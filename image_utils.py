@@ -12,6 +12,18 @@ overscan = afwGeom.Box2I(afwGeom.Point2I(525, 100),
 active = afwGeom.Box2I(afwGeom.Point2I(10, 0), 
                        afwGeom.Point2I(521, 2000))
 
+def bias(im, overscan=overscan):
+    return np.mean(im.Factory(im, overscan).getArray())
+
+def unbias_and_trim(im, active=active, overscan=overscan, trim=True):
+    """Subtract bias calculated from overscan region and optionally trim 
+    prescan and overscan regions."""
+    im -= bias(im, overscan)
+    if trim:
+        return im.Factory(im, active)
+    else:
+        return im
+
 def fits_median(files, hdu=2, fix=True):
     """Compute the median image from a set of image FITS files."""
     ims = [afwImage.ImageF(f, hdu) for f in files]
@@ -31,16 +43,6 @@ def fits_median(files, hdu=2, fix=True):
     medim = afwImage.ImageF(np.median(imcube, axis=0))
 
     return medim
-
-def unbias_and_trim(im, active=active, overscan=overscan, trim=True):
-    """Subtract bias calculated from overscan region and optionally trim 
-    prescan and overscan regions."""
-    bias = np.mean(im.Factory(im, overscan).getArray())
-    im -= bias
-    if trim:
-        return im.Factory(im, active)
-    else:
-        return im
 
 if __name__ == '__main__':
     import glob

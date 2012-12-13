@@ -31,3 +31,10 @@ else:
 
 # Find bright columns
 colavgs = [np.median(col) for col in imarr]
+bright_cols = np.where(colavs > threshold)
+bc_count = len(bright_cols[0])
+
+# Weed out bright pixels that are already in bright columns or rows.
+if bc_count > 0:
+    for i in range(bc_count):
+        cols = 
