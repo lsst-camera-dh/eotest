@@ -4,7 +4,7 @@ sensor gain from Fe55 data.
 
 @author J. Chiang <jchiang@slac.stanford.edu>
 """
-import numpy as num
+import numpy as np
 import lsst.afw.math as afwMath
 import lsst.afw.image as afwImage
 import lsst.afw.geom as afwGeom
@@ -65,7 +65,7 @@ class Fe55Gain(object):
                        fp_set.getFootprints() if fp.getNpix() < max_npix]
             mean = self._clipped_stats(signals).getValue(afwMath.MEAN)
             values.append(1620./mean)
-        imed = num.argsort(values)[len(values)/2]
+        imed = np.argsort(values)[len(values)/2]
         if regfile is not None:
             make_region_file(self.fp_sets[imed], regfile)
         return values[imed]

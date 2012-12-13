@@ -1,22 +1,19 @@
 """
 @brief Re-implementation of P. Doherty's IDL function to compute
 dark current.
-
-@author J. Chiang <jchiang@slac.stanford.edu>
 """
-import numpy as num
+import numpy as np
 import numpy.random as random
 
 import lsst.afw.image as afwImage
 import lsst.afw.geom as afwGeom
 
-from fits_median import fits_median
-from sensorImage import SensorImage
+from image_utils import fits_median, unbias_and_trim
 
 def dark_curr(files, hdu=2, gain=1, count=1000, 
               nx=400, ny=900, x0=10, y0=0, dx=100, dy=100, seed=101):
     random.seed(seed)
-    im = SensorImage(fits_median(files, hdu=hdu)).unbias()
+    im = unbias_and_trim(fits_median(files, hdu=hdu))
 
     # Generate random locations to perform estimates, then take the
     # median.  This avoids bright defects.
@@ -29,8 +26,8 @@ def dark_curr(files, hdu=2, gain=1, count=1000,
         extent = afwGeom.Extent2I(dx, dy)
         bbox = afwGeom.Box2I(llc, extent)
         subim = im.Factory(im, bbox)
-        signal.append(num.mean(subim.getArray()))
-    dark_current = num.median(signal)*gain
+        signal.append(np.mean(subim.getArray()))
+    dark_current = np.median(signal)*gain
 
     return dark_current
 

@@ -6,7 +6,7 @@ data butler.
 #
 # $Header: /usr/local/CVS/SLAC/users/jchiang/lsst_dm_tools/test_convolve.py,v 1.3 2012/11/08 19:26:47 jchiang Exp $
 #
-import numpy as num
+import numpy as np
 import lsst.afw.math as afwMath
 import lsst.afw.image as afwImage
 import lsst.afw.geom as afwGeom
@@ -28,7 +28,7 @@ deltaKernel = afwMath.DeltaFunctionKernel(1, 1, afwGeom.Point2I(0, 0))
 #
 fwhm = 5
 psf = afwDetection.createPsf("DoubleGaussian", 15, 15, 
-                             fwhm/(2*num.sqrt(2*num.log(2))))
+                             fwhm/(2*np.sqrt(2*np.log(2))))
 gaussKernel = psf.getKernel()
 
 #
