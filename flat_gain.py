@@ -3,7 +3,6 @@
 examining two flat field images. The calculation is the standard
 mean/variance thing.
 """
-import sys
 import numpy as np
 import numpy.random as random
 
