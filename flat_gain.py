@@ -50,7 +50,7 @@ def flat_gain(file1, file2, hdu=2, count=1000, seed=None, dx=100, dy=100):
         # Calculate the mean value of the flat field images.
         fmean = (np.mean(imarr1) + np.mean(imarr2))/2.
         # Calculate the variance of the flat difference image.
-        fvar = np.std(imarr1 - imarr2)**2/2.
+        fvar = np.var(imarr1 - imarr2)/2.
         gains.append(fvar/fmean)
     gain = np.median(gains)
     return gain

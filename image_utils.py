@@ -7,10 +7,17 @@ import numpy as np
 import lsst.afw.geom as afwGeom
 import lsst.afw.image as afwImage
 
+prescan = afwGeom.Box2I(afwGeom.Point2I(0, 100), 
+                         afwGeom.Extent2I(10, 1900))
+
 overscan = afwGeom.Box2I(afwGeom.Point2I(525, 100), 
                          afwGeom.Extent2I(5, 1900))
+
 imaging = afwGeom.Box2I(afwGeom.Point2I(10, 0), 
                         afwGeom.Point2I(521, 2000))
+
+full_segment = afwGeom.Box2I(afwGeom.Point2I(0, 0),
+                             afwGeom.Extent2I(543, 2023))
 
 def bias(im, overscan=overscan):
     "Compute the bias from the overscan region."

@@ -1,40 +1,45 @@
+"""
+@brief Find bright pixels and bright columns above a 
+threshold = mean + nsig*sigma
+"""
 import numpy as np
 import lsst.afw.image as afwImage
-import lsst.afw.geom as afwGeom
-import lsst.afw.math as afwMath
 
 from image_utils import unbias_and_trim
+from sim_tools import SegmentExposure, writeFits
 
-infile = 'fe55_0060s_000.fits'
-pct = 90.
-hdu = 2
-threshold = 1000
+def bright_pix(infile, hdu=2, nsig=5):
+    im = unbias_and_trim(afwImage.ImageF(infile, hdu))
+    imarr = im.getArray()
 
-im = unbias_and_trim(afwImage.ImageF(infile, hdu))
+    mean = np.mean(imarr)
+    sigma = np.std(imarr)
+    threshold = nsig*sigma + mean
 
-imarr = im.getArray()
+    # Find bright pixels.
+    pixels = np.where(imarr > threshold)
 
-# Mean value of each CCD column.
-col_means = [np.mean(imarr[i,:]) for i in range(512)]
+    # Find bright columns.
+    col_means = [np.mean(imarr[:, i]) for i in range(im.getWidth())]
+    columns = np.where(col_means > threshold)
 
-# Find columns where mean > pct/100*(image mean)
-bcols = np.where(col_means >= (mean(imarr)*pct/100.))
-count = len(bcols[0])
+    # Weed out bright pixels that are already in bright columns or rows.
+    indx = [i for i in range(len(pixels[1])) if pixels[1][i] not in columns]
 
-bright_pix = np.where(imarr > threshold)
-bp_count = len(bright_pix[0])
+    pixels = (pixels[0][indx], pixels[1][indx])
 
-if bp_count > 0:
-    bp_mean = np.mean(imarr[bright_pix])
-else:
-    bp_mean = 0
+    return pixels, columns, im
 
-# Find bright columns
-colavgs = [np.median(col) for col in imarr]
-bright_cols = np.where(colavs > threshold)
-bc_count = len(bright_cols[0])
+def write_test_image(outfile):
+    seg = SegmentExposure()
+    seg.add_bias(1e4, 10)
+    seg.add_dark_current(300)
+    seg.expose_flat(200, 5)
+    cols = seg.add_bright_cols(ncols=1, nsig=10)
+    pix = seg.add_bright_pix(npix=100, nsig=10)
+    writeFits((seg,), outfile)
 
-# Weed out bright pixels that are already in bright columns or rows.
-if bc_count > 0:
-    for i in range(bc_count):
-        cols = 
+if __name__ == '__main__':
+    fitsfile = 'test_image.fits'
+    write_test_image(fitsfile)
+    pixels, columns, im = bright_pix(fitsfile)

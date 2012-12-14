@@ -17,8 +17,8 @@ def dark_curr(files, hdu=2, gain=1, count=1000, dx=100, dy=100, seed=None):
 
     # Generate dx by dy boxes at random locations to perform
     # estimates, then take the median.  This avoids bright defects.
-    xarr = random.randint(im.getWidth() - dx -1, size=count)
-    yarr = random.randint(im.getHeight() - dy -1, size=count) 
+    xarr = random.randint(im.getWidth() - dx - 1, size=count)
+    yarr = random.randint(im.getHeight() - dy - 1, size=count) 
 
     signal = []
     for x, y in zip(xarr, yarr):
