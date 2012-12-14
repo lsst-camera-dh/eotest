@@ -12,6 +12,7 @@ from image_utils import fits_median, unbias_and_trim
 
 def dark_curr(files, hdu=2, gain=1, count=1000, dx=100, dy=100, seed=None):
     random.seed(seed)
+    exptime = afwImage.readMetadata(files[0], 1).get('EXPTIME')
     im = unbias_and_trim(fits_median(files, hdu=hdu))
 
     # Generate dx by dy boxes at random locations to perform
@@ -25,13 +26,21 @@ def dark_curr(files, hdu=2, gain=1, count=1000, dx=100, dy=100, seed=None):
                              afwGeom.Extent2I(dx, dy))
         subim = im.Factory(im, bbox)
         signal.append(np.mean(subim.getArray()))
-    dark_current = np.median(signal)*gain
+    dark_current = np.median(signal)*gain/exptime
 
     return dark_current
 
 if __name__ == '__main__':
-    import glob
-    files = glob.glob('data/dark*.fits')
-    seed = 10184791
-    for hdu in range(2, 18):
-        print hdu, dark_curr(files, hdu=hdu, count=100, seed=seed)
+    from sim_tools import simulateDark
+
+    hdus = 2
+    dark_current = 3
+    exptime = 12
+    files = []
+    for i in range(4):
+        outfile = 'test_dark%02i.fits' % i
+        simulateDark(outfile, dark_current, exptime, hdus=hdus)
+        files.append(outfile)
+
+    for hdu in range(hdus):
+        print hdu, dark_curr(files, hdu=hdu+2, count=100)

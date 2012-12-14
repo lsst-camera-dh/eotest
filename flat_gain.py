@@ -51,14 +51,19 @@ def flat_gain(file1, file2, hdu=2, count=1000, seed=None, dx=100, dy=100):
         fmean = (np.mean(imarr1) + np.mean(imarr2))/2.
         # Calculate the variance of the flat difference image.
         fvar = np.std(imarr1 - imarr2)**2/2.
-        gains.append(fmean/fvar)
+        gains.append(fvar/fmean)
     gain = np.median(gains)
     return gain
 
 if __name__ == '__main__':
-    import glob
-    files = glob.glob('data/pxfer*flat[12].fits')[:2]
+    from sim_tools import simulateFlat
+    
+    file1 = 'test_flat1.fits'
+    file2 = 'test_flat2.fits'
 
-    seed = 30910481   # Set specific seed for reproducibility.
-    for hdu in range(2, 18):
-        print hdu, flat_gain(files[0], files[1], hdu=hdu, count=1000, seed=seed)
+    hdus = 2
+    simulateFlat(file1, 40, 5, hdus=hdus)
+    simulateFlat(file2, 40, 5, hdus=hdus)
+
+    for hdu in range(hdus):
+        print hdu, flat_gain(file1, file2, hdu=hdu+2, count=1000)

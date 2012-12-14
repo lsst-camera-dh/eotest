@@ -9,23 +9,23 @@ import lsst.afw.image as afwImage
 
 overscan = afwGeom.Box2I(afwGeom.Point2I(525, 100), 
                          afwGeom.Extent2I(5, 1900))
-active = afwGeom.Box2I(afwGeom.Point2I(10, 0), 
-                       afwGeom.Point2I(521, 2000))
+imaging = afwGeom.Box2I(afwGeom.Point2I(10, 0), 
+                        afwGeom.Point2I(521, 2000))
 
 def bias(im, overscan=overscan):
     "Compute the bias from the overscan region."
     return np.mean(im.Factory(im, overscan).getArray())
 
-def trim(im, active=active):
+def trim(im, imaging=imaging):
     "Trim the prescan and overscan regions."
-    return im.Factory(im, active)
+    return im.Factory(im, imaging)
 
-def unbias_and_trim(im, overscan=overscan, active=active, apply_trim=True):
+def unbias_and_trim(im, overscan=overscan, imaging=imaging, apply_trim=True):
     """Subtract bias calculated from overscan region and optionally trim 
     prescan and overscan regions."""
     im -= bias(im, overscan)
     if apply_trim:
-        return trim(im, active)
+        return trim(im, imaging)
     else:
         return im
 
