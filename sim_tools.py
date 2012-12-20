@@ -2,6 +2,8 @@
 @brief Tools to create simulated CCD segment exposures under ideal
 conditions.  Darks, flats, Fe55, etc..
 """
+import os
+
 import numpy as np
 import numpy.random as random
 
@@ -59,7 +61,12 @@ def writeFits(ccd_segments, outfile, clobber=True):
     output[0].header["EXPTIME"] = ccd_segments[0].exptime
     for segment in ccd_segments:
         output.append(pyfits.ImageHDU(data=segment.image.getArray()))
-    output.writeto(outfile, clobber=clobber)
+    if clobber:
+        try:
+            os.remove(outfile)
+        except OSError:
+            pass
+    output.writeto(outfile)
     
 def simulateDark(outfile, dark_curr, exptime=1, hdus=16, verbose=True):
     if verbose:

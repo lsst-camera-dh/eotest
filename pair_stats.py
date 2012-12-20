@@ -58,9 +58,11 @@ if __name__ == '__main__':
     file1 = 'test_flat1.fits'
     file2 = 'test_flat2.fits'
 
-    simulateFlat(file1, 200, 5, hdus=1)
-    simulateFlat(file2, 200, 5, hdus=1)
+    simulateFlat(file1, 200, 5, hdus=16)
+    simulateFlat(file2, 200, 5, hdus=16)
 
-    my_pair_stats, b1, b2 = pair_stats(file1, file2)
-    print my_pair_stats.header()
-    print my_pair_stats.summary()
+    for hdu in range(16):
+        my_pair_stats, b1, b2 = pair_stats(file1, file2, hdu=hdu+2)
+        if hdu == 0:
+            print my_pair_stats.header()
+        print my_pair_stats.summary()
