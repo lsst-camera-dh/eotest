@@ -1,33 +1,39 @@
 """
 @brief Module to perform standard operations on sensor images such
-computing median images, unbiasing using the overscan region,
+computing median images, unbiasing using the serial overscan region,
 trimming, etc..
 """
 import numpy as np
 import lsst.afw.geom as afwGeom
 import lsst.afw.image as afwImage
 
-prescan = afwGeom.Box2I(afwGeom.Point2I(0, 100), 
-                         afwGeom.Extent2I(10, 1900))
-
-overscan = afwGeom.Box2I(afwGeom.Point2I(525, 100), 
-                         afwGeom.Extent2I(5, 1900))
-
-imaging = afwGeom.Box2I(afwGeom.Point2I(10, 0), 
-                        afwGeom.Point2I(521, 2000))
-
 full_segment = afwGeom.Box2I(afwGeom.Point2I(0, 0),
-                             afwGeom.Extent2I(543, 2023))
+                             afwGeom.Point2I(541, 2021))
 
-def bias(im, overscan=overscan):
-    "Compute the bias from the overscan region."
+prescan = afwGeom.Box2I(afwGeom.Point2I(0, 0),
+                        afwGeom.Point2I(9, 2021))
+
+imaging = afwGeom.Box2I(afwGeom.Point2I(10, 0),
+                        afwGeom.Point2I(521, 2001))
+
+serial_overscan = afwGeom.Box2I(afwGeom.Point2I(522, 0), 
+                                afwGeom.Point2I(541, 2021))
+
+parallel_overscan = afwGeom.Box2I(afwGeom.Point2I(10, 2002),
+                                  afwGeom.Point2I(522, 2021))
+
+overscan = serial_overscan  # for backwards compatibility
+
+def bias(im, overscan=serial_overscan):
+    "Compute the bias from the serial overscan region."
     return np.mean(im.Factory(im, overscan).getArray())
 
 def trim(im, imaging=imaging):
     "Trim the prescan and overscan regions."
     return im.Factory(im, imaging)
 
-def unbias_and_trim(im, overscan=overscan, imaging=imaging, apply_trim=True):
+def unbias_and_trim(im, overscan=serial_overscan, imaging=imaging,
+                    apply_trim=True):
     """Subtract bias calculated from overscan region and optionally trim 
     prescan and overscan regions."""
     im -= bias(im, overscan)
