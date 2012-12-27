@@ -72,16 +72,18 @@ class Fe55Gain(object):
 
 if __name__ == '__main__':
     from sim_tools import SegmentExposure, writeFits
-    regfile = None
-#    regfile = 'ds9.reg'
-#    imfile = 'fe55_0060s_000.fits'
-    
-    seg = SegmentExposure(exptime=1, gain=3)
-    seg.add_bias(level=2000, sigma=2)
-    seg.add_dark_current(level=1000)
-    seg.add_Fe55_hits(nxrays=200)
-    imfile = writeFits((seg,), 'test_fe55_image.fits')
 
-    for hdu in range(2, 3):
-        f55 = Fe55Gain(imfile, hdu=hdu)
-        print hdu, f55.gain(regfile=regfile), f55.median, f55.noise
+    ntrials = 100
+    gains = []
+    hdu = 1
+    for i in range(ntrials):
+        seg = SegmentExposure(exptime=1, gain=3)
+        seg.add_bias(level=2000, sigma=2)
+        seg.add_dark_current(level=1000)
+        seg.add_Fe55_hits(nxrays=200)
+        imfile = writeFits((seg,), 'test_fe55_image.fits')
+
+        f55 = Fe55Gain(imfile, hdu=hdu+1)
+        gains.append(f55.gain())
+        print i, gains[-1]
+    print np.mean(gains), np.median(gains), np.std(gains)

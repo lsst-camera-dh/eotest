@@ -56,12 +56,26 @@ class SegmentExposure(object):
         self.imarr += bright_pix*nsig*self.sigma()
         return np.where(bright_pix == 1)
     def add_Fe55_hits(self, nxrays=200):
+        """One- and two-pixel distributions, based on statistics
+        from one of PD's Fe55 exposures."""
         ny, nx = self.imarr.shape
         for i in range(nxrays):
             x0 = random.randint(nx)
             y0 = random.randint(ny)
-            self.imarr[y0][x0] += int(1620./self.gain)
-
+            signal = random.normal(1620., 13.)/self.gain  # Janesick, p 132.
+            if random.uniform() < 0.5:  # Single pixel hit
+                self.imarr[y0][x0] += int(signal)
+            else:  # Two pixels
+                peak_ratio = min(random.normal(0.58, 0.055), 1)
+                self.imarr[y0][x0] = int(signal*peak_ratio)
+                tail = int(1 - signal*peak_ratio)
+                try:
+                    if random.uniform() < 0.5:
+                        self.imarr[y0][x0 + random.randint(2)*2 - 1] += tail
+                    else:
+                        self.imarr[y0 + random.randint(2)*2 - 1][x0] += tail
+                except IndexError:
+                    pass
 def writeFits(ccd_segments, outfile, clobber=True):
     output = pyfits.HDUList()
     output.append(pyfits.PrimaryHDU())
