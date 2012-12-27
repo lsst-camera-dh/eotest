@@ -16,8 +16,9 @@ import lsst.afw.display.ds9 as ds9
 from image_utils import imaging, full_segment
 
 class SegmentExposure(object):
-    def __init__(self, exptime=1, bbox=full_segment):
+    def __init__(self, exptime=1, gain=5, bbox=full_segment):
         self.exptime = exptime
+        self.gain = gain
         self.image = afwImage.ImageF(bbox)
         self.imarr = self.image.Factory(self.image, imaging).getArray()
         self.ny, self.nx = self.imarr.shape
@@ -29,11 +30,11 @@ class SegmentExposure(object):
         bias_arr = np.array(random.normal(level, sigma, nx*ny),
                             dtype=np.int).reshape(ny, nx)
         fullarr += bias_arr
-    def add_dark_current(self, level):
+    def add_dark_current(self, level=10):
         dark_arr = self._poisson_imarr(level*self.exptime)
         self.imarr += dark_arr
-    def expose_flat(self, level, gain):
-        flat_arr = self._poisson_imarr(level*self.exptime)*gain
+    def expose_flat(self, level):
+        flat_arr = self._poisson_imarr(level*self.exptime)*self.gain
         self.imarr += flat_arr
     def _poisson_imarr(self, level):
         return random.poisson(level, self.npix).reshape(self.ny, self.nx)
@@ -54,6 +55,12 @@ class SegmentExposure(object):
         bright_pix = bright_pix.reshape(self.ny, self.nx)
         self.imarr += bright_pix*nsig*self.sigma()
         return np.where(bright_pix == 1)
+    def add_Fe55_hits(self, nxrays=200):
+        ny, nx = self.imarr.shape
+        for i in range(nxrays):
+            x0 = random.randint(nx)
+            y0 = random.randint(ny)
+            self.imarr[y0][x0] += int(1620./self.gain)
 
 def writeFits(ccd_segments, outfile, clobber=True):
     output = pyfits.HDUList()
@@ -67,6 +74,7 @@ def writeFits(ccd_segments, outfile, clobber=True):
         except OSError:
             pass
     output.writeto(outfile)
+    return outfile
     
 def simulateDark(outfile, dark_curr, exptime=1, hdus=16, verbose=True):
     if verbose:
@@ -75,7 +83,7 @@ def simulateDark(outfile, dark_curr, exptime=1, hdus=16, verbose=True):
     for i in range(hdus):
         if verbose:
             print "HDU", i
-        seg = SegmentExposure(exptime)
+        seg = SegmentExposure(exptime=exptime)
         seg.add_bias()
         seg.add_dark_current(dark_curr)
         segments.append(seg)
@@ -89,7 +97,7 @@ def simulateFlat(outfile, level, gain, dark_curr=1, exptime=1, hdus=16,
     for i in range(hdus):
         if verbose:
             print "HDU", i
-        seg = SegmentExposure(exptime)
+        seg = SegmentExposure(exptime=exptime, gain=gain)
         seg.add_bias()
         seg.add_dark_current(dark_curr)
         seg.expose_flat(level, gain)
