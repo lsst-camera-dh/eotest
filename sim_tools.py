@@ -114,7 +114,7 @@ def simulateFlat(outfile, level, gain, dark_curr=1, exptime=1, hdus=16,
         seg = SegmentExposure(exptime=exptime, gain=gain)
         seg.add_bias()
         seg.add_dark_current(dark_curr)
-        seg.expose_flat(level, gain)
+        seg.expose_flat(level)
         segments.append(seg)
     writeFits(segments, outfile)
 
