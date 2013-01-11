@@ -34,7 +34,7 @@ def write_test_image(outfile):
     seg = SegmentExposure()
     seg.add_bias(1e4, 10)
     seg.add_dark_current(300)
-    seg.expose_flat(200, 5)
+    seg.expose_flat(200)
     cols = seg.add_bright_cols(ncols=1, nsig=10)
     pix = seg.add_bright_pix(npix=100, nsig=10)
     writeFits((seg,), outfile)
