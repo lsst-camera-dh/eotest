@@ -1,6 +1,6 @@
 """
 @brief Function to compute the max dark current for a given percentile
-of pixels
+of pixels.
 """
 import numpy as np
 import lsst.afw.image as afwImage
