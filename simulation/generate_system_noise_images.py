@@ -8,10 +8,10 @@ import os
 import numpy as np
 from sim_inputs import *
 
-def generate_readout_noise_images(nexp, outdir, sensorid):
+def generate_system_noise_images(nexp, outdir, sensorid):
     exptime = 0
     for i in range(nexp):
-        filename = 'readout_noise_%s_%02i.fits' % (sensorid, i)
+        filename = 'system_noise_%s_%02i.fits' % (sensorid, i)
         outfile = os.path.join(outdir, filename)
         noise_segs = []
         for hdu in range(nhdu):
@@ -22,4 +22,4 @@ def generate_readout_noise_images(nexp, outdir, sensorid):
 
 if __name__ == '__main__':
     nexp = 10
-    generate_readout_noise_images(nexp, '.')
+    generate_system_noise_images(nexp, '.')

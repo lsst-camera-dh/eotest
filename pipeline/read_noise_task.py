@@ -7,18 +7,22 @@ contribution from the electronics.
 
 @author J. Chiang <jchiang@slac.stanford.edu>
 """
+import os
+import sys
+import glob
+    
 import numpy as np
 import pyfits
 
 from read_noise import NoiseDists, median
 from xray_gain import hdu_gains
 
-def write_read_noise_dists(Nread, Nsys, outfile, fe55, bias, readout):
+def write_read_noise_dists(outfile, Nread, Nsys, gains, fe55, bias, sysnoise):
     output = pyfits.HDUList()
     output.append(pyfits.PrimaryHDU())
-    output[0].header.update('FE55_FILE', fe55)
-    output[0].header.update('BIAS_FILE', bias)
-    output[0].header.update('READOUT_FILE', readout)
+    output[0].header.update('FE55FILE', fe55)
+    output[0].header.update('BIASFILE', bias)
+    output[0].header.update('SYSNFILE', sysnoise)
     for hdu, sigread, sigsys in zip(range(len(Nread)), Nread, Nsys):
         nread_col = pyfits.Column(name="CCD_READ_NOISE", format="E",
                                   unit="e- rms", array=sigread)
@@ -26,12 +30,26 @@ def write_read_noise_dists(Nread, Nsys, outfile, fe55, bias, readout):
                                  unit="e- rms", array=sigsys)
         output.append(pyfits.new_table((nread_col, nsys_col)))
         output[hdu+1].name = "AMP%02i" % hdu
+        output[hdu+1].header.update("GAINFE55", gains[hdu])
     output.writeto(outfile, clobber=True)
 
+def get_input_files(sensordir):
+    Fe55_files = glob.glob(os.path.join(sensordir, 'Fe55', 'Fe55_exp_*'))
+    Fe55_files.sort()
+
+    bias_files = glob.glob(os.path.join(sensordir, 'Fe55', 'Fe55_bias_*'))
+    bias_files.sort()
+
+    system_noise_files = glob.glob(os.path.join(sensordir, 'system_noise',
+                                                 'system_noise_*'))
+    system_noise_files.sort()
+    return Fe55_files, bias_files, system_noise_files
+
 if __name__ == '__main__':
-    import os
-    import sys
-    import glob
+    #
+    # sys.argv parsing and get_input_files will be replace by a
+    # function that makes an appropriate Data Catalog query.
+    #
     try:
         sensordir = sys.argv[1]
         outdir = sys.argv[2]
@@ -39,29 +57,22 @@ if __name__ == '__main__':
         print "usage: python get_read_noise.py <sensordir> <outputdir>"
         sys.exit(1)
 
-    Fe55_files = glob.glob(os.path.join(sensordir, 'Fe55', 'Fe55_exp_*'))
-    Fe55_files.sort()
-
-    bias_files = glob.glob(os.path.join(sensordir, 'Fe55', 'Fe55_bias_*'))
-    bias_files.sort()
-
-    readout_noise_files = glob.glob(os.path.join(sensordir, 'read_noise',
-                                                 'readout_noise_*'))
-    readout_noise_files.sort()
+    Fe55_files, bias_files, system_noise_files = get_input_files(sensordir)
     
-    for i, fe55, bias, readout in zip(range(len(Fe55_files)), Fe55_files,
-                                      bias_files, readout_noise_files):
-        outfile = os.path.join(outdir, outfile)
+    for i, fe55, bias, sysnoise in zip(range(len(Fe55_files)), Fe55_files,
+                                       bias_files, system_noise_files):
         outfile = "ccd_read_noise_%s_%02i.fits" \
                   % (os.path.basename(sensordir), i)
+        outfile = os.path.join(outdir, outfile)
         
-        print "Processing", fe55, bias, readout, "->", outfile 
+        print "Processing", fe55, bias, sysnoise, "->", outfile 
         gains = hdu_gains(fe55)
         noise_dists = NoiseDists(gains)
         
         Ntot = noise_dists(bias)
-        Nsys = noise_dists(readout)
+        Nsys = noise_dists(sysnoise)
         
         Nread = np.sqrt(Ntot*Ntot - Nsys*Nsys)
     
-        write_read_noise_dists(Nread, Nsys, outfile)
+        write_read_noise_dists(outfile, Nread, Nsys, gains,
+                               fe55, bias, sysnoise)

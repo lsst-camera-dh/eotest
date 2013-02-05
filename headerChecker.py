@@ -16,7 +16,7 @@ def fixHeader(dir, r):
 	
 	else:
 		#find FITS files in this directory only
-		files = glob.glob(dir+'*.fits')
+		files = glob.glob(os.path.join(dir/'*.fits'))
 	
 	for filename in files:
 	
