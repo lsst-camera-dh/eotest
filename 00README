@@ -1,4 +1,4 @@
-Here are brief escriptions of the python modules in the sensor_testing
+Here are brief descriptions of the python modules in the test_scripts
 repository.  Most of the scripts contain a single eponomously named
 function, and most are re-implementations of the corresponding IDL
 routines from Peter D.
@@ -44,11 +44,31 @@ pair_stats.py: This script computes the bias mean, bias rms, flat mean,
                of flat exposures and writes the statistics out in 
                an ascii table.
 
-sim_tools.py: Tools to generate simulated images including bias, dark
-              current, flat exposures, defects, and Fe55 exposures.
-              These are intended for making idealized images for which
-              we know the statistical properties precisely.  We can
-              add other effects here as needed.
+read_noise.py: Computes the read noise given a bias frame and a
+               readout system noise measurement.  The NoiseDists
+               functor returns a distribution of noise estimates
+               evaluated in nsamp dx by dy pixel subregions.
 
 xray_gain.py: This module uses the afwDetect algorithms to find Fe55
               hits and estimates the sensor gain from those signals.
+
+pipeline/get_read_noise.py: Compute read noise distributions for a
+              sample of images.  The system gain for each channel is
+              determined from Fe55 data, and the corresponding bias
+              frame is used to characterize the total system noise.
+              Readout noise frames are used for determining the noise
+              contribution from the electronics.
+
+simulation/sim_tools.py: Tools to generate simulated images including
+              bias, dark current, flat exposures, defects, and Fe55
+              exposures.  These are intended for making idealized
+              images for which we know the statistical properties
+              precisely.  We can add other effects here as needed.
+
+simulation/generate_Fe55_images.py: Generate Fe55 images and
+              associated darks and bias images according to section
+              5.4 of the E/O document (Dec 19, 2012 version).
+
+simulation/generate_readout_noise.py: Generate the readout system
+              noise frames according to section 5.8 of the E/O
+              document (Dec 19, 2012 version).
