@@ -53,7 +53,7 @@ def pair_stats(file1, file2, hdu=2):
     return PairStats(bmean, bias_rms, fmean, fvar, gain, noise), b1, b2
 
 if __name__ == '__main__':
-    from sim_tools import simulateFlat
+    from simulation.sim_tools import simulateFlat
 
     file1 = 'test_flat1.fits'
     file2 = 'test_flat2.fits'

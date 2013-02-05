@@ -24,14 +24,18 @@ class SegmentExposure(object):
         self.ny, self.nx = self.imarr.shape
         self.npix = self.nx*self.ny
         self._sigma = -1
-    def add_bias(self, level=1e4, sigma=10):
+    def add_bias(self, level=1e4, sigma=4):
+        """The parameters level and bias are in units of e- and
+        converted on output to DN via the system gain."""
         fullarr = self.image.getArray()
         ny, nx = fullarr.shape
         bias_arr = np.array(random.normal(level, sigma, nx*ny),
-                            dtype=np.int).reshape(ny, nx)
-        fullarr += bias_arr
-    def add_dark_current(self, level=10):
-        dark_arr = self._poisson_imarr(level*self.exptime)
+                            dtype=np.float).reshape(ny, nx)
+        fullarr += bias_arr/self.gain
+    def add_dark_current(self, level=3):
+        """Units of level should be e- per unit time and converted to
+        DN on output."""
+        dark_arr = self._poisson_imarr(level*self.exptime)/self.gain
         self.imarr += dark_arr
     def expose_flat(self, level):
         flat_arr = self._poisson_imarr(level*self.exptime)*self.gain

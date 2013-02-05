@@ -6,7 +6,7 @@ import numpy as np
 import lsst.afw.image as afwImage
 
 from image_utils import unbias_and_trim
-from sim_tools import SegmentExposure, writeFits
+from simulation.sim_tools import SegmentExposure, writeFits
 
 def bright_pix(infile, hdu=2, nsig=5):
     im = unbias_and_trim(afwImage.ImageF(infile, hdu))
@@ -42,4 +42,4 @@ def write_test_image(outfile):
 if __name__ == '__main__':
     fitsfile = 'test_image.fits'
     write_test_image(fitsfile)
-    pixels, columns, im = bright_pix(fitsfile)
+    pixels, columns, im = bright_pix(fitsfile, hdu=2)

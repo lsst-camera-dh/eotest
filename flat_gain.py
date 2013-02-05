@@ -55,7 +55,7 @@ def flat_gain(file1, file2, hdu=2, count=1000, seed=None, dx=100, dy=100):
     return gain
 
 if __name__ == '__main__':
-    from sim_tools import simulateFlat
+    from simulation.sim_tools import simulateFlat
     
     file1 = 'test_flat1.fits'
     file2 = 'test_flat2.fits'

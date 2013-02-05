@@ -5,6 +5,7 @@ sensor gain from Fe55 data.
 @author J. Chiang <jchiang@slac.stanford.edu>
 """
 import numpy as np
+import pyfits
 import lsst.afw.math as afwMath
 import lsst.afw.image as afwImage
 import lsst.afw.geom as afwGeom
@@ -63,17 +64,31 @@ class Fe55Gain(object):
             self.fp_sets.append(fp_set)
             signals = [self._footprint_signal(fp) for fp in 
                        fp_set.getFootprints() if fp.getNpix() < max_npix]
-            mean = self._clipped_stats(signals).getValue(afwMath.MEAN)
-            values.append(1620./mean)
-        imed = np.argsort(values)[len(values)/2]
+            try:
+                mean = self._clipped_stats(signals).getValue(afwMath.MEAN)
+                values.append(1620./mean)
+            except:
+                pass
+        try:
+            imed = np.where(values >= np.median(values))[0][0]
+        except IndexError:
+            values.pop()
+            imed = np.where(values >= np.median(values))[0][0]
         if regfile is not None:
             make_region_file(self.fp_sets[imed], regfile)
         return values[imed]
 
-if __name__ == '__main__':
-    from sim_tools import SegmentExposure, writeFits
+def hdu_gains(infile):
+    gains = []
+    for hdu in range(16):
+        fe55 = Fe55Gain(infile, hdu=hdu+2)
+        gains.append(fe55.gain())
+    return gains
 
-    ntrials = 100
+if __name__ == '__main__':
+    from simulation.sim_tools import SegmentExposure, writeFits
+
+    ntrials = 10
     gains = []
     hdu = 1
     for i in range(ntrials):

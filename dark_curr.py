@@ -31,7 +31,7 @@ def dark_curr(files, hdu=2, gain=1, count=1000, dx=100, dy=100, seed=None):
     return dark_current
 
 if __name__ == '__main__':
-    from sim_tools import simulateDark
+    from simulation.sim_tools import simulateDark
 
     hdus = 2
     dark_current = 3
