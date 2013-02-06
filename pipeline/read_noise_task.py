@@ -45,24 +45,36 @@ def get_input_files(sensordir):
     system_noise_files.sort()
     return Fe55_files, bias_files, system_noise_files
 
+def get_file_list(prefix):
+    numfiles = int(os.environ["NUM%sFILES" % prefix])
+    my_files = []
+    for i in range(numfiles):
+        my_files.append(os.environ["%s_%02i" % (prefix, i)])
+    return my_files
+
 if __name__ == '__main__':
-    #
-    # sys.argv parsing and get_input_files will be replace by a
-    # function that makes an appropriate Data Catalog query.
-    #
-    try:
+    if len(sys.argv) == 3:
         sensordir = sys.argv[1]
         outdir = sys.argv[2]
-    except:
-        print "usage: python get_read_noise.py <sensordir> <outputdir>"
-        sys.exit(1)
+        sensor_id = os.path.basename(sensordir)
+        Fe55_files, bias_files, system_noise_files = get_input_files(sensordir)
+    else:
+        try:
+            Fe55_files = get_file_list('FE55')
+            bias_files = get_file_list('BIAS')
+            system_noise_files = get_file_list('SYSNOISE')
+            sensor_id = os.environ['SENSOR_ID']
+            outdir = os.environ['OUTPUTDIR']
+        except:
+            print "usage: python get_read_noise.py <sensordir> <outputdir>"
+            sys.exit(1)
 
-    Fe55_files, bias_files, system_noise_files = get_input_files(sensordir)
+    if not os.path.isdir(outdir):
+        os.mkdir(outdir)
     
     for i, fe55, bias, sysnoise in zip(range(len(Fe55_files)), Fe55_files,
                                        bias_files, system_noise_files):
-        outfile = "ccd_read_noise_%s_%02i.fits" \
-                  % (os.path.basename(sensordir), i)
+        outfile = "ccd_read_noise_%s_%02i.fits" % (sensor_id, i)
         outfile = os.path.join(outdir, outfile)
         
         print "Processing", fe55, bias, sysnoise, "->", outfile 
