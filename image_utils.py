@@ -7,6 +7,16 @@ import numpy as np
 import lsst.afw.geom as afwGeom
 import lsst.afw.image as afwImage
 
+allAmps = range(1,17)
+
+# Segment ID to HDU number in FITS dictionary
+hdu_dict = dict( [ (1,'Segment10'), (2,'Segment11'), (3,'Segment12'),
+                   (4,'Segment13'), (5,'Segment14'), (6,'Segment15'),
+                   (7,'Segment16'), (8,'Segment17'), (9,'Segment07'),
+                   (10,'Segment06'), (11,'Segment05'), (12,'Segment04'),
+                   (13,'Segment03'), (14,'Segment02'), (15,'Segment01'),
+                   (16,'Segment00') ] )
+
 full_segment = afwGeom.Box2I(afwGeom.Point2I(0, 0),
                              afwGeom.Point2I(541, 2021))
 
@@ -23,6 +33,10 @@ parallel_overscan = afwGeom.Box2I(afwGeom.Point2I(10, 2002),
                                   afwGeom.Point2I(522, 2021))
 
 overscan = serial_overscan  # for backwards compatibility
+
+def dm_hdu(hdu):
+    """ Compute DM HDU from the actual FITS file HDU."""
+    return hdu+1
 
 def bias(im, overscan=serial_overscan):
     "Compute the bias from the serial overscan region."
