@@ -52,12 +52,19 @@ def get_file_list(prefix):
         my_files.append(os.environ["%s_%02i" % (prefix, i)])
     return my_files
 
+def export_file_list(files, prefix):
+    import pipeline
+    pipeline.setVariable("NUM%sFILES" % prefix, "%s" % len(files))
+    for i, item in enumerate(files):
+        pipeline.setVariable("%s_%02i" % (prefix, i), item)
+
 if __name__ == '__main__':
     if len(sys.argv) == 3:
         sensordir = sys.argv[1]
         outdir = sys.argv[2]
         sensor_id = os.path.basename(sensordir)
         Fe55_files, bias_files, system_noise_files = get_input_files(sensordir)
+        pipeline_task = False
     else:
         try:
             Fe55_files = get_file_list('FE55')
@@ -65,6 +72,7 @@ if __name__ == '__main__':
             system_noise_files = get_file_list('SYSNOISE')
             sensor_id = os.environ['SENSOR_ID']
             outdir = os.environ['OUTPUTDIR']
+            pipeline_task = True
         except:
             print "usage: python get_read_noise.py <sensordir> <outputdir>"
             sys.exit(1)
@@ -72,10 +80,12 @@ if __name__ == '__main__':
     if not os.path.isdir(outdir):
         os.mkdir(outdir)
     
+    outfiles = []
     for i, fe55, bias, sysnoise in zip(range(len(Fe55_files)), Fe55_files,
                                        bias_files, system_noise_files):
         outfile = "ccd_read_noise_%s_%02i.fits" % (sensor_id, i)
         outfile = os.path.join(outdir, outfile)
+        outfiles.append(outfile)
         
         print "Processing", fe55, bias, sysnoise, "->", outfile 
         gains = hdu_gains(fe55)
@@ -88,3 +98,5 @@ if __name__ == '__main__':
     
         write_read_noise_dists(outfile, Nread, Nsys, gains,
                                fe55, bias, sysnoise)
+    if pipeline_task:
+        export_file_list(outfiles, "READNOISE")
