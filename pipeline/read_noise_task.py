@@ -14,7 +14,7 @@ import glob
 import numpy as np
 import pyfits
 
-from read_noise import NoiseDists, median
+from read_noise import NoiseDists, median, stdev
 from xray_gain import hdu_gains
 
 def write_read_noise_dists(outfile, Nread, Nsys, gains, fe55, bias, sysnoise):
@@ -30,7 +30,9 @@ def write_read_noise_dists(outfile, Nread, Nsys, gains, fe55, bias, sysnoise):
                                  unit="e- rms", array=sigsys)
         output.append(pyfits.new_table((nread_col, nsys_col)))
         output[hdu+1].name = "AMP%02i" % hdu
-        output[hdu+1].header.update("GAINFE55", gains[hdu])
+        output[0].header.update("GAIN%02i" % hdu, gains[hdu])
+        output[0].header.update("RNOISE%02i" % hdu, median(sigread))
+        output[0].header.update("RNSTDV%02i" % hdu, stdev(sigread))
     output.writeto(outfile, clobber=True)
 
 def get_input_files(sensordir):
