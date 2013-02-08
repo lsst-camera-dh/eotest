@@ -86,9 +86,12 @@ def fixHeader(dir, r):
 		
 	
 if __name__ == '__main__':
-	parser = argparse.ArgumentParser(description='Fix FITS headers to comply with LSST DM Stack.')
+	parser = argparse.ArgumentParser( \
+       description='Fix FITS headers to comply with LSST DM Stack.')
 	parser.add_argument('-d', '--dir', help="directory of files to fix")
-	parser.add_argument('-r', '--recursive', help="whether to search recursively through the directory. Default = False", type=bool, default = False)
+	parser.add_argument('-r', '--recursive', help= \
+       "whether to search recursively through the directory. Default = False", \
+       action='store_true', default = False)
 	args = parser.parse_args()
 
 	fixHeader(args.dir, args.recursive)
