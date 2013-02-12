@@ -1,11 +1,20 @@
 import copy
 import numpy as np
 import numpy.random as random
+import pyfits
 
 import lsst.afw.geom as afwGeom
 import lsst.afw.image as afwImage
 
 from image_utils import bias, overscan
+
+def exptime(infile):
+    try:
+        md = afwImage.readMetadata(infile, 1)
+        return md.get('EXPTIME')
+    except:
+        foo = pyfits.open(infile)
+        return foo[0].header['EXPTIME']
 
 class PairStats(object):
     def __init__(self, bias_mean, bias_stddev, flat_mean, flat_var, 
@@ -28,6 +37,9 @@ class PairStats(object):
                          self.gain, self.noise)
 
 def pair_stats(file1, file2, hdu=2):
+    if exptime(file1) != exptime(file2):
+        raise RuntimeError("Exposure times for files %s, %s do not match"
+                           % (file1, file2))
     flat_region = afwGeom.Box2I(afwGeom.Point2I(200, 900), 
                                 afwGeom.Extent2I(100, 100))
     im1 = afwImage.ImageF(file1, hdu)

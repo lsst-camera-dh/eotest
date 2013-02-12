@@ -38,7 +38,7 @@ class SegmentExposure(object):
         dark_arr = self._poisson_imarr(level*self.exptime)/self.gain
         self.imarr += dark_arr
     def expose_flat(self, level):
-        flat_arr = self._poisson_imarr(level*self.exptime)*self.gain
+        flat_arr = self._poisson_imarr(level*self.exptime)
         self.imarr += flat_arr
     def _poisson_imarr(self, level):
         return random.poisson(level, self.npix).reshape(self.ny, self.nx)
@@ -80,12 +80,17 @@ class SegmentExposure(object):
                         self.imarr[y0 + random.randint(2)*2 - 1][x0] += tail
                 except IndexError:
                     pass
-def writeFits(ccd_segments, outfile, clobber=True):
+                
+def fitsFile(ccd_segments):
     output = pyfits.HDUList()
     output.append(pyfits.PrimaryHDU())
     output[0].header["EXPTIME"] = ccd_segments[0].exptime
     for segment in ccd_segments:
         output.append(pyfits.ImageHDU(data=segment.image.getArray()))
+    return output
+                
+def writeFits(ccd_segments, outfile, clobber=True):
+    output = FitsFile(ccd_segments)
     if clobber:
         try:
             os.remove(outfile)
