@@ -1,0 +1,42 @@
+7.1 Read Noise
+* CCD read noise median and stdev for each amp
+
+7.2 Full Well
+* For each amp:
+  * linear and polynomial fit parameters up to detector full well
+  * computed full well
+* For CCD:
+  * average segment full well
+  * stats over 18 segments: min, max, mean, median, stdev
+
+7.3 Non-linearity
+* per amp:
+  * linear fit parameters from 100 e- to 90000 e-.
+  * maximum deviation from linear
+
+7.4 Serial Charge Transfer Efficiency
+* per amp
+  * serial CTE value
+
+7.5 Parallel Charge Transfer Efficiency
+* per amp
+  * parallel CTE value
+
+7.7 Dark Current
+* per amp
+  * 95th percentile dark current value
+* per CCD
+  * 95th percentile dark current value averaged ove 18 amps
+
+7.8 Quantum Efficiency
+
+7.9 Bright Pixels
+* per amp
+  * total count of bright pixels
+
+7.10 Dark Pixels
+
+
+----------------------------------------------------------------------
+
+CCD Segments
