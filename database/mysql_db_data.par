@@ -1,0 +1,5 @@
+host = "mysql-dev01.slac.stanford.edu"
+port = 3307
+user = "rd_lsst_snsd_u"
+passwd = 'mocolate4!chousse'
+db = 'rd_lsst_snsd'
