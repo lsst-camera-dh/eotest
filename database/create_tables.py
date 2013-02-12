@@ -19,6 +19,6 @@ def create_tables(db, infile='createTables.sql'):
     db.apply(sql)
 
 if __name__ == '__main__':
-    db = Database('mysql_db_data.par')
+    db = Database('mysql_db_data_u.par')
     drop_tables(db)
     create_tables(db)

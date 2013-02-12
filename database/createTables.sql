@@ -25,7 +25,7 @@ CREATE TABLE Segment (
    id int NOT NULL AUTO_INCREMENT,
    channelId char(2) NOT NULL,
    ccdId int NOT NULL,
-   readNoiseMedian float,
+   readNoise float,
    ptcSlope float,
    ptcIntercept float,
    fullWell float,

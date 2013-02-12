@@ -26,7 +26,10 @@ class Parfile(dict):
         for line in open(self.filename).readlines():
             if line.find('#') == 0:
                 continue
-            data = line.split('#')[0]
+            if line.find(" #") != -1 or line.find("\t#") != -1:
+                data = '#'.join(line.split('#')[:-1])
+            else:
+                data = line
             key, value = [x.strip() for x in data.split("=")]
             self._addkey(key)
             try:

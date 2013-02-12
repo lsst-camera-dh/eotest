@@ -69,20 +69,24 @@ class Fe55Gain(object):
                 values.append(1620./mean)
             except:
                 pass
+        my_gain = np.median(values)
         try:
-            imed = np.where(values >= np.median(values))[0][0]
+            imed = np.where(values == my_gain)[0][0]
         except IndexError:
             values.pop()
-            imed = np.where(values >= np.median(values))[0][0]
+            imed = np.where(values == np.median(values))[0][0]
         if regfile is not None:
             make_region_file(self.fp_sets[imed], regfile)
-        return values[imed]
+        return my_gain
 
 def hdu_gains(infile):
     gains = []
-    for hdu in range(16):
-        fe55 = Fe55Gain(infile, hdu=hdu+2)
-        gains.append(fe55.gain())
+    for hdu in range(18):
+        try:
+            fe55 = Fe55Gain(infile, hdu=hdu+2)
+            gains.append(fe55.gain())
+        except:
+            pass
     return gains
 
 if __name__ == '__main__':

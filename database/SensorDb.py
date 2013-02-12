@@ -60,9 +60,9 @@ class SensorDb(Database):
         return Sensor(ccdId, self)
  
 if __name__ == '__main__':
-    sensorDb = SensorDb('mysql_db_data.par')
+    sensorDb = SensorDb('mysql_db_data_app.par')
     vendor = 'e2v'
-    vendorId = '000-00'
+    vendorId = '000-01'
     my_sensor = sensorDb.getSensor(vendor, vendorId)
     my_sensor.add_ccd_result('ctiSerialMean', 5e-6)
     my_sensor.add_seg_result(0, 'ctiSerial', 3e-6)
