@@ -5,6 +5,15 @@
 """
 from MySQL_Database import Database
 
+class NullDbObject(object):
+    def __init__(self, ccdId, sensorDb):
+        self.ccdId = ccdId
+        self.db = sensorDb
+    def add_ccd_result(self, column, value):
+        pass
+    def add_seg_result(self, segment, column, value):
+        pass
+
 class Sensor(object):
     def __init__(self, ccdId, sensorDb):
         self.ccdId = ccdId
@@ -15,7 +24,7 @@ class Sensor(object):
         self.db.apply(sql)
     def add_seg_result(self, segment, column, value):
         sql = ("""update Segment set %s=%s where
-               ccdId=%i and channelId='%02i'"""
+               ccdId=%i and channelId='%02o'"""
                % (column, value, self.ccdId, segment))
         self.db.apply(sql)
 
@@ -51,8 +60,8 @@ class SensorDb(Database):
         sql = """insert into CCD_VendorIds (ccdId, vendor, vendorId) values
                  (%(ccdId)i, '%(vendor)s', '%(vendorId)s')""" % locals()
         self.apply(sql)
-        for segment in range(18):
-            channelId = "%02i" % segment
+        for segment in range(16):
+            channelId = "%02o" % segment
             sql = """insert into Segment (channelId, ccdId) values
                      ('%(channelId)s', %(ccdId)i)""" % locals()
             self.apply(sql)
