@@ -16,6 +16,8 @@ import pyfits
 
 from read_noise import NoiseDists, median, stdev
 from xray_gain import hdu_gains
+from file_handling import get_file_list, export_file_list
+from database.SensorDb import SensorDb
 
 def write_read_noise_dists(outfile, Nread, Nsys, gains, fe55, bias, sysnoise):
     output = pyfits.HDUList()
@@ -47,19 +49,6 @@ def get_input_files(sensordir):
     system_noise_files.sort()
     return Fe55_files, bias_files, system_noise_files
 
-def get_file_list(prefix):
-    numfiles = int(os.environ["NUM%sFILES" % prefix])
-    my_files = []
-    for i in range(numfiles):
-        my_files.append(os.environ["%s_%02i" % (prefix, i)])
-    return my_files
-
-def export_file_list(files, prefix):
-    import pipeline
-    pipeline.setVariable("NUM%sFILES" % prefix, "%s" % len(files))
-    for i, item in enumerate(files):
-        pipeline.setVariable("%s_%02i" % (prefix, i), item)
-
 if __name__ == '__main__':
     if len(sys.argv) == 3:
         sensordir = sys.argv[1]
@@ -82,7 +71,19 @@ if __name__ == '__main__':
     if not os.path.isdir(outdir):
         os.mkdir(outdir)
     
+    #
+    # Get vendor from environment, otherwise assume "e2v".
+    #
+    try:
+        vendor = os.environ['VENDOR']
+    except KeyError:
+        vendor = 'e2v'
+
+    sensorDb = SensorDb(os.environ["DB_CREDENTIALS"])
+    sensor = sensorDb.getSensor(vendor, sensor_id)
+
     outfiles = []
+    Nread_accums = [[] for x in range(18)]
     for i, fe55, bias, sysnoise in zip(range(len(Fe55_files)), Fe55_files,
                                        bias_files, system_noise_files):
         outfile = "ccd_read_noise_%s_%02i.fits" % (sensor_id, i)
@@ -97,8 +98,14 @@ if __name__ == '__main__':
         Nsys = noise_dists(sysnoise)
         
         Nread = np.sqrt(Ntot*Ntot - Nsys*Nsys)
+        for hdu in range(18):
+            Nread_accums[hdu].extend(Nread[hdu])
     
         write_read_noise_dists(outfile, Nread, Nsys, gains,
                                fe55, bias, sysnoise)
+
+    for hdu, dist in enumerate(Nread_accums):
+        sensor.add_seg_result(hdu, 'readNoise', median(dist))
+            
     if pipeline_task:
         export_file_list(outfiles, "READNOISE")
