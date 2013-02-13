@@ -5,8 +5,11 @@ import pyfits
 
 import lsst.afw.geom as afwGeom
 import lsst.afw.image as afwImage
+import lsst.afw.math as afwMath
 
 from image_utils import bias, overscan
+
+varclip = lambda x : afwMath.makeStatistics(x, afwMath.VARIANCECLIP).getValue()
 
 def exptime(infile):
     try:
@@ -56,8 +59,11 @@ def pair_stats(file1, file2, hdu=2):
     fmean = (np.mean(f1) + np.mean(f2))/2.
     fdiff = f1 - f2
     bdiff = b1 - b2
-    fvar = np.var(fdiff)/2.
-    bvar = np.var(bdiff)/2.
+    #
+    # Use clipped variance to handle bright pixels and columns
+    #
+    fvar = varclip(np.array(fdiff.flat, dtype=np.float))/2.
+    bvar = varclip(np.array(bdiff.flat, dtype=np.float))/2.
     gain = fvar/fmean
 #    gain = (fvar - bvar)/fmean  # seems like we should subtract bvar.
     bias_rms = np.std(b1)
