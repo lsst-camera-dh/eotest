@@ -5,76 +5,79 @@ threshold = mean + nsig*sigma
 import argparse
 import numpy as np
 import lsst.afw.image as afwImage
-
+import lsst.daf.base as dafBase
 import image_utils
+import sys, traceback
 #from image_utils import unbias_and_trim
 from simulation.sim_tools import SegmentExposure, writeFits
 
-def bright_pix(infile, hdu=2, nsig=5):
-    """ Does the work of finding the bright pixels and columns. """
+class BrightPix(object):
+    def __init__(self, nsig=5):
+        self.nsig = nsig
 
-    im = image_utils.unbias_and_trim(afwImage.ImageF(infile, hdu))
-    imarr = im.getArray()
+    def __call__(self, fitsfile, amps):
+        """ Iterate over requested amps and find bright pixels. """
 
-    mean = np.mean(imarr)
-    sigma = np.std(imarr)
-    threshold = nsig*sigma + mean
+        tot_bright_ccd = 0
+        tot_bright_per_amp = []
+        pix_per_amp = []
 
-    # Find bright pixels.
-    pixels = np.where(imarr > threshold)
+        for amp in amps:
+            try:
+                tot, pixels, cols = self.bright_pix(fitsfile, \
+                                                    image_utils.dm_hdu(amp))
+                tot_bright_ccd += tot
+                tot_bright_per_amp.append(tot)
+                pix_per_amp.append(pixels)
+            except:
+                print "Failed bright pixel for hdu ", amp, " ", \
+                      image_utils.dm_hdu(amp)
+                traceback.print_exc(file=sys.stdout)
+                continue
 
-    # Find bright columns.
-    col_means = [np.mean(imarr[:, i]) for i in range(im.getWidth())]
-    columns = np.where(col_means > threshold)
+        return tot_bright_ccd, tot_bright_per_amp, pix_per_amp
 
-    # Weed out bright pixels that are already in bright columns or rows.
-    indx = [i for i in range(len(pixels[1])) if pixels[1][i] not in columns]
+    def bright_pix(self, fitsfile, hdu):
+        """ Does the work of finding the bright pixels and columns. """
 
-    pixels = (pixels[0][indx], pixels[1][indx])
+        im = image_utils.unbias_and_trim(afwImage.ImageF(fitsfile, hdu))
+        imarr = im.getArray()
+        mean = np.mean(imarr)
+        sigma = np.std(imarr)
+        threshold = self.nsig*sigma + mean
 
-    return pixels, columns, im
+        # Find bright pixels.
+        pixels = np.where(imarr > threshold)
 
-def segment_results(amp, pixels, outfile=None, verbose=True):
-    """ Print results for this segment/amplifier.
+        # Find bright columns.
+        col_means = [np.mean(imarr[:, i]) for i in range(im.getWidth())]
+        columns = np.where(col_means > threshold)
 
-        A total count of bright pixels and table of locations
-    """
+        # Weed out bright pixels that are already in bright columns or rows.
+        indx = [i for i in range(len(pixels[1])) if pixels[1][i] not in columns]
 
-    hdrStr = "Amp: " + str(amp) + " " + image_utils.hdu_dict[amp] \
-              + " Bright Pixel Count: " + str(len(pixels[0]))
-    if verbose:
-        print hdrStr
+        pixels = (pixels[0][indx], pixels[1][indx])
+        tup = zip(pixels[1],pixels[0])
+        sorted_tup = sorted(tup)
+        return len(sorted_tup), sorted_tup, columns
 
-    if outfile:
-        outfile.write(hdrStr+"\n")
 
-    tup = zip(pixels[0],pixels[1])
-    sorted_tup = sorted(tup)
-    for pair in sorted_tup:
-        if verbose:
-            print pair
-
-        if outfile:
-            outfile.write(str(pair)+"\n")
-
-    return len(pixels[0])
-
-def run_bright_pix(fitsfile, amps=image_utils.allAmps, outfile=None, \
-                   verbose=True):
+def run_bright_pix(fitsfile, amps=image_utils.allAmps, verbose=False):
     """ Given an input FITS file, find bright pixels."""
 
-    count_bright_pixels = 0
-    for hdu in amps:
-        pixels, columns, im = bright_pix(fitsfile, \
-                                  image_utils.dm_hdu(hdu))
-        count_bright_pixels += segment_results(hdu, pixels, outfile, verbose)
-
-    ccdTotal = 'Total CCD Bright Pixels: ' + str(count_bright_pixels)
-    if outfile != None:
-        outfile.write(ccdTotal+"\n")
+    try:
+        bp = BrightPix()
+        tot_bright_pixels, tot_per_amp, pix_per_amp = bp(fitsfile, amps)
+    except:
+        traceback.print_exc(file=sys.stdout)
 
     if verbose:
-        print ccdTotal
+        for ind, amp in enumerate(amps):
+            print "Amp: ", amp, " ", tot_per_amp[ind], " Bright Pixels"
+            print pix_per_amp[ind]
+        print 'Total CCD Bright Pixels: ', tot_bright_pixels
+
+    return tot_bright_pixels, tot_per_amp, pix_per_amp
 
 
 def write_test_image(outfile, nhdus=16, verbose=True):
@@ -96,11 +99,8 @@ def run_test():
 
     fitsfile = 'test_image.fits'
     write_test_image(fitsfile)
-    count_bright_pixels = 0
-    for hdu in image_utils.hdu_dict:
-        pixels, columns, im = bright_pix(fitsfile, image_utils.dm_hdu(hdu))
-        count_bright_pixels += segment_results(hdu, pixels)
-    print "Total CCD Bright Pixels: ", count_bright_pixels
+    tot_bright_pix, tot_per_amp, tup_per_amp = \
+        run_bright_pix(fitsfile, verbose=True)
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Find bright pixels.')
@@ -111,22 +111,14 @@ if __name__ == '__main__':
                         type=int, nargs = '+', default=range(1, 17))
     parser.add_argument('-t', '--test', help="run test only", \
                         action='store_true', default=False)
-    parser.add_argument('-o', '--outfile', \
-                        help="output file to store results", type=str)
     parser.add_argument('-v', '--verbose', help="turn verbosity on", \
                         action='store_true', default=False)
     args = parser.parse_args()
 
-    if args.outfile:
-        outfile = open(args.outfile, 'w')
-    else:
-        outfile = None
-
     if args.test:
         run_test()
     else:
-        run_bright_pix(args.infile, args.amps, outfile, args.verbose)
+        tot, tot_per_amp, pix_per_amp = \
+            run_bright_pix(args.infile, args.amps, args.verbose)
 
-    if outfile:
-        outfile.close()
 
