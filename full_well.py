@@ -42,6 +42,7 @@ def full_well(ptcfile, segment, fracdevmax=0.10, make_plot=False):
     gain = 1./results[0]
     #
     # Convert from DN to e-.
+    #
     meanNe = gain*meanDN
     varNe = gain*varDN
     #
@@ -74,33 +75,36 @@ def full_well(ptcfile, segment, fracdevmax=0.10, make_plot=False):
 
         quadfit = quadratic_fit_fixedpt(xx, ff, xref, fref)
         f2 = lambda x : quadfit[0]*(x**2-xref**2) + quadfit[1]*(x-xref) + fref
-    
-        fracdev = lambda x : np.abs(f1(x) - f2(x))/f1(x)
-        full_well_est = meanNe[imax]
         #
         # Here the fractional deviation is computed at the current
-        # end-point for the data that are fit.  Need to check the
-        # extremum of f1-f2, unless "deviation below the linear curve"
-        # is the criterion, in which case, the current implementation
-        # is ok.
+        # end-point for the data that are fit.  May need to check the
+        # extremum of f1-f2. If "deviation *below* the linear curve"
+        # is the criterion, then the current implementation is ok.
         #
+        #fracdev = lambda x : np.abs(f1(x) - f2(x))/f1(x)
+        fracdev = lambda x : (f1(x) - f2(x))/f1(x)
+        full_well_est = meanNe[imax]
         dvarmax = fracdev(full_well_est)
         imax += 1
     
     if make_plot and plot is not None:
         plot.xyplot(meanNe, varNe, xname='mean(e-)', yname='var(e-)')
+        plot.xyplot(xx, ff, oplot=1, color='r')
         x = np.linspace(xref, meanNe[imax], 100)
         plot.curve(x, f1(x), oplot=1, lineStyle=':')
         plot.curve(x, f2(x), oplot=1, lineStyle='--')
         plot.vline(full_well_est)
 
-        plot.curve(x, np.abs(f1(x) - f2(x))/f1(x))
+        plot.curve(x, fracdev(x), xname='mean(e-)',
+                   yname='fractional deviation from linear fit')
         plot.hline(fracdevmax)
+        plot.vline(full_well_est)
 
     return full_well_est
 
 if __name__ == '__main__':
     ptcfile = 'ptc_results.txt'
+#    print full_well(ptcfile, 0, make_plot=True)
     for segment in range(16):
         try:
             result = '%02o  %i' % (segment, full_well(ptcfile, segment))
