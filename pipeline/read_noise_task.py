@@ -31,7 +31,7 @@ def write_read_noise_dists(outfile, Nread, Nsys, gains, fe55, bias, sysnoise):
         nsys_col = pyfits.Column(name="SYSTEM_NOISE", format="E",
                                  unit="e- rms", array=sigsys)
         output.append(pyfits.new_table((nread_col, nsys_col)))
-        output[hdu+1].name = "AMP%02i" % hdu
+        output[hdu+1].name = "AMP%02o" % hdu
         output[0].header.update("GAIN%02i" % hdu, gains[hdu])
         output[0].header.update("RNOISE%02i" % hdu, median(sigread))
         output[0].header.update("RNSTDV%02i" % hdu, stdev(sigread))
@@ -79,11 +79,10 @@ if __name__ == '__main__':
     except KeyError:
         vendor = 'e2v'
 
-    try:
+    if pipeline_task:
         sensorDb = SensorDb(os.environ["DB_CREDENTIALS"])
         sensor = sensorDb.getSensor(vendor, sensor_id)
-    except:
-        print "using NullDbObject"
+    else:
         sensor = NullDbObject(vendor, sensor_id)
 
     nhdu = 16
