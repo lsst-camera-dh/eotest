@@ -1,3 +1,11 @@
+"""
+@brief For pairs of flats obtain for a range of exposures, compute the
+photon transfer curve (using pair_stats.py) and write as an output
+file for use by later tasks, such as full_well_task.py,
+linearity_task.py, etc..
+
+@author J. Chiang <jchiang@slac.stanford.edu>
+"""
 import os
 import glob
 import pyfits
@@ -6,6 +14,9 @@ from pair_stats import pair_stats
 exptime = lambda x : pyfits.open(x)[0].header['EXPTIME']
 
 def find_flats(full_path):
+    """Assume all flats are in directory full_path, have standard
+    names *_flat[12].fits, and have names that are sortable by
+    exposure time."""
     flat1s = glob.glob(os.path.join(full_path, '*_flat1.fits'))
     flat1s.sort()
     flats = []
@@ -16,6 +27,8 @@ def find_flats(full_path):
     return flats
 
 def accumulate_stats(flats, outfile='ptc_results.txt'):
+    """Run pair_stats.py to find mean and variance (in units of DN) as a
+    function of exposure time."""
     output = open(outfile, 'w')
     for file1, file2 in flats:
         exposure = exptime(file1)
@@ -29,67 +42,22 @@ def accumulate_stats(flats, outfile='ptc_results.txt'):
     output.close()
 
 if __name__ == '__main__':
-    import numpy as np
-    import pylab_plotter as plot
+    import sys
     
-    full_path = '/nfs/farm/g/lsst/u1/testData/HarvardData/112-02/ptc/logain'
-    outfile = 'ptc_results.txt'
+    if len(sys.argv) == 3:
+        full_path = sys.argv[1]
+        outfile = sys.argv[2]
+    else:
+        #
+        # For testing:
+        #
+        full_path = '/nfs/farm/g/lsst/u1/testData/HarvardData/112-02/ptc/logain'
+        outfile = 'ptc_results.txt'
+        #
+        # Pipeline input
+        #
+        # full_path = os.environ['FLATSDIRECTORY']
+        # outfile = os.environ['OUTPUTFILE']
 
-    gain = 5
-    
-#    flats = find_flats(full_path)
-#    accumulate_stats(flats, outfile=outfile)
-    
-    data = np.recfromtxt(outfile)
-    data = data.transpose()
-    exptime = data[0]
-    meanDN = data[1]
-    varDN = data[2]
-    #
-    # Using gain estimate, find exposure where e-=5e4.
-    #
-    meanNe = gain*meanDN
-    npts = 0
-    while (meanNe[npts] < 5e4):
-        npts += 1
-    #
-    # Perform linear fit to first npts points and obtain better gain estimate.
-    #
-    results = np.polyfit(meanDN[:npts], varDN[:npts], 1)
-    gain = 1./results[0]
-    print "initial fit gain =", gain
-    meanNe = gain*meanDN
-
-    #
-    # Select region for final linear fit as specified in E/O doc.
-    #
-#    indx = np.where((meanNe > 3000) & (meanNe < 5e4))
-    indx = np.where((meanNe > 100) & (meanNe < 9e4))
-
-    results = np.polyfit(meanDN[indx], varDN[indx], 1)
-    
-    #
-    # update gain
-    #
-    gain = 1./results[0]
-    print "updated gain =", gain
-
-    meanNe = gain*meanDN
-    varNe = gain*varDN
-    plot.xyplot(meanNe, varNe, xname='mean(e-)', yname='var(e-)')
-    plot.xyplot(meanNe[indx], varNe[indx], oplot=1, color='r')
-
-    jndx = np.where(meanNe < 9e4)
-    
-    f = lambda x : results[0]*x + results[1]
-    deviations = (varNe[jndx] - f(meanNe[jndx]))/varNe[jndx]
-
-    x = np.linspace(min(meanNe[jndx]), max(meanNe[jndx]), 100)
-    plot.curve(x, f(x), oplot=1, lineStyle=':')
-
-    print "gain = ", gain
-    print "max. fractional deviation:", max(np.abs(deviations))
-
-    plot.xyplot(meanNe[jndx], deviations, xname='mean(e-)',
-                yname='(var(e-) - f(mean(e-)))/var(e-)')
-    plot.hline(0)
+    flats = find_flats(full_path)
+    accumulate_stats(flats, outfile=outfile)
