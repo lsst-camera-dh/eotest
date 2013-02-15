@@ -16,11 +16,12 @@ class BrightPix(object):
         self.nsig = nsig
 
     def __call__(self, fitsfile, amps):
-        """ Iterate over requested amps and find bright pixels. """
+        """ Iterate over requested amps and find bright pixels and columns. """
 
         tot_bright_ccd = 0
         tot_bright_per_amp = []
         pix_per_amp = []
+        col_per_amp = []
 
         for amp in amps:
             try:
@@ -29,13 +30,14 @@ class BrightPix(object):
                 tot_bright_ccd += tot
                 tot_bright_per_amp.append(tot)
                 pix_per_amp.append(pixels)
+                col_per_amp.append(cols)
             except:
                 print "Failed bright pixel for hdu ", amp, " ", \
                       image_utils.dm_hdu(amp)
                 traceback.print_exc(file=sys.stdout)
                 continue
 
-        return tot_bright_ccd, tot_bright_per_amp, pix_per_amp
+        return tot_bright_ccd, tot_bright_per_amp, pix_per_amp, col_per_amp
 
     def bright_pix(self, fitsfile, hdu):
         """ Does the work of finding the bright pixels and columns. """
@@ -67,7 +69,7 @@ def run_bright_pix(fitsfile, amps=image_utils.allAmps, verbose=False):
 
     try:
         bp = BrightPix()
-        tot_bright_pixels, tot_per_amp, pix_per_amp = bp(fitsfile, amps)
+        tot_bright_pixels, tot_per_amp, pix_per_amp, col_per_amp = bp(fitsfile, amps)
     except:
         traceback.print_exc(file=sys.stdout)
 
@@ -77,7 +79,7 @@ def run_bright_pix(fitsfile, amps=image_utils.allAmps, verbose=False):
             print pix_per_amp[ind]
         print 'Total CCD Bright Pixels: ', tot_bright_pixels
 
-    return tot_bright_pixels, tot_per_amp, pix_per_amp
+    return tot_bright_pixels, tot_per_amp, pix_per_amp, col_per_amp
 
 
 def write_test_image(outfile, nhdus=16, verbose=True):
@@ -99,7 +101,7 @@ def run_test():
 
     fitsfile = 'test_image.fits'
     write_test_image(fitsfile)
-    tot_bright_pix, tot_per_amp, tup_per_amp = \
+    tot_bright_pix, tot_per_amp, tup_per_amp, col_per_amp = \
         run_bright_pix(fitsfile, verbose=True)
 
 if __name__ == '__main__':
@@ -118,7 +120,7 @@ if __name__ == '__main__':
     if args.test:
         run_test()
     else:
-        tot, tot_per_amp, pix_per_amp = \
+        tot, tot_per_amp, pix_per_amp, col_per_amp = \
             run_bright_pix(args.infile, args.amps, args.verbose)
 
 
