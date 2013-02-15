@@ -90,7 +90,7 @@ def fitsFile(ccd_segments):
     return output
                 
 def writeFits(ccd_segments, outfile, clobber=True):
-    output = FitsFile(ccd_segments)
+    output = fitsFile(ccd_segments)
     if clobber:
         try:
             os.remove(outfile)
