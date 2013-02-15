@@ -26,7 +26,8 @@ def quadratic_fit_fixedpt(x, y, x0, y0):
     B = [sum((y - y0)*(x**2 - x0**2)), sum((y - y0)*(x - x0))]
     return linalg.solve(A, B)
 
-def full_well(ptcfile, segment, fracdevmax=0.10, make_plot=False):
+def full_well(ptcfile, segment, fracdevmax=0.10, make_plot=False,
+              outfile_prefix=None):
     data = np.recfromtxt(ptcfile)
     data = data.transpose()
 
@@ -88,23 +89,31 @@ def full_well(ptcfile, segment, fracdevmax=0.10, make_plot=False):
         imax += 1
     
     if make_plot and plot is not None:
-        plot.xyplot(meanNe, varNe, xname='mean(e-)', yname='var(e-)')
+        win0 = plot.xyplot(meanNe, varNe, xname='mean(e-)', yname='var(e-)')
         plot.xyplot(xx, ff, oplot=1, color='r')
         x = np.linspace(xref, meanNe[imax], 100)
         plot.curve(x, f1(x), oplot=1, lineStyle=':')
         plot.curve(x, f2(x), oplot=1, lineStyle='--')
         plot.vline(full_well_est)
+        win0.set_title('Segment %02o, full well = %i e-'
+                       % (segment, full_well_est))
+        if outfile_prefix is not None:
+            plot.save(outfile_prefix + '_ptc.png')
 
-        plot.curve(x, fracdev(x), xname='mean(e-)',
-                   yname='fractional deviation from linear fit')
+        win1 = plot.curve(x, fracdev(x), xname='mean(e-)',
+                          yname='fractional deviation from linear fit')
         plot.hline(fracdevmax)
         plot.vline(full_well_est)
+        win1.set_title('Segment %02o, full well = %i e-'
+                       % (segment, full_well_est))
+        if outfile_prefix is not None:
+            plot.save(outfile_prefix + '_fracdev.png')
 
     return full_well_est
 
 if __name__ == '__main__':
     ptcfile = 'ptc_results.txt'
-#    print full_well(ptcfile, 0, make_plot=True)
+#    print full_well(ptcfile, 0, make_plot=True, outfile_prefix='seg00')
     for segment in range(16):
         try:
             result = '%02o  %i' % (segment, full_well(ptcfile, segment))

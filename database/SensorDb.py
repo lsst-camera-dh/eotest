@@ -39,13 +39,13 @@ class SensorDb(Database):
         Database.__init__(self, dbdata)
     def getSensor(self, vendor, vendorId):
         try:
-            return self.addSensor(vendor, vendorId)
+            return self._addSensor(vendor, vendorId)
         except SensorDbException:
             sql = """select ccdId from CCD_VendorIds
                   where vendor='%(vendor)s' and
                   vendorId='%(vendorId)s'""" % locals()
             return Sensor(self.apply(sql, cursorFunc=_default_callback), self)
-    def addSensor(self, vendor, vendorId):
+    def _addSensor(self, vendor, vendorId):
         sql = """select ccdId from CCD_VendorIds where vendor='%(vendor)s'
               and vendorId='%(vendorId)s'""" % locals()
         try:

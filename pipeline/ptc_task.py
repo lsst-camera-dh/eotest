@@ -16,18 +16,32 @@ mean = lambda x : afwMath.makeStatistics(x, afwMath.MEAN).getValue()
 
 exptime = lambda x : pyfits.open(x)[0].header['EXPTIME']
 
-def find_flats(full_path):
-    """Assume all flats are in directory full_path, have standard
-    names *_flat[12].fits, and have names that are sortable by
-    exposure time."""
-    flat1s = glob.glob(os.path.join(full_path, '*_flat1.fits'))
+def glob_flats(full_path, outfile='ptc_flats.txt'):
+    flats = glob.glob(os.path.join(full_path, '*_flat?.fits'))
+    output = open(outfile, 'w')
+    for item in flats:
+        output.write('%s\n' % item)
+    output.close()
+
+def find_flats_from_file(infile):
+    flat1s, flat2s = [], []
+    for line in open(infile):
+        filename = line.strip()
+        if filename[-11:] == '_flat1.fits':
+            flat1s.append(filename)
+        elif filename[-11:] == '_flat2.fits':
+            flat2s.append(filename)
     flat1s.sort()
     flats = []
-    for file1 in flat1s:
-        file2 = file1.replace('_flat1.fits', '_flat2.fits')
-        if os.path.isfile(file1) and os.path.isfile(file2):
-            flats.append((file1, file2))
+    for flat1 in flat1s:
+        flat2 = flat1.replace('_flat1.fits', '_flat2.fits')
+        if flat2 in flat2s:
+            flats.append((flat1, flat2))
     return flats
+
+def find_flats(full_path, outfile='ptc_flats.txt'):
+    glob_flats(full_path, outfile=outfile)
+    return find_flats_from_file(outfile)
 
 def accumulate_stats(flats, outfile='ptc_results.txt', verbose=True):
     """Run pair_stats.py to find mean and variance (in units of DN) as a
@@ -52,28 +66,26 @@ if __name__ == '__main__':
     from database.SensorDb import SensorDb, NullDbObject
     
     try:
-        vendor = os.environ['VENDOR']
+        vendor = os.environ['CCD_VENDOR']
     except KeyError:
         vendor = 'e2v'
 
-    if len(sys.argv) == 3:
+    flat_list = 'ptc_flats.txt'
+
+    if len(sys.argv) == 4:
         full_path = sys.argv[1]
-        outfile = sys.argv[2]
+        ptcfile = sys.argv[2]
         sensor_id = sys.argv[3]
+        glob_flats(full_path, outfile=flat_list)
         pipeline_task = False
     else:
         #
-        # For testing:
-        #
-        full_path = '/nfs/farm/g/lsst/u1/testData/HarvardData/112-02/ptc/logain'
-        outfile = 'ptc_results.txt'
-        sensor_id = '112-02'
-        pipeline_task = True
-        #
         # Pipeline input
         #
-        # full_path = os.environ['FLATSDIRECTORY']
-        # outfile = os.environ['OUTPUTFILE']
+        flat_list = os.environ['PTC_FLAT_LIST']
+        ptcfile = os.environ['PTC_OUTFILE']
+        sensor_id = os.environ['SENSOR_ID']
+        pipeline_task = True
 
     if pipeline_task:
         sensorDb = SensorDb(os.environ["DB_CREDENTIALS"])
@@ -81,15 +93,15 @@ if __name__ == '__main__':
     else:
         sensor = NullDbObject(vendor, sensor_id)
 
-    flats = find_flats(full_path)
-    accumulate_stats(flats, outfile=outfile)
+    flats = find_flats_from_file(flat_list)
+    accumulate_stats(flats, outfile=ptcfile)
 
     #
     # Full well calculations.
     #
     full_well_values = []
     for segment in range(16):
-        full_well_est = full_well(outfile, segment)
+        full_well_est = full_well(ptcfile, segment)
         full_well_values.append(full_well_est)
         print '%02o  %i' % (segment, full_well_est)
         sensor.add_seg_result(segment, 'fullWell', full_well_est)

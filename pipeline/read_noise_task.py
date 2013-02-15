@@ -75,7 +75,7 @@ if __name__ == '__main__':
     # Get vendor from environment, otherwise assume "e2v".
     #
     try:
-        vendor = os.environ['VENDOR']
+        vendor = os.environ['CCD_VENDOR']
     except KeyError:
         vendor = 'e2v'
 
