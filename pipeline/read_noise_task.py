@@ -69,7 +69,10 @@ if __name__ == '__main__':
             sys.exit(1)
 
     if not os.path.isdir(outdir):
-        os.mkdir(outdir)
+        try:
+            os.mkdirs(outdir)
+        except OSError:
+            pass
     
     #
     # Get vendor from environment, otherwise assume "e2v".
