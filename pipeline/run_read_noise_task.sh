@@ -2,10 +2,6 @@
 
 export PYTHONPATH=.:${PYTHONPATH}
 
-export NUMFE55FILES=2
-export FE55_00=../000-00/Fe55/Fe55_exp_000-00_00.fits
-export FE55_01=../000-00/Fe55/Fe55_exp_000-00_01.fits
-
 export NUMBIASFILES=2
 export BIAS_00=../000-00/Fe55/Fe55_bias_000-00_00.fits
 export BIAS_01=../000-00/Fe55/Fe55_bias_000-00_01.fits

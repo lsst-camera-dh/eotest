@@ -26,21 +26,22 @@ def quadratic_fit_fixedpt(x, y, x0, y0):
     B = [sum((y - y0)*(x**2 - x0**2)), sum((y - y0)*(x - x0))]
     return linalg.solve(A, B)
 
-def full_well(ptcfile, segment, fracdevmax=0.10, make_plot=False,
-              outfile_prefix=None):
+def gain_est(meanDN, varDN, nmin=10, nmax=100):
+    results = np.polyfit(meanDN[nmin:nmax], varDN[nmin:nmax], 1)
+    gain = 1./results[0]
+    return gain
+
+def full_well(ptcfile, segment, gain=None, fracdevmax=0.10, 
+              make_plot=False, outfile_prefix=None):
     data = np.recfromtxt(ptcfile)
     data = data.transpose()
 
     exptime = data[0]
     meanDN = data[segment*2 + 1]
     varDN = data[segment*2 + 2]
-    #
-    # Estimate gain.
-    #
-    nmin = 10
-    nmax = 100
-    results = np.polyfit(meanDN[nmin:nmax], varDN[nmin:nmax], 1)
-    gain = 1./results[0]
+    
+    if gain is None:
+        gain = gainEst(meanDN, varDN)
     #
     # Convert from DN to e-.
     #

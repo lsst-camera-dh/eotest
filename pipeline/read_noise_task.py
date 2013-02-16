@@ -1,7 +1,6 @@
 """
-@brief Compute read noise distributions for a sample of images.  The
-system gain for each channel is determined from Fe55 data, and the
-corresponding bias frame is used to characterize the total system
+@brief Compute read noise distributions for a sample of images.  Bias
+frames from Fe55 tests are used to characterize the total system
 noise.  Readout noise frames are used for determining the noise
 contribution from the electronics.
 
@@ -16,7 +15,7 @@ import pyfits
 
 from read_noise import NoiseDists, median, stdev
 from xray_gain import hdu_gains
-from file_handling import get_file_list, export_file_list
+from pipeline.file_handling import get_file_list, export_file_list
 from database.SensorDb import SensorDb, NullDbObject
 
 def write_read_noise_dists(outfile, Nread, Nsys, gains, fe55, bias, sysnoise):
@@ -38,9 +37,6 @@ def write_read_noise_dists(outfile, Nread, Nsys, gains, fe55, bias, sysnoise):
     output.writeto(outfile, clobber=True)
 
 def get_input_files(sensordir):
-    Fe55_files = glob.glob(os.path.join(sensordir, 'Fe55', 'Fe55_exp_*'))
-    Fe55_files.sort()
-
     bias_files = glob.glob(os.path.join(sensordir, 'Fe55', 'Fe55_bias_*'))
     bias_files.sort()
 
@@ -49,27 +45,37 @@ def get_input_files(sensordir):
     system_noise_files.sort()
     return Fe55_files, bias_files, system_noise_files
 
+def get_gains(nhdu):
+
 if __name__ == '__main__':
-    if len(sys.argv) == 3:
+    if len(sys.argv) >= 3:
         sensordir = sys.argv[1]
         outdir = sys.argv[2]
+        try:
+            gain = sys.argv[3]
+        else:
+            print "Setting system gain to 5.5 e-/DN for all segments."
+            gain = 5.5
         sensor_id = os.path.basename(sensordir)
-        Fe55_files, bias_files, system_noise_files = get_input_files(sensordir)
+        bias_files, system_noise_files = get_input_files(sensordir)
         pipeline_task = False
     else:
         try:
-            Fe55_files = get_file_list('FE55')
             bias_files = get_file_list('BIAS')
             system_noise_files = get_file_list('SYSNOISE')
             sensor_id = os.environ['SENSOR_ID']
             outdir = os.environ['OUTPUTDIR']
+            gain = None
             pipeline_task = True
         except:
-            print "usage: python read_noise_task.py <sensordir> <outputdir>"
+            print "usage: python read_noise_task.py <sensordir> <outputdir> <gain>"
             sys.exit(1)
 
     if not os.path.isdir(outdir):
-        os.mkdir(outdir)
+        try:
+            os.mkdirs(outdir)
+        except OSError:
+            pass
     
     #
     # Get vendor from environment, otherwise assume "e2v".
@@ -89,15 +95,13 @@ if __name__ == '__main__':
 
     outfiles = []
     Nread_dists = [[] for x in range(nhdu)]
-    gain_dists = [[] for x in range(nhdu)]
-    for i, fe55, bias, sysnoise in zip(range(len(Fe55_files)), Fe55_files,
-                                       bias_files, system_noise_files):
+    for i, bias, sysnoise in zip(range(len(bias_files)),
+                                 bias_files, system_noise_files):
         outfile = "ccd_read_noise_%s_%02i.fits" % (sensor_id, i)
         outfile = os.path.join(outdir, outfile)
         outfiles.append(outfile)
         
-        print "Processing", fe55, bias, sysnoise, "->", outfile 
-        gains = hdu_gains(fe55)
+        print "Processing", bias, sysnoise, "->", outfile 
         noise_dists = NoiseDists(gains)
         
         Ntot = noise_dists(bias)
