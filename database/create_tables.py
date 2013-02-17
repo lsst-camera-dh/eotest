@@ -19,7 +19,7 @@ def create_tables(db, infile='createTables.sql'):
     db.apply(sql)
 
 if __name__ == '__main__':
-#    db = Database('mysql_db_data_u.par')
+#    db = Database('db_dev_u.par')
     db = Database('db_test_u.par')
     drop_tables(db)
     create_tables(db)

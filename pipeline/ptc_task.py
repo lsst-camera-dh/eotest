@@ -99,9 +99,10 @@ if __name__ == '__main__':
     #
     # Full well calculations.
     #
+    gains = SensorGains(vendor=vendor, vendorId=sensor_id)
     full_well_values = []
     for segment in range(16):
-        full_well_est = full_well(ptcfile, segment)
+        full_well_est = full_well(ptcfile, segment, gain=)
         full_well_values.append(full_well_est)
         print '%02o  %i' % (segment, full_well_est)
         sensor.add_seg_result(segment, 'fullWell', full_well_est)

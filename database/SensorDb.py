@@ -5,6 +5,8 @@
 """
 from MySQL_Database import Database
 
+_default_callback = lambda curs : [x[0] for x in curs][0]
+
 class NullDbObject(object):
     def __init__(self, ccdId, sensorDb):
         self.ccdId = ccdId
@@ -23,12 +25,19 @@ class Sensor(object):
                % (column, value, self.ccdId))
         self.db.apply(sql)
     def add_seg_result(self, segment, column, value):
-        sql = ("""update Segment set %s=%s where
-               ccdId=%i and channelId='%02o'"""
-               % (column, value, self.ccdId, segment))
+        ccdId = self.ccdId
+        sql = """update Segment set %(column)s=%(value)s where
+                 ccdId=%(ccdId)i and channelId='%(segment)02o'""" % locals()
         self.db.apply(sql)
-
-_default_callback = lambda curs : [x[0] for x in curs][0]
+    def get_ccd_result(self, column):
+        ccdId = self.ccdId
+        sql = "select %(column)s from CCD where id=%(ccdId)i" % locals()
+        return self.db.apply(sql, cursorFunc=_default_callback)
+    def get_seg_result(self, segment, column):
+        ccdId = self.ccdId
+        sql = """select %(column)s from Segment where ccdId=%(ccdId)i 
+                 and channelId='%(segment)02o'""" % locals()
+        return self.db.apply(sql, cursorFunc=_default_callback)
 
 class SensorDbException(Exception):
     def __init__(self, *args):
@@ -37,20 +46,21 @@ class SensorDbException(Exception):
 class SensorDb(Database):
     def __init__(self, dbdata):
         Database.__init__(self, dbdata)
-    def getSensor(self, vendor, vendorId):
+    def getSensor(self, vendor, vendorId, add=False):
         try:
-            return self._addSensor(vendor, vendorId)
-        except SensorDbException:
-            sql = """select ccdId from CCD_VendorIds
-                  where vendor='%(vendor)s' and
-                  vendorId='%(vendorId)s'""" % locals()
-            return Sensor(self.apply(sql, cursorFunc=_default_callback), self)
-    def _addSensor(self, vendor, vendorId):
+            return Sensor(self.getCcdId(vendor, vendorId), self)
+        except IndexError:
+            if add:
+                return self.addSensor(vendor, vendorId)
+            raise SensorDbException("Requested sensor -- vendor=%(vendor)s, vendorId=%(vendorId)s -- not in db." % locals())
+    def getCcdId(self, vendor, vendorId):
         sql = """select ccdId from CCD_VendorIds where vendor='%(vendor)s'
               and vendorId='%(vendorId)s'""" % locals()
+        return self.apply(sql, cursorFunc=_default_callback)
+    def addSensor(self, vendor, vendorId):
         try:
-            ccdId = self.apply(sql, cursorFunc=_default_callback)
-            raise SensorDbException("Sensor already in db")
+            self.getCcdId(vendor, vendorId)
+            raise SensorDbException("Sensor already in db.")
         except IndexError:
             pass
         sql = "insert into CCD () values ();"
@@ -69,9 +79,16 @@ class SensorDb(Database):
         return Sensor(ccdId, self)
  
 if __name__ == '__main__':
-    sensorDb = SensorDb('mysql_db_data_app.par')
+    sensorDb = SensorDb('db_test_app.par')
     vendor = 'e2v'
     vendorId = '000-01'
     my_sensor = sensorDb.getSensor(vendor, vendorId)
     my_sensor.add_ccd_result('ctiSerialMean', 5e-6)
     my_sensor.add_seg_result(0, 'ctiSerial', 3e-6)
+
+    assert(my_sensor.get_ccd_result('ctiSerialMean') == 5e-6)
+    assert(my_sensor.get_seg_result(0, 'ctiSerial') == 3e-6)
+    try:
+        sensorDb.getSensor(vendor, '000-00', add=False)
+    except SensorDbException:
+        pass

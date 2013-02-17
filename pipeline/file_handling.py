@@ -2,7 +2,7 @@ import os
 import subprocess
 
 def setVariable(key, value):
-    subprocess.call("pipelineSet %s %s" % (key, value), shell=True)
+    subprocess.call('pipelineSet %s %s' % (key, value), shell=True)
 
 def get_file_list(prefix):
     numfiles = int(os.environ["NUM%sFILES" % prefix])
