@@ -46,13 +46,13 @@ class SensorDbException(Exception):
 class SensorDb(Database):
     def __init__(self, dbdata):
         Database.__init__(self, dbdata)
-    def getSensor(self, vendor, vendorId, add=True):
+    def getSensor(self, vendor, vendorId, add=False):
         try:
             return Sensor(self.getCcdId(vendor, vendorId), self)
         except IndexError:
             if add:
                 return self.addSensor(vendor, vendorId)
-            raise SensorDbException("Sensor not in db.")
+            raise SensorDbException("Requested sensor -- vendor=%(vendor)s, vendorId=%(vendorId)s -- not in db." % locals())
     def getCcdId(self, vendor, vendorId):
         sql = """select ccdId from CCD_VendorIds where vendor='%(vendor)s'
               and vendorId='%(vendorId)s'""" % locals()

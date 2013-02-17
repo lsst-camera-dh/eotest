@@ -34,28 +34,19 @@ def write_read_noise_dists(outfile, Nread, Nsys, gains, bias, sysnoise):
         output[0].header.update("RNSTDV%02i" % hdu, stdev(sigread))
     output.writeto(outfile, clobber=True)
 
-def get_input_files(sensordir):
-    bias_files = glob.glob(os.path.join(sensordir, 'Fe55', 'Fe55_bias_*'))
-    bias_files.sort()
-
-    system_noise_files = glob.glob(os.path.join(sensordir, 'system_noise',
-                                                 'system_noise_*'))
-    system_noise_files.sort()
-    return Fe55_files, bias_files, system_noise_files
-
 if __name__ == '__main__':
-    if len(sys.argv) >= 4:
-        bias_pattern = sys.argv[1]
-        sysnoise_pattern = sys.argv[2]
-        sensor_id = sys.argv[2]
-        outdir = sys.argv[3]
+    if len(sys.argv) >= 5:
+        bias_pattern = sys.argv[1].replace('\\', '')
+        sysnoise_pattern = sys.argv[2].replace('\\', '')
+        sensor_id = sys.argv[3]
+        outdir = sys.argv[4]
         try:
-            gains = SensorGains(float(sys.argv[4]))
+            gains = SensorGains(float(sys.argv[5]))
         except IndexError:
             print "Setting system gain to 5.5 e-/DN for all segments."
             gains = SensorGains(5.5)
         bias_files = glob.glob(bias_pattern)
-        system_noise_files = glob_glob(sysnoise_pattern)
+        system_noise_files = glob.glob(sysnoise_pattern)
         pipeline_task = False
     else:
         try:
@@ -66,13 +57,13 @@ if __name__ == '__main__':
             outdir = os.environ['OUTPUTDIR']
             gains = SensorGains(vendorId=sensor_id, vendor=vendor)
             pipeline_task = True
-        except:
-            print "usage: python read_noise_task.py <sensordir> <outputdir> <gain>"
+        except KeyError:
+            print "usage: python read_noise_task.py <bias file pattern> <sysnoise file pattern> <sensor id> <output dir> [<gain>=5.5]"
             sys.exit(1)
 
     if not os.path.isdir(outdir):
         try:
-            os.mkdirs(outdir)
+            os.makedirs(outdir)
         except OSError:
             pass
 
@@ -105,8 +96,10 @@ if __name__ == '__main__':
         for hdu in range(nhdu):
             Nread_dists[hdu].extend(Nread[hdu])
 
+    print "Segment    read noise"
     for hdu, dist in enumerate(Nread_dists):
         sensor.add_seg_result(hdu, 'readNoise', median(dist))
+        print "%02o         %.4f" % (hdu, median(dist))
             
     if pipeline_task:
         export_file_list(outfiles, "READNOISE")
