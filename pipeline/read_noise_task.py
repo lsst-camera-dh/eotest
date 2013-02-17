@@ -12,6 +12,7 @@ import glob
 import numpy as np
 import pyfits
 
+from image_utils import allAmps, channelIds
 from read_noise import NoiseDists, median, stdev
 from pipeline.file_handling import get_file_list, export_file_list
 from database.SensorDb import SensorDb, NullDbObject
@@ -22,16 +23,16 @@ def write_read_noise_dists(outfile, Nread, Nsys, gains, bias, sysnoise):
     output.append(pyfits.PrimaryHDU())
     output[0].header.update('BIASFILE', bias)
     output[0].header.update('SYSNFILE', sysnoise)
-    for hdu, sigread, sigsys in zip(range(len(Nread)), Nread, Nsys):
+    for amp, sigread, sigsys in zip(allAmps, Nread, Nsys):
         nread_col = pyfits.Column(name="CCD_READ_NOISE", format="E",
                                   unit="e- rms", array=sigread)
         nsys_col = pyfits.Column(name="SYSTEM_NOISE", format="E",
                                  unit="e- rms", array=sigsys)
         output.append(pyfits.new_table((nread_col, nsys_col)))
-        output[hdu+1].name = "AMP%02o" % hdu
-        output[0].header.update("GAIN%02i" % hdu, gains[hdu])
-        output[0].header.update("RNOISE%02i" % hdu, median(sigread))
-        output[0].header.update("RNSTDV%02i" % hdu, stdev(sigread))
+        output[amp].name = "AMP%s" % channelIds[amp]
+        output[0].header.update("GAIN%s" % channelIds[amp], gains[amp])
+        output[0].header.update("RNOISE%s" % channelIds[amp], median(sigread))
+        output[0].header.update("RNSTDV%s" % channelIds[amp], stdev(sigread))
     output.writeto(outfile, clobber=True)
 
 if __name__ == '__main__':
@@ -74,13 +75,10 @@ if __name__ == '__main__':
         vendor = 'e2v'
         sensor = NullDbObject(vendor, sensor_id)
 
-    nhdu = 16
-
     outfiles = []
-    Nread_dists = [[] for x in range(nhdu)]
-    for i, bias, sysnoise in zip(range(len(bias_files)),
-                                 bias_files, system_noise_files):
-        outfile = "ccd_read_noise_%s_%02i.fits" % (sensor_id, i)
+    Nread_dists = dict([(amp, []) for amp in allAmps])
+    for amp, bias, sysnoise in zip(allAmps, bias_files, system_noise_files):
+        outfile = "ccd_read_noise_%s_%s.fits" % (sensor_id, channelIds[amp])
         outfile = os.path.join(outdir, outfile)
         outfiles.append(outfile)
         
@@ -93,13 +91,14 @@ if __name__ == '__main__':
         Nread = np.sqrt(Ntot*Ntot - Nsys*Nsys)
         write_read_noise_dists(outfile, Nread, Nsys, gains, bias, sysnoise)
 
-        for hdu in range(nhdu):
-            Nread_dists[hdu].extend(Nread[hdu])
+        for amp in allAmps:
+            Nread_dists[amp].extend(Nread[amp-1])
 
     print "Segment    read noise"
-    for hdu, dist in enumerate(Nread_dists):
-        sensor.add_seg_result(hdu, 'readNoise', median(dist))
-        print "%02o         %.4f" % (hdu, median(dist))
+    for amp in allAmps:
+        med_dist = median(Nread_dists[amp])
+        sensor.add_seg_result(amp, 'readNoise', med_dist)
+        print "%s         %.4f" % (channelIds[amp], med_dist)
             
     if pipeline_task:
         export_file_list(outfiles, "READNOISE")

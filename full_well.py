@@ -9,6 +9,8 @@ specified in LCA-128.
 """
 import numpy as np
 import numpy.linalg as linalg
+from image_utils import allAmps, channelIds
+
 try:
     import pylab_plotter as plot
 except ImportError:
@@ -31,17 +33,17 @@ def gain_est(meanDN, varDN, nmin=10, nmax=100):
     gain = 1./results[0]
     return gain
 
-def full_well(ptcfile, segment, gain=None, fracdevmax=0.10, 
+def full_well(ptcfile, amp, gain=None, fracdevmax=0.10, 
               make_plot=False, outfile_prefix=None):
     data = np.recfromtxt(ptcfile)
     data = data.transpose()
 
     exptime = data[0]
-    meanDN = data[segment*2 + 1]
-    varDN = data[segment*2 + 2]
+    meanDN = data[(amp-1)*2 + 1]
+    varDN = data[(amp-1)*2 + 2]
     
     if gain is None:
-        gain = gainEst(meanDN, varDN)
+        gain = gain_est(meanDN, varDN)
     #
     # Convert from DN to e-.
     #
@@ -96,8 +98,8 @@ def full_well(ptcfile, segment, gain=None, fracdevmax=0.10,
         plot.curve(x, f1(x), oplot=1, lineStyle=':')
         plot.curve(x, f2(x), oplot=1, lineStyle='--')
         plot.vline(full_well_est)
-        win0.set_title('Segment %02o, full well = %i e-'
-                       % (segment, full_well_est))
+        win0.set_title('Segment %s, full well = %i e-'
+                       % (channelIds[amp], full_well_est))
         if outfile_prefix is not None:
             plot.save(outfile_prefix + '_ptc.png')
 
@@ -105,8 +107,8 @@ def full_well(ptcfile, segment, gain=None, fracdevmax=0.10,
                           yname='fractional deviation from linear fit')
         plot.hline(fracdevmax)
         plot.vline(full_well_est)
-        win1.set_title('Segment %02o, full well = %i e-'
-                       % (segment, full_well_est))
+        win1.set_title('Segment %s, full well = %i e-'
+                       % (channelIds[amp], full_well_est))
         if outfile_prefix is not None:
             plot.save(outfile_prefix + '_fracdev.png')
 
@@ -114,10 +116,12 @@ def full_well(ptcfile, segment, gain=None, fracdevmax=0.10,
 
 if __name__ == '__main__':
     ptcfile = 'ptc_results.txt'
-#    print full_well(ptcfile, 0, make_plot=True, outfile_prefix='seg00')
-    for segment in range(16):
+    amp = 1
+    print full_well(ptcfile, amp, make_plot=True,
+                    outfile_prefix='seg%s' % channelIds[amp])
+    for amp in allAmps:
         try:
-            result = '%02o  %i' % (segment, full_well(ptcfile, segment))
+            result = '%s  %i' % (channelIds[amp], full_well(ptcfile, amp))
             print result
         except:
             pass

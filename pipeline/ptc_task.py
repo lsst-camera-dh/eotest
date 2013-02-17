@@ -9,8 +9,9 @@ linearity_task.py, etc..
 import os
 import glob
 import pyfits
-from pair_stats import pair_stats
 import lsst.afw.math as afwMath
+from pair_stats import pair_stats
+from image_utils import allAmps, channelIds
 
 mean = lambda x : afwMath.makeStatistics(x, afwMath.MEAN).getValue()
 
@@ -52,10 +53,10 @@ def accumulate_stats(flats, outfile='ptc_results.txt', verbose=True):
             print "processing", file1
         exposure = exptime(file1)
         output.write('%12.4e' % exposure)
-        for hdu in range(16):
-            results, b1, b2 = pair_stats(file1, file2, hdu+2)
-            output.write('  %12.4e  %12.4e'%(results.flat_mean,
-                                             results.flat_var))
+        for amp in allAmps:
+            results, b1, b2 = pair_stats(file1, file2, amp+1)
+            output.write('  %12.4e  %12.4e' % (results.flat_mean,
+                                               results.flat_var))
         output.write('\n')
         output.flush()
     output.close()
@@ -64,33 +65,41 @@ if __name__ == '__main__':
     import sys
     from full_well import full_well
     from database.SensorDb import SensorDb, NullDbObject
-    
-    try:
-        vendor = os.environ['CCD_VENDOR']
-    except KeyError:
-        vendor = 'e2v'
+    from database.SensorGains import SensorGains
 
     flat_list = 'ptc_flats.txt'
 
-    if len(sys.argv) == 4:
+    if len(sys.argv) >= 4:
         full_path = sys.argv[1]
         ptcfile = sys.argv[2]
         sensor_id = sys.argv[3]
+        try:
+            gains = SensorGains(float(sys.argv[4]))
+        except IndexError:
+            print "Setting system gain to 5.5 e-/DN for all segments."
+            gains = SensorGains(5.5)
         glob_flats(full_path, outfile=flat_list)
         pipeline_task = False
     else:
         #
         # Pipeline input
         #
-        flat_list = os.environ['PTC_FLAT_LIST']
-        ptcfile = os.environ['PTC_OUTFILE']
-        sensor_id = os.environ['SENSOR_ID']
-        pipeline_task = True
+        try:
+            flat_list = os.environ['PTC_FLAT_LIST']
+            ptcfile = os.environ['PTC_OUTFILE']
+            sensor_id = os.environ['SENSOR_ID']
+            vendor = os.environ['CCD_VENDOR']
+            gains = SensorGains(vendor=vendor, vendorId=sensor_id)
+            pipeline_task = True
+        except KeyError:
+            print "usage: python <flats subdir> <ptc output file> <sensor id> [<gains>=5.5]"
+            sys.exit(1)
 
     if pipeline_task:
         sensorDb = SensorDb(os.environ["DB_CREDENTIALS"])
         sensor = sensorDb.getSensor(vendor, sensor_id)
     else:
+        vendor = 'e2v'
         sensor = NullDbObject(vendor, sensor_id)
 
     flats = find_flats_from_file(flat_list)
@@ -99,11 +108,10 @@ if __name__ == '__main__':
     #
     # Full well calculations.
     #
-    gains = SensorGains(vendor=vendor, vendorId=sensor_id)
     full_well_values = []
-    for segment in range(16):
-        full_well_est = full_well(ptcfile, segment, gain=)
+    for amp in allAmps:
+        full_well_est = full_well(ptcfile, amp, gain=gains[amp])
         full_well_values.append(full_well_est)
-        print '%02o  %i' % (segment, full_well_est)
-        sensor.add_seg_result(segment, 'fullWell', full_well_est)
+        print '%s  %.1f' % (channelIds[amp], full_well_est)
+        sensor.add_seg_result(amp, 'fullWell', full_well_est)
     sensor.add_ccd_result('fullWellMean', mean(full_well_values))

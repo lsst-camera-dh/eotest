@@ -11,6 +11,7 @@ import lsst.afw.image as afwImage
 import lsst.afw.geom as afwGeom
 import lsst.afw.detection as afwDetection
 import lsst.daf.base as dafBase
+from image_utils import allAmps
 
 _ds9_header = """# Region file format: DS9 version 4.0
 global color=green font="helvetica 10 normal" select=1 highlite=1 edit=1 move=1 delete=1 include=1 fixed=0 source
@@ -80,11 +81,11 @@ class Fe55Gain(object):
         return my_gain
 
 def hdu_gains(infile):
-    gains = []
-    for hdu in range(18):
+    gains = {}
+    for amp in allAmps:
         try:
-            fe55 = Fe55Gain(infile, hdu=hdu+2)
-            gains.append(fe55.gain())
+            fe55 = Fe55Gain(infile, hdu=amp+1)
+            gains[amp] = fe55.gain()
         except:
             pass
     return gains

@@ -11,7 +11,7 @@ import lsst.afw.geom as afwGeom
 import lsst.afw.image as afwImage
 import lsst.afw.math as afwMath
 
-from image_utils import trim, imaging
+from image_utils import trim, imaging, allAmps
 
 mean = lambda x : afwMath.makeStatistics(x, afwMath.MEAN).getValue()
 median = lambda x : afwMath.makeStatistics(x, afwMath.MEDIAN).getValue()
@@ -30,8 +30,8 @@ class NoiseDists(object):
         self.yarr = random.randint(imaging.getHeight() - dy - 1, size=nsamp)
     def __call__(self, infile):
         noise_dists = []
-        for hdu, gain in enumerate(self.gains):
-            im = trim(afwImage.ImageF(infile, hdu+2))
+        for amp, gain in self.gains.items():
+            im = trim(afwImage.ImageF(infile, amp+1))
             noise_samples = []
             for x, y in zip(self.xarr, self.yarr):
                 bbox = afwGeom.Box2I(afwGeom.Point2I(int(x), int(y)),
@@ -46,13 +46,12 @@ if __name__ == '__main__':
     #
     # Simulate bias image.
     #
-    nhdu = 16
-    gains = np.ones(nhdu)*5.5
+    gains = dict([(amp, 5.5) for amp in allAmps])
 
     bias_file = "bias.fits"
     bias_segs = []
-    for hdu in range(nhdu):
-        seg = SegmentExposure(exptime=0, gain=gains[hdu])
+    for amp in allAmps:
+        seg = SegmentExposure(exptime=0, gain=gains[amp])
         seg.add_bias(level=1e4, sigma=5) # electronic bias and noise
         seg.add_bias(sigma=4)            # CCD read noise
         bias_segs.append(seg)
@@ -62,8 +61,8 @@ if __name__ == '__main__':
     #
     readout_noise_file = 'readout_noise.fits'
     noise_segs = []
-    for hdu in range(nhdu):
-        seg = SegmentExposure(exptime=0, gain=gains[hdu])
+    for amp in allAmps:
+        seg = SegmentExposure(exptime=0, gain=gains[amp])
         seg.add_bias(level=1e4, sigma=5) # electronic bias and noise
         noise_segs.append(seg)
     writeFits(noise_segs, readout_noise_file)

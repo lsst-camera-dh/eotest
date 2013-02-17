@@ -17,6 +17,8 @@ hdu_dict = dict( [ (1,'Segment10'), (2,'Segment11'), (3,'Segment12'),
                    (13,'Segment03'), (14,'Segment02'), (15,'Segment01'),
                    (16,'Segment00') ] )
 
+channelIds = dict([(i, hdu_dict[i][-2:]) for i in allAmps])
+
 full_segment = afwGeom.Box2I(afwGeom.Point2I(0, 0),
                              afwGeom.Point2I(541, 2021))
 

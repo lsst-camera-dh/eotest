@@ -3,6 +3,7 @@
 
 @author J. Chiang <jchiang@slac.stanford.edu>
 """
+from image_utils import channelIds, allAmps
 from MySQL_Database import Database
 
 _default_callback = lambda curs : [x[0] for x in curs][0]
@@ -13,7 +14,7 @@ class NullDbObject(object):
         self.db = sensorDb
     def add_ccd_result(self, column, value):
         pass
-    def add_seg_result(self, segment, column, value):
+    def add_seg_result(self, amp, column, value):
         pass
 
 class Sensor(object):
@@ -24,19 +25,21 @@ class Sensor(object):
         sql = ("update CCD set %s=%s where id=%i"
                % (column, value, self.ccdId))
         self.db.apply(sql)
-    def add_seg_result(self, segment, column, value):
+    def add_seg_result(self, amp, column, value):
         ccdId = self.ccdId
+        channelId = channelIds[amp]
         sql = """update Segment set %(column)s=%(value)s where
-                 ccdId=%(ccdId)i and channelId='%(segment)02o'""" % locals()
+                 ccdId=%(ccdId)i and channelId='%(channelId)s'""" % locals()
         self.db.apply(sql)
     def get_ccd_result(self, column):
         ccdId = self.ccdId
         sql = "select %(column)s from CCD where id=%(ccdId)i" % locals()
         return self.db.apply(sql, cursorFunc=_default_callback)
-    def get_seg_result(self, segment, column):
+    def get_seg_result(self, amp, column):
         ccdId = self.ccdId
+        channelId = channelIds[amp]
         sql = """select %(column)s from Segment where ccdId=%(ccdId)i 
-                 and channelId='%(segment)02o'""" % locals()
+                 and channelId='%(channelId)s'""" % locals()
         return self.db.apply(sql, cursorFunc=_default_callback)
 
 class SensorDbException(Exception):
@@ -70,8 +73,8 @@ class SensorDb(Database):
         sql = """insert into CCD_VendorIds (ccdId, vendor, vendorId) values
                  (%(ccdId)i, '%(vendor)s', '%(vendorId)s')""" % locals()
         self.apply(sql)
-        for segment in range(16):
-            channelId = "%02o" % segment
+        for amp in allAmps:
+            channelId = channelIds[amp]
             sql = """insert into Segment (channelId, ccdId) values
                      ('%(channelId)s', %(ccdId)i)""" % locals()
             self.apply(sql)
@@ -82,12 +85,12 @@ if __name__ == '__main__':
     sensorDb = SensorDb('db_test_app.par')
     vendor = 'e2v'
     vendorId = '000-01'
-    my_sensor = sensorDb.getSensor(vendor, vendorId)
+    my_sensor = sensorDb.getSensor(vendor, vendorId, add=True)
     my_sensor.add_ccd_result('ctiSerialMean', 5e-6)
-    my_sensor.add_seg_result(0, 'ctiSerial', 3e-6)
+    my_sensor.add_seg_result(1, 'ctiSerial', 3e-6)
 
     assert(my_sensor.get_ccd_result('ctiSerialMean') == 5e-6)
-    assert(my_sensor.get_seg_result(0, 'ctiSerial') == 3e-6)
+    assert(my_sensor.get_seg_result(1, 'ctiSerial') == 3e-6)
     try:
         sensorDb.getSensor(vendor, '000-00', add=False)
     except SensorDbException:
