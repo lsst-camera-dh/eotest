@@ -4,8 +4,10 @@ computing median images, unbiasing using the serial overscan region,
 trimming, etc..
 """
 import numpy as np
+import numpy.random as random
 import lsst.afw.geom as afwGeom
 import lsst.afw.image as afwImage
+import lsst.afw.math as afwMath
 
 allAmps = range(1,17)
 
@@ -35,6 +37,10 @@ parallel_overscan = afwGeom.Box2I(afwGeom.Point2I(10, 2002),
                                   afwGeom.Point2I(522, 2021))
 
 overscan = serial_overscan  # for backwards compatibility
+
+mean = lambda x : afwMath.makeStatistics(x, afwMath.MEAN).getValue()
+median = lambda x : afwMath.makeStatistics(x, afwMath.MEDIAN).getValue()
+stdev = lambda x : afwMath.makeStatistics(x, afwMath.STDEV).getValue()
 
 def dm_hdu(hdu):
     """ Compute DM HDU from the actual FITS file HDU."""
@@ -77,6 +83,17 @@ def fits_median(files, hdu=2, fix=True):
     medim = afwImage.ImageF(np.median(imcube, axis=0))
 
     return medim
+
+class SubRegionSampler(object):
+    def __init__(self, dx, dy, nsamp, imaging):
+        self.dx = dx
+        self.dy = dy
+        #
+        # Generate sub-regions at random locations on the segement
+        # imaging region.
+        #
+        self.xarr = random.randint(imaging.getWidth() - dx - 1, size=nsamp)
+        self.yarr = random.randint(imaging.getHeight() - dy - 1, size=nsamp)
 
 if __name__ == '__main__':
     import glob

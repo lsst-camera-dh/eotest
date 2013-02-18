@@ -20,29 +20,22 @@ from database.SensorDb import SensorDb, NullDbObject
 median = lambda x : afwMath.makeStatistics(x, afwMath.MEDIAN).getValue()
 
 if __name__ == '__main__':
-    if len(sys.argv) == 3:
-        sensor_id = sys.argv[1]
-        pattern = sys.argv[2].replace('\\', '')
+    if len(sys.argv) == 2:
+        pattern = sys.argv[1].replace('\\', '')
         target = os.path.join(pattern)
         Fe55_files = glob.glob(target)
         Fe55_files.sort()
-        pipeline_task = False
+        sensor = NullDbObject()
     else:
         try:
             Fe55_files = get_file_list('FE55')
             sensor_id = os.environ['SENSOR_ID']
             vendor = os.environ['CCD_VENDOR']
-            pipeline_task = True
+            sensorDb = SensorDb(os.environ["DB_CREDENTIALS"])
+            sensor = sensorDb.getSensor(vendor, sensor_id, add=True)
         except:
-            print "usage: python fe55_gain_task.py <sensor_id> <glob pattern>"
+            print "usage: python fe55_gain_task.py <Fe55 file pattern>"
             sys.exit(1)
-
-    if pipeline_task:
-        sensorDb = SensorDb(os.environ["DB_CREDENTIALS"])
-        sensor = sensorDb.getSensor(vendor, sensor_id, add=True)
-    else:
-        vendor = 'e2v'
-        sensor = NullDbObject(vendor, sensor_id)
 
     gain_dists = dict([(amp, []) for amp in allAmps])
     for fe55 in Fe55_files:

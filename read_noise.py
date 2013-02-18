@@ -11,23 +11,13 @@ import lsst.afw.geom as afwGeom
 import lsst.afw.image as afwImage
 import lsst.afw.math as afwMath
 
-from image_utils import trim, imaging, allAmps
+from image_utils import trim, imaging, allAmps, SubRegionSampler, \
+    mean, median, stdev
 
-mean = lambda x : afwMath.makeStatistics(x, afwMath.MEAN).getValue()
-median = lambda x : afwMath.makeStatistics(x, afwMath.MEDIAN).getValue()
-stdev = lambda x : afwMath.makeStatistics(x, afwMath.STDEV).getValue()
-
-class NoiseDists(object):
+class NoiseDists(SubRegionSampler):
     def __init__(self, gains, dx=100, dy=100, nsamp=1000, imaging=imaging):
+        SubRegionSampler.__init__(self, dx, dy, nsamp, imaging)
         self.gains = gains
-        self.dx = dx
-        self.dy = dy
-        #
-        # Generate postage stamp sub-regions at random locations on the
-        # segment imaging region.
-        #
-        self.xarr = random.randint(imaging.getWidth() - dx - 1, size=nsamp)
-        self.yarr = random.randint(imaging.getHeight() - dy - 1, size=nsamp)
     def __call__(self, infile):
         noise_dists = []
         for amp, gain in self.gains.items():

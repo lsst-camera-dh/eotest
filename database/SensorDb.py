@@ -9,7 +9,7 @@ from MySQL_Database import Database
 _default_callback = lambda curs : [x[0] for x in curs][0]
 
 class NullDbObject(object):
-    def __init__(self, ccdId, sensorDb):
+    def __init__(self, ccdId=None, sensorDb=None):
         self.ccdId = ccdId
         self.db = sensorDb
     def add_ccd_result(self, column, value):

@@ -48,6 +48,7 @@ if __name__ == '__main__':
             gains = SensorGains(5.5)
         bias_files = glob.glob(bias_pattern)
         system_noise_files = glob.glob(sysnoise_pattern)
+        sensor = NullDbObject()
         pipeline_task = False
     else:
         try:
@@ -57,6 +58,8 @@ if __name__ == '__main__':
             vendor = os.environ['CCD_VENDOR']
             outdir = os.environ['OUTPUTDIR']
             gains = SensorGains(vendorId=sensor_id, vendor=vendor)
+            sensorDb = SensorDb(os.environ["DB_CREDENTIALS"])
+            sensor = sensorDb.getSensor(vendor, sensor_id)
             pipeline_task = True
         except KeyError:
             print "usage: python read_noise_task.py <bias file pattern> <sysnoise file pattern> <sensor id> <output dir> [<gain>=5.5]"
@@ -67,13 +70,6 @@ if __name__ == '__main__':
             os.makedirs(outdir)
         except OSError:
             pass
-
-    if pipeline_task:
-        sensorDb = SensorDb(os.environ["DB_CREDENTIALS"])
-        sensor = sensorDb.getSensor(vendor, sensor_id)
-    else:
-        vendor = 'e2v'
-        sensor = NullDbObject(vendor, sensor_id)
 
     outfiles = []
     Nread_dists = dict([(amp, []) for amp in allAmps])
