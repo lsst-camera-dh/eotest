@@ -93,14 +93,17 @@ if __name__ == '__main__':
     exposure = data[0]
     lamp_current = data[1]
     print "Segment    max. frac. deviation"
+    maxdevs = []
     for amp in allAmps:
         indx = np.where((data[amp+1] > 100.) & (data[amp+1] < 9e4))
         signal = data[amp+1]/lamp_current
         results = np.polyfit(exposure[indx], signal[indx], 1)
-        sensor.add_seg_result(amp, 'ptcSlope', results[0])
-        sensor.add_seg_result(amp, 'ptcIntercept', results[1])
+        sensor.add_seg_result(amp, 'linefit_Slope', results[0])
+        sensor.add_seg_result(amp, 'linefit_Intercept', results[1])
         f = np.poly1d(results)
         fvals = f(exposure)
         maxDeviation = max(np.abs(fvals - signal)/fvals)
+        maxdevs.append(maxDeviation)
         sensor.add_seg_result(amp, 'maxDeviation', maxDeviation)
-        print "%s         %.2f" % (channelIds[amp], maxDeviation)
+        print "%s         %.4f" % (channelIds[amp], maxDeviation)
+    sensor.add_ccd_result('maxDeviation', max(maxdevs))
