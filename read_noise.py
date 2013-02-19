@@ -7,9 +7,7 @@ segment.
 import numpy as np
 import numpy.random as random
 
-import lsst.afw.geom as afwGeom
 import lsst.afw.image as afwImage
-import lsst.afw.math as afwMath
 
 from image_utils import trim, imaging, allAmps, SubRegionSampler, \
     mean, median, stdev
@@ -24,9 +22,7 @@ class NoiseDists(SubRegionSampler):
             im = trim(afwImage.ImageF(infile, amp+1))
             noise_samples = []
             for x, y in zip(self.xarr, self.yarr):
-                bbox = afwGeom.Box2I(afwGeom.Point2I(int(x), int(y)),
-                                     afwGeom.Extent2I(self.dx, self.dy))
-                subim = im.Factory(im, bbox)
+                subim = self.subim(im, x, y)
                 noise_samples.append(stdev(subim)*gain)
             noise_dists.append(np.array(noise_samples))
         return np.array(noise_dists)

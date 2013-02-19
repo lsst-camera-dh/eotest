@@ -64,33 +64,23 @@ def accumulate_stats(flats, outfile='ptc_results.txt', verbose=True):
 if __name__ == '__main__':
     import sys
     from full_well import full_well
-    from database.SensorDb import SensorDb, NullDbObject
-    from database.SensorGains import SensorGains
+    from pipeline.pipeline_utils import setup
 
     flat_list = 'ptc_flats.txt'
 
     if len(sys.argv) >= 3:
         full_path = sys.argv[1]
         ptcfile = sys.argv[2]
-        try:
-            gains = SensorGains(float(sys.argv[3]))
-        except IndexError:
-            print "Setting system gain to 5.5 e-/DN for all segments."
-            gains = SensorGains(5.5)
         glob_flats(full_path, outfile=flat_list)
-        sensor = NullDbObject()
     else:
         try:
             flat_list = os.environ['PTC_FLAT_LIST']
             ptcfile = os.environ['PTC_OUTFILE']
-            sensor_id = os.environ['SENSOR_ID']
-            vendor = os.environ['CCD_VENDOR']
-            gains = SensorGains(vendor=vendor, vendorId=sensor_id)
-            sensorDb = SensorDb(os.environ["DB_CREDENTIALS"])
-            sensor = sensorDb.getSensor(vendor, sensor_id)
         except KeyError:
             print "usage: python ptc_task.py <ptc flats subdir> <ptc output file> [<gains>=5.5]"
             sys.exit(1)
+
+    gains, sensor = setup(sys.argv, 3)
 
     flats = find_flats_from_file(flat_list)
     accumulate_stats(flats, outfile=ptcfile)

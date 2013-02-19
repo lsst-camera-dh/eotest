@@ -29,9 +29,7 @@ class MeanSignal(SubRegionSampler):
 #            im = unbias_and_trim(afwImage.ImageF(infile, dm_hdu(amp)))
             im = trim(afwImage.ImageF(infile, dm_hdu(amp)))
             for x, y in zip(self.xarr, self.yarr):
-                bbox = afwGeom.Box2I(afwGeom.Point2I(int(x), int(y)),
-                                     afwGeom.Extent2I(self.dx, self.dy))
-                subim = im.Factory(im, bbox)
+                subim = self.subim(im, x, y)
                 samples.append(mean(subim))
             signals[amp] = median(samples)
         return signals
@@ -58,33 +56,23 @@ def compute_mean_signal(flat_list, outfile='linearity_results.txt',
 if __name__ == '__main__':
     import os
     import sys
-    from database.SensorDb import SensorDb, NullDbObject
-    from database.SensorGains import SensorGains
+    from pipeline.pipeline_utils import setup
 
     if len(sys.argv) >= 3:
         flat_pattern = sys.argv[1].replace('\\', '')
         linearity_file = sys.argv[2]
-        try:
-            gains = SensorGains(float(sys.argv[3]))
-        except IndexError:
-            print "Setting system gain to 5.5 e-/DN for all segments."
-            gains = SensorGains(5.5)
-        sensor = NullDbObject()
         flat_list = 'linearity_flats.txt'
         glob_flats(flat_pattern, outfile=flat_list)
     else:
         try:
             flat_list = os.environ['FLAT_LIST']
             linearity_file = os.environ['LINEARITY_OUTFILE']
-            sensor_id = os.environ['SENSOR_ID']
-            vendor = os.environ['CCD_VENDOR']
-            sensorDb = SensorDb(os.environ['DB_CREDENTIALS'])
-            sensor = sensorDb.getSensor(vendor, sensor_id)
-            gains = SensorGains(vendor=vendor, vendorId=sensor_id)
         except KeyError:
             print "usage: python linearity_task.py <flats pattern> <linearity output file> [<gains>=5.5]"
             sys.exit(1)
     
+    gains, sensor = setup(sys.argv, 3)
+
     compute_mean_signal(flat_list, outfile=linearity_file)
     #
     # Read in the data and fit
@@ -101,8 +89,8 @@ if __name__ == '__main__':
         sensor.add_seg_result(amp, 'linefit_Slope', results[0])
         sensor.add_seg_result(amp, 'linefit_Intercept', results[1])
         f = np.poly1d(results)
-        fvals = f(exposure)
-        maxDeviation = max(np.abs(fvals - signal)/fvals)
+        fvals = f(exposure[indx])
+        maxDeviation = max(np.abs(fvals - signal[indx])/fvals)
         maxdevs.append(maxDeviation)
         sensor.add_seg_result(amp, 'maxDeviation', maxDeviation)
         print "%s         %.4f" % (channelIds[amp], maxDeviation)

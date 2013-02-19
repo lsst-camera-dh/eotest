@@ -14,7 +14,7 @@ import lsst.afw.math as afwMath
 
 from image_utils import channelIds, allAmps
 from xray_gain import hdu_gains
-from pipeline.file_handling import get_file_list
+from pipeline.pipeline_utils import get_file_list
 from database.SensorDb import SensorDb, NullDbObject
 
 median = lambda x : afwMath.makeStatistics(x, afwMath.MEDIAN).getValue()
@@ -25,17 +25,20 @@ if __name__ == '__main__':
         target = os.path.join(pattern)
         Fe55_files = glob.glob(target)
         Fe55_files.sort()
-        sensor = NullDbObject()
     else:
         try:
             Fe55_files = get_file_list('FE55')
-            sensor_id = os.environ['SENSOR_ID']
-            vendor = os.environ['CCD_VENDOR']
-            sensorDb = SensorDb(os.environ["DB_CREDENTIALS"])
-            sensor = sensorDb.getSensor(vendor, sensor_id, add=True)
         except:
             print "usage: python fe55_gain_task.py <Fe55 file pattern>"
             sys.exit(1)
+
+    try:
+        sensor_id = os.environ['SENSOR_ID']
+        vendor = os.environ['CCD_VENDOR']
+        sensorDb = SensorDb(os.environ["DB_CREDENTIALS"])
+        sensor = sensorDb.getSensor(vendor, sensor_id, add=True)
+    except KeyError:
+        sensor = NullDbObject()
 
     gain_dists = dict([(amp, []) for amp in allAmps])
     for fe55 in Fe55_files:

@@ -94,6 +94,11 @@ class SubRegionSampler(object):
         #
         self.xarr = random.randint(imaging.getWidth() - dx - 1, size=nsamp)
         self.yarr = random.randint(imaging.getHeight() - dy - 1, size=nsamp)
+    def bbox(self, x, y):
+        return afwGeom.Box2I(afwGeom.Point2I(int(x), int(y)),
+                             afwGeom.Extent2I(self.dx, self.dy))
+    def subim(self, im, x, y):
+        return im.Factory(im, self.bbox(x, y))
 
 if __name__ == '__main__':
     import glob
