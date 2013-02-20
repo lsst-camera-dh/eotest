@@ -56,10 +56,11 @@ class BrightPix(object):
         columns = np.where(col_means > threshold)
 
         # Weed out bright pixels that are already in bright columns or rows.
-        indx = [i for i in range(len(pixels[1])) if pixels[1][i] not in columns]
+        indx = [i for i in range(len(pixels[1])) 
+                if pixels[1][i] not in columns[0]]
 
         pixels = (pixels[0][indx], pixels[1][indx])
-        tup = zip(pixels[1],pixels[0])
+        tup = zip(pixels[1], pixels[0])
         sorted_tup = sorted(tup)
         return len(sorted_tup), sorted_tup, columns
 

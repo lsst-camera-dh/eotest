@@ -12,16 +12,14 @@ import pyfits
 import lsst.afw.image as afwImage
 from image_utils import fits_median, allAmps, dm_hdu, unbias_and_trim, \
      channelIds, mean
+from bright_pix import BrightPix
 from pipeline.pipeline_utils import setup
 
-def write_dark_current_maps(images, dark95s, darks, outfile):
+def writeFits(images, outfile):
     output = pyfits.HDUList()
     output.append(pyfits.PrimaryHDU())
-    for i, dark in enumerate(darks):
-        output[0].header.update('DARK%02i' % i, os.path.basename(dark))
     for amp in allAmps:
         output.append(pyfits.ImageHDU(data=images[amp].getArray()))
-        output[0].header.update("DARK95%s" % channelIds[amp], dark95s[amp])
         output[amp].name = 'AMP%s' % channelIds[amp]
     output.writeto(outfile, clobber=True)
 
@@ -51,8 +49,7 @@ if __name__ == '__main__':
 
     gains, sensor = setup(sys.argv, 5)
 
-    md = afwImage.readMetadata(darks[0], 1)
-    exptime = md.get('EXPTIME')
+    exptime = afwImage.readMetadata(darks[0], 1).get('EXPTIME')
 
     #
     # Check tempertures
@@ -65,22 +62,19 @@ if __name__ == '__main__':
                            "deg C relative to average.")
 
     median_images = {}
-    dark95s = {}
-    print "Segment    95 percentile dark current"
     for amp in allAmps:
-        median_images[amp] = unbias_and_trim(fits_median(darks, dm_hdu(amp)))
-        median_images[amp] *= gains[amp]/exptime
-        imarr = median_images[amp].getArray()
-        pixels = imarr.reshape(1, imarr.shape[0]*imarr.shape[1])[0]
-        pixels.sort()
-        dark95s[amp] = pixels[len(pixels)*0.95]
-        sensor.add_seg_result(amp, 'darkCurrent95', dark95s[amp])
-        print "%s         %.3f" % (channelIds[amp], dark95s[amp])
+        median_images[amp] = fits_median(darks, dm_hdu(amp))
 
-    dark95mean = np.mean(dark95s.values())
-    print "CCD: mean 95 percentile value =", dark95mean
-    sensor.add_ccd_result('darkCurrent95mean', dark95mean)
+    medfile = 'median_dark.fits'
+    writeFits(median_images, medfile)
 
-    outfile = '%s_dark_current_map.fits' % sensor_id.replace('-', '_')
-    outfile = os.path.join(outputdir, outfile)
-    write_dark_current_maps(median_images, dark95s, darks, outfile)
+    bright_pix = BrightPix()
+
+    results = bright_pix(medfile, allAmps)
+
+    sensor.add_ccd_result('numBrightPixels', results[0])
+    print "Total bright pixels:", results[0]
+    print "Segment     # bright pixels"
+    for amp, count in zip(allAmps, results[1]):
+        sensor.add_seg_result(amp, 'numBrightPixels', count)
+        print "%s          %i" % (channelIds[amp], count)

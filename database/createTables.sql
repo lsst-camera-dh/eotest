@@ -16,7 +16,7 @@ CREATE TABLE CCD (
    ctiSerialMean float,
    ctiParallelMean float,
    darkCurrent95Mean float,
-   numBrightPixels float,
+   numBrightPixels int,
    PRIMARY KEY (id),
    CONSTRAINT fk20 FOREIGN KEY (raftId)
    REFERENCES Raft (id), INDEX fk20 (raftId)
