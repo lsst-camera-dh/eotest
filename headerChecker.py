@@ -6,6 +6,7 @@ import pyfits as pyf
 import re, os, fnmatch
 import argparse
 
+headerVersion = 0
 
 def fixHeader(dir, r):
     if r==True:
@@ -32,6 +33,20 @@ def fixHeader(dir, r):
         
             #grab primary header
             hdr = f[0].header
+
+            # Check to see if HeaderVersion keyword already exists
+            # If so, and version is sufficiently updated, exit
+            # Otherwise, update the header version number
+            if 'HDRVER' in hdr.keys():
+                ver = hdr['HDRVER']
+                if ver >= headerVersion:
+                    print 'Skipping file: ', filename, ' Header at Version: ', ver
+                    continue                   
+                else:
+                    hdr['HDRVER'] = headerVersion
+            # If the header version keyword does not yet exist, add it
+            else:
+                hdr.update('HDRVER', headerVersion)
         
             #truncate keithley idn because HIERARCH isn't compatible with CONTINUE
             if 'K_PHOT.IDN' in hdr.keys():
