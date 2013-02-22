@@ -8,19 +8,17 @@ fits also give estimates of the system gain.
 """
 import sys
 import glob
+import numpy as np
+import numpy.linalg as linalg
 import lsst.afw.detection as afwDetect
 import lsst.afw.image as afwImage
 import lsst.afw.math as afwMath
 import image_utils as imUtils
-import numpy as np
-import numpy.linalg as linalg
+from fe55_yield import fe55_yield
 try:
     import pylab_plotter as plot
 except ImportError:
     plot = None
-
-def Fe55_yield(ccdtemp=None):
-    return 1620.
 
 class XrayCte(object):
     def __init__(self, image, ccdtemp=None):
@@ -30,7 +28,7 @@ class XrayCte(object):
         stats = afwMath.makeStatistics(image, stat_control)
         self.mean = stats.getValue(afwMath.MEANCLIP)
         self.stdev = stats.getValue(afwMath.STDEVCLIP)
-        self.fe55_yield = Fe55_yield(ccdtemp)
+        self.fe55_yield = fe55_yield(ccdtemp)[0]
     def find_hits(self, nsig=2, gain_range=(2, 10), make_plots=True):
         DN_range = (self.fe55_yield/gain_range[1],
                     self.fe55_yield/gain_range[0])
@@ -128,13 +126,18 @@ class XrayCte(object):
 if __name__ == '__main__':
     fe55 = '/nfs/farm/g/lsst/u1/testData/eotestData/000-00/xray/data/000_00_fe55_0600s_000.fits'
 #    fe55 = '/nfs/farm/g/lsst/u1/testData/SIMData/000-00/Fe55/Fe55_exp_000-00_00.fits'
+    try:
+        ccdtemp = afwImage.readMetadata(fe55, 1).get('CCDTEMP')
+    except:
+        ccdtemp = -100
+    print "CCD temp:", ccdtemp
     print "Segment   serial CTI   parallel CTI   gain ests."
     make_plots = False
     for amp in imUtils.allAmps:
 #    make_plots = True
 #    for amp in (1,):
         image = afwImage.ImageF(fe55, imUtils.dm_hdu(amp))
-        cte = XrayCte(image)
+        cte = XrayCte(image, ccdtemp=ccdtemp)
         cte.find_hits(nsig=2, make_plots=make_plots)
         sys.stdout.write("%s       " % imUtils.channelIds[amp])
         results = cte.fit_1d(200, make_plots=make_plots)

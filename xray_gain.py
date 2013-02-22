@@ -11,13 +11,12 @@ import lsst.afw.geom as afwGeom
 import lsst.afw.detection as afwDetection
 import lsst.daf.base as dafBase
 import image_utils as imUtils
+from fe55_yield import fe55_yield
 
 _ds9_header = """# Region file format: DS9 version 4.0
 global color=green font="helvetica 10 normal" select=1 highlite=1 edit=1 move=1 delete=1 include=1 fixed=0 source
 linear
 """
-def Fe55_yield(ccdtemp=None):
-    return 1620.
 
 def make_region_file(fpset, outfile='ds9.reg'):
     output = open(outfile, 'w')
@@ -32,7 +31,7 @@ class Fe55Gain(object):
     def __init__(self, imfile, bbox=afwGeom.Box2I(), hdu=0, 
                  metadata=dafBase.PropertySet(), ccdtemp=None):
         self.image = afwImage.ImageF(imfile, hdu, metadata, bbox)
-        self.fe55_yield = Fe55_yield(ccdtemp)
+        self.fe55_yield = fe55_yield(ccdtemp)[0]
         #
         # Store numpy array of full segment (i.e., for an empty bbox,
         # which is the default in the ImageF constructor) for
@@ -81,9 +80,14 @@ class Fe55Gain(object):
         return my_gain
 
 def hdu_gains(infile, bbox=afwGeom.Box2I()):
+    try:
+        ccdtemp = afwImage.readMetadata(infile, 1).get('CCDTEMP')
+    except:
+        ccdtemp = -100.
     gains = {}
     for amp in imUtils.allAmps:
-        fe55 = Fe55Gain(infile, bbox=bbox, hdu=imUtils.dm_hdu(amp))
+        fe55 = Fe55Gain(infile, bbox=bbox, hdu=imUtils.dm_hdu(amp),
+                        ccdtemp=ccdtemp)
         gains[amp] = fe55.gain()
     return gains
 
