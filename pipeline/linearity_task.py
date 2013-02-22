@@ -61,7 +61,7 @@ def compute_mean_signal(flat_list, outfile='linearity_results.txt',
 if __name__ == '__main__':
     if len(sys.argv) >= 3:
         flat_pattern = sys.argv[1].replace('\\', '')
-        linearity_file = sys.argv[2]
+        outputdir = sys.argv[2]
         flat_list = 'linearity_flats.txt'
         glob_flats(flat_pattern, outfile=flat_list)
     else:
@@ -69,12 +69,20 @@ if __name__ == '__main__':
             sensor_id = os.environ['SENSOR_ID']
             flat_list = '%s_FLAT.txt' % sensor_id
             print flat_list
-            linearity_file = os.environ['LINEARITY_OUTFILE']
+            outputdir = os.environ['OUTPUTDIR']
         except KeyError:
-            print "usage: python linearity_task.py <flats pattern> <linearity output file> [<gains>=5.5]"
+            print "usage: python linearity_task.py <flats pattern> <output directory> [<gains>=5.5]"
             sys.exit(1)
-    
+            
     gains, sensor = pipeUtils.setup(sys.argv, 3)
+
+    try:
+        os.makedirs(outputdir)
+    except OSError:
+        pass
+
+    linearity_file = '%s_linearity_points.txt' % sensor_id.replace('-', '_')
+    linearity_file = os.path.join(outputdir, linearity_file)
 
     compute_mean_signal(flat_list, outfile=linearity_file)
     #

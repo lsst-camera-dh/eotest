@@ -67,18 +67,26 @@ if __name__ == '__main__':
 
     if len(sys.argv) >= 3:
         full_path = sys.argv[1]
-        ptcfile = sys.argv[2]
+        outputdir = sys.argv[2]
         glob_flats(full_path, outfile=flat_list)
     else:
         try:
             sensor_id = os.environ['SENSOR_ID']
             flat_list = '%s_PTC_FLAT.txt' % sensor_id
-            ptcfile = os.environ['PTC_OUTFILE']
+            outputdir = os.environ['OUTPUTDIR']
         except KeyError:
-            print "usage: python ptc_task.py <ptc flats subdir> <ptc output file> [<gains>=5.5]"
+            print "usage: python ptc_task.py <ptc flats subdir> <output directory> [<gains>=5.5]"
             sys.exit(1)
 
     gains, sensor = pipeUtils.setup(sys.argv, 3)
+
+    try:
+        os.makedirs(outputdir)
+    except OSError:
+        pass
+
+    ptcfile = '%s_ptc_results.txt' % sensor_id.replace('-', '_')
+    ptcfile = os.path.join(outputdir, ptcfile)
 
     flats = find_flats_from_file(flat_list)
     accumulate_stats(flats, outfile=ptcfile)

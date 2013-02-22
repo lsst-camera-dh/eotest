@@ -2,7 +2,7 @@
 
 export PYTHONPATH=.:${PYTHONPATH}
 
-export OUTPUTDIR=../000-00/ccd_read_noise
+export OUTPUTDIR=read_noise/data
 export CCD_VENDOR=e2v
 export SENSOR_ID=000-00
 

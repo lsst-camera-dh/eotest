@@ -66,7 +66,7 @@ if __name__ == '__main__':
     Nread_dists = dict([(amp, []) for amp in imUtils.allAmps])
     for i, bias, sysnoise in zip(range(len(bias_files)), bias_files,
                                  system_noise_files):
-        outfile = "ccd_read_noise_%s_%03i.fits" % (sensor_id, i)
+        outfile = "%s_read_noise_%03i.fits" % (sensor_id.replace('-', '_'), i)
         outfile = os.path.join(outdir, outfile)
         outfiles.append(outfile)
         
@@ -87,6 +87,3 @@ if __name__ == '__main__':
             Nread = -1
         sensor.add_seg_result(amp, 'readNoise', Nread)
         print "%s         %.4f" % (imUtils.channelIds[amp], Nread)
-            
-    if pipeline_task:
-        pipeUtils.export_file_list(outfiles, "READNOISE", sensor_id)
