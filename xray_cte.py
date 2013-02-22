@@ -36,9 +36,8 @@ class XrayCte(object):
                     self.fe55_yield/gain_range[0])
         threshold = afwDetect.Threshold(self.mean + nsig*self.stdev)
         fpset = afwDetect.FootprintSet(self.image, threshold)
-        footprints = [fp for fp in fpset.getFootprints()]
         zarr, xarr, yarr = [], [], []
-        for fp in footprints:
+        for fp in fpset.getFootprints():
             if fp.getNpix() < 9:
                 f, ix, iy = self._footprint_info(fp)
                 if DN_range[0] < f < DN_range[1]:
@@ -49,6 +48,7 @@ class XrayCte(object):
         self.yarr = np.array(yarr)
         self.zarr = np.array(zarr)
         median_signal = imUtils.median(self.zarr)
+        self.median_signal = median_signal
         self.sigrange = (median_signal*(1. - 2./np.sqrt(self.fe55_yield)),
                          median_signal*(1. + 2./np.sqrt(self.fe55_yield)))
         self.sig5range = (median_signal*(1. - 5./np.sqrt(self.fe55_yield)),
@@ -57,6 +57,9 @@ class XrayCte(object):
             plot.histogram(self.zarr, xrange=self.sig5range,
                            yrange=(0, 200), bins=100,
                            xname='DN', yname='entries / bin')
+            plot.vline(median_signal)
+            plot.vline(self.sigrange[0], color='g')
+            plot.vline(self.sigrange[1], color='g')
             plot.xyplot(xarr, zarr, yrange=DN_range,
                         xname='x pixel', yname='DN')
             plot.hline(self.sigrange[0], color='g')
@@ -87,26 +90,24 @@ class XrayCte(object):
 
         ax, bx = np.polyfit(xarr, zarr, 1)
         CTIx = -ax/bx
-        if plot is not None and make_plots:
-            fx = np.poly1d((ax, bx))
-            xx = np.linspace(0, 600, 100)
-            plot.xyplot(xarr, zarr, yrange=self.sig5range,
-                        xname='x pixel', yname='DN')
-            plot.curve(xx, fx(xx), oplot=1, lineStyle='--', color='r')
-            plot.hline(self.sigrange[0], color='g')
-            plot.hline(self.sigrange[1], color='g')
 
         ay, by = np.polyfit(yarr, zarr, 1)
         CTIy = -ay/by
+
         if plot is not None and make_plots:
-            fy = np.poly1d((ay, by))
-            yy = np.linspace(0, 2500, 100)
-            plot.xyplot(yarr, zarr, yrange=self.sig5range,
-                        xname='y pixel', yname='DN')
-            plot.curve(yy, fy(yy), oplot=1, lineStyle='--', color='r')
-            plot.hline(self.sigrange[0], color='g')
-            plot.hline(self.sigrange[1], color='g')
-        return (CTIx, CTIy, self.fe55_yield/bx, self.fe55_yield/by)
+            self._plot1d(ax, bx, 'x pixel', xarr, zarr)
+            self._plot1d(ay, by, 'y pixel', yarr, zarr)
+
+        return CTIx, CTIy, self.fe55_yield/bx, self.fe55_yield/by
+    def _plot1d(self, a, b, xlabel, xarr, zarr):
+        f = np.poly1d((a, b))
+        xx = np.linspace(0, 2500, 5)
+        win = plot.xyplot(xarr, zarr, yrange=self.sig5range,
+                          xname=xlabel, yname='DN')
+        plot.curve(xx, f(xx), oplot=1, lineStyle='--', color='r')
+        plot.hline(self.sigrange[0], color='g')
+        plot.hline(self.sigrange[1], color='g')
+        return win
     def fit_2d(self, xmin=100):
         # Omit pixels affected by edge roll-off and that are outside
         # the nominal signal range.
@@ -122,20 +123,22 @@ class XrayCte(object):
         B = [-sum(xarr*zarr), -sum(yarr*zarr), sum(zarr)]
     
         CTIx, CTIy, sig0 = linalg.solve(A, B)
-        return (CTIx/sig0, CTIy/sig0, self.fe55_yield/sig0)
+        return CTIx/sig0, CTIy/sig0, self.fe55_yield/sig0
 
 if __name__ == '__main__':
-    make_plots = False
     fe55 = '/nfs/farm/g/lsst/u1/testData/eotestData/000-00/xray/data/000_00_fe55_0600s_008.fits'
 #    fe55 = '/nfs/farm/g/lsst/u1/testData/SIMData/000-00/Fe55/Fe55_exp_000-00_00.fits'
+    print "Segment   serial CTI   parallel CTI   gain ests."
+    make_plots = False
     for amp in imUtils.allAmps:
+#    make_plots = True
 #    for amp in (1,):
         image = afwImage.ImageF(fe55, imUtils.dm_hdu(amp))
         cte = XrayCte(image)
         cte.find_hits(nsig=2, make_plots=make_plots)
         results = cte.fit_1d(200, make_plots=make_plots)
-        sys.stdout.write("%s  " % imUtils.channelIds[amp])
-        print "%11.4e  %11.4e  %.3f  %.3f"  % results
+        sys.stdout.write("%s       " % imUtils.channelIds[amp])
+        print "%11.4e   %11.4e    %.3f  %.3f"  % results
         results = cte.fit_2d(200)
-        print "    %11.4e  %11.4e  %.3f" % results
+        print "         %11.4e   %11.4e    %.3f" % results
         
