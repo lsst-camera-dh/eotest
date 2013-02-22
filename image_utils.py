@@ -42,6 +42,21 @@ mean = lambda x : afwMath.makeStatistics(x, afwMath.MEAN).getValue()
 median = lambda x : afwMath.makeStatistics(x, afwMath.MEDIAN).getValue()
 stdev = lambda x : afwMath.makeStatistics(x, afwMath.STDEV).getValue()
 
+detsize = '[0:4336,0:4044]'
+
+def detsec(amp, dx=542, dy=2022):
+    """DETSEC header keyword value for iraf mosaicking"""
+    namps = len(allAmps)
+    if amp < allAmps[namps/2]:
+        x1 = dx*amp
+        x2 = x1 - dx
+        y1, y2 = 0, dy
+    else:
+        x1 = dx*(namps - amp)
+        x2 = x1 + dx
+        y1, y2 = 2*dy, dy
+    return '[%i:%i,%i:%i]' % (x1, x2, y1, y2)
+
 def dm_hdu(hdu):
     """ Compute DM HDU from the actual FITS file HDU."""
     return hdu+1

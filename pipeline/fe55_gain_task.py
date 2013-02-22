@@ -11,11 +11,11 @@ import sys
 import glob
 
 import lsst.afw.math as afwMath
-
-from image_utils import channelIds, allAmps
-from xray_gain import hdu_gains
-from pipeline.pipeline_utils import get_file_list
+import image_utils as imUtils
+import pipeline.pipeline_utils as pipeUtils
 from database.SensorDb import SensorDb, NullDbObject
+
+from xray_gain import hdu_gains
 
 median = lambda x : afwMath.makeStatistics(x, afwMath.MEDIAN).getValue()
 
@@ -27,7 +27,8 @@ if __name__ == '__main__':
         Fe55_files.sort()
     else:
         try:
-            Fe55_files = get_file_list('FE55')
+            sensor_id = os.environ['SENSOR_ID']
+            Fe55_files = pipeUtils.get_file_list('FE55', sensor_id)
         except:
             print "usage: python fe55_gain_task.py <Fe55 file pattern>"
             sys.exit(1)
@@ -40,17 +41,17 @@ if __name__ == '__main__':
     except KeyError:
         sensor = NullDbObject()
 
-    gain_dists = dict([(amp, []) for amp in allAmps])
+    gain_dists = dict([(amp, []) for amp in imUtils.allAmps])
     for fe55 in Fe55_files:
         print "processing", fe55
         gains = hdu_gains(fe55)
-        for amp in allAmps:
+        for amp in imUtils.allAmps:
             gain_dists[amp].append(gains[amp])
-    seg_gains = [median(gain_dists[amp]) for amp in allAmps]
+    seg_gains = [imUtils.median(gain_dists[amp]) for amp in imUtils.allAmps]
     
-    sensor.add_ccd_result('gainMedian', median(seg_gains))
-    print "Median gain among segments:", median(seg_gains)
+    sensor.add_ccd_result('gainMedian', imUtils.median(seg_gains))
+    print "Median gain among segments:", imUtils.median(seg_gains)
     print "Segment    gain"
-    for amp in allAmps:
+    for amp in imUtils.allAmps:
         sensor.add_seg_result(amp, 'gain', seg_gains[amp-1])
-        print "%s         %.4f" % (channelIds[amp], seg_gains[amp-1])
+        print "%s         %.4f" % (imUtils.channelIds[amp], seg_gains[amp-1])

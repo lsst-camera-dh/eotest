@@ -13,14 +13,14 @@ import lsst.afw.geom as afwGeom
 import lsst.afw.image as afwImage
 import lsst.afw.display.ds9 as ds9
 
-from image_utils import imaging, full_segment
+import image_utils as imutils
 
 class SegmentExposure(object):
-    def __init__(self, exptime=1, gain=5, bbox=full_segment):
+    def __init__(self, exptime=1, gain=5, bbox=imutils.full_segment):
         self.exptime = exptime
         self.gain = gain
         self.image = afwImage.ImageF(bbox)
-        self.imarr = self.image.Factory(self.image, imaging).getArray()
+        self.imarr = self.image.Factory(self.image, imutils.imaging).getArray()
         self.ny, self.nx = self.imarr.shape
         self.npix = self.nx*self.ny
         self._sigma = -1
@@ -85,8 +85,11 @@ def fitsFile(ccd_segments):
     output = pyfits.HDUList()
     output.append(pyfits.PrimaryHDU())
     output[0].header["EXPTIME"] = ccd_segments[0].exptime
-    for segment in ccd_segments:
+    for amp, segment in zip(imutils.allAmps, ccd_segments):
         output.append(pyfits.ImageHDU(data=segment.image.getArray()))
+        output[amp].name = 'AMP%s' % imutils.channelIds[amp]
+        output[amp].header.update('DETSIZE', imutils.detsize)
+        output[amp].header.update('DETSEC', imutils.detsec(amp))
     return output
                 
 def writeFits(ccd_segments, outfile, clobber=True):

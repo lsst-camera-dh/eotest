@@ -2,7 +2,6 @@
 
 export PYTHONPATH=.:${PYTHONPATH}
 
-export PTC_FLAT_LIST=ptc_flats.txt
 export PTC_OUTFILE=ptc_results.txt
 export CCD_VENDOR=e2v
 export SENSOR_ID=000-00

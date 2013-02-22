@@ -3,13 +3,15 @@
 
 @author J. Chiang <jchiang@slac.stanford.edu>
 """
+import os
+import sys
 import numpy as np
 import glob
 import lsst.afw.geom as afwGeom
 import lsst.afw.image as afwImage
 
-from image_utils import dm_hdu, trim, unbias_and_trim, imaging, allAmps, \
-    SubRegionSampler, mean, median, channelIds
+import image_utils as imUtils
+import pipeline.pipeline_utils as pipeUtils
 
 def glob_flats(pattern, outfile='flats.txt'):
     flats = glob.glob(pattern)
@@ -19,19 +21,20 @@ def glob_flats(pattern, outfile='flats.txt'):
         output.write('%s\n' % item)
     output.close()
 
-class MeanSignal(SubRegionSampler):
-    def __init__(self, dx=100, dy=100, nsamp=1000, imaging=imaging):
-        SubRegionSampler.__init__(self, dx, dy, nsamp, imaging)
+class MeanSignal(imUtils.SubRegionSampler):
+    def __init__(self, dx=100, dy=100, nsamp=1000, imaging=imUtils.imaging):
+        imUtils.SubRegionSampler.__init__(self, dx, dy, nsamp, imaging)
     def __call__(self, infile):
         signals = {}
-        for amp in allAmps:
+        for amp in imUtils.allAmps:
             samples = []
-#            im = unbias_and_trim(afwImage.ImageF(infile, dm_hdu(amp)))
-            im = trim(afwImage.ImageF(infile, dm_hdu(amp)))
+#            im = imUtils.unbias_and_trim(afwImage.ImageF(infile,
+#                                                         imUtils.dm_hdu(amp)))
+            im = imUtils.trim(afwImage.ImageF(infile, imUtils.dm_hdu(amp)))
             for x, y in zip(self.xarr, self.yarr):
                 subim = self.subim(im, x, y)
-                samples.append(mean(subim))
-            signals[amp] = median(samples)
+                samples.append(imUtils.mean(subim))
+            signals[amp] = imUtils.median(samples)
         return signals
 
 def compute_mean_signal(flat_list, outfile='linearity_results.txt',
@@ -40,6 +43,8 @@ def compute_mean_signal(flat_list, outfile='linearity_results.txt',
     output = open(outfile, 'w')
     for flat in open(flat_list):
         infile = flat.strip()
+        if infile[-11:] != '_flat1.fits':
+            continue
         if verbose:
             print "processing", infile
         md = afwImage.readMetadata(infile, 1)
@@ -47,17 +52,13 @@ def compute_mean_signal(flat_list, outfile='linearity_results.txt',
         kphot = np.abs(md.get('K_PHOT_CURRENT'))
         output.write('%12.4e  %12.4e' % (exptime, kphot))
         mean_signals = signal_estimator(infile)
-        for amp in allAmps:
+        for amp in imUtils.allAmps:
             output.write('  %12.4e' % (mean_signals[amp]*gains[amp]))
         output.write('\n')
         output.flush()
     output.close()
 
 if __name__ == '__main__':
-    import os
-    import sys
-    from pipeline.pipeline_utils import setup
-
     if len(sys.argv) >= 3:
         flat_pattern = sys.argv[1].replace('\\', '')
         linearity_file = sys.argv[2]
@@ -65,13 +66,15 @@ if __name__ == '__main__':
         glob_flats(flat_pattern, outfile=flat_list)
     else:
         try:
-            flat_list = os.environ['FLAT_LIST']
+            sensor_id = os.environ['SENSOR_ID']
+            flat_list = '%s_FLAT.txt' % sensor_id
+            print flat_list
             linearity_file = os.environ['LINEARITY_OUTFILE']
         except KeyError:
             print "usage: python linearity_task.py <flats pattern> <linearity output file> [<gains>=5.5]"
             sys.exit(1)
     
-    gains, sensor = setup(sys.argv, 3)
+    gains, sensor = pipeUtils.setup(sys.argv, 3)
 
     compute_mean_signal(flat_list, outfile=linearity_file)
     #
@@ -82,7 +85,7 @@ if __name__ == '__main__':
     lamp_current = data[1]
     print "Segment    max. frac. deviation"
     maxdevs = []
-    for amp in allAmps:
+    for amp in imUtils.allAmps:
         indx = np.where((data[amp+1] > 100.) & (data[amp+1] < 9e4))
         signal = data[amp+1]/lamp_current
         results = np.polyfit(exposure[indx], signal[indx], 1)
@@ -93,5 +96,5 @@ if __name__ == '__main__':
         maxDeviation = max(np.abs(fvals - signal[indx])/fvals)
         maxdevs.append(maxDeviation)
         sensor.add_seg_result(amp, 'maxDeviation', maxDeviation)
-        print "%s         %.4f" % (channelIds[amp], maxDeviation)
+        print "%s         %.4f" % (imUtils.channelIds[amp], maxDeviation)
     sensor.add_ccd_result('maxDeviation', max(maxdevs))

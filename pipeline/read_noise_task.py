@@ -5,10 +5,14 @@ noise contribution from the electronics, must be provided.
 
 @author J. Chiang <jchiang@slac.stanford.edu>
 """
+import os
+import sys
+import glob
 import numpy as np
 import pyfits
+import image_utils as imUtils
+import pipeline.pipeline_utils as pipeUtils
 
-from image_utils import allAmps, channelIds
 from read_noise import NoiseDists, median, stdev
 
 def write_read_noise_dists(outfile, Ntot, Nsys, gains, bias, sysnoise):
@@ -16,24 +20,21 @@ def write_read_noise_dists(outfile, Ntot, Nsys, gains, bias, sysnoise):
     output.append(pyfits.PrimaryHDU())
     output[0].header.update('BIASFILE', bias)
     output[0].header.update('SYSNFILE', sysnoise)
-    for amp, sigtot, sigsys in zip(allAmps, Ntot, Nsys):
+    for amp, sigtot, sigsys in zip(imUtils.allAmps, Ntot, Nsys):
         nread_col = pyfits.Column(name="TOTAL_NOISE", format="E",
                                   unit="e- rms", array=sigtot)
         nsys_col = pyfits.Column(name="SYSTEM_NOISE", format="E",
                                  unit="e- rms", array=sigsys)
         output.append(pyfits.new_table((nread_col, nsys_col)))
-        output[amp].name = "AMP%s" % channelIds[amp]
-        output[0].header.update("GAIN%s" % channelIds[amp], gains[amp])
-        output[0].header.update("SIGTOT%s" % channelIds[amp], median(sigtot))
-        output[0].header.update("SIGSYS%s" % channelIds[amp], median(sigsys))
+        output[amp].name = "AMP%s" % imUtils.channelIds[amp]
+        output[0].header.update("GAIN%s" % imUtils.channelIds[amp], gains[amp])
+        output[0].header.update("SIGTOT%s" % imUtils.channelIds[amp],
+                                median(sigtot))
+        output[0].header.update("SIGSYS%s" % imUtils.channelIds[amp],
+                                median(sigsys))
     output.writeto(outfile, clobber=True)
 
 if __name__ == '__main__':
-    import os
-    import sys
-    import glob
-    from pipeline.pipeline_utils import get_file_list, export_file_list, setup
-
     if len(sys.argv) >= 5:
         bias_pattern = sys.argv[1].replace('\\', '')
         sysnoise_pattern = sys.argv[2].replace('\\', '')
@@ -44,16 +45,16 @@ if __name__ == '__main__':
         pipeline_task = False
     else:
         try:
-            bias_files = get_file_list('BIAS')
-            system_noise_files = get_file_list('SYSNOISE')
             sensor_id = os.environ['SENSOR_ID']
+            bias_files = pipeUtils.get_file_list('BIAS', sensor_id)
+            system_noise_files = pipeUtils.get_file_list('SYSNOISE', sensor_id)
             outdir = os.environ['OUTPUTDIR']
             pipeline_task = True
         except KeyError:
             print "usage: python read_noise_task.py <bias file pattern> <sysnoise file pattern> <sensor id> <output dir> [<gain>=5.5]"
             sys.exit(1)
 
-    gains, sensor = setup(sys.argv, 5)
+    gains, sensor = pipeUtils.setup(sys.argv, 5)
 
     if not os.path.isdir(outdir):
         try:
@@ -62,7 +63,7 @@ if __name__ == '__main__':
             pass
 
     outfiles = []
-    Nread_dists = dict([(amp, []) for amp in allAmps])
+    Nread_dists = dict([(amp, []) for amp in imUtils.allAmps])
     for i, bias, sysnoise in zip(range(len(bias_files)), bias_files,
                                  system_noise_files):
         outfile = "ccd_read_noise_%s_%03i.fits" % (sensor_id, i)
@@ -78,14 +79,14 @@ if __name__ == '__main__':
         write_read_noise_dists(outfile, Ntot, Nsys, gains, bias, sysnoise)
 
     print "Segment    read noise"
-    for amp in allAmps:
+    for amp in imUtils.allAmps:
         var = median(Ntot[amp-1])**2 - median(Nsys[amp-1])**2
         if var >= 0:
             Nread = np.sqrt(var)
         else:
             Nread = -1
         sensor.add_seg_result(amp, 'readNoise', Nread)
-        print "%s         %.4f" % (channelIds[amp], Nread)
+        print "%s         %.4f" % (imUtils.channelIds[amp], Nread)
             
     if pipeline_task:
-        export_file_list(outfiles, "READNOISE")
+        pipeUtils.export_file_list(outfiles, "READNOISE", sensor_id)

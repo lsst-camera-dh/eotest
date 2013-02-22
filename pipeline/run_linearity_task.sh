@@ -2,7 +2,6 @@
 
 export PYTHONPATH=.:${PYTHONPATH}
 
-export FLAT_LIST=linearity_flats.txt
 export LINEARITY_OUTFILE=linearity_results.txt
 export SENSOR_ID=000-00
 export CCD_VENDOR=e2v

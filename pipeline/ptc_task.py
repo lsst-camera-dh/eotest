@@ -1,21 +1,22 @@
 """
 @brief For pairs of flats obtain for a range of exposures, compute the
-photon transfer curve (using pair_stats.py) and write as an output
-file for use by later tasks, such as full_well_task.py,
-linearity_task.py, etc..
+photon transfer curve (using pair_stats.py) and compute and write out
+the full well.
 
 @author J. Chiang <jchiang@slac.stanford.edu>
 """
 import os
+import sys
 import glob
-import pyfits
+import lsst.afw.image as afwImage
 import lsst.afw.math as afwMath
+import image_utils as imUtils
+import pipeline.pipeline_utils as pipeUtils
+
 from pair_stats import pair_stats
-from image_utils import allAmps, channelIds
+from full_well import full_well
 
-mean = lambda x : afwMath.makeStatistics(x, afwMath.MEAN).getValue()
-
-exptime = lambda x : pyfits.open(x)[0].header['EXPTIME']
+exptime = lambda x : afwImage.readMetadata(x, 1).get('EXPTIME')
 
 def glob_flats(full_path, outfile='ptc_flats.txt'):
     flats = glob.glob(os.path.join(full_path, '*_flat?.fits'))
@@ -53,7 +54,7 @@ def accumulate_stats(flats, outfile='ptc_results.txt', verbose=True):
             print "processing", file1
         exposure = exptime(file1)
         output.write('%12.4e' % exposure)
-        for amp in allAmps:
+        for amp in imUtils.allAmps:
             results, b1, b2 = pair_stats(file1, file2, amp+1)
             output.write('  %12.4e  %12.4e' % (results.flat_mean,
                                                results.flat_var))
@@ -62,10 +63,6 @@ def accumulate_stats(flats, outfile='ptc_results.txt', verbose=True):
     output.close()
 
 if __name__ == '__main__':
-    import sys
-    from full_well import full_well
-    from pipeline.pipeline_utils import setup
-
     flat_list = 'ptc_flats.txt'
 
     if len(sys.argv) >= 3:
@@ -74,13 +71,14 @@ if __name__ == '__main__':
         glob_flats(full_path, outfile=flat_list)
     else:
         try:
-            flat_list = os.environ['PTC_FLAT_LIST']
+            sensor_id = os.environ['SENSOR_ID']
+            flat_list = '%s_PTC_FLAT.txt' % sensor_id
             ptcfile = os.environ['PTC_OUTFILE']
         except KeyError:
             print "usage: python ptc_task.py <ptc flats subdir> <ptc output file> [<gains>=5.5]"
             sys.exit(1)
 
-    gains, sensor = setup(sys.argv, 3)
+    gains, sensor = pipeUtils.setup(sys.argv, 3)
 
     flats = find_flats_from_file(flat_list)
     accumulate_stats(flats, outfile=ptcfile)
@@ -89,9 +87,9 @@ if __name__ == '__main__':
     # Full well calculations.
     #
     full_well_values = []
-    for amp in allAmps:
+    for amp in imUtils.allAmps:
         full_well_est = full_well(ptcfile, amp, gain=gains[amp])
         full_well_values.append(full_well_est)
-        print '%s  %.1f' % (channelIds[amp], full_well_est)
+        print '%s  %.1f' % (imUtils.channelIds[amp], full_well_est)
         sensor.add_seg_result(amp, 'fullWell', full_well_est)
-    sensor.add_ccd_result('fullWellMean', mean(full_well_values))
+    sensor.add_ccd_result('fullWellMean', imUtils.mean(full_well_values))
