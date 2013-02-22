@@ -126,7 +126,7 @@ class XrayCte(object):
         return CTIx/sig0, CTIy/sig0, self.fe55_yield/sig0
 
 if __name__ == '__main__':
-    fe55 = '/nfs/farm/g/lsst/u1/testData/eotestData/000-00/xray/data/000_00_fe55_0600s_008.fits'
+    fe55 = '/nfs/farm/g/lsst/u1/testData/eotestData/000-00/xray/data/000_00_fe55_0600s_000.fits'
 #    fe55 = '/nfs/farm/g/lsst/u1/testData/SIMData/000-00/Fe55/Fe55_exp_000-00_00.fits'
     print "Segment   serial CTI   parallel CTI   gain ests."
     make_plots = False
@@ -136,8 +136,8 @@ if __name__ == '__main__':
         image = afwImage.ImageF(fe55, imUtils.dm_hdu(amp))
         cte = XrayCte(image)
         cte.find_hits(nsig=2, make_plots=make_plots)
-        results = cte.fit_1d(200, make_plots=make_plots)
         sys.stdout.write("%s       " % imUtils.channelIds[amp])
+        results = cte.fit_1d(200, make_plots=make_plots)
         print "%11.4e   %11.4e    %.3f  %.3f"  % results
         results = cte.fit_2d(200)
         print "         %11.4e   %11.4e    %.3f" % results

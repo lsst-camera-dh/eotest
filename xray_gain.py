@@ -5,18 +5,19 @@ sensor gain from Fe55 data.
 @author J. Chiang <jchiang@slac.stanford.edu>
 """
 import numpy as np
-import pyfits
 import lsst.afw.math as afwMath
 import lsst.afw.image as afwImage
 import lsst.afw.geom as afwGeom
 import lsst.afw.detection as afwDetection
 import lsst.daf.base as dafBase
-from image_utils import allAmps
+import image_utils as imUtils
 
 _ds9_header = """# Region file format: DS9 version 4.0
 global color=green font="helvetica 10 normal" select=1 highlite=1 edit=1 move=1 delete=1 include=1 fixed=0 source
 linear
 """
+def Fe55_yield(ccdtemp=None):
+    return 1620.
 
 def make_region_file(fpset, outfile='ds9.reg'):
     output = open(outfile, 'w')
@@ -28,15 +29,20 @@ def make_region_file(fpset, outfile='ds9.reg'):
     output.close()
 
 class Fe55Gain(object):
-    _stat_controls = (afwMath.NPOINT | afwMath.MEAN | afwMath.STDEV 
-                      | afwMath.MEDIAN)
     def __init__(self, imfile, bbox=afwGeom.Box2I(), hdu=0, 
-                 metadata=dafBase.PropertySet()):
+                 metadata=dafBase.PropertySet(), ccdtemp=None):
         self.image = afwImage.ImageF(imfile, hdu, metadata, bbox)
-        self.arr = self.image.getArray()
-        my_arr = self.arr.reshape(self.image.getHeight()*self.image.getWidth())
-        stats = self._clipped_stats(my_arr.tolist())
-        self.noise = stats.getValue(afwMath.STDEV)
+        self.fe55_yield = Fe55_yield(ccdtemp)
+        #
+        # Store numpy array of full segment (i.e., for an empty bbox,
+        # which is the default in the ImageF constructor) for
+        # self._footprint_signal, since footprint spans use full
+        # segment image pixel coordinates.
+        #
+        self.arr = afwImage.ImageF(imfile, hdu).getArray()
+        stats = afwMath.makeStatistics(self.image,
+                                       afwMath.STDEVCLIP | afwMath.MEDIAN)
+        self.noise = stats.getValue(afwMath.STDEVCLIP)
         self.median = stats.getValue(afwMath.MEDIAN)
         self.fp_sets = []
     def _footprint_signal(self, footprint):
@@ -45,13 +51,6 @@ class Fe55Gain(object):
         for span in spans:
             total += sum(self.arr[span.getY()][span.getX0():span.getX1()+1])
         return total - footprint.getNpix()*self.median
-    def _clipped_stats(self, xvals, nsig=3):
-        stats = afwMath.makeStatistics(xvals, self._stat_controls)
-        med = stats.getValue(afwMath.MEDIAN)
-        stdev = stats.getValue(afwMath.STDEV)
-        xmin, xmax = med - stdev*nsig, med + stdev*nsig
-        my_xvals = [x for x in xvals if xmin <= x <= xmax]
-        return afwMath.makeStatistics(my_xvals, self._stat_controls)
     def gain(self, jmargin=None, max_npix=9, regfile=None):
         if jmargin is None:
             jmargins = range(10)
@@ -66,8 +65,9 @@ class Fe55Gain(object):
             signals = [self._footprint_signal(fp) for fp in 
                        fp_set.getFootprints() if fp.getNpix() < max_npix]
             try:
-                mean = self._clipped_stats(signals).getValue(afwMath.MEAN)
-                values.append(1620./mean)
+                stats = afwMath.makeStatistics(signals, afwMath.MEANCLIP)
+                mean = stats.getValue()
+                values.append(self.fe55_yield/mean)
             except:
                 pass
         my_gain = np.median(values)
@@ -80,14 +80,11 @@ class Fe55Gain(object):
             make_region_file(self.fp_sets[imed], regfile)
         return my_gain
 
-def hdu_gains(infile):
+def hdu_gains(infile, bbox=afwGeom.Box2I()):
     gains = {}
-    for amp in allAmps:
-        try:
-            fe55 = Fe55Gain(infile, hdu=amp+1)
-            gains[amp] = fe55.gain()
-        except:
-            pass
+    for amp in imUtils.allAmps:
+        fe55 = Fe55Gain(infile, bbox=bbox, hdu=imUtils.dm_hdu(amp))
+        gains[amp] = fe55.gain()
     return gains
 
 if __name__ == '__main__':

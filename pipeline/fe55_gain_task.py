@@ -10,6 +10,7 @@ import os
 import sys
 import glob
 
+import lsst.afw.geom as afwGeom
 import lsst.afw.math as afwMath
 import image_utils as imUtils
 import pipeline.pipeline_utils as pipeUtils
@@ -41,10 +42,17 @@ if __name__ == '__main__':
     except KeyError:
         sensor = NullDbObject()
 
+    # Read the full segment.
+    bbox = afwGeom.Box2I()
+    
+#    # Omit the first 200 columns to avoid edge roll-off.
+#    bbox = afwGeom.Box2I(afwGeom.Point2I(200, 0),
+#                         afwGeom.Point2I(541, 2021))
+
     gain_dists = dict([(amp, []) for amp in imUtils.allAmps])
     for fe55 in Fe55_files:
         print "processing", fe55
-        gains = hdu_gains(fe55)
+        gains = hdu_gains(fe55, bbox=bbox)
         for amp in imUtils.allAmps:
             gain_dists[amp].append(gains[amp])
     seg_gains = [imUtils.median(gain_dists[amp]) for amp in imUtils.allAmps]

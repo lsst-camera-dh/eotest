@@ -14,7 +14,7 @@ def setVariable(key, value):
 def get_file_list(prefix, sensor_id):
     infile = '%s_%s.txt' % (sensor_id, prefix)
     print "Reading filenames from %s" % infile
-    my_files = [x.strip() for x in open(infile)]
+    my_files = [x.strip() for x in open(infile) if x[0] != '#']
     return my_files
 
 def export_file_list(files, prefix, sensor_id):
