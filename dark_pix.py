@@ -1,53 +1,81 @@
-import lsst.pipe.base as pipeBase
+#import lsst.pipe.base as pipeBase
 
-import sys
+import sys, traceback
 import numpy as np
 import argparse
 import lsst.afw.image as afwImage
-import lsst.afw.geom as afwGeom
+#import lsst.afw.geom as afwGeom
 import lsst.afw.math as afwMath
-import lsst.afw.detection as afwDetect
-import lsst.afw.display.ds9 as ds9
+#import lsst.afw.detection as afwDetect
+#import lsst.afw.display.ds9 as ds9
+import image_utils
 
+class DarkPix(object):
+    def __init__(self, percent):
+        self.percent = percent
+    
+    def __call__(self, fitsfile, amps):
 
-def dark_pix(infilename, percent, amps):
-    """ List pixels with counts less than a specified percentage of the
-        median flux, for the specified amps. """
+        tot_dark_ccd = 0
+        tot_dark_per_amp = []
+        pix_per_amp = []
+        col_per_amp  = []
 
-    for amp in amps:
+        for amp in amps:
+            try:
+                tot, pixels = self.dark_pix(fitsfile, image_utils.dm_hdu(amp))
+                tot_dark_ccd += tot
+                tot_dark_per_amp.append(tot)
+                pix_per_amp.append(pixels)
+            except:
+                print "Failed dark pixels for hdu ", amp, " ", \
+                    image_utils.dm_hdu(amp)
+                traceback.print_exc(file=sys.stdout)
+                continue
+
+        return tot_dark_ccd, tot_dark_per_amp, pix_per_amp, col_per_amp
+
+    def dark_pix(self, infile, hdu):
+        """ List pixels with counts less than a specified percentage of the
+            median flux, for the specified amps. """
+
         #read in and trim image area
-        im = afwImage.ExposureF(infilename, amp+1, \
-                      afwGeom.BoxI(afwGeom.PointI(10, 0), \
-                      afwGeom.PointI(521, 2001))).getMaskedImage().getImage()
-        
+        im = image_utils.unbias_and_trim(afwImage.ImageF(infile, hdu))
+
         #find median of image
         median = afwMath.makeStatistics(im, afwMath.MEDIAN).getValue()
-        thresh = median*percent/100.0
-        #print thresh
-        
+        thresh = median*self.percent/100.0
+
         #find pixels less than _ percent of median
         imarr = im.getArray()
         darkpix = np.where(imarr <= thresh)
-        
-#        p.figure()
-#        p.plot(darkpix)
-        
+
         #turn x,y into a list of pixel coords
         pixlist = np.transpose(darkpix)
 
-        
-        print thresh
-        print pixlist
-        print len(pixlist)
-        
-        return pixlist
+        return len(pixlist), pixlist
+
+def run_dark_pix(fitsfile, percent=80, amps=image_utils.allAmps, verbose=False):
+    """ Given an input FITS file, find bright pixels."""
+
+    try:
+        dp = DarkPix(percent)
+        tot_dark_pixels, tot_per_amp, pix_per_amp, col_per_amp = dp(fitsfile, amps)
+    except:
+        traceback.print_exc(file=sys.stdout)
+
+    if verbose:
+        for ind, amp in enumerate(amps):
+            print "Amp: ", amp, " ", tot_per_amp[ind], " Dark Pixels"
+            print pix_per_amp[ind]
+        print 'Total CCD Dark Pixels: ', tot_dark_pixels
+
+    return tot_dark_pixels, tot_per_amp, pix_per_amp, col_per_amp
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(\
                       description='Find the locations of dark pixels.')
-    parser.add_argument('-i', '--infile', help="path to input image file" \
-                        type=str)
-    parser.add_argument('-o', '--outfile', help="output results text file" \
+    parser.add_argument('-i', '--infile', help="path to input image file", \
                         type=str)
     parser.add_argument('-p', '--percent', \
                         help="Percentage of median to use as threshold", \
@@ -60,13 +88,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     
-    if args.outfile:
-        outfile = open(args.outfile, "w")
-    else:
-        outfile = None
+    tot, tot_per_amp, pix_per_amp, col_per_amp = \
+        run_dark_pix(args.infile, args.percent, args.amps, args.verbose)
 
-    im = dark_pix(args.infilename, args.percent, args.amps)
-
-    if outfile:
-        outfile.close()
 
