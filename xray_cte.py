@@ -1,3 +1,12 @@
+"""
+@brief Compute charge transfer inefficiency (CTI) by fitting Fe55 data
+using linear functions, either separately in 1D, for parallel and
+serial directions, or for both directions at once in a 2D fit.  These
+fits also give estimates of the system gain.
+
+@author J. Chiang <jchiang@slac.stanford.edu>
+"""
+import sys
 import glob
 import lsst.afw.detection as afwDetect
 import lsst.afw.image as afwImage
@@ -10,40 +19,48 @@ try:
 except ImportError:
     plot = None
 
-class XrayCte(object):
-    def __init__(self, image):
-        self.image = image
-        self.image -= imUtils.bias(image)
-        self.imarr = image.getArray()
+def Fe55_yield(ccdtemp=None):
+    return 1620.
 
+class XrayCte(object):
+    def __init__(self, image, ccdtemp=None):
+        self.image = image
+        self.imarr = image.getArray()
         stat_control = afwMath.MEANCLIP | afwMath.STDEVCLIP 
         stats = afwMath.makeStatistics(image, stat_control)
         self.mean = stats.getValue(afwMath.MEANCLIP)
         self.stdev = stats.getValue(afwMath.STDEVCLIP)
-    def find_hits(self, nsig=2, DN_range=None, make_plots=True):
-        threshold = afwDetect.Threshold(self.mean + 2*self.stdev)
+        self.fe55_yield = Fe55_yield(ccdtemp)
+    def find_hits(self, nsig=2, gain_range=(2, 10), make_plots=True):
+        DN_range = (self.fe55_yield/gain_range[1],
+                    self.fe55_yield/gain_range[0])
+        threshold = afwDetect.Threshold(self.mean + nsig*self.stdev)
         fpset = afwDetect.FootprintSet(self.image, threshold)
         footprints = [fp for fp in fpset.getFootprints()]
         zarr, xarr, yarr = [], [], []
         for fp in footprints:
             if fp.getNpix() < 9:
                 f, ix, iy = self._footprint_info(fp)
-                if DN_range is None or DN_range[0] < f < DN_range[1]:
+                if DN_range[0] < f < DN_range[1]:
                     zarr.append(f)
                     xarr.append(ix)
                     yarr.append(iy)
         self.xarr = np.array(xarr)
         self.yarr = np.array(yarr)
         self.zarr = np.array(zarr)
+        median_signal = imUtils.median(self.zarr)
+        self.sigrange = (median_signal*(1. - 2./np.sqrt(self.fe55_yield)),
+                         median_signal*(1. + 2./np.sqrt(self.fe55_yield)))
+        self.sig5range = (median_signal*(1. - 5./np.sqrt(self.fe55_yield)),
+                          median_signal*(1. + 5./np.sqrt(self.fe55_yield)))
         if plot is not None and make_plots:
-            if DN_range is not None:
-                sigrange = DN_range
-            else:
-                sigrange = (0, 1000)
-            plot.histogram(zarr, xrange=sigrange,
-                           xname='DN', yname='counts / bin')
-            plot.xyplot(xarr, zarr, yrange=sigrange,
+            plot.histogram(self.zarr, xrange=self.sig5range,
+                           yrange=(0, 200), bins=100,
+                           xname='DN', yname='entries / bin')
+            plot.xyplot(xarr, zarr, yrange=DN_range,
                         xname='x pixel', yname='DN')
+            plot.hline(self.sigrange[0], color='g')
+            plot.hline(self.sigrange[1], color='g')
     def _footprint_info(self, fp):
         imarr = self.imarr
         spans = fp.getSpans()
@@ -60,40 +77,41 @@ class XrayCte(object):
         ix, iy = peaks[ii].getIx(), peaks[ii].getIy()
         return total - self.mean*fp.getNpix(), ix, iy
     def fit_1d(self, xmin=100, make_plots=True):
-        # Omit pixels affected by edge roll-off.
-        indx = np.where(self.xarr > xmin)
+        # Omit pixels affected by edge roll-off and that are outside
+        # the nominal signal range.
+        indx = np.where((self.xarr > xmin) & (self.zarr > self.sigrange[0]) &
+                        (self.zarr < self.sigrange[1]))
         xarr = self.xarr[indx]
         yarr = self.yarr[indx]
         zarr = self.zarr[indx]
 
         ax, bx = np.polyfit(xarr, zarr, 1)
         CTIx = -ax/bx
-        print "1D CTI estimates:"
-        print "x-direction:"
-        print "   CTI =", CTIx
-        print "   gain =", 1620./bx
         if plot is not None and make_plots:
             fx = np.poly1d((ax, bx))
             xx = np.linspace(0, 600, 100)
-            plot.xyplot(xarr, zarr, yrange=(300, 400),
+            plot.xyplot(xarr, zarr, yrange=self.sig5range,
                         xname='x pixel', yname='DN')
             plot.curve(xx, fx(xx), oplot=1, lineStyle='--', color='r')
+            plot.hline(self.sigrange[0], color='g')
+            plot.hline(self.sigrange[1], color='g')
 
         ay, by = np.polyfit(yarr, zarr, 1)
         CTIy = -ay/by
-        print "y-direction:"
-        print "   CTI =", CTIy
-        print "   gain =", 1620./by
         if plot is not None and make_plots:
             fy = np.poly1d((ay, by))
             yy = np.linspace(0, 2500, 100)
-            plot.xyplot(yarr, zarr, yrange=(300, 400),
+            plot.xyplot(yarr, zarr, yrange=self.sig5range,
                         xname='y pixel', yname='DN')
             plot.curve(yy, fy(yy), oplot=1, lineStyle='--', color='r')
-        print
+            plot.hline(self.sigrange[0], color='g')
+            plot.hline(self.sigrange[1], color='g')
+        return (CTIx, CTIy, self.fe55_yield/bx, self.fe55_yield/by)
     def fit_2d(self, xmin=100):
-        # Omit pixels affected by edge roll-off.
-        indx = np.where(self.xarr > xmin)
+        # Omit pixels affected by edge roll-off and that are outside
+        # the nominal signal range.
+        indx = np.where((self.xarr > xmin) & (self.zarr > self.sigrange[0]) &
+                        (self.zarr < self.sigrange[1]))
         xarr = self.xarr[indx]
         yarr = self.yarr[indx]
         zarr = self.zarr[indx]
@@ -104,17 +122,20 @@ class XrayCte(object):
         B = [-sum(xarr*zarr), -sum(yarr*zarr), sum(zarr)]
     
         CTIx, CTIy, sig0 = linalg.solve(A, B)
-        print "2D CTI estimates:"
-        print "   CTI(x) =", CTIx/sig0
-        print "   CTI(y) =", CTIy/sig0
-        print "   gain =", 1620./sig0
+        return (CTIx/sig0, CTIy/sig0, self.fe55_yield/sig0)
 
 if __name__ == '__main__':
+    make_plots = False
     fe55 = '/nfs/farm/g/lsst/u1/testData/eotestData/000-00/xray/data/000_00_fe55_0600s_008.fits'
+#    fe55 = '/nfs/farm/g/lsst/u1/testData/SIMData/000-00/Fe55/Fe55_exp_000-00_00.fits'
     for amp in imUtils.allAmps:
+#    for amp in (1,):
         image = afwImage.ImageF(fe55, imUtils.dm_hdu(amp))
-        print "Segment %s" % imUtils.channelIds[amp]
         cte = XrayCte(image)
-        cte.find_hits(nsig=2, DN_range=(330, 360))
-        cte.fit_1d(200)
-        cte.fit_2d(200)
+        cte.find_hits(nsig=2, make_plots=make_plots)
+        results = cte.fit_1d(200, make_plots=make_plots)
+        sys.stdout.write("%s  " % imUtils.channelIds[amp])
+        print "%11.4e  %11.4e  %.3f  %.3f"  % results
+        results = cte.fit_2d(200)
+        print "    %11.4e  %11.4e  %.3f" % results
+        
