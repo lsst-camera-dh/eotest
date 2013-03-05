@@ -22,14 +22,20 @@ except ImportError:
 
 class XrayCte(object):
     def __init__(self, image, ccdtemp=None):
-        self.image = image
+        if (image.getWidth() == imUtils.full_segment.getWidth() and
+            image.getHeight() == imUtils.full_segment.getHeight()):
+            # Trim to imaging area.
+            self.image = image.Factory(image, imUtils.imaging)
+        else:
+            message = "XrayCte constructor: must pass an untrimmed image"
+            raise RuntimeError(message)
         self.imarr = image.getArray()
         stat_control = afwMath.MEANCLIP | afwMath.STDEVCLIP 
         stats = afwMath.makeStatistics(image, stat_control)
         self.mean = stats.getValue(afwMath.MEANCLIP)
         self.stdev = stats.getValue(afwMath.STDEVCLIP)
         self.fe55_yield = fe55_yield(ccdtemp)[0]
-    def find_hits(self, nsig=2, gain_range=(2, 10), make_plots=True):
+    def find_hits(self, nsig=2, gain_range=(2, 10), buff=1, make_plots=True):
         DN_range = (self.fe55_yield/gain_range[1],
                     self.fe55_yield/gain_range[0])
         threshold = afwDetect.Threshold(self.mean + nsig*self.stdev)
@@ -37,7 +43,7 @@ class XrayCte(object):
         zarr, xarr, yarr = [], [], []
         for fp in fpset.getFootprints():
             if fp.getNpix() < 9:
-                f, ix, iy = self._footprint_info(fp)
+                f, ix, iy = self._footprint_info(fp, buff)
                 if DN_range[0] < f < DN_range[1]:
                     zarr.append(f)
                     xarr.append(ix)
@@ -62,12 +68,14 @@ class XrayCte(object):
                         xname='x pixel', yname='DN')
             plot.hline(self.sigrange[0], color='g')
             plot.hline(self.sigrange[1], color='g')
-    def _footprint_info(self, fp):
-        imarr = self.imarr
-        spans = fp.getSpans()
-        total = 0
-        for span in spans:
-            total += sum(imarr[span.getY()][span.getX0():span.getX1()+1])
+    def _footprint_info(self, fp, buff=1):
+        bbox = fp.getBBox()
+        xmin = max(imUtils.imaging.getMinX(), bbox.getMinX() - buff)
+        xmax = min(imUtils.imaging.getMaxX(), bbox.getMaxX() + buff)
+        ymin = max(imUtils.imaging.getMinY(), bbox.getMinY() - buff)
+        ymax = min(imUtils.imaging.getMaxY(), bbox.getMaxY() + buff)
+        subarr = self.imarr[ymin:ymax+1, xmin:xmax+1] 
+        signal = sum(subarr.flat) - self.mean*len(subarr.flat)
         peakvalues = np.array([x.getPeakValue() for x in fp.getPeaks()])
         peaks = [x for x in fp.getPeaks()]
         if len(peakvalues) > 1:
@@ -76,7 +84,7 @@ class XrayCte(object):
         else:
             ii = 0
         ix, iy = peaks[ii].getIx(), peaks[ii].getIy()
-        return total - self.mean*fp.getNpix(), ix, iy
+        return signal, ix, iy
     def fit_1d(self, xmin=100, make_plots=True):
         # Omit pixels affected by edge roll-off and that are outside
         # the nominal signal range.
@@ -138,7 +146,7 @@ if __name__ == '__main__':
 #    for amp in (1,):
         image = afwImage.ImageF(fe55, imUtils.dm_hdu(amp))
         cte = XrayCte(image, ccdtemp=ccdtemp)
-        cte.find_hits(nsig=2, make_plots=make_plots)
+        cte.find_hits(nsig=5, make_plots=make_plots)
         sys.stdout.write("%s       " % imUtils.channelIds[amp])
         results = cte.fit_1d(200, make_plots=make_plots)
         print "%11.4e   %11.4e    %.3f  %.3f"  % results

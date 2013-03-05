@@ -44,13 +44,22 @@ class Fe55Gain(object):
         self.noise = stats.getValue(afwMath.STDEVCLIP)
         self.median = stats.getValue(afwMath.MEDIAN)
         self.fp_sets = []
-    def _footprint_signal(self, footprint):
-        spans = footprint.getSpans()
-        total = 0
-        for span in spans:
-            total += sum(self.arr[span.getY()][span.getX0():span.getX1()+1])
-        return total - footprint.getNpix()*self.median
-    def gain(self, jmargin=None, max_npix=9, regfile=None):
+#    def _footprint_signal(self, footprint):
+#        spans = footprint.getSpans()
+#        total = 0
+#        for span in spans:
+#            total += sum(self.arr[span.getY()][span.getX0():span.getX1()+1])
+#        return total - footprint.getNpix()*self.median
+    def _footprint_signal(self, footprint, buff=1):
+        bbox = footprint.getBBox()
+        xmin = max(imUtils.imaging.getMinX(), bbox.getMinX() - buff)
+        xmax = min(imUtils.imaging.getMaxX(), bbox.getMaxX() + buff)
+        ymin = max(imUtils.imaging.getMinY(), bbox.getMinY() - buff)
+        ymax = min(imUtils.imaging.getMaxY(), bbox.getMaxY() + buff)
+        subarr = self.arr[ymin:ymax+1, xmin:xmax+1] 
+        signal = sum(subarr.flat) - self.median*len(subarr.flat)
+        return signal
+    def gain(self, jmargin=None, max_npix=9, buff=1, regfile=None):
         if jmargin is None:
             jmargins = range(10)
         else:
@@ -61,7 +70,7 @@ class Fe55Gain(object):
             threshold = afwDetection.Threshold(self.median + margin)
             fp_set = afwDetection.FootprintSet(self.image, threshold)
             self.fp_sets.append(fp_set)
-            signals = [self._footprint_signal(fp) for fp in 
+            signals = [self._footprint_signal(fp, buff) for fp in 
                        fp_set.getFootprints() if fp.getNpix() < max_npix]
             try:
                 stats = afwMath.makeStatistics(signals, afwMath.MEANCLIP)
