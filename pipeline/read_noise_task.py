@@ -6,12 +6,15 @@ noise contribution from the electronics, must be provided.
 @author J. Chiang <jchiang@slac.stanford.edu>
 """
 import os
-import sys
+import sys, traceback
 import glob
+import argparse
 import numpy as np
 import pyfits
 import image_utils as imUtils
 import pipeline.pipeline_utils as pipeUtils
+from database.SensorDb import NullDbObject
+from database.SensorGains import SensorGains
 
 from read_noise import NoiseDists, median, stdev
 
@@ -35,13 +38,27 @@ def write_read_noise_dists(outfile, Ntot, Nsys, gains, bias, sysnoise):
     output.writeto(outfile, clobber=True)
 
 if __name__ == '__main__':
+    parser = argparse.ArgumentParser(\
+                      description='Compute Read Noise')
+    parser.add_argument('-b', '--bias', help="input bias file pattern", type=str)
+    parser.add_argument('-n', '--noise', help="input noise file pattern", type=str)
+    parser.add_argument('-g', '--gain', help="input gain file", type=str)
+    parser.add_argument('-i', '--id', help="sensor id", type=str)
+    parser.add_argument('-o', '--outdir', help="output directory", type=str)
+    parser.add_argument('-v', '--verbose', help="turn verbosity on", \
+             action='store_true', default=False)
+    args = parser.parse_args()
+
     if len(sys.argv) >= 5:
-        bias_pattern = sys.argv[1].replace('\\', '')
-        sysnoise_pattern = sys.argv[2].replace('\\', '')
-        sensor_id = sys.argv[3]
-        outdir = sys.argv[4]
+        bias_pattern = args.bias.replace('\\', '')
+        sysnoise_pattern = args.noise.replace('\\', '')
+        sensor_id = args.id
+        outdir = args.outdir
         bias_files = glob.glob(bias_pattern)
+        bias_files.sort()
         system_noise_files = glob.glob(sysnoise_pattern)
+        system_noise_files.sort()
+        gain_file = args.gain
         pipeline_task = False
     else:
         try:
@@ -54,7 +71,21 @@ if __name__ == '__main__':
             print "usage: python read_noise_task.py <bias file pattern> <sysnoise file pattern> <sensor id> <output dir> [<gain>=5.5]"
             sys.exit(1)
 
-    gains, sensor = pipeUtils.setup(sys.argv, 5)
+    if pipeline_task:
+        gains, sensor = pipeUtils.setup(sys.argv, 5)
+    else:
+        g=[]
+        sensor = NullDbObject()
+        try:
+            f = pyfits.open(gain_file)
+            hdr = f[0].header
+            for amp in imUtils.allAmps:
+                g.append(hdr["GAIN%s" % imUtils.channelIds[amp]])
+            gains = SensorGains(g)
+        except:
+            print 'Failed to access gains from: ', gain_file
+            traceback.print_exc(file=sys.stdout)
+            sys.exit()
 
     if not os.path.isdir(outdir):
         try:
