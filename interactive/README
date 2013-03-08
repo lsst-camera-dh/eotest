@@ -1,0 +1,20 @@
+2013 March 08
+
+Assumes user will set two environment variables:
+
+DMSTACK_DIR = location of the DMStack installation
+We are currently using the Winter2013 Beta but Summer2012 should work as well
+
+LSSTSCRIPT_DIR = location of the test_scripts directory obtained from git repo:
+git@git.lsstcorp.org:LSST/Camera/Sensors/test_scripts
+
+Once those variables are set, do:
+source setup.sh
+
+This will update your environment to use the DMstack and the analysis scripts.
+
+This directory also contains examples to run two examples:
+fe55_gain and read_noise
+Users can view the contents of those scripts for clues on running at the 
+command line or edit the scripts directly and use them.
+
