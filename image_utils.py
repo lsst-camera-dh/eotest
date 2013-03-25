@@ -62,18 +62,36 @@ def dm_hdu(hdu):
     return hdu+1
 
 def bias(im, overscan=serial_overscan):
-    "Compute the bias from the serial overscan region."
-    return np.mean(im.Factory(im, overscan).getArray())
+    """Compute the bias from the mean of the pixels in the serial
+    overscan region."""
+    return mean(im.Factory(im, overscan))
+
+def bias_func(im, overscan=serial_overscan, fit_order=1):
+    """Compute the bias by fitting a polynomial (linear, by default)
+    to the mean of each row of the selected overscan region.  This
+    returns a numpy.poly1d object that returns the fitted bias as
+    function of pixel row."""
+    imarr = im.Factory(im, overscan).getArray()
+    ny, nx = imarr.shape
+    rows = np.arange(ny)
+    values = np.array([np.mean(imarr[j]) for j in rows])
+    return np.poly1d(np.polyfit(rows, values, fit_order))
 
 def trim(im, imaging=imaging):
     "Trim the prescan and overscan regions."
     return im.Factory(im, imaging)
 
 def unbias_and_trim(im, overscan=serial_overscan, imaging=imaging,
-                    apply_trim=True):
+                    apply_trim=True, fit_order=1):
     """Subtract bias calculated from overscan region and optionally trim 
     prescan and overscan regions."""
-    im -= bias(im, overscan)
+    imarr = im.getArray()
+    ny, nx = imarr.shape
+
+    my_bias = bias_func(im, overscan, fit_order)
+    for row in range(ny):
+        imarr[row] -= my_bias(row)
+        
     if apply_trim:
         return trim(im, imaging)
     else:
