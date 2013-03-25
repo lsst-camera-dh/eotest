@@ -12,13 +12,16 @@ import pyfits
 import lsst.afw.geom as afwGeom
 import lsst.afw.image as afwImage
 import lsst.afw.display.ds9 as ds9
+from fe55_yield import Fe55Yield
 
 import image_utils as imutils
 
 class SegmentExposure(object):
-    def __init__(self, exptime=1, gain=5, bbox=imutils.full_segment):
+    def __init__(self, exptime=1, gain=5, ccd_temp=-100,
+                 bbox=imutils.full_segment):
         self.exptime = exptime
         self.gain = gain
+        self.fe55_yield = Fe55Yield(ccd_temp)
         self.image = afwImage.ImageF(bbox)
         self.imarr = self.image.Factory(self.image, imutils.imaging).getArray()
         self.ny, self.nx = self.imarr.shape
@@ -59,27 +62,18 @@ class SegmentExposure(object):
         bright_pix = bright_pix.reshape(self.ny, self.nx)
         self.imarr += bright_pix*nsig*self.sigma()
         return np.where(bright_pix == 1)
-    def add_Fe55_hits(self, nxrays=200):
-        """One- and two-pixel distributions, based on statistics
-        from one of PD's Fe55 exposures."""
+    def add_Fe55_hits(self, nxrays=200, beta_frac=0.12):
+        """Single pixel hits for now.  Need to investigate effects of
+        charge diffusion."""
         ny, nx = self.imarr.shape
         for i in range(nxrays):
             x0 = random.randint(nx)
             y0 = random.randint(ny)
-            signal = random.normal(1620., 13.)/self.gain  # Janesick, p 132.
-            if random.uniform() < 0.5:  # Single pixel hit
-                self.imarr[y0][x0] += int(signal)
-            else:  # Two pixels
-                peak_ratio = min(random.normal(0.58, 0.055), 1)
-                self.imarr[y0][x0] = int(signal*peak_ratio)
-                tail = int(1 - signal*peak_ratio)
-                try:
-                    if random.uniform() < 0.5:
-                        self.imarr[y0][x0 + random.randint(2)*2 - 1] += tail
-                    else:
-                        self.imarr[y0 + random.randint(2)*2 - 1][x0] += tail
-                except IndexError:
-                    pass
+            if random.random() < beta_frac:
+                signal = self.fe55_yield.beta()/self.gain
+            else:
+                signal = self.fe55_yield.alpha()/self.gain
+            self.imarr[y0][x0] += int(signal)
                 
 def fitsFile(ccd_segments):
     output = pyfits.HDUList()

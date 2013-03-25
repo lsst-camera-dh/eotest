@@ -11,15 +11,6 @@ import lsst.afw.image as afwImage
 import image_utils as imutils
 import simulation.sim_tools as sim_tools
 
-class ChargeTransfer(object):
-    def __init__(self, cti, gain):
-        self.cti = cti
-        self.gain = gain
-    def __call__(self, DN):
-        Ne = DN*self.gain
-        deferred = random.poisson(Ne*self.cti)  # Is this a Poisson process?
-        return (Ne - deferred)/self.gain, deferred/self.gain
-
 def fitsFile(segments, exptime=1):
     output = pyfits.HDUList()
     output.append(pyfits.PrimaryHDU())
@@ -102,7 +93,8 @@ if __name__ == '__main__':
     make_fe55(test_file, nxrays, amps=(1,))
 
     pcti = 1e-5
-    scti = 2e-5
+#    scti = 2e-5
+    scti = 0
 
     foo = ctesim(test_file, pcti=pcti, scti=scti)
     foo.writeto('fe55_test_cti.fits', clobber=True)

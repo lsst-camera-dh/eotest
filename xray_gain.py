@@ -11,7 +11,7 @@ import lsst.afw.geom as afwGeom
 import lsst.afw.detection as afwDetection
 import lsst.daf.base as dafBase
 import image_utils as imUtils
-from fe55_yield import fe55_yield
+from fe55_yield import Fe55Yield
 
 _ds9_header = """# Region file format: DS9 version 4.0
 global color=green font="helvetica 10 normal" select=1 highlite=1 edit=1 move=1 delete=1 include=1 fixed=0 source
@@ -29,9 +29,9 @@ def make_region_file(fpset, outfile='ds9.reg'):
 
 class Fe55Gain(object):
     def __init__(self, imfile, bbox=afwGeom.Box2I(), hdu=0, 
-                 metadata=dafBase.PropertySet(), ccdtemp=None):
+                 metadata=dafBase.PropertySet(), ccdtemp=-100):
         self.image = afwImage.ImageF(imfile, hdu, metadata, bbox)
-        self.fe55_yield = fe55_yield(ccdtemp)[0]
+        self.fe55_yield = Fe55Yield(ccdtemp).alpha()
         #
         # Store numpy array of full segment (i.e., for an empty bbox,
         # which is the default in the ImageF constructor) for
@@ -44,13 +44,15 @@ class Fe55Gain(object):
         self.noise = stats.getValue(afwMath.STDEVCLIP)
         self.median = stats.getValue(afwMath.MEDIAN)
         self.fp_sets = []
-#    def _footprint_signal(self, footprint):
-#        spans = footprint.getSpans()
-#        total = 0
-#        for span in spans:
-#            total += sum(self.arr[span.getY()][span.getX0():span.getX1()+1])
-#        return total - footprint.getNpix()*self.median
-    def _footprint_signal(self, footprint, buff=1):
+        self._footprint_signal = self._footprint_signal_spans
+        #self._footprint_signal = self._footprint_signal_bbox
+    def _footprint_signal_spans(self, footprint, buff=None):
+        spans = footprint.getSpans()
+        total = 0
+        for span in spans:
+            total += sum(self.arr[span.getY()][span.getX0():span.getX1()+1])
+        return total - footprint.getNpix()*self.median
+    def _footprint_signal_bbox(self, footprint, buff=1):
         bbox = footprint.getBBox()
         xmin = max(imUtils.imaging.getMinX(), bbox.getMinX() - buff)
         xmax = min(imUtils.imaging.getMaxX(), bbox.getMaxX() + buff)
@@ -109,8 +111,8 @@ if __name__ == '__main__':
     for i in range(ntrials):
         seg = SegmentExposure(exptime=1, gain=3)
         seg.add_bias(level=2000, sigma=2)
-        seg.add_dark_current(level=1000)
-        seg.add_Fe55_hits(nxrays=200)
+        seg.add_dark_current(level=100)
+        seg.add_Fe55_hits(nxrays=1000)
         imfile = writeFits((seg,), 'test_fe55_image.fits')
 
         f55 = Fe55Gain(imfile, hdu=hdu+1)
