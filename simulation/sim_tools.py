@@ -3,6 +3,7 @@
 conditions.  Darks, flats, Fe55, etc..
 """
 import os
+from collections import OrderedDict
 
 import numpy as np
 import numpy.random as random
@@ -16,12 +17,59 @@ from fe55_yield import Fe55Yield
 
 import image_utils as imutils
 
+class CCD(object):
+    def __init__(self, exptime=1, gain=5, ccdtemp=-100,
+                 bbox=imutils.full_segment, amps=imutils.allAmps):
+        self.segments = OrderedDict()
+        for amp in amps:
+            self.segments[amp] = SegmentExposure(exptime, gain, ccdtemp, bbox)
+    def add_bias(self, level=1e4, sigma=4):
+        for amp in self.segments:
+            self.segments[amp].add_bias(level=level, sigma=sigma)
+    def add_dark_current(self, level=2e-3):
+        for amp in self.segments:
+            self.segments[amp].add_dark_current(level=level)
+    def expose_flat(self, intensity=0):
+        for amp in self.segments:
+            self.segments[amp].expose_flat(intensity=intensity)
+    def add_Fe55_hits(self, nxrays=1000, beta_frac=0.12):
+        for amp in self.segments:
+            self.segments[amp].add_Fe55_hits(nxrays=nxrays,
+                                             beta_frac=beta_frac)
+    def generate_bright_cols(self, ncols=1):
+        bright_cols = OrderedDict()
+        for amp in self.segments:
+            bright_cols[amp] = self.segments[amp].generate_bright_cols(ncols)
+        return bright_cols
+    def add_bright_cols(self, bright_cols, nsig=5):
+        for amp in self.segments:
+            self.segments[amp].add_bright_cols(bright_cols[amp], nsig=nsig)
+    def generate_bright_pix(self, npix=100):
+        bright_pix = OrderedDict()
+        for amp in self.segments:
+            bright_pix[amp] = self.segments[amp].generate_bright_pix(npix)
+        return bright_pix
+    def add_bright_pix(self, bright_pix, nsig=5):
+        for amp in self.segments:
+            self.segments[amp].add_bright_pix(bright_pix[amp], nsig=nsig)
+    def writeto(self, outfile, pars=None):
+        ccd_segments = [self.segments[amp] for amp in self.segments]
+        output = fitsFile(ccd_segments)
+        if pars is not None:
+            output[0].header['GAIN'] = pars.system_gain
+            output[0].header['BIASLVL'] = pars.bias_level
+            output[0].header['SYSNOISE'] = pars.bias_sigma
+            output[0].header['RDNOISE'] = pars.read_noise
+            output[0].header['DARKCURR'] = pars.dark_current
+        output.writeto(outfile, clobber=True)
+
 class SegmentExposure(object):
-    def __init__(self, exptime=1, gain=5, ccd_temp=-100,
+    def __init__(self, exptime=1, gain=5, ccdtemp=-100,
                  bbox=imutils.full_segment):
         self.exptime = exptime
+        self.ccdtemp = ccdtemp
         self.gain = gain
-        self.fe55_yield = Fe55Yield(ccd_temp)
+        self.fe55_yield = Fe55Yield(ccdtemp)
         self.image = afwImage.ImageF(bbox)
         self.imarr = self.image.Factory(self.image, imutils.imaging).getArray()
         self.ny, self.nx = self.imarr.shape
@@ -35,34 +83,36 @@ class SegmentExposure(object):
         bias_arr = np.array(random.normal(level, sigma, nx*ny),
                             dtype=np.float).reshape(ny, nx)
         fullarr += bias_arr/self.gain
-    def add_dark_current(self, level=3):
+    def add_dark_current(self, level=2e-3):
         """Units of level should be e- per unit time and converted to
         DN on output."""
         dark_arr = self._poisson_imarr(level*self.exptime)/self.gain
         self.imarr += dark_arr
-    def expose_flat(self, level):
-        flat_arr = self._poisson_imarr(level*self.exptime)
+    def expose_flat(self, intensity=0):
+        """level is in units of incident photons per pixel per unit time."""
+        flat_arr = self._poisson_imarr(intensity*self.exptime)/self.gain
         self.imarr += flat_arr
-    def _poisson_imarr(self, level):
-        return random.poisson(level, self.npix).reshape(self.ny, self.nx)
+    def _poisson_imarr(self, Ne):
+        return random.poisson(Ne, self.npix).reshape(self.ny, self.nx)
     def sigma(self):
         if self._sigma == -1:
             self._sigma = np.std(self.imarr)
         return self._sigma
-    def add_bright_cols(self, ncols=1, nsig=5):
+    def generate_bright_cols(self, ncols=1):
         bright_cols = np.arange(self.nx)
         random.shuffle(bright_cols)
-        bright_cols = bright_cols[:ncols]
-        for i in bright_cols:
+        return bright_cols[:ncols]
+    def add_bright_cols(self, columns, nsig=5):
+        for i in columns:
             self.imarr[:, i] += nsig*self.sigma()
-        return bright_cols
-    def add_bright_pix(self, npix=100, nsig=5):
+    def generate_bright_pix(self, npix=100):
         bright_pix = np.concatenate((np.ones(npix), np.zeros(self.npix-npix)))
         random.shuffle(bright_pix)
         bright_pix = bright_pix.reshape(self.ny, self.nx)
+        return bright_pix
+    def add_bright_pix(self, bright_pix, nsig=5):
         self.imarr += bright_pix*nsig*self.sigma()
-        return np.where(bright_pix == 1)
-    def add_Fe55_hits(self, nxrays=200, beta_frac=0.12):
+    def add_Fe55_hits(self, nxrays=1000, beta_frac=0.12):
         """Single pixel hits for now.  Need to investigate effects of
         charge diffusion."""
         ny, nx = self.imarr.shape
@@ -79,6 +129,7 @@ def fitsFile(ccd_segments):
     output = pyfits.HDUList()
     output.append(pyfits.PrimaryHDU())
     output[0].header["EXPTIME"] = ccd_segments[0].exptime
+    output[0].header["CCDTEMP"] = ccd_segments[0].ccdtemp
     for amp, segment in zip(imutils.allAmps, ccd_segments):
         output.append(pyfits.ImageHDU(data=segment.image.getArray()))
         output[amp].name = 'AMP%s' % imutils.channelIds[amp]
@@ -128,7 +179,7 @@ if __name__ == '__main__':
     seg = SegmentExposure()
     
     seg.add_bias(1e4, 10)
-    seg.add_dark_current(300)
+    seg.add_dark_current(1e-2)
     seg.expose_flat(200)
     cols = seg.add_bright_cols(ncols=1, nsig=5)
     pix = seg.add_bright_pix(npix=100, nsig=10)

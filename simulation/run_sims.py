@@ -7,40 +7,102 @@ sensors using a specified directory structure.
 import os
 
 import numpy as np
+import image_utils as imutils
 
-from simulation.generate_Fe55_images import *
-from simulation.generate_system_noise_images import *
+from sim_tools import *
 
 def mkdir(path):
     try:
-        os.mkdir(path)
+        os.makedirs(path)
     except OSError:
         pass
 
-sim_data_root = '/nfs/farm/g/lsst/u1/testData/SIMData'
+def setup(pars, testtype):
+    outputdir = os.path.join(pars.rootdir, pars.sensor_id, testtype, 'data')
+    mkdir(outputdir)
+    sensor_id = pars.sensor_id.replace('-', '_')
+    return outputdir, sensor_id
 
-sensors = ['000-%02i' % i for i in range(4)]
+def simulate_frame(exptime, pars, ccdtemp=-100):
+    sensor = CCD(exptime=exptime, gain=pars.system_gain, ccdtemp=ccdtemp)
+    #
+    # Add test-independent effects.
+    #
+    sensor.add_bias(level=pars.bias_level, sigma=pars.bias_sigma)
+    sensor.add_bias(level=0, sigma=pars.read_noise)
+    sensor.add_dark_current(pars.dark_current)
+    return sensor
 
-nexp = 10
-exptimes = np.linspace(1, 5, nexp)
-nxrays = [int(x*1000) for x in exptimes] 
+def generate_Fe55(pars):
+    outputdir, sensor_id = setup(pars, 'xray')
+    fe55 = pars.fe55
+    for frame in range(fe55.nframes):
+        print "Generating Fe55 frame", frame
+        #
+        # Fe55 exposure
+        #
+        sensor = simulate_frame(fe55.exptime, pars, ccdtemp=fe55.ccdtemp)
+        sensor.add_Fe55_hits(nxrays=fe55.nxrays)
+        filename = "%s_fe55_%04is_%03i.fits" % (sensor_id, fe55.exptime, frame)
+        sensor.writeto(os.path.join(outputdir, filename))
+        #
+        # Bias frame
+        #
+        exptime = 0
+        sensor = simulate_frame(exptime, pars, ccdtemp=fe55.ccdtemp)
+        filename = "%s_fe55_bias_%03i.fits" % (sensor_id, frame)
+        sensor.writeto(os.path.join(outputdir, filename))
 
-os.chdir(sim_data_root)
-for sensor in sensors:
-    print "Creating data for sensor", sensor
-    sensor_dir = os.path.join(sim_data_root, sensor)
-    mkdir(sensor_dir)
-    #
-    # Fe55 data
-    #
-    print "Fe55 images..."
-    fe55_dir = os.path.join(sensor_dir, 'Fe55')
-    mkdir(fe55_dir)
-    generate_Fe55_images(exptimes, nxrays, fe55_dir, sensor)
-    #
-    # Readout system noise images
-    #
-    print "Readout system noise images..."
-    systemnoise_dir = os.path.join(sensor_dir, 'system_noise')
-    mkdir(systemnoise_dir)
-    generate_system_noise_images(nexp, systemnoise_dir, sensor)
+def generate_darks(pars):
+    outputdir, sensor_id = setup(pars, 'dark')
+    darks = pars.darks
+    bright_cols = None
+    bright_pix = None
+    for ccdtemp in darks.ccdtemps:
+        #
+        # Bias frame
+        #
+        exptime = 0
+        sensor = simulate_frame(exptime, pars)
+        filename = "%s_bias_%03i.fits" % (sensor_id, -ccdtemp)
+        sensor.writeto(os.path.join(outputdir, filename))
+        #
+        # Dark frames
+        #
+        for frame in range(darks.nframes):
+            sensor = simulate_frame(darks.exptime, pars)
+            if bright_cols is None:
+                bright_cols = sensor.generate_bright_cols(darks.bright_ncols)
+            if bright_pix is None:
+                bright_pix = sensor.generate_bright_pix(darks.bright_npix)
+            sensor.add_bright_cols(bright_cols, nsig=darks.bright_nsig)
+            sensor.add_bright_pix(bright_pix, nsig=darks.bright_nsig)
+
+            filename = "%s_dark_%03i_%03i.fits" % (sensor_id, -ccdtemp, frame)
+            sensor.writeto(os.path.join(outputdir, filename))
+
+def generate_flats(pars):
+    outputdir, sensor_id = setup(pars, 'flat')
+    flats = pars.flat_fields
+    Nes = np.logspace(np.log10(flats.min_charge), np.log10(flats.max_charge),
+                      flats.nframes)
+    exptimes = np.logspace(np.log10(flats.exptime_min),
+                           np.log10(flats.exptime_max),
+                           flats.nframes)
+    for exptime, Ne in zip(exptimes, Nes):
+        intensity = Ne/exptime
+        for flat_id in ('flat1', 'flat2'):
+            sensor = simulate_frame(exptime, pars)
+            sensor.expose_flat(intensity)
+            filename = "%(sensor_id)s_flat_%(exptime)06.2fs_%(flat_id)s.fits" \
+                       % locals()
+            sensor.writeto(os.path.join(outputdir, filename))
+
+if __name__ == '__main__':
+    import simulation.sim_params as pars
+#    pars.rootdir = '/nfs/farm/g/lsst/u1/testData/SIMData'
+    pars.rootdir = '/nfs/slac/g/ki/ki18/jchiang/LSST/SensorTests/test_scripts/work'
+    pars.sensor_id = '001-00'
+    generate_flats(pars)
+    generate_darks(pars)
+    generate_Fe55(pars)
