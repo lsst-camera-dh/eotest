@@ -71,7 +71,7 @@ if __name__ == '__main__':
     
     medims = {}
     dark95s = {}
-    print "Segment    95 percentile dark current"
+    print "Segment    95 percentile    median"
     for amp in imUtils.allAmps:
         medims[amp] = median_image(darks, amp)
         medims[amp] *= gains[amp]/exptime
@@ -80,7 +80,9 @@ if __name__ == '__main__':
         pixels.sort()
         dark95s[amp] = pixels[len(pixels)*0.95]
         sensor.add_seg_result(amp, 'darkCurrent95', dark95s[amp])
-        print "%s         %.3f" % (imUtils.channelIds[amp], dark95s[amp])
+        print "%s         %.2e         %.2e" % (imUtils.channelIds[amp],
+                                                dark95s[amp],
+                                                pixels[len(pixels)/2])
 
     dark95mean = np.mean(dark95s.values())
     print "CCD: mean 95 percentile value =", dark95mean

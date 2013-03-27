@@ -70,7 +70,7 @@ def full_well(ptcfile, amp, gain=None, fracdevmax=0.10,
     #
     dvarmax = 0
     imax = indx + 10
-    while dvarmax < fracdevmax:
+    while dvarmax < fracdevmax and imax < len(meanNe)-1:
         xx = meanNe[indx:imax]
         ff = varNe[indx:imax]
 
