@@ -71,11 +71,11 @@ class BrightPixels(object):
         #
         bright_pixs = []
         bright_cols = []
-        for y in columns:
-            if len(columns[y]) > colthresh:
-                bright_cols.append(y)
+        for x in columns:
+            if len(columns[x]) > colthresh:
+                bright_cols.append(x)
             else:
-                bright_pixs.extend([(x, y) for x in columns[y]])
+                bright_pixs.extend([(x, y) for y in columns[x]])
         #
         # Sort the output.
         #
@@ -114,7 +114,7 @@ if __name__ == '__main__':
     remove_file(mask_file)
 
     gain = 5
-    write_test_image(dark_file, emin=10, gain=5, npix=1000)
+    #write_test_image(dark_file, emin=10, gain=5, npix=1000)
     
     for amp in imutils.allAmps:
         bright_pixels = BrightPixels(dark_file, amp)
