@@ -1,9 +1,10 @@
-import numpy as np
-import pyfits
+"""
+@brief Class to handle masks for a full sensor.  Added mask files can be
+or'd to existing masks, and mask bits can be set for use with an
+afwMath.makeStatistics object.
 
-import lsst.afw.display.ds9 as ds9
-import lsst.afw.detection as afwDetect
-import lsst.afw.geom as afwGeom
+@author J. Chiang <jchiang@slac.stanford.edu>
+"""
 import lsst.afw.image as afwImage
 import lsst.afw.math as afwMath
 
@@ -16,61 +17,61 @@ class MaskedCCD(dict):
             image = afwImage.ImageF(imfile, imutils.dm_hdu(amp))
             mask = afwImage.MaskU(image.getDimensions())
             self[amp] = afwImage.MaskedImageF(image, mask)
-    def add_mask(self, mask_file, mask_name='BAD', threshold=0.5):
-        mpd = self._update_mask_planes(mask_name,
-                                       mask=self[imutils.allAmps[0]].getMask())
-        threshold = afwDetect.Threshold(threshold)
+        self.stat_ctrl = afwMath.StatisticsControl()
+    def mask_plane_dict(self):
+        amp = self.keys()[0]
+        return dict(self[amp].getMask().getMaskPlaneDict().items())
+    def add_masks(self, mask_file):
+        """
+        Add a masks from a mask file by or-ing with existing masks.
+        """
         for amp in imutils.allAmps:
-            my_mask = afwImage.ImageU(mask_file, imutils.dm_hdu(amp))
-            #
-            # MaskU.setMaskPlaneValues seems to want Spans from
-            # afwDetect.Footprints for setting the mask plane values.
-            #
-            fp_set = afwDetect.FootprintSet(my_mask, threshold)
-            for fp in fp_set.getFootprints():
-                for span in fp.getSpans():
-                    self[amp].getMask().setMaskPlaneValues(mpd[mask_name],
-                                                           span.getX0(),
-                                                           span.getX1(),
-                                                           span.getY())
-    def _update_mask_planes(self, mask_name, mask=None):
-        if mask is None:
-            mask = afwImage.MaskU(1, 1)
-        mpd = dict(mask.getMaskPlaneDict().items())
-        if not mpd.has_key(mask_name):
-            mask.addMaskPlane(mask_name)
-        return mpd
-    def setAndMask(self, mask_name=None, clear=False):
-        stat_ctrl = afwMath.StatisticsControl()
-        if clear:     # Unset all masks.
-            stat_ctrl.setAndMask(0)
-        if mask_name is not None: # Set the desired mask.
-            stat_ctrl.setAndMask(afwImage.MaskU.getPlaneBitMask(mask_name))
-        return stat_ctrl
+            curr_mask = self[amp].getMask()
+            curr_mask |= afwImage.MaskU(mask_file, imutils.dm_hdu(amp))
+    def setMask(self, mask_name=None, clear=False):
+        """
+        Enable a mask and return the afwMath.StatisticsControl object
+        for use by afwMath.makeStatistics. If clear is False, then the
+        new mask is or'd with the existing mask.  If clear is False
+        and mask_name is None, then all mask bits are cleared.
+        """
+        if clear:                         # Unset all masks.
+            self.stat_ctrl.setAndMask(0)
+        if mask_name is not None:         # Set the desired mask.
+            new_mask = (self.stat_ctrl.getAndMask()
+                        | afwImage.MaskU.getPlaneBitMask(mask_name))
+            self.stat_ctrl.setAndMask(new_mask)
+        return self.stat_ctrl
 
-if __name__ == '__main__':           
-    image_file = '001-00/dark/data/001_00_dark_100_000.fits'
-    mask_file = '001-00/bright_pixels/data/001-00_bright_pixel_map.fits'
-    mask_name = 'BAD'
-
+def compute_stats(image, sctrl, weights=None):
     flags = afwMath.MEAN | afwMath.STDEV
+    if weights is None:
+        stats = afwMath.makeStatistics(image, flags, sctrl)
+    else:
+        stats = afwMath.makeStatistics(image, weights, flags, sctrl)
+    return stats.getValue(afwMath.MEAN), stats.getValue(afwMath.STDEV)
+
+if __name__ == '__main__':
+    image_file = 'bright_pix_test_10.fits'
+    mask_files = ('bright_pix_mask.fits', 'CCD250_DEFECTS_mask.fits')
 
     ccd = MaskedCCD(image_file)
-    ccd.add_mask(mask_file, mask_name)
+    for mask_file in mask_files:
+        print "adding masks from", mask_file
+        ccd.add_masks(mask_file)
+        print "mask plane dict:", ccd.mask_plane_dict()
+        print
 
-    #
-    # Compute statistics with bad pixels masked out.
-    #
-    stat_ctrl = ccd.setAndMask(mask_name)
-    for amp in imutils.allAmps:
-        stats = afwMath.makeStatistics(ccd[amp], flags, stat_ctrl)
-        print amp, stats.getValue(afwMath.MEAN), stats.getValue(afwMath.STDEV)
-    print
+    amp = imutils.allAmps[0]
     
-    #
-    # Unset bad-pixel mask and recompute statistics
-    #
-    stat_ctrl = ccd.setAndMask(clear=True)
-    for amp in imutils.allAmps:
-        stats = afwMath.makeStatistics(ccd[amp], flags, stat_ctrl)
-        print amp, stats.getValue(afwMath.MEAN), stats.getValue(afwMath.STDEV)
+    sctrl = ccd.stat_ctrl
+    print sctrl.getAndMask(), compute_stats(ccd[amp], sctrl)
+
+    sctrl = ccd.setMask('BAD')
+    print sctrl.getAndMask(), compute_stats(ccd[amp], sctrl)
+
+    sctrl = ccd.setMask('CCD250_DEFECTS')
+    print sctrl.getAndMask(), compute_stats(ccd[amp], sctrl)
+
+    sctrl = ccd.setMask(clear=True)
+    print sctrl.getAndMask(), compute_stats(ccd[amp], sctrl)
