@@ -65,7 +65,7 @@ def extract_path(filename):
             if type in dir:
                 ret_type = type         
 
-        idMatch = re.match('[0-9][0-9][0-9]-[0-9][0-9]', dir)
+        idMatch = re.match('[0-9][0-9][0-9][-|_][0-9][0-9]', dir)
         if idMatch:
             sensor_id = idMatch.group() 
 
@@ -201,6 +201,7 @@ def fixHeader(files):
             if 'K_PHOT.IDN' in hdr.keys():
                 idn1 = hdr['K_PHOT.IDN']
                 hdr['K_PHOT.IDN'] = idn1[0:50]
+            if 'K_BIAS.IDN' in hdr.keys():
                 idn1 = hdr['K_BIAS.IDN']
                 hdr['K_BIAS.IDN'] = idn1[0:50]
         
