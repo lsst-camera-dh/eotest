@@ -16,7 +16,7 @@ bloom_stop_width = 5
 signal = 10
 
 #
-# Create an empty set of frames to fill with an image of the mask with
+# Create an empty set of frames to fill with an image of the mask from
 # which we will generate the masks.
 #
 ccd = CCD(exptime=1)
@@ -49,8 +49,8 @@ for amp in (1, 9):
     imarr = ccd.segments[amp].image.getArray()
     imarr[:, xmin:xmax] += signal
 #
-# Loop over all amps, set signal in row direction along 
-# perimeter, and write masks to the FITS file.
+# Loop over all amps, set signal in perimeter and around blooming
+# stop; write masks to the FITS file.
 #
 ymax = imutils.imaging.getMaxY() + 1
 ymin = ymax - bloom_stop_width
