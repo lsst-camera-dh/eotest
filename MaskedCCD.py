@@ -42,6 +42,12 @@ class MaskedCCD(dict):
                         | afwImage.MaskU.getPlaneBitMask(mask_name))
             self.stat_ctrl.setAndMask(new_mask)
         return self.stat_ctrl
+    def setAllMasks(self):
+        "Enable all masks."
+        mpd = self.mask_plane_dict()
+        mask_bits = 2**len(mpd) - 1
+        self.stat_ctrl.setAndMask(mask_bits)
+        return self.stat_ctrl
 
 def compute_stats(image, sctrl, weights=None):
     flags = afwMath.MEAN | afwMath.STDEV
@@ -74,4 +80,7 @@ if __name__ == '__main__':
     print sctrl.getAndMask(), compute_stats(ccd[amp], sctrl)
 
     sctrl = ccd.setMask(clear=True)
+    print sctrl.getAndMask(), compute_stats(ccd[amp], sctrl)
+
+    sctrl = ccd.setAllMasks()
     print sctrl.getAndMask(), compute_stats(ccd[amp], sctrl)

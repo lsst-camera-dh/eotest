@@ -55,7 +55,7 @@ def ccd250_mask(outfile, mask_plane='CCD250_DEFECTS',
     #
     hdulist = pyfits.HDUList()
     hdulist.append(pyfits.PrimaryHDU())
-    hdulist.writeto(mask_file, clobber=True)
+    hdulist.writeto(outfile, clobber=True)
     #
     # Amplifiers 1 (AMP10), 8 (AMP17), 9 (AMP07) and 16 (AMP00) are
     # along the perimeter.
@@ -104,7 +104,7 @@ def ccd250_mask(outfile, mask_plane='CCD250_DEFECTS',
     for amp in imutils.allAmps:
         bright_pixels = BrightPixels(tmp_mask_image, amp)
         pixels, columns = bright_pixels.find(gain, ethresh=signal/2.)
-        bright_pixels.write_mask(mask_file, mask_plane)
+        bright_pixels.write_mask(outfile, mask_plane)
         
     if cleanup:
         os.remove(tmp_mask_image)

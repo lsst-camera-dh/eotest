@@ -7,45 +7,42 @@ sensor gain from Fe55 data.
 import numpy as np
 import lsst.afw.math as afwMath
 import lsst.afw.image as afwImage
-import lsst.afw.geom as afwGeom
-import lsst.afw.detection as afwDetection
-import lsst.daf.base as dafBase
-import image_utils as imUtils
+import lsst.afw.detection as afwDetect
+import image_utils as imutils
+from MaskedCCD import MaskedCCD
 from fe55_yield import Fe55Yield
 
-_ds9_header = """# Region file format: DS9 version 4.0
-global color=green font="helvetica 10 normal" select=1 highlite=1 edit=1 move=1 delete=1 include=1 fixed=0 source
-linear
-"""
-
-def make_region_file(fpset, outfile='ds9.reg'):
-    output = open(outfile, 'w')
-    output.write(_ds9_header)
-    for fp in fpset.getFootprints():
-        peak = fp.getPeaks()[0]
-        output.write('point(%i,%i) # point=circle\n' 
-                     % (peak.getIx(), peak.getIy()))
-    output.close()
-
 class Fe55Gain(object):
-    def __init__(self, imfile, bbox=afwGeom.Box2I(), hdu=0, 
-                 metadata=dafBase.PropertySet(), ccdtemp=-100):
-        self.image = afwImage.ImageF(imfile, hdu, metadata, bbox)
+    def __init__(self, imfile, mask_files=(), ccdtemp_par=-100):
+        self.ccd = MaskedCCD(imfile)
+        for mask_file in mask_files:
+            self.ccd.add_masks(mask_file)
+            self.ccd.setAllMasks()
+        self.md = afwImage.readMetadata(imfile, 0)
+        try:
+            ccdtemp = self.md.get('CCDTEMP')
+        except:
+            ccdtemp = ccdtemp_par
         self.fe55_yield = Fe55Yield(ccdtemp).alpha()
+        self._footprint_signal = self._footprint_signal_spans
+        #self._footprint_signal = self._footprint_signal_bbox
+    def _generate_stats(self, amp):
         #
-        # Store numpy array of full segment (i.e., for an empty bbox,
-        # which is the default in the ImageF constructor) for
+        # Extract the imaging region of the masked image for the
+        # specified amplifier.
+        #
+        image = imutils.trim(self.ccd[amp])
+        #
+        # Store numpy array of full segment for
         # self._footprint_signal, since footprint spans use full
         # segment image pixel coordinates.
         #
-        self.arr = afwImage.ImageF(imfile, hdu).getArray()
-        stats = afwMath.makeStatistics(self.image,
-                                       afwMath.STDEVCLIP | afwMath.MEDIAN)
+        self.arr = self.ccd[amp].getImage().getArray()
+        stats = afwMath.makeStatistics(image,
+                                       afwMath.STDEVCLIP | afwMath.MEDIAN,
+                                       self.ccd.stat_ctrl)
         self.noise = stats.getValue(afwMath.STDEVCLIP)
         self.median = stats.getValue(afwMath.MEDIAN)
-        self.fp_sets = []
-        self._footprint_signal = self._footprint_signal_spans
-        #self._footprint_signal = self._footprint_signal_bbox
     def _footprint_signal_spans(self, footprint, buff=None):
         spans = footprint.getSpans()
         total = 0
@@ -54,24 +51,26 @@ class Fe55Gain(object):
         return total - footprint.getNpix()*self.median
     def _footprint_signal_bbox(self, footprint, buff=1):
         bbox = footprint.getBBox()
-        xmin = max(imUtils.imaging.getMinX(), bbox.getMinX() - buff)
-        xmax = min(imUtils.imaging.getMaxX(), bbox.getMaxX() + buff)
-        ymin = max(imUtils.imaging.getMinY(), bbox.getMinY() - buff)
-        ymax = min(imUtils.imaging.getMaxY(), bbox.getMaxY() + buff)
+        xmin = max(imutils.imaging.getMinX(), bbox.getMinX() - buff)
+        xmax = min(imutils.imaging.getMaxX(), bbox.getMaxX() + buff)
+        ymin = max(imutils.imaging.getMinY(), bbox.getMinY() - buff)
+        ymax = min(imutils.imaging.getMaxY(), bbox.getMaxY() + buff)
         subarr = self.arr[ymin:ymax+1, xmin:xmax+1] 
         signal = sum(subarr.flat) - self.median*len(subarr.flat)
         return signal
-    def gain(self, jmargin=None, max_npix=9, buff=1, regfile=None):
+    def gain(self, amp, jmargin=None, max_npix=9, buff=1):
         if jmargin is None:
             jmargins = range(10)
         else:
             jmargins = (jmargin,)
+        self._generate_stats(amp)
         values = []
+        fp_sets = []
         for j in jmargins:
             margin = self.noise*(j + 3)
-            threshold = afwDetection.Threshold(self.median + margin)
-            fp_set = afwDetection.FootprintSet(self.image, threshold)
-            self.fp_sets.append(fp_set)
+            threshold = afwDetect.Threshold(self.median + margin)
+            fp_set = afwDetect.FootprintSet(self.ccd[amp], threshold)
+            fp_sets.append(fp_set)
             signals = [self._footprint_signal(fp, buff) for fp in 
                        fp_set.getFootprints() if fp.getNpix() < max_npix]
             try:
@@ -86,36 +85,31 @@ class Fe55Gain(object):
         except IndexError:
             values.pop()
             imed = np.where(values == np.median(values))[0][0]
-        if regfile is not None:
-            make_region_file(self.fp_sets[imed], regfile)
         return my_gain
 
-def hdu_gains(infile, bbox=afwGeom.Box2I()):
-    try:
-        ccdtemp = afwImage.readMetadata(infile, 1).get('CCDTEMP')
-    except:
-        ccdtemp = -100.
+def hdu_gains(infile, mask_files=()):
+    fe55 = Fe55Gain(infile, mask_files=mask_files)
     gains = {}
-    for amp in imUtils.allAmps:
-        fe55 = Fe55Gain(infile, bbox=bbox, hdu=imUtils.dm_hdu(amp),
-                        ccdtemp=ccdtemp)
-        gains[amp] = fe55.gain()
+    for amp in imutils.allAmps:
+        gains[amp] = fe55.gain(amp)
     return gains
 
 if __name__ == '__main__':
-    from simulation.sim_tools import SegmentExposure, writeFits
+    from simulation.sim_tools import CCD
+    from ccd250_mask import ccd250_mask
 
-    ntrials = 10
-    gains = []
-    hdu = 1
-    for i in range(ntrials):
-        seg = SegmentExposure(exptime=1, gain=3)
-        seg.add_bias(level=2000, sigma=2)
-        seg.add_dark_current(level=100)
-        seg.add_Fe55_hits(nxrays=1000)
-        imfile = writeFits((seg,), 'test_fe55_image.fits')
+    mask_file = 'CCD250_DEFECTS_mask.fits'
+    ccd250_mask(mask_file)
 
-        f55 = Fe55Gain(imfile, hdu=hdu+1)
-        gains.append(f55.gain())
-        print i, gains[-1]
-    print np.mean(gains), np.median(gains), np.std(gains)
+    test_file = 'fe55_test_image.fits'
+    
+    ccd = CCD(exptime=1, gain=3, ccdtemp=-100)
+    ccd.add_bias(level=2000, sigma=2)
+    ccd.add_dark_current(level=2e-3)
+    ccd.add_Fe55_hits(nxrays=1000)
+    ccd.writeto(test_file)
+    
+    gains = hdu_gains(test_file, mask_files=(mask_file,))
+
+    for key, value in gains.items():
+        print key, value
