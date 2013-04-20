@@ -7,83 +7,105 @@ tables.
 @author J. Chiang <jchiang@slac.stanford.edu>
 """
 import os
-import sys
 import glob
 import argparse
 import pyfits
 
-import lsst.afw.geom as afwGeom
-import lsst.afw.math as afwMath
-import image_utils as imUtils
-import pipeline.pipeline_utils as pipeUtils
+import image_utils as imutils
+from ccd250_mask import ccd250_mask
 from database.SensorDb import SensorDb, NullDbObject
 
 from xray_gain import hdu_gains
 
-median = lambda x : afwMath.makeStatistics(x, afwMath.MEDIAN).getValue()
+parser = argparse.ArgumentParser(description='Compute gain using Fe55 data')
+parser.add_argument('-f', '--files', type=str, 
+                    help='file pattern for Fe55 files')
+parser.add_argument('-l', '--filelist', type=str,
+                    help='file containing list of Fe55 files')
+parser.add_argument('-d', '--db_credentials', type=str,
+                    help='file containing database credentials')
+parser.add_argument('-s', '--sensor_id', type=str,
+                    help='sensor ID')
+parser.add_argument('-V', '--Vendor', type=str,
+                    help='CCD Vendor (e.g., e2v, ITL)')
+parser.add_argument('-m', '--mask_file', default='ccd250_defects', type=str,
+                    help='mask file to use')
+parser.add_argument('-o', '--output_dir', default='.', type=str,
+                    help='output directory')
+parser.add_argument('-v', '--verbose', action='store_true', default=False,
+                    help='turn verbosity on')
+args = parser.parse_args()
 
-if __name__ == '__main__':
-    parser = argparse.ArgumentParser(\
-                      description='Compute gain using Fe55 data')
-    parser.add_argument('-f', '--files', help="input Fe55 file pattern", type=str)
-    parser.add_argument('-v', '--verbose', help="turn verbosity on", \
-             action='store_true', default=False)
-    args = parser.parse_args()
+if args.files is None and args.filelist is None:
+    parser.parse_args('--help'.split())
 
-    if args.files:
-        pattern = args.files.replace('\\', '')
-        target = os.path.join(pattern)
-        Fe55_files = glob.glob(target)
-        Fe55_files.sort()
-        pipeline_task = False
-        if args.verbose:
-            print "processing files: ", Fe55_files
-    else:
-        try:
-            sensor_id = os.environ['SENSOR_ID']
-            Fe55_files = pipeUtils.get_file_list('FE55', sensor_id)
-            pipeline_task = True
-        except:
-            print "usage: python fe55_gain_task.py <Fe55 file pattern>"
-            sys.exit(1)
-
-    try:
-        sensor_id = os.environ['SENSOR_ID']
-        vendor = os.environ['CCD_VENDOR']
-        sensorDb = SensorDb(os.environ["DB_CREDENTIALS"])
-        sensor = sensorDb.getSensor(vendor, sensor_id, add=True)
-    except KeyError:
-        sensor = NullDbObject()
-
-    # Read the full segment.
-    bbox = afwGeom.Box2I()
+#
+# Input files. If the filelist option is specified, it takes precedence.
+#
+if args.filelist is not None:
+    Fe55_files = [x.strip() for x in open(args.filelist)]
+elif args.files is not None:
+    pattern = args.files.replace('\\', '')
+    if args.verbose:
+        print pattern
+    target = os.path.join(pattern)
+    Fe55_files = glob.glob(target)
+Fe55_files.sort()
     
-#    # Omit the first 200 columns to avoid edge roll-off.
-#    bbox = afwGeom.Box2I(afwGeom.Point2I(200, 0),
-#                         afwGeom.Point2I(541, 2021))
+if args.verbose:
+    print "processing files: ", Fe55_files
 
-    gain_dists = dict([(amp, []) for amp in imUtils.allAmps])
-    for fe55 in Fe55_files:
+#
+# Database handling
+#
+if args.db_credentials is not None:
+    sensor_id = args.sensor_id
+    vendor = args.Vendor
+    sensorDb = SensorDb(args.db_credentials)
+    sensor = sensorDb.getSensor(vendor, sensor_id, add=True)
+else:
+    sensor = NullDbObject()
+        
+#
+# Mask file to use.
+#
+if args.mask_file == 'ccd250_defects':
+    mask_files = ('ccd250_defects.fits',)
+    ccd250_mask(mask_files[0])
+elif mask_file is not None:
+    mask_files = (args.mask_file,)
+else:
+    mask_files = ()
+
+#
+# Compute gain distributions for each segment.
+#
+gain_dists = dict([(amp, []) for amp in imutils.allAmps])
+for fe55 in Fe55_files:
+    if args.verbose:
         print "processing", fe55
-        gains = hdu_gains(fe55, bbox=bbox)
-        for amp in imUtils.allAmps:
-            gain_dists[amp].append(gains[amp])
-    seg_gains = [imUtils.median(gain_dists[amp]) for amp in imUtils.allAmps]
+    gains = hdu_gains(fe55, mask_files=mask_files)
+    for amp in imutils.allAmps:
+        gain_dists[amp].append(gains[amp])
+        
+seg_gains = dict([(amp, imutils.median(gain_dists[amp]))
+                  for amp in imutils.allAmps])
 
-    if not pipeline_task:
-        outfile = "%s_gain.fits" % (sensor_id.replace('-', '_'))
-        output = pyfits.HDUList()
-        output.append(pyfits.PrimaryHDU())
+#
+# Write output to db table and output file.
+#
+outfile = os.path.join(args.output_dir,
+                       "%s_gain.fits" % (sensor_id.replace('-', '_')))
+output = pyfits.HDUList()
+output.append(pyfits.PrimaryHDU())
     
-    
-    sensor.add_ccd_result('gainMedian', imUtils.median(seg_gains))
-    print "Median gain among segments:", imUtils.median(seg_gains)
-    print "Segment    gain"
-    for amp in imUtils.allAmps:
-        sensor.add_seg_result(amp, 'gain', seg_gains[amp-1])
-        print "%s         %.4f" % (imUtils.channelIds[amp], seg_gains[amp-1])
-        if not pipeline_task:
-            output[0].header.update("GAIN%s" % imUtils.channelIds[amp], seg_gains[amp-1])
-  
-    if not pipeline_task:
-        output.writeto(outfile, clobber=True)
+gain_median = imutils.median(seg_gains.values())
+sensor.add_ccd_result('gainMedian', gain_median)
+print "Median gain among segments:", gain_median
+print "Segment    gain"
+for amp in imutils.allAmps:
+    sensor.add_seg_result(amp, 'gain', seg_gains[amp])
+    print "%s         %.4f" % (imutils.channelIds[amp], seg_gains[amp])
+    output[0].header.update("GAIN%s" % imutils.channelIds[amp],
+                            seg_gains[amp])
+output.writeto(outfile, clobber=True)
