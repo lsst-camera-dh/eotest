@@ -5,38 +5,43 @@ segment.
 @author J. Chiang <jchiang@slac.stanford.edu>
 """
 import numpy as np
-import numpy.random as random
 
 import lsst.afw.image as afwImage
+import lsst.afw.math as afwMath
+from MaskedCCD import MaskedCCD
+import image_utils as imutils
 
-from image_utils import trim, imaging, allAmps, SubRegionSampler, \
-    mean, median, stdev
+class NoiseDist(object):
+    def __init__(self, imfile, region_sampler, mask_files=()):
+        self.ccd = MaskedCCD(imfile, mask_files=mask_files)
+        self.sampler = region_sampler
+    def __call__(self, amp, gain):
+        image = self.ccd[amp].Factory(self.ccd[amp], self.sampler.imaging)
+        noise_samples = []
+        for x, y in zip(self.sampler.xarr, self.sampler.yarr):
+            subim = self.sampler.subim(image, x, y)
+            stdev = afwMath.makeStatistics(subim, afwMath.STDEV,
+                                           self.ccd.stat_ctrl).getValue()
+            noise_samples.append(stdev*gain)
+        return np.array(noise_samples)
 
-class NoiseDists(SubRegionSampler):
-    def __init__(self, gains, dx=100, dy=100, nsamp=1000, imaging=imaging):
-        SubRegionSampler.__init__(self, dx, dy, nsamp, imaging)
-        self.gains = gains
-    def __call__(self, infile):
-        noise_dists = []
-        for amp, gain in self.gains.items():
-            im = trim(afwImage.ImageF(infile, amp+1))
-            noise_samples = []
-            for x, y in zip(self.xarr, self.yarr):
-                subim = self.subim(im, x, y)
-                noise_samples.append(stdev(subim)*gain)
-            noise_dists.append(np.array(noise_samples))
-        return np.array(noise_dists)
+def noise_dists(imfile, gains, sampler, mask_files=()):
+    noise_dist = NoiseDist(imfile, sampler, mask_files=mask_files)
+    my_noise_dists = {}
+    for amp in imutils.allAmps:
+        my_noise_dists[amp] = noise_dist(amp, gains[amp])
+    return my_noise_dists
 
 if __name__ == '__main__':
     from simulation.sim_tools import SegmentExposure, writeFits
     #
     # Simulate bias image.
     #
-    gains = dict([(amp, 5.5) for amp in allAmps])
+    gains = dict([(amp, 5.5) for amp in imutils.allAmps])
 
     bias_file = "bias.fits"
     bias_segs = []
-    for amp in allAmps:
+    for amp in imutils.allAmps:
         seg = SegmentExposure(exptime=0, gain=gains[amp])
         seg.add_bias(level=1e4, sigma=5) # electronic bias and noise
         seg.add_bias(sigma=4)            # CCD read noise
@@ -47,7 +52,7 @@ if __name__ == '__main__':
     #
     readout_noise_file = 'readout_noise.fits'
     noise_segs = []
-    for amp in allAmps:
+    for amp in imutils.allAmps:
         seg = SegmentExposure(exptime=0, gain=gains[amp])
         seg.add_bias(level=1e4, sigma=5) # electronic bias and noise
         noise_segs.append(seg)
@@ -55,12 +60,17 @@ if __name__ == '__main__':
     #
     # Compute the distribution of noise estimates.
     #
-    noise_dists = NoiseDists(gains)
-    Ntot = noise_dists(bias_file)
-    Nsys = noise_dists(readout_noise_file)
+    dx, dy = 100, 100
+    nsamp = 1000
+    imaging = imutils.imaging
+    sampler = imutils.SubRegionSampler(dx, dy, nsamp, imaging)
+    #mask_files = ('CCD250_DEFECTS_mask.fits',)
+    mask_files = ()
+    Ntot = noise_dists(bias_file, gains, sampler, mask_files=mask_files)
+    Nsys = noise_dists(readout_noise_file, gains, sampler, mask_files)
     #
     # Read noise distribution.
     #
-    Nread = np.sqrt(Ntot*Ntot - Nsys*Nsys)
-    for nread in Nread:
-        print median(nread), stdev(nread)
+    for amp in imutils.allAmps:
+        Nread = np.sqrt(Ntot[amp]*Ntot[amp] - Nsys[amp]*Nsys[amp])
+        print imutils.median(Nread), imutils.stdev(Nread)
