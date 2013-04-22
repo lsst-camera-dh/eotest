@@ -130,7 +130,7 @@ def fits_median(files, hdu=2, fix=True):
     return medim
 
 class SubRegionSampler(object):
-    def __init__(self, dx, dy, nsamp, imaging):
+    def __init__(self, dx, dy, nsamp, imaging=imaging):
         self.dx = dx
         self.dy = dy
         #
@@ -139,6 +139,7 @@ class SubRegionSampler(object):
         #
         self.xarr = random.randint(imaging.getWidth() - dx - 1, size=nsamp)
         self.yarr = random.randint(imaging.getHeight() - dy - 1, size=nsamp)
+        self.imaging = imaging
     def bbox(self, x, y):
         return afwGeom.Box2I(afwGeom.Point2I(int(x), int(y)),
                              afwGeom.Extent2I(self.dx, self.dy))

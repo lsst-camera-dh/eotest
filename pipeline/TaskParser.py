@@ -1,0 +1,78 @@
+"""
+@brief Class to parse common command line options for pipeline tasks.
+
+@author J. Chiang <jchiang@slac.stanford.edu>
+"""
+import os
+import glob
+import argparse
+import image_utils as imutils
+from ccd250_mask import ccd250_mask
+from database.SensorDb import SensorDb, NullDbObject
+from database.SensorGains import SensorGains
+
+class TaskParser(argparse.ArgumentParser):
+    def __init__(self, description):
+        argparse.ArgumentParser.__init__(self, description=description)
+        self.add_argument('-d', '--db_credentials', type=str,
+                          help='file containing database credentials')
+        self.add_argument('-s', '--sensor_id', type=str,
+                          help="sensor ID")
+        self.add_argument('-V', '--Vendor', type=str,
+                          help='CCD vendor (e.g., e2v, ITL)')
+        self.add_argument('-m', '--mask_file', 
+                          default='ccd250_defects', type=str,
+                          help='mask file to use')
+        self.add_argument('-o', '--output_dir', type=str, default='.',
+                          help="output directory")
+        self.add_argument('-g', '--gains', type=str, 
+                          help='file of system gains')
+        self.add_argument('-v', '--verbose', action='store_true', default=False,
+                          help='turn verbosity on')
+    def parse_args(self):
+        self.args = argparse.ArgumentParser.parse_args(self)
+        if self.args.output_dir is not None:
+            try:
+                os.makedirs(self.args.output_dir)
+            except OSError:
+                pass
+        return self.args
+    def files(self, file_pattern, file_list):
+        if file_list is not None:
+            my_files = [x.strip() for x in open(file_list)]
+        elif file_pattern is not None:
+            my_pattern = file_pattern.replace('\\', '')
+            my_files = glob.glob(my_pattern)
+            my_files.sort()
+        else:
+            raise RuntimeError('You must specify a file pattern or file list.')
+        return my_files
+    def sensor(self):
+        if self.args.db_credentials is not None:
+            sensorDb = SensorDb(self.args.db_credentials)
+            return sensorDb.getSensor(self.args.Vendor, self.args.sensor_id, 
+                                      add=True)
+        else:
+            return NullDbObject()
+    def system_gains(self):
+        if self.args.db_credentials is not None:
+            return SensorGains(vendor=self.args.Vendor,
+                               vendorId=self.args.sensor_id,
+                               db_credentials=self.args.db_credentials)
+        else:
+            md = afwImage.readMetadata(self.args.gains, 1)
+            return dict([(amp, md.get('GAIN%s' % imutils.channelIds[amp]))
+                         for amp in imutils.allAmps])
+    def mask_files(self):
+        if self.args.mask_file == 'ccd250_defects':
+            my_mask_files = ('ccd250_defects.fits',)
+            ccd250_mask(my_mask_files[0])
+        elif self.args.mask_file is not None:
+            my_mask_files = (self.args.mask_file,)
+        else:
+            my_mask_files = ()
+        return my_mask_files
+
+if __name__ == '__main__':
+    parser = TaskParser('test task')
+    args = parser.parse_args()
