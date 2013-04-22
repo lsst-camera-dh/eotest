@@ -8,50 +8,55 @@ import lsst.afw.detection as afwDetect
 import lsst.afw.image as afwImage
 import lsst.daf.base as dafBase
 import image_utils as imutils
+from MaskedCCD import MaskedCCD
 from simulation.sim_tools import CCD
 
 class BrightPixels(object):
     """
-    Find bright pixels and bright columns based on a threshold of 5e-
-    per second per pixel.  A bright column has at least 20 bright
-    pixels.  The bright pixels that are returned are exclusive of the
-    bright columns.
+    Find bright pixels and bright columns based on a threshold of
+    ethresh e- per second per pixel.  A bright column has at least
+    colthresh bright pixels.  The bright pixels that are returned are
+    exclusive of the bright columns.  The mask that is generated will
+    be identified as mask_plane.
     """
-    def __init__(self, dark_file, amp):
-        self.dark_file = dark_file
-        self.amp = amp
-        self.md = afwImage.readMetadata(dark_file, 1)
-        self.raw_image = afwImage.ImageF(dark_file, imutils.dm_hdu(amp))
-        self.mask = afwImage.MaskU(self.raw_image.getDimensions())
-    def write_mask(self, outfile, mask_plane='BAD'):
+    def __init__(self, dark_file, mask_files=(), ethresh=5, colthresh=20,
+                 mask_plane='BAD'):
+        self.ccd = MaskedCCD(dark_file, mask_files=mask_files)
+        self.ethresh = ethresh
+        self.colthresh = colthresh
+        self.mask_plane = mask_plane
+        self.exptime = afwImage.readMetadata(dark_file, 1).get('EXPTIME')
+    def generate_mask(self, amp, gain, outfile):
         """
-        Write the mask for this amplifier to a FITS file using the
-        afwImage.MaskU.writeFits method.  This method writes the mask
-        plane bit mapping as header keywords like MP_BAD = 0, MP_SAT =
-        1, etc.. Also add keywords for iraf mosaicking in ds9.
+        Find bright pixels and columns, and write the mask for this
+        amplifier to a FITS file using the afwImage.MaskU.writeFits
+        method.
         """
-        self.fp_set.setMask(self.mask, mask_plane)
+        results = self._find(amp, gain)
+        self.mask = afwImage.MaskU(self.ccd[amp].getDimensions())
+        self.fp_set.setMask(self.mask, self.mask_plane)
         if not os.path.isfile(outfile):
             foo = pyfits.HDUList()
             foo.append(pyfits.PrimaryHDU())
             foo.writeto(outfile, clobber=True)
         md = dafBase.PropertySet()
-        md.set('EXTNAME', 'AMP%s' % imutils.channelIds[self.amp])
+        md.set('EXTNAME', 'AMP%s' % imutils.channelIds[amp])
         md.set('DETSIZE', imutils.detsize)
-        md.set('DETSEC', imutils.detsec(self.amp))
+        md.set('DETSEC', imutils.detsec(amp))
         self.mask.writeFits(outfile, md, 'a')
-    def find(self, gain, ethresh=5, colthresh=20):
+        return results
+    def _find(self, amp, gain):
         """
         Find and return the bright pixels and bright columns.
         """
-        exptime = self.md.get('EXPTIME')
+        raw_image = self.ccd[amp]
         #
-        image = imutils.unbias_and_trim(self.raw_image)
+        image = imutils.unbias_and_trim(raw_image)
         #
         # Multiply e- threshold rate by exptime and convert to DN;
         # create Threshold object.
         #
-        threshold = afwDetect.Threshold(ethresh*exptime/gain)
+        threshold = afwDetect.Threshold(self.ethresh*self.exptime/gain)
         #
         # Apply footprint detection code.
         #
@@ -59,20 +64,20 @@ class BrightPixels(object):
         #
         # Organize bright pixels by column.
         #
-        columns = dict([(x, []) for x in range(0, self.raw_image.getWidth())])
+        columns = dict([(x, []) for x in range(0, raw_image.getWidth())])
         for footprint in self.fp_set.getFootprints():
             for span in footprint.getSpans():
                 y = span.getY()
                 for x in range(span.getX0(), span.getX1()+1):
                     columns[x].append(y)
         #
-        # Divide into bright columns (with # bright pixels > colthresh) and
-        # remaining bright pixels.
+        # Divide into bright columns (with # bright pixels > self.colthresh)
+        # and remaining bright pixels.
         #
         bright_pixs = []
         bright_cols = []
         for x in columns:
-            if len(columns[x]) > colthresh:
+            if len(columns[x]) > self.colthresh:
                 bright_cols.append(x)
             else:
                 bright_pixs.extend([(x, y) for y in columns[x]])
@@ -109,15 +114,14 @@ def remove_file(filename):
         pass
 
 if __name__ == '__main__':
-    dark_file = 'bright_pix_test_10.fits'
+    dark_file = 'bright_pix_test.fits'
     mask_file = 'bright_pix_mask.fits'
     remove_file(mask_file)
 
     gain = 5
-    #write_test_image(dark_file, emin=10, gain=5, npix=1000)
+    write_test_image(dark_file, emin=10, gain=5, npix=1000)
     
+    bright_pixels = BrightPixels(dark_file)
     for amp in imutils.allAmps:
-        bright_pixels = BrightPixels(dark_file, amp)
-        pixels, columns = bright_pixels.find(gain, ethresh=5)
+        pixels, columns = bright_pixels.generate_mask(amp, gain, mask_file)
         print imutils.channelIds[amp], len(pixels), columns
-        bright_pixels.write_mask(mask_file)

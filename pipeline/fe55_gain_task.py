@@ -27,7 +27,7 @@ parser.add_argument('-d', '--db_credentials', type=str,
 parser.add_argument('-s', '--sensor_id', type=str,
                     help='sensor ID')
 parser.add_argument('-V', '--Vendor', type=str,
-                    help='CCD Vendor (e.g., e2v, ITL)')
+                    help='CCD vendor (e.g., e2v, ITL)')
 parser.add_argument('-m', '--mask_file', default='ccd250_defects', type=str,
                     help='mask file to use')
 parser.add_argument('-o', '--output_dir', default='.', type=str,
@@ -94,6 +94,10 @@ seg_gains = dict([(amp, imutils.median(gain_dists[amp]))
 #
 # Write output to db table and output file.
 #
+try:
+    os.makedirs(args.output_dir)
+except OSError:
+    pass
 outfile = os.path.join(args.output_dir,
                        "%s_gain.fits" % (sensor_id.replace('-', '_')))
 output = pyfits.HDUList()

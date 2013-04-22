@@ -14,10 +14,7 @@ from fe55_yield import Fe55Yield
 
 class Fe55Gain(object):
     def __init__(self, imfile, mask_files=(), ccdtemp_par=-100):
-        self.ccd = MaskedCCD(imfile)
-        for mask_file in mask_files:
-            self.ccd.add_masks(mask_file)
-            self.ccd.setAllMasks()
+        self.ccd = MaskedCCD(imfile, mask_files=mask_files)
         self.md = afwImage.readMetadata(imfile, 0)
         try:
             ccdtemp = self.md.get('CCDTEMP')

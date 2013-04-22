@@ -71,11 +71,23 @@ def bias_func(im, overscan=serial_overscan, fit_order=1):
     to the mean of each row of the selected overscan region.  This
     returns a numpy.poly1d object that returns the fitted bias as
     function of pixel row."""
-    imarr = im.Factory(im, overscan).getArray()
+    try:
+        imarr = im.Factory(im, overscan).getArray()
+    except AttributeError: # Dealing with a MaskedImage
+        imarr = im.Factory(im, overscan).getImage().getArray()
     ny, nx = imarr.shape
     rows = np.arange(ny)
     values = np.array([np.mean(imarr[j]) for j in rows])
     return np.poly1d(np.polyfit(rows, values, fit_order))
+
+def bias_image(im, overscan=serial_overscan, fit_order=1):
+    my_bias = bias_func(im, serial_overscan, fit_order)
+    biasim = afwImage.ImageF(im.getDimensions())
+    imarr = biasim.getArray()
+    ny, nx = imarr.shape
+    for row in range(ny):
+        imarr[row] += my_bias(row)
+    return biasim
 
 def trim(im, imaging=imaging):
     "Trim the prescan and overscan regions."
@@ -85,13 +97,13 @@ def unbias_and_trim(im, overscan=serial_overscan, imaging=imaging,
                     apply_trim=True, fit_order=1):
     """Subtract bias calculated from overscan region and optionally trim 
     prescan and overscan regions."""
-    imarr = im.getArray()
-    ny, nx = imarr.shape
-
-    my_bias = bias_func(im, overscan, fit_order)
-    for row in range(ny):
-        imarr[row] -= my_bias(row)
-        
+#    imarr = im.getArray()
+#    ny, nx = imarr.shape
+#
+#    my_bias = bias_func(im, overscan, fit_order)
+#    for row in range(ny):
+#        imarr[row] -= my_bias(row)
+    im -= bias_image(im, serial_overscan, fit_order)
     if apply_trim:
         return trim(im, imaging)
     else:

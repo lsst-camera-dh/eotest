@@ -101,10 +101,10 @@ def ccd250_mask(outfile, mask_plane='CCD250_DEFECTS',
     #
     mask = afwImage.MaskU(image.getDimensions())
     mask.addMaskPlane(mask_plane)
+    bright_pixels = BrightPixels(tmp_mask_image, mask_plane=mask_plane,
+                                 ethresh=signal/2.)
     for amp in imutils.allAmps:
-        bright_pixels = BrightPixels(tmp_mask_image, amp)
-        pixels, columns = bright_pixels.find(gain, ethresh=signal/2.)
-        bright_pixels.write_mask(outfile, mask_plane)
+        bright_pixels.generate_mask(amp, gain, outfile)
         
     if cleanup:
         os.remove(tmp_mask_image)

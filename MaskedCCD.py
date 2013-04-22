@@ -11,13 +11,17 @@ import lsst.afw.math as afwMath
 import image_utils as imutils
 
 class MaskedCCD(dict):
-    def __init__(self, imfile):
+    def __init__(self, imfile, mask_files=()):
         dict.__init__(self)
         for amp in imutils.allAmps:
             image = afwImage.ImageF(imfile, imutils.dm_hdu(amp))
             mask = afwImage.MaskU(image.getDimensions())
             self[amp] = afwImage.MaskedImageF(image, mask)
+        for mask_file in mask_files:
+            self.add_masks(mask_file)
         self.stat_ctrl = afwMath.StatisticsControl()
+        if mask_files:
+            self.setAllMasks()
     def mask_plane_dict(self):
         amp = self.keys()[0]
         return dict(self[amp].getMask().getMaskPlaneDict().items())
