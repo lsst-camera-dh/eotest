@@ -22,6 +22,7 @@ class BrightPixels(object):
     def __init__(self, dark_file, mask_files=(), ethresh=5, colthresh=20,
                  mask_plane='BAD'):
         self.ccd = MaskedCCD(dark_file, mask_files=mask_files)
+        self.md = afwImage.readMetadata(dark_file, 1)
         self.ethresh = ethresh
         self.colthresh = colthresh
         self.mask_plane = mask_plane
@@ -36,9 +37,16 @@ class BrightPixels(object):
         self.mask = afwImage.MaskU(self.ccd[amp].getDimensions())
         self.fp_set.setMask(self.mask, self.mask_plane)
         if not os.path.isfile(outfile):
-            foo = pyfits.HDUList()
-            foo.append(pyfits.PrimaryHDU())
-            foo.writeto(outfile, clobber=True)
+            output = pyfits.HDUList()
+            output.append(pyfits.PrimaryHDU())
+            output[0].header['CCD_MANU'] = self.md.get('CCD_MANU')
+            output[0].header['CCD_TYPE'] = self.md.get('CCD_TYPE')
+            output[0].header['CCD_SERN'] = self.md.get('CCD_SERN')
+            output[0].header['LSST_NUM'] = self.md.get('LSST_NUM')
+            output[0].header['MASKTYPE'] = 'BRIGHT_PIXELS'
+            output[0].header['ETHRESH'] = self.ethresh
+            output[0].header['CTHRESH'] = self.colthresh
+            output.writeto(outfile, clobber=True)
         md = dafBase.PropertySet()
         md.set('EXTNAME', 'AMP%s' % imutils.channelIds[amp])
         md.set('DETSIZE', imutils.detsize)
