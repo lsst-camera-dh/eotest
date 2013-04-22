@@ -6,37 +6,21 @@
 import os
 import glob
 import argparse
+import lsst.afw.image as afwImage
 import image_utils as imutils
 from ccd250_mask import ccd250_mask
 from database.SensorDb import SensorDb, NullDbObject
 from database.SensorGains import SensorGains
 
-class TaskParser(argparse.ArgumentParser):
-    def __init__(self, description):
-        argparse.ArgumentParser.__init__(self, description=description)
-        self.add_argument('-d', '--db_credentials', type=str,
-                          help='file containing database credentials')
-        self.add_argument('-s', '--sensor_id', type=str,
-                          help="sensor ID")
-        self.add_argument('-V', '--Vendor', type=str,
-                          help='CCD vendor (e.g., e2v, ITL)')
-        self.add_argument('-m', '--mask_file', 
-                          default='ccd250_defects', type=str,
-                          help='mask file to use')
-        self.add_argument('-o', '--output_dir', type=str, default='.',
-                          help="output directory")
-        self.add_argument('-g', '--gains', type=str, 
-                          help='file of system gains')
-        self.add_argument('-v', '--verbose', action='store_true', default=False,
-                          help='turn verbosity on')
-    def parse_args(self):
-        self.args = argparse.ArgumentParser.parse_args(self)
-        if self.args.output_dir is not None:
-            try:
-                os.makedirs(self.args.output_dir)
-            except OSError:
-                pass
-        return self.args
+class TaskNamespace(object):
+    """
+    Decorator class for argparse.Namespace.  This class provides
+    functions for information derived from the Namespace attributes, such
+    as lists of input files based on a file pattern or file_list file,
+    a SensorDb object, system gains, etc..
+    """
+    def __init__(self, args):
+        self.args = args
     def files(self, file_pattern, file_list):
         if file_list is not None:
             my_files = [x.strip() for x in open(file_list)]
@@ -72,6 +56,39 @@ class TaskParser(argparse.ArgumentParser):
         else:
             my_mask_files = ()
         return my_mask_files
+    def __getattr__(self, attrname):
+        return getattr(self.args, attrname)
+
+class TaskParser(argparse.ArgumentParser):
+    """
+    Subclass of argparse.ArgumentParser that adds default command line
+    options for all pipeline tasks.
+    """
+    def __init__(self, description):
+        argparse.ArgumentParser.__init__(self, description=description)
+        self.add_argument('-d', '--db_credentials', type=str,
+                          help='file containing database credentials')
+        self.add_argument('-s', '--sensor_id', type=str,
+                          help="sensor ID")
+        self.add_argument('-V', '--Vendor', type=str,
+                          help='CCD vendor (e.g., e2v, ITL)')
+        self.add_argument('-m', '--mask_file', 
+                          default='ccd250_defects', type=str,
+                          help='mask file to use')
+        self.add_argument('-o', '--output_dir', type=str, default='.',
+                          help="output directory")
+        self.add_argument('-g', '--gains', type=str, 
+                          help='file of system gains')
+        self.add_argument('-v', '--verbose', action='store_true',default=False,
+                          help='turn verbosity on')
+    def parse_args(self):
+        args = argparse.ArgumentParser.parse_args(self)
+        if args.output_dir is not None:
+            try:
+                os.makedirs(args.output_dir)
+            except OSError:
+                pass
+        return TaskNamespace(args)
 
 if __name__ == '__main__':
     parser = TaskParser('test task')

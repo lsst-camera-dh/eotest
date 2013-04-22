@@ -49,12 +49,12 @@ parser.add_argument('-S', '--nsamp', default=1000, type=int,
                     help='number of subregions to sample')
 args = parser.parse_args()
 
-bias_files = parser.files(args.bias, args.bias_file_list)
-system_noise_files = parser.files(args.noise, args.noise_file_list)
+bias_files = args.files(args.bias, args.bias_file_list)
+system_noise_files = args.files(args.noise, args.noise_file_list)
 sensor_id = args.sensor_id
-sensor = parser.sensor()
-gains = parser.system_gains()
-mask_files = parser.mask_files()
+sensor = args.sensor()
+gains = args.system_gains()
+mask_files = args.mask_files()
 
 outfiles = []
 Nread_dists = dict([(amp, []) for amp in imutils.allAmps])
