@@ -86,7 +86,8 @@ if args.db_credentials is not None:
     vendor = args.Vendor
     sensorDb = SensorDb(args.db_credentials)
     sensor = sensorDb.getSensor(vendor, sensor_id, add=True)
-    gains = SensorGains(vendor=vendor, vendorId=sensor_id)
+    gains = SensorGains(vendor=vendor, vendorId=sensor_id, 
+                        db_credentials=args.db_credentials)
 else:
     sensor = NullDbObject()
     gains = SensorGains(args.gains)

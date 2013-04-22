@@ -9,10 +9,11 @@ from image_utils import allAmps
 from database.SensorDb import SensorDb
 
 class SensorGains(dict):
-    def __init__(self, gains=None, vendorId=None, vendor='e2v'):
+    def __init__(self, gains=None, vendorId=None, vendor='e2v',
+                 db_credentials=None):
         dict.__init__(self)
         if gains is None:
-            db = SensorDb(os.environ['DB_CREDENTIALS'])
+            db = SensorDb(db_credentials)
             sensor = db.getSensor(vendor, vendorId)
             [self.__setitem__(amp, sensor.get_seg_result(amp, 'gain'))
              for amp in allAmps]
