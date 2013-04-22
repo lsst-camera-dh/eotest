@@ -129,6 +129,13 @@ def fits_median(files, hdu=2, fix=True):
 
     return medim
 
+def check_temperatures(files, tol):
+    ccd_temps = [afwImage.readMetadata(x, 1).get('CCDTEMP') for x in files]
+    temp_avg = mean(ccd_temps)
+    if max(ccd_temps) - temp_avg > tol or temp_avg - min(ccd_temps) > tol:
+        raise RuntimeError("Temperature deviations > %s " % tol +
+                           "deg C relative to average.")
+
 class SubRegionSampler(object):
     def __init__(self, dx, dy, nsamp, imaging=imaging):
         self.dx = dx
