@@ -53,6 +53,23 @@ class MaskedCCD(dict):
         self.stat_ctrl.setAndMask(mask_bits)
         return self.stat_ctrl
 
+def add_mask_files(mask_files, outfile, clobber=True):
+    masks = dict([(amp, afwImage.MaskU(mask_files[0], imutils.dm_hdu(amp)))
+                  for amp in imutils.allAmps])
+    for mask_file in mask_files[1:]:
+        for amp in imutils.allAmps:
+            masks[amp] |= afwImage.MaskU(mask_file, imutils.dm_hdu(amp))
+    output = pyfits.HDUList()
+    output.append(pyfits.PrimaryHDU())
+    output.writeto(outfile, clobber=clobber)
+    for amp in imutils.allAmps:
+        md = dafBase.PropertySet()
+        md.set('EXTNAME', 'AMP%s' % imutils.channelIds[amp])
+        md.set('DETSIZE', imutils.detsize)
+        md.set('DETSEC', imutils.detsec(amp))
+        masks[amp].writeFits(outfile, md, 'a')
+    return masks
+
 def compute_stats(image, sctrl, weights=None):
     flags = afwMath.MEAN | afwMath.STDEV
     if weights is None:
