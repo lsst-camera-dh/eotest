@@ -1,0 +1,101 @@
+usage: fe55_gain_task.py [-h] [-d DB_CREDENTIALS] [-s SENSOR_ID] [-V VENDOR]
+                         [-m MASK_FILE] [-o OUTPUT_DIR] [-g GAINS] [-v]
+                         [-f FE55_FILES] [-F FE55_FILE_LIST] [-O OUTPUT_FILE]
+
+Compute gain using Fe55 data
+
+optional arguments:
+  -h, --help            show this help message and exit
+  -d DB_CREDENTIALS, --db_credentials DB_CREDENTIALS
+                        file containing database credentials
+  -s SENSOR_ID, --sensor_id SENSOR_ID
+                        sensor ID
+  -V VENDOR, --Vendor VENDOR
+                        CCD vendor (e.g., e2v, ITL)
+  -m MASK_FILE, --mask_file MASK_FILE
+                        mask file to use
+  -o OUTPUT_DIR, --output_dir OUTPUT_DIR
+                        output directory
+  -g GAINS, --gains GAINS
+                        file of system gains
+  -v, --verbose         turn verbosity on
+  -f FE55_FILES, --fe55_files FE55_FILES
+                        file pattern for Fe55 files
+  -F FE55_FILE_LIST, --fe55_file_list FE55_FILE_LIST
+                        file containing list of Fe55 files
+  -O OUTPUT_FILE, --output_file OUTPUT_FILE
+                        Output FITS file to contain gain values
+
+-------------------------------------------------------------------------------
+
+usage: bright_pixels_task.py [-h] [-d DB_CREDENTIALS] [-s SENSOR_ID]
+                             [-V VENDOR] [-m MASK_FILE] [-o OUTPUT_DIR]
+                             [-g GAINS] [-v] [-f DARK_FILES]
+                             [-F DARK_FILE_LIST] [-e ETHRESH] [-c COLTHRESH]
+                             [-p MASK_PLANE] [-t TEMP_TOL]
+
+Find bright pixels and columns
+
+optional arguments:
+  -h, --help            show this help message and exit
+  -d DB_CREDENTIALS, --db_credentials DB_CREDENTIALS
+                        file containing database credentials
+  -s SENSOR_ID, --sensor_id SENSOR_ID
+                        sensor ID
+  -V VENDOR, --Vendor VENDOR
+                        CCD vendor (e.g., e2v, ITL)
+  -m MASK_FILE, --mask_file MASK_FILE
+                        mask file to use
+  -o OUTPUT_DIR, --output_dir OUTPUT_DIR
+                        output directory
+  -g GAINS, --gains GAINS
+                        file of system gains
+  -v, --verbose         turn verbosity on
+  -f DARK_FILES, --dark_files DARK_FILES
+                        file pattern for darks
+  -F DARK_FILE_LIST, --dark_file_list DARK_FILE_LIST
+                        file containing list of dark files
+  -e ETHRESH, --ethresh ETHRESH
+                        bright pixel threshold in e- per pixel per second
+  -c COLTHRESH, --colthresh COLTHRESH
+                        bright column threshold in # of bright pixels
+  -p MASK_PLANE, --mask_plane MASK_PLANE
+                        mask plane to be used for output mask file
+  -t TEMP_TOL, --temp_tol TEMP_TOL
+                        temperature tolerance for CCDTEMP among dark files
+
+-------------------------------------------------------------------------------
+
+usage: read_noise_task.py [-h] [-d DB_CREDENTIALS] [-s SENSOR_ID] [-V VENDOR]
+                          [-m MASK_FILE] [-o OUTPUT_DIR] [-g GAINS] [-v]
+                          [-b BIAS] [-B BIAS_FILE_LIST] [-n NOISE]
+                          [-N NOISE_FILE_LIST] [-x DX] [-y DY] [-S NSAMP]
+
+Compute Read Noise
+
+optional arguments:
+  -h, --help            show this help message and exit
+  -d DB_CREDENTIALS, --db_credentials DB_CREDENTIALS
+                        file containing database credentials
+  -s SENSOR_ID, --sensor_id SENSOR_ID
+                        sensor ID
+  -V VENDOR, --Vendor VENDOR
+                        CCD vendor (e.g., e2v, ITL)
+  -m MASK_FILE, --mask_file MASK_FILE
+                        mask file to use
+  -o OUTPUT_DIR, --output_dir OUTPUT_DIR
+                        output directory
+  -g GAINS, --gains GAINS
+                        file of system gains
+  -v, --verbose         turn verbosity on
+  -b BIAS, --bias BIAS  bias file pattern
+  -B BIAS_FILE_LIST, --bias_file_list BIAS_FILE_LIST
+                        list of bias files
+  -n NOISE, --noise NOISE
+                        system noise file pattern
+  -N NOISE_FILE_LIST, --noise_file_list NOISE_FILE_LIST
+                        list of system noise files
+  -x DX, --dx DX        subregion size in pixels along x-direction
+  -y DY, --dy DY        subregion size in pixels along y-direction
+  -S NSAMP, --nsamp NSAMP
+                        number of subregions to sample
