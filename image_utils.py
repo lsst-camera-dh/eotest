@@ -5,6 +5,7 @@ trimming, etc..
 """
 import numpy as np
 import numpy.random as random
+import pyfits
 import lsst.afw.geom as afwGeom
 import lsst.afw.image as afwImage
 import lsst.afw.math as afwMath
@@ -128,6 +129,21 @@ def fits_median(files, hdu=2, fix=True):
     medim = afwImage.ImageF(np.median(imcube, axis=0))
 
     return medim
+
+def writeFits(images, outfile, md):
+    output = pyfits.HDUList()
+    output.append(pyfits.PrimaryHDU())
+    output[0].header['EXPTIME'] = md.get('EXPTIME')
+#    output[0].header['CCD_MANU'] = md.get('CCD_MANU')
+#    output[0].header['CCD_TYPE'] = md.get('CCD_TYPE')
+#    output[0].header['CCD_SERN'] = md.get('CCD_SERN')
+#    output[0].header['LSST_NUM'] = md.get('LSST_NUM')
+    for amp in allAmps:
+        output.append(pyfits.ImageHDU(data=images[amp].getArray()))
+        output[amp].name = 'AMP%s' % channelIds[amp]
+        output[amp].header.update('DETSIZE', detsize)
+        output[amp].header.update('DETSEC', detsec(amp))
+    output.writeto(outfile, clobber=True)
 
 def check_temperatures(files, tol):
     ccd_temps = [afwImage.readMetadata(x, 1).get('CCDTEMP') for x in files]

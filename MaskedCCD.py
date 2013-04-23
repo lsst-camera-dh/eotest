@@ -81,7 +81,7 @@ def compute_stats(image, sctrl, weights=None):
     return stats.getValue(afwMath.MEAN), stats.getValue(afwMath.STDEV)
 
 if __name__ == '__main__':
-    image_file = 'bright_pix_test_10.fits'
+    image_file = 'bright_pix_test.fits'
     mask_files = ('bright_pix_mask.fits', 'CCD250_DEFECTS_mask.fits')
 
     ccd = MaskedCCD(image_file)

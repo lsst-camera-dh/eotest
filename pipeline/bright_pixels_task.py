@@ -9,26 +9,10 @@ bright column is specified via the --colthresh option.
 """
 import os
 import numpy as np
-import pyfits
 import lsst.afw.image as afwImage
 import image_utils as imutils
 from TaskParser import TaskParser
 from BrightPixels import BrightPixels
-
-def _writeFits(images, outfile, md):
-    output = pyfits.HDUList()
-    output.append(pyfits.PrimaryHDU())
-    output[0].header['EXPTIME'] = md.get('EXPTIME')
-#    output[0].header['CCD_MANU'] = md.get('CCD_MANU')
-#    output[0].header['CCD_TYPE'] = md.get('CCD_TYPE')
-#    output[0].header['CCD_SERN'] = md.get('CCD_SERN')
-#    output[0].header['LSST_NUM'] = md.get('LSST_NUM')
-    for amp in imutils.allAmps:
-        output.append(pyfits.ImageHDU(data=images[amp].getArray()))
-        output[amp].name = 'AMP%s' % imutils.channelIds[amp]
-        output[amp].header.update('DETSIZE', imutils.detsize)
-        output[amp].header.update('DETSEC', imutils.detsec(amp))
-    output.writeto(outfile, clobber=True)
 
 parser = TaskParser('Find bright pixels and columns')
 parser.add_argument('-f', '--dark_files', type=str,
@@ -62,7 +46,7 @@ md = afwImage.readMetadata(dark_files[0], 1)
 for amp in imutils.allAmps:
     median_images[amp] = imutils.fits_median(dark_files, imutils.dm_hdu(amp))
 medfile = os.path.join(args.output_dir, '%s_median_dark_bp.fits' % sensor_id)
-_writeFits(median_images, medfile, md)
+imutils.writeFits(median_images, medfile, md)
 
 bright_pixels = BrightPixels(medfile, mask_files=mask_files,
                              ethresh=args.ethresh, colthresh=args.colthresh,
