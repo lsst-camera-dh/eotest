@@ -65,7 +65,9 @@ class TaskParser(argparse.ArgumentParser):
     options for all pipeline tasks.
     """
     def __init__(self, description):
-        argparse.ArgumentParser.__init__(self, description=description)
+        formatter_class = argparse.ArgumentDefaultsHelpFormatter
+        argparse.ArgumentParser.__init__(self, description=description,
+                                         formatter_class=formatter_class)
         self.add_argument('-d', '--db_credentials', type=str,
                           help='file containing database credentials')
         self.add_argument('-s', '--sensor_id', type=str,
