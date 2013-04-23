@@ -5,6 +5,8 @@ afwMath.makeStatistics object.
 
 @author J. Chiang <jchiang@slac.stanford.edu>
 """
+import pyfits
+import lsst.daf.base as dafBase
 import lsst.afw.image as afwImage
 import lsst.afw.math as afwMath
 

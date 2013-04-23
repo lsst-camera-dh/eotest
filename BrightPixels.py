@@ -3,6 +3,7 @@
 in units of e- per second per pixel.
 """
 import os
+import numpy as np
 import pyfits
 import lsst.afw.detection as afwDetect
 import lsst.afw.image as afwImage
@@ -27,22 +28,22 @@ class BrightPixels(object):
         self.colthresh = colthresh
         self.mask_plane = mask_plane
         self.exptime = afwImage.readMetadata(dark_file, 1).get('EXPTIME')
-    def generate_mask(self, amp, gain, outfile):
+    def generate_mask(self, amp, gain, outfile, imaging=imutils.imaging):
         """
         Find bright pixels and columns, and write the mask for this
         amplifier to a FITS file using the afwImage.MaskU.writeFits
         method.
         """
-        results = self._find(amp, gain)
+        results = self._find(amp, gain, imaging)
         self.mask = afwImage.MaskU(self.ccd[amp].getDimensions())
         self.fp_set.setMask(self.mask, self.mask_plane)
         if not os.path.isfile(outfile):
             output = pyfits.HDUList()
             output.append(pyfits.PrimaryHDU())
-            output[0].header['CCD_MANU'] = self.md.get('CCD_MANU')
-            output[0].header['CCD_TYPE'] = self.md.get('CCD_TYPE')
-            output[0].header['CCD_SERN'] = self.md.get('CCD_SERN')
-            output[0].header['LSST_NUM'] = self.md.get('LSST_NUM')
+#            output[0].header['CCD_MANU'] = self.md.get('CCD_MANU')
+#            output[0].header['CCD_TYPE'] = self.md.get('CCD_TYPE')
+#            output[0].header['CCD_SERN'] = self.md.get('CCD_SERN')
+#            output[0].header['LSST_NUM'] = self.md.get('LSST_NUM')
             output[0].header['MASKTYPE'] = 'BRIGHT_PIXELS'
             output[0].header['ETHRESH'] = self.ethresh
             output[0].header['CTHRESH'] = self.colthresh
@@ -53,13 +54,13 @@ class BrightPixels(object):
         md.set('DETSEC', imutils.detsec(amp))
         self.mask.writeFits(outfile, md, 'a')
         return results
-    def _find(self, amp, gain):
+    def _find(self, amp, gain, imaging):
         """
         Find and return the bright pixels and bright columns.
         """
         raw_image = self.ccd[amp]
         #
-        image = imutils.unbias_and_trim(raw_image)
+        image = imutils.unbias_and_trim(raw_image, imaging=imaging)
         #
         # Multiply e- threshold rate by exptime and convert to DN;
         # create Threshold object.
@@ -84,11 +85,13 @@ class BrightPixels(object):
         #
         bright_pixs = []
         bright_cols = []
+        x0 = imaging.getMinX()
+        y0 = imaging.getMinY()
         for x in columns:
             if len(columns[x]) > self.colthresh:
-                bright_cols.append(x)
+                bright_cols.append(x - x0)
             else:
-                bright_pixs.extend([(x, y) for y in columns[x]])
+                bright_pixs.extend([(x - x0, y - y0) for y in columns[x]])
         #
         # Sort the output.
         #
