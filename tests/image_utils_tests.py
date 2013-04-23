@@ -1,3 +1,8 @@
+"""
+@brief Unit tests for image_utils.py module.
+
+@author J. Chiang <jchiang@slac.stanford.edu>
+"""
 import os
 import unittest
 import numpy as np
@@ -6,37 +11,43 @@ from simulation.sim_tools import CCD
 from MaskedCCD import MaskedCCD
 import image_utils as imutils
 
-class BiasHandlingTestCase(unittest.TestCase):
-    def setUp(self):
-        self.bias_slope = 1e-3
-        self.bias_intercept = 0.5
-        self.exptime = 1
-        self.gain = 1
-        self.image_file = 'test_image.fits'
+class BiasFunc(object):
+    def __init__(self, slope, intercept):
+        self.pars = slope, intercept
+    def __call__(self, x):
+        return x*self.pars[0] + self.pars[1]
 
-        self.bias_func = lambda pixel : pixel*self.bias_slope \
-                         + self.bias_intercept
-        self.bias_image = afwImage.ImageF(imutils.full_segment)
-        imarr = self.bias_image.getArray()
+class BiasHandlingTestCase(unittest.TestCase):
+    bias_slope = 1e-3
+    bias_intercept = 0.5
+    exptime = 1
+    gain = 1
+    image_file = 'test_image.fits'
+    @classmethod
+    def setUpClass(cls):
+        cls.bias_image = afwImage.ImageF(imutils.full_segment)
+        imarr = cls.bias_image.getArray()
         ny, nx = imarr.shape
         yvals = np.arange(0, ny, dtype=np.float)
+        bias_func = BiasFunc(cls.bias_slope, cls.bias_intercept)
         for x in range(nx):
-            imarr[:,x] += self.bias_func(yvals)
-
-        ccd = CCD(exptime=self.exptime, gain=self.gain)
+            imarr[:,x] += bias_func(yvals)
+        ccd = CCD(exptime=cls.exptime, gain=cls.gain)
         for amp in imutils.allAmps:
-            ccd.segments[amp].image += self.bias_image
-        ccd.writeto(self.image_file)
-    def tearDown(self):
-        os.remove(self.image_file)
+            ccd.segments[amp].image += cls.bias_image
+        ccd.writeto(cls.image_file)
+    @classmethod
+    def tearDownClass(cls):
+        os.remove(cls.image_file)
     def test_bias_func(self):
+        bias_func = BiasFunc(self.bias_slope, self.bias_intercept)
         ccd = MaskedCCD(self.image_file)
         for amp in imutils.allAmps:
             bf_i = imutils.bias_func(ccd[amp].getImage())
             bf_m = imutils.bias_func(ccd[amp])
             for y in range(2022):
                 self.assertEqual(bf_i(y), bf_m(y))
-                self.assertAlmostEqual(self.bias_func(y), bf_m(y))
+                self.assertAlmostEqual(bias_func(y), bf_m(y))
     def test_bias_image(self):
         ccd = MaskedCCD(self.image_file)
         for amp in imutils.allAmps:
@@ -53,4 +64,3 @@ class BiasHandlingTestCase(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
-

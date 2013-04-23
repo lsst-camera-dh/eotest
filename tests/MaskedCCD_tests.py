@@ -14,34 +14,36 @@ from BrightPixels import BrightPixels
 from MaskedCCD import MaskedCCD, add_mask_files
 
 class MaskedCCDTestCase(unittest.TestCase):
-    def setUp(self):
-        self.gain = 1
-        self.exptime = 1
-        self.signal = 1
-        self.xmin, self.xmax = 200, 250
-        self.ymin, self.ymax = 1000, 1050
-        self.mask_image = 'mask_image.fits'
-        self.ccd = CCD(self.exptime, gain=self.gain)
+    gain = 1
+    exptime = 1
+    signal = 1
+    xmin, xmax = 200, 250
+    ymin, ymax = 1000, 1050
+    mask_image = 'mask_image.fits'
+    mpd = dict(afwImage.MaskU().getMaskPlaneDict().items())
+    @classmethod
+    def setUpClass(cls):
+        ccd = CCD(cls.exptime, gain=cls.gain)
         for amp in imutils.allAmps:
-            imarr = self.ccd.segments[amp].image.getArray()
-            imarr[self.ymin:self.ymax, self.xmin:self.xmax] += self.signal
-        self.ccd.writeto(self.mask_image)
-        self.mpd = dict(afwImage.MaskU().getMaskPlaneDict().items())
-        self.mask_files = []
-        for mask_plane, bit in self.mpd.items():
+            imarr = ccd.segments[amp].image.getArray()
+            imarr[cls.ymin:cls.ymax, cls.xmin:cls.xmax] += cls.signal
+        ccd.writeto(cls.mask_image)
+        cls.mask_files = []
+        for mask_plane, bit in cls.mpd.items():
             mask_file = 'mask_file_%s.fits' % mask_plane
-            self.mask_files.append(mask_file)
-            bp = BrightPixels(self.mask_image, mask_plane=mask_plane,
-                              ethresh=self.signal/2.)
+            cls.mask_files.append(mask_file)
+            bp = BrightPixels(cls.mask_image, mask_plane=mask_plane,
+                              ethresh=cls.signal/2.)
             for amp in imutils.allAmps:
-                bp.generate_mask(amp, self.gain, mask_file)
-        self.summed_mask_file = 'summed_mask_file.fits'
-        add_mask_files(self.mask_files, self.summed_mask_file)
-    def tearDown(self):
-        os.remove(self.mask_image)
-        for mask_file in self.mask_files:
+                bp.generate_mask(amp, cls.gain, mask_file)
+        cls.summed_mask_file = 'summed_mask_file.fits'
+        add_mask_files(cls.mask_files, cls.summed_mask_file)
+    @classmethod
+    def tearDownClass(cls):
+        os.remove(cls.mask_image)
+        for mask_file in cls.mask_files:
             os.remove(mask_file)
-        os.remove(self.summed_mask_file)
+        os.remove(cls.summed_mask_file)
 #    @unittest.skip('skip test_add_masks')
     def test_add_masks(self):
         ccd = MaskedCCD(self.mask_image)
