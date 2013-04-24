@@ -58,7 +58,7 @@ def contour(x, y, z, levels=None, xname='x', yname='y',
     win.handles.append(handle)
     return win
 
-def histogram(x, bin_edges=None, bins=50,
+def histogram(x, bin_edges=None, bins=50, histtype='step',
               xname='x', yname='entries / bin', oplot=0, color='k',
               linestyle='solid', weights=None,
               xrange=None, yrange=None, linewidth=1, ylog=False,
@@ -72,7 +72,7 @@ def histogram(x, bin_edges=None, bins=50,
         weights = np.ones(len(x))
     if bin_edges is not None:
         bins = bin_edges
-    handle = pylab.hist(x, bins=bins, range=xrange, histtype='step',
+    handle = pylab.hist(x, bins=bins, range=xrange, histtype=histtype,
                         align='mid', color=color, linestyle=linestyle,
                         weights=weights, linewidth=linewidth, log=ylog)
     if not oplot:
