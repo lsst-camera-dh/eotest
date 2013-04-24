@@ -93,7 +93,7 @@ class Xrays(object):
             pylab.annotate(("K-alpha peak = %i DN\n\n" + 
                             "Gain = %.2f e-/DN\n\n" + 
                             "Noise = %.2f e-")
-                           % (kalpha_peak, gain, xrays.stdev*gain),
+                           % (kalpha_peak, gain, noise),
                            (0.1, 0.7), xycoords='axes fraction')
             pylab.axes().set_title('%s, AMP%s' %
                                    (os.path.basename(self.image_file),
