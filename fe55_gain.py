@@ -10,8 +10,14 @@ import image_utils as imutils
 from fe55_yield import Fe55Yield
 
 def fe55_lines(x, *args):
-    k1, m1, s1, k2, s2 = args
+    """
+    Two Gaussian model of Mn K-alpha and K-beta lines for Fe55 tests.
+    The ratio of peak locations is fixed at the line energy ratio, and
+    the line widths are assumed to be the same.
+    """
+    k1, m1, s1, k2 = args
     m2 = 6.49/5.889*m1
+    s2 = s1
     value = k1*scipy.stats.norm.pdf(x, loc=m1, scale=s1)
     value += k2*scipy.stats.norm.pdf(x, loc=m2, scale=s2)
     return value
@@ -65,7 +71,7 @@ class Xrays(object):
         stats = afwMath.makeStatistics(signals, flags)
         median = stats.getValue(afwMath.MEDIAN)
         stdev = stats.getValue(afwMath.STDEVCLIP)
-        xrange = (median - 13*stdev, median + 13*stdev)
+        xrange = (median - 10*stdev, median + 10*stdev)
         if make_plot:
             pylab.ion()
             fig = pylab.figure(self.amp)
@@ -77,7 +83,13 @@ class Xrays(object):
         x = (hist[1][1:] + hist[1][:-1])/2.
         y = hist[0]
         ntot = sum(y)
-        p0 = (ntot*0.88, median, stdev/2., ntot*0.12, stdev/2.)
+        #
+        # Starting values for two Gaussian fit. The relative
+        # normalizations are initially set at the expected line ratio
+        # of K-alpha/K-beta = 0.88/0.12.  The relative peak locations
+        # and relative widths are fixed in fe55_lines(...) above.
+        #
+        p0 = (ntot*0.88, median, stdev/2., ntot*0.12)
         pars, _ = scipy.optimize.curve_fit(fe55_lines, x, y, p0=p0)
         
         kalpha_peak = pars[1]
