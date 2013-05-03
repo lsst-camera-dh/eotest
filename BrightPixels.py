@@ -20,30 +20,31 @@ class BrightPixels(object):
     exclusive of the bright columns.  The mask that is generated will
     be identified as mask_plane.
     """
-    def __init__(self, dark_file, mask_files=(), ethresh=5, colthresh=20,
-                 mask_plane='BAD'):
-        self.ccd = MaskedCCD(dark_file, mask_files=mask_files)
-        self.md = afwImage.readMetadata(dark_file, 1)
+    def __init__(self, raw_image, exptime, gain,
+                 ethresh=5, colthresh=20, mask_plane='BAD'):
+        self.raw_image = raw_image
+        self.exptime = exptime
+        self.gain = gain
         self.ethresh = ethresh
         self.colthresh = colthresh
         self.mask_plane = mask_plane
-        self.exptime = afwImage.readMetadata(dark_file, 1).get('EXPTIME')
-    def generate_mask(self, amp, gain, outfile, imaging=imutils.imaging):
+        self.bright_pixels = None
+        self.bright_columns = None
+    def generate_mask(self, outfile, amp, imaging=imutils.imaging):
         """
         Find bright pixels and columns, and write the mask for this
         amplifier to a FITS file using the afwImage.MaskU.writeFits
         method.
         """
-        results = self._find(amp, gain, imaging)
-        self.mask = afwImage.MaskU(self.ccd[amp].getDimensions())
+        if self.bright_pixels is None or self.bright_columns is None:
+            self.find(imaging)
+        self.mask = afwImage.MaskU(self.raw_image.getDimensions())
         self.fp_set.setMask(self.mask, self.mask_plane)
+        self._write_fits(outfile, amp)
+    def _write_fits(self, outfile, amp):
         if not os.path.isfile(outfile):
             output = pyfits.HDUList()
             output.append(pyfits.PrimaryHDU())
-#            output[0].header['CCD_MANU'] = self.md.get('CCD_MANU')
-#            output[0].header['CCD_TYPE'] = self.md.get('CCD_TYPE')
-#            output[0].header['CCD_SERN'] = self.md.get('CCD_SERN')
-#            output[0].header['LSST_NUM'] = self.md.get('LSST_NUM')
             output[0].header['MASKTYPE'] = 'BRIGHT_PIXELS'
             output[0].header['ETHRESH'] = self.ethresh
             output[0].header['CTHRESH'] = self.colthresh
@@ -53,19 +54,16 @@ class BrightPixels(object):
         md.set('DETSIZE', imutils.detsize)
         md.set('DETSEC', imutils.detsec(amp))
         self.mask.writeFits(outfile, md, 'a')
-        return results
-    def _find(self, amp, gain, imaging):
+    def find(self, imaging=imutils.imaging):
         """
         Find and return the bright pixels and bright columns.
         """
-        raw_image = self.ccd[amp]
-        #
-        image = imutils.unbias_and_trim(raw_image, imaging=imaging)
+        image = imutils.unbias_and_trim(self.raw_image, imaging=imaging)
         #
         # Multiply e- threshold rate by exptime and convert to DN;
         # create Threshold object.
         #
-        threshold = afwDetect.Threshold(self.ethresh*self.exptime/gain)
+        threshold = afwDetect.Threshold(self.ethresh*self.exptime/self.gain)
         #
         # Apply footprint detection code.
         #
@@ -73,7 +71,7 @@ class BrightPixels(object):
         #
         # Organize bright pixels by column.
         #
-        columns = dict([(x, []) for x in range(0, raw_image.getWidth())])
+        columns = dict([(x, []) for x in range(0, self.raw_image.getWidth())])
         for footprint in self.fp_set.getFootprints():
             for span in footprint.getSpans():
                 y = span.getY()
@@ -97,6 +95,8 @@ class BrightPixels(object):
         #
         bright_cols.sort()
         bright_pixs = sorted(bright_pixs)
+        self.bright_pixels = bright_pixs
+        self.bright_columns = bright_cols
         return bright_pixs, bright_cols
 
 def write_test_image(outfile, emin=10, dark_curr=2e-3, exptime=10,
@@ -131,8 +131,10 @@ if __name__ == '__main__':
 
     gain = 5
     write_test_image(dark_file, emin=10, gain=5, npix=1000)
-    
-    bright_pixels = BrightPixels(dark_file)
+
+    ccd = MaskedCCD(dark_file)
     for amp in imutils.allAmps:
-        pixels, columns = bright_pixels.generate_mask(amp, gain, mask_file)
+        bright_pixels = BrightPixels(ccd[amp], ccd.md.get('EXPTIME'), gain)
+        pixels, columns = bright_pixels.find()
+        bright_pixels.generate_mask(mask_file, amp)
         print imutils.channelIds[amp], len(pixels), columns

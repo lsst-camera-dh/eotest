@@ -12,6 +12,7 @@ import numpy as np
 import lsst.afw.image as afwImage
 import image_utils as imutils
 from TaskParser import TaskParser
+from MaskedCCD import MaskedCCD
 from BrightPixels import BrightPixels
 
 parser = TaskParser('Find bright pixels and columns')
@@ -48,15 +49,21 @@ for amp in imutils.allAmps:
 medfile = os.path.join(args.output_dir, '%s_median_dark_bp.fits' % sensor_id)
 imutils.writeFits(median_images, medfile, md)
 
-bright_pixels = BrightPixels(medfile, mask_files=mask_files,
-                             ethresh=args.ethresh, colthresh=args.colthresh,
-                             mask_plane=args.mask_plane)
 
+ccd = MaskedCCD(medfile, mask_files=mask_files)
+exptime = ccd.md.get('EXPTIME')
+#bright_pixels = BrightPixels(medfile, mask_files=mask_files,
+#                             ethresh=args.ethresh, colthresh=args.colthresh,
+#                             mask_plane=args.mask_plane)
+#
 outfile = os.path.join(args.output_dir, '%s_bright_pixel_map.fits' % sensor_id)
 total_bright_pixels = 0
 print "Segment     # bright pixels"
 for amp in imutils.allAmps:
-    pixels, columns = bright_pixels.generate_mask(amp, gains[amp], outfile)
+    bright_pixels = BrightPixels(ccd[amp], exptime, gains[amp])
+    pixels, columns = bright_pixels.find()
+    bright_pixels.generate_mask(outfile, amp)
+#    pixels, columns = bright_pixels.generate_mask(amp, gains[amp], outfile)
     count = len(pixels)
     total_bright_pixels += count
     sensor.add_seg_result(amp, 'numBrightPixels', count)

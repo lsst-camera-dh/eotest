@@ -77,11 +77,6 @@ class Fe55Gain(object):
             except:
                 pass
         my_gain = np.median(values)
-        try:
-            imed = np.where(values == my_gain)[0][0]
-        except IndexError:
-            values.pop()
-            imed = np.where(values == np.median(values))[0][0]
         return my_gain
 
 def hdu_gains(infile, mask_files=()):

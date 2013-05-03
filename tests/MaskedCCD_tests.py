@@ -23,7 +23,7 @@ class MaskedCCDTestCase(unittest.TestCase):
     mpd = dict(afwImage.MaskU().getMaskPlaneDict().items())
     @classmethod
     def setUpClass(cls):
-        ccd = CCD(cls.exptime, gain=cls.gain)
+        ccd = CCD(exptime=cls.exptime, gain=cls.gain)
         for amp in imutils.allAmps:
             imarr = ccd.segments[amp].image.getArray()
             imarr[cls.ymin:cls.ymax, cls.xmin:cls.xmax] += cls.signal
@@ -32,10 +32,11 @@ class MaskedCCDTestCase(unittest.TestCase):
         for mask_plane, bit in cls.mpd.items():
             mask_file = 'mask_file_%s.fits' % mask_plane
             cls.mask_files.append(mask_file)
-            bp = BrightPixels(cls.mask_image, mask_plane=mask_plane,
-                              ethresh=cls.signal/2.)
+            masked_ccd = MaskedCCD(cls.mask_image)
             for amp in imutils.allAmps:
-                bp.generate_mask(amp, cls.gain, mask_file)
+                bp = BrightPixels(masked_ccd[amp], cls.exptime, cls.gain,
+                                  mask_plane=mask_plane, ethresh=cls.signal/2.)
+                bp.generate_mask(mask_file, amp)
         cls.summed_mask_file = 'summed_mask_file.fits'
         add_mask_files(cls.mask_files, cls.summed_mask_file)
     @classmethod

@@ -11,7 +11,7 @@ import glob
 import pyfits
 import image_utils as imutils
 from TaskParser import TaskParser
-from xray_gain import hdu_gains
+from fe55_gain import hdu_gains
 
 parser = TaskParser('Compute gain using Fe55 data')
 parser.add_argument('-f', '--fe55_files', type=str, 

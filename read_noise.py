@@ -11,25 +11,23 @@ import lsst.afw.math as afwMath
 from MaskedCCD import MaskedCCD
 import image_utils as imutils
 
-class NoiseDist(object):
-    def __init__(self, imfile, region_sampler, mask_files=()):
-        self.ccd = MaskedCCD(imfile, mask_files=mask_files)
-        self.sampler = region_sampler
-    def __call__(self, amp, gain):
-        image = self.ccd[amp].Factory(self.ccd[amp], self.sampler.imaging)
-        noise_samples = []
-        for x, y in zip(self.sampler.xarr, self.sampler.yarr):
-            subim = self.sampler.subim(image, x, y)
-            stdev = afwMath.makeStatistics(subim, afwMath.STDEV,
-                                           self.ccd.stat_ctrl).getValue()
-            noise_samples.append(stdev*gain)
-        return np.array(noise_samples)
+def noise_samples(raw_image, gain, region_sampler,
+                  stat_ctrl=afwMath.StatisticsControl()):
+    image = raw_image.Factory(raw_image, region_sampler.imaging)
+    samples = []
+    for x, y in zip(region_sampler.xarr, region_sampler.yarr):
+        subim = region_sampler.subim(image, x, y)
+        stdev = afwMath.makeStatistics(subim, afwMath.STDEV,
+                                       stat_ctrl).getValue()
+        samples.append(stdev*gain)
+    return np.array(samples)
 
 def noise_dists(imfile, gains, sampler, mask_files=()):
-    noise_dist = NoiseDist(imfile, sampler, mask_files=mask_files)
+    ccd = MaskedCCD(imfile, mask_files=mask_files)
     my_noise_dists = {}
     for amp in imutils.allAmps:
-        my_noise_dists[amp] = noise_dist(amp, gains[amp])
+        my_noise_dists[amp] = noise_samples(ccd[amp], gains[amp], sampler,
+                                            ccd.stat_ctrl)
     return my_noise_dists
 
 if __name__ == '__main__':

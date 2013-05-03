@@ -15,6 +15,8 @@ import image_utils as imutils
 class MaskedCCD(dict):
     def __init__(self, imfile, mask_files=()):
         dict.__init__(self)
+        self.imfile = imfile
+        self.md = afwImage.readMetadata(imfile, 1)
         for amp in imutils.allAmps:
             image = afwImage.ImageF(imfile, imutils.dm_hdu(amp))
             mask = afwImage.MaskU(image.getDimensions())

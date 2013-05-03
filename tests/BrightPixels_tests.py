@@ -8,6 +8,7 @@ import unittest
 import numpy as np
 import image_utils as imutils
 from simulation.sim_tools import CCD
+from MaskedCCD import MaskedCCD
 from BrightPixels import BrightPixels
 
 class BrightPixelsTestCase(unittest.TestCase):
@@ -35,9 +36,12 @@ class BrightPixelsTestCase(unittest.TestCase):
         os.remove(self.dark_file)
         os.remove(self.mask_file)
     def test_generate_mask(self):
-        bp = BrightPixels(self.dark_file, ethresh=self.emin/2., colthresh=100)
+        ccd = MaskedCCD(self.dark_file)
         for amp in imutils.allAmps:
-            results = bp.generate_mask(amp, self.gain, self.mask_file)
+            bp = BrightPixels(ccd[amp], ccd.md.get('EXPTIME'), self.gain,
+                              ethresh=self.emin/2., colthresh=100)
+            results = bp.find()
+            bp.generate_mask(self.mask_file, amp)
             pixels = np.array(np.where(self.pixels[amp] == 1))
             pixels = pixels.transpose()
             pixels = [(x, y) for y, x in pixels]
@@ -69,9 +73,12 @@ class BrightColumnsTestCase(unittest.TestCase):
         os.remove(self.dark_file)
         os.remove(self.mask_file)
     def test_generate_mask(self):
-        bp = BrightPixels(self.dark_file, ethresh=self.emin/2., colthresh=100)
+        ccd = MaskedCCD(self.dark_file)
         for amp in imutils.allAmps:
-            results = bp.generate_mask(amp, self.gain, self.mask_file)
+            bp = BrightPixels(ccd[amp], ccd.md.get('EXPTIME'), self.gain,
+                              ethresh=self.emin/2., colthresh=100)
+            results = bp.find()
+            bp.generate_mask(self.mask_file, amp)
             columns = sorted(self.columns[amp])
             self.assertEqual(columns, results[1])
 

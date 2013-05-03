@@ -14,6 +14,7 @@ import lsst.afw.detection as afwDetect
 import lsst.afw.image as afwImage
 import lsst.daf.base as dafBase
 import image_utils as imutils
+from MaskedCCD import MaskedCCD
 from BrightPixels import BrightPixels
 from simulation.sim_tools import CCD
 
@@ -48,7 +49,8 @@ def ccd250_mask(outfile, mask_plane='CCD250_DEFECTS',
     # code can interpret DN directly as e- per second.
     #
     gain = 1
-    ccd = CCD(exptime=1, gain=gain)
+    exptime = 1
+    ccd = CCD(exptime=exptime, gain=gain)
     #
     # Write the output file with a primary HDU so that the DMstack code
     # can append only image extensions (and not write to the PHDU).
@@ -101,11 +103,11 @@ def ccd250_mask(outfile, mask_plane='CCD250_DEFECTS',
     #
     mask = afwImage.MaskU(image.getDimensions())
     mask.addMaskPlane(mask_plane)
-    bright_pixels = BrightPixels(tmp_mask_image, mask_plane=mask_plane,
-                                 ethresh=signal/2.)
+    maskedCCD = MaskedCCD(tmp_mask_image)
     for amp in imutils.allAmps:
-        bright_pixels.generate_mask(amp, gain, outfile)
-        
+        bright_pixels = BrightPixels(maskedCCD[amp], exptime, gain,
+                                     ethresh=signal/2., mask_plane=mask_plane)
+        bright_pixels.generate_mask(outfile, amp)
     if cleanup:
         os.remove(tmp_mask_image)
         

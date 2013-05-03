@@ -7,6 +7,7 @@ import lsst.afw.detection as afwDetect
 import lsst.afw.image as afwImage
 import lsst.afw.math as afwMath
 import image_utils as imutils
+from MaskedCCD import MaskedCCD
 from fe55_yield import Fe55Yield
 
 def fe55_lines(x, *args):
@@ -23,17 +24,19 @@ def fe55_lines(x, *args):
     return value
 
 class Xrays(object):
-    def __init__(self, image_file, amp):
-        self.image_file = image_file
-        self.amp = amp
-        self.ccdtemp = afwImage.readMetadata(image_file, 1).get('CCDTEMP')
+    _fig_num = 0
+    def __init__(self, raw_image, ccdtemp, imaging=imutils.imaging,
+                 stat_ctrl = afwMath.StatisticsControl()):
+        self.ccdtemp = ccdtemp
+        self.stat_ctrl = stat_ctrl
         self.fe55_yield = Fe55Yield(self.ccdtemp)
-        hdu = imutils.dm_hdu(amp)
-        raw_image = afwImage.ImageF(image_file, hdu)
-        self.imarr = raw_image.getArray()
-        self.image = imutils.trim(raw_image)
+        try:
+            self.imarr = raw_image.getArray()
+        except AttributeError:
+            self.imarr = raw_image.getImage().getArray()
+        self.image = imutils.trim(raw_image, imaging=imaging)
         flags = afwMath.MEANCLIP | afwMath.STDEVCLIP
-        stats = afwMath.makeStatistics(self.image, flags)
+        stats = afwMath.makeStatistics(self.image, flags, self.stat_ctrl)
         self.mean = stats.getValue(afwMath.MEANCLIP)
         self.stdev = stats.getValue(afwMath.STDEVCLIP)
         self.footprint_signal = self._footprint_signal_spans
@@ -68,13 +71,14 @@ class Xrays(object):
     def gain(self, nsig=2, max_npix=9, gain_max=10., make_plot=False):
         signals = self.signals(nsig, max_npix, gain_max)
         flags = afwMath.MEDIAN | afwMath.STDEVCLIP
-        stats = afwMath.makeStatistics(signals, flags)
+        stats = afwMath.makeStatistics(signals, flags, self.stat_ctrl)
         median = stats.getValue(afwMath.MEDIAN)
         stdev = stats.getValue(afwMath.STDEVCLIP)
         xrange = (median - 10*stdev, median + 10*stdev)
         if make_plot:
             pylab.ion()
-            fig = pylab.figure(self.amp)
+            fig = pylab.figure(self._fig_num)
+            self._fig_num += 1
         else:
             pylab.ioff()
             
@@ -107,19 +111,30 @@ class Xrays(object):
                             "Noise = %.2f e-")
                            % (kalpha_peak, gain, noise),
                            (0.1, 0.7), xycoords='axes fraction')
-            pylab.axes().set_title('%s, AMP%s' %
-                                   (os.path.basename(self.image_file),
-                                    imutils.channelIds[amp]))
         return gain, noise
 
+def hdu_gains(fe55_file, mask_files=()):
+    ccd = MaskedCCD(fe55_file, mask_files=mask_files)
+    ccd.setAllMasks()
+    ccdtemp = ccd.md.get('CCDTEMP')
+    gains = {}
+    for amp in imutils.allAmps:
+        xrays = Xrays(ccd[amp], ccdtemp)
+        gains[amp], noise = xrays.gain()
+    return gains
+
 if __name__ == '__main__':
+    from MaskedCCD import MaskedCCD
+    
     data_dir = '/nfs/farm/g/lsst/u1/testData/eotestData/000_00/xray/data' 
     infile = os.path.join(data_dir, '000_00_fe55_0600s_000.fits')
     
-    make_plot = True
+    make_plot = False
+
+    CCD = MaskedCCD(infile)
 
     print 'AMP   gain    noise'
-    for amp in imutils.allAmps[:1]:
-        xrays = Xrays(infile, amp)
+    for amp in imutils.allAmps:
+        xrays = Xrays(CCD[amp], CCD.md.get('CCDTEMP'), stat_ctrl=CCD.stat_ctrl)
         gain, noise = xrays.gain(make_plot=make_plot)
         print '%s    %.2f    %.2f' % (imutils.channelIds[amp], gain, noise)
