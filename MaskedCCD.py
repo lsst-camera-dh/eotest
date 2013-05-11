@@ -12,11 +12,30 @@ import lsst.afw.math as afwMath
 
 import image_utils as imutils
 
+class Metadata(object):
+    """
+    Class to encapulate primary header keyword data.  Default is to
+    use afwImage.readMetadata, and to fall-back to using pyfits if the
+    FITS file has non-conforming keywords.
+    """
+    def __init__(self, imfile, hdu):
+        self.header = None
+        try:
+            self.md = afwImage.readMetadata(imfile, hdu)
+        except:
+            self.header = pyfits.open(imfile)[hdu-1].header
+    def __call__(self, key):
+        if self.header is None:
+            return self.md.get(key)
+        else:
+            return self.header[key]
+
 class MaskedCCD(dict):
     def __init__(self, imfile, mask_files=()):
         dict.__init__(self)
         self.imfile = imfile
-        self.md = afwImage.readMetadata(imfile, 1)
+#        self.md = afwImage.readMetadata(imfile, 1)
+        self.md = Metadata(imfile, 1)
         for amp in imutils.allAmps:
             image = afwImage.ImageF(imfile, imutils.dm_hdu(amp))
             mask = afwImage.MaskU(image.getDimensions())
