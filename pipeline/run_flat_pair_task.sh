@@ -14,6 +14,6 @@ python flat_pair_task.py \
 ## Interactive example
 ##
 #python flat_pair_task.py \
-#    -f /nfs/farm/g/lsst/u1/testData/SIMData/000_00/flat/data/\*flat\?.fits
+#    -f /nfs/farm/g/lsst/u1/testData/eotestData/000_00/flat/data/\*flat\?.fits \
 #    -g 000-00_gain.fits \
-#    -s 000-00 -V e2v -o read_noise/data -v
+#    -s 000-00 -V e2v -o flat_pair/data -v
