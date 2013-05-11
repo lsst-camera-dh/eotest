@@ -185,35 +185,35 @@ class CrosstalkMatrix(object):
 
 if __name__ == '__main__':
     sys_xtfile = lambda amp : '/nfs/farm/g/lsst/u1/testData/eotestData/System/xtalk/data/xtalk_seg%02i.fits' % amp
-#    #
-#    # System crosstalk calculation
-#    #
-#    sys_xtalk = CrosstalkMatrix()
-#    #
-#    # Loop over aggressor amps.
-#    #
-#    for agg_amp in imutils.allAmps:
-#        ratios = system_crosstalk(sys_xtfile(agg_amp), agg_amp)
-#        sys_xtalk.set_row(agg_amp, ratios)
-#    sys_xtalk.write('sys_xtalk.txt')
-#
-#    #
-#    # Read it back in from the text file and plot.
-#    #
+    #
+    # System crosstalk calculation
+    #
+    sys_xtalk = CrosstalkMatrix()
+    #
+    # Loop over aggressor amps.
+    #
+    for agg_amp in imutils.allAmps:
+        ratios = system_crosstalk(sys_xtfile(agg_amp), agg_amp)
+        sys_xtalk.set_row(agg_amp, ratios)
+    sys_xtalk.write('sys_xtalk.txt')
+
+    #
+    # Read it back in from the text file and plot.
+    #
     foo = CrosstalkMatrix('sys_xtalk.txt')
     foo.plot_matrix('System crosstalk')
 
-#    #
-#    # Compute detector crosstalk from spot image datasets. (Use
-#    # system file as proxy.)
-#    #
-#    det_xtalk = CrosstalkMatrix()
-#    for agg_amp in imutils.allAmps:
-#        det_ratios = detector_crosstalk(sys_xtfile(agg_amp), agg_amp)
-#        det_xtalk.set_row(agg_amp, det_ratios)
-#
-#    #
-#    # Take difference and display
-#    #
-#    diff_xtalk = det_xtalk - sys_xtalk
-#    diff_xtalk.plot_matrix('Device crosstalk')
+    #
+    # Compute detector crosstalk from spot image datasets. (Use
+    # system file as proxy.)
+    #
+    det_xtalk = CrosstalkMatrix()
+    for agg_amp in imutils.allAmps:
+        det_ratios = detector_crosstalk(sys_xtfile(agg_amp), agg_amp)
+        det_xtalk.set_row(agg_amp, det_ratios)
+
+    #
+    # Take difference and display
+    #
+    diff_xtalk = det_xtalk - sys_xtalk
+    diff_xtalk.plot_matrix('Device crosstalk')
