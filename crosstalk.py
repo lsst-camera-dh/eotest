@@ -4,6 +4,7 @@
 @author J. Chiang <jchiang@slac.stanford.edu>
 """
 import os
+import time
 import numpy as np
 import pylab
 import lsst.afw.detection as afwDetect
@@ -13,12 +14,12 @@ import image_utils as imutils
 from MaskedCCD import MaskedCCD
 from BrightPixels import BrightPixels
 
-def column_mean(raw_image, col, imaging=imutils.imaging):
+def column_mean(raw_image, col, stat_ctrl, imaging=imutils.imaging):
     reg = afwGeom.Box2I(afwGeom.Point2I(col, imaging.getMinY()),
                         afwGeom.Extent2I(1, imaging.getHeight()))
     image = imutils.unbias_and_trim(raw_image, imaging=imaging)
     subim = image.Factory(image, reg)
-    return afwMath.makeStatistics(subim, afwMath.MEAN).getValue()
+    return afwMath.makeStatistics(subim, afwMath.MEAN, stat_ctrl).getValue()
 
 def system_crosstalk(imfile, aggressor_amp, ethresh=10000,
                      mask_files=()):
@@ -48,9 +49,9 @@ def system_crosstalk(imfile, aggressor_amp, ethresh=10000,
         raise RuntimeError("More than one aggressor column found.")
 
     agg_col = columns[0]
-    agg_mean = column_mean(ccd[aggressor_amp], agg_col)
+    agg_mean = column_mean(ccd[aggressor_amp], agg_col, ccd.stat_ctrl)
     
-    ratios = dict([(amp, column_mean(ccd[amp], agg_col)/agg_mean)
+    ratios = dict([(amp, column_mean(ccd[amp], agg_col, ccd.stat_ctrl)/agg_mean)
                    for amp in imutils.allAmps])
     return ratios
 
@@ -63,7 +64,22 @@ def get_footprint(fp_set):
     peak_value = max([x.getPeakValue() for x in fp.getPeaks()])
     return fp, peak_value
 
-def extract_mean_signal(masked_image, footprint):
+def extract_mean_signal_2(masked_image, footprint, stat_ctrl):
+    masked_image -= imutils.bias_image(masked_image)
+    signal = 0
+    npix = 0
+    for span in footprint.getSpans():
+        width = span.getX1() - span.getX0() + 1
+        bbox = afwGeom.Box2I(afwGeom.Point2I(span.getX0(), span.getY()),
+                             afwGeom.Extent2I(width, 1))
+        subim = masked_image.Factory(masked_image, bbox)
+        stats = afwMath.makeStatistics(subim, afwMath.SUM | afwMath.NPOINT,
+                                       stat_ctrl)
+        signal += stats.getValue(afwMath.SUM)
+        npix += stats.getValue(afwMath.NPOINT)
+    return signal/npix
+
+def extract_mean_signal(masked_image, footprint, stat_ctrl):
     image = masked_image.getImage()
     maskarr = masked_image.getMask().getArray()
     image -= imutils.bias_image(image)
@@ -79,7 +95,8 @@ def extract_mean_signal(masked_image, footprint):
     return signal/float(npix)
 
 def detector_crosstalk(imfile, aggressor_amp, ethresh=10000,
-                       peak_frac=0.5, mask_files=()):
+                       peak_frac=0.5, mask_files=(),
+                       signal_extractor=extract_mean_signal):
     """
     Compute detector crosstalk from a spot image in the aggressor
     amplifier.
@@ -101,9 +118,9 @@ def detector_crosstalk(imfile, aggressor_amp, ethresh=10000,
     creg_fp_set = afwDetect.FootprintSet(image, creg_threshold)
     footprint, peak_value = get_footprint(creg_fp_set)
 
-    agg_mean = extract_mean_signal(ccd[aggressor_amp], footprint)
-    ratios = dict([(amp, extract_mean_signal(ccd[amp], footprint)/agg_mean)
-                   for amp in imutils.allAmps])
+    agg_mean = signal_extractor(ccd[aggressor_amp], footprint, ccd.stat_ctrl)
+    ratios = dict([(amp, signal_extractor(ccd[amp], footprint, ccd.stat_ctrl)
+                    /agg_mean) for amp in imutils.allAmps])
     return ratios
 
 class CrosstalkMatrix(object):
@@ -185,18 +202,18 @@ class CrosstalkMatrix(object):
 
 if __name__ == '__main__':
     sys_xtfile = lambda amp : '/nfs/farm/g/lsst/u1/testData/eotestData/System/xtalk/data/xtalk_seg%02i.fits' % amp
+    mask_files = ('CCD250_DEFECTS_mask.fits', )
     #
     # System crosstalk calculation
     #
+    tstart = time.time()
     sys_xtalk = CrosstalkMatrix()
-    #
-    # Loop over aggressor amps.
-    #
     for agg_amp in imutils.allAmps:
-        ratios = system_crosstalk(sys_xtfile(agg_amp), agg_amp)
+        ratios = system_crosstalk(sys_xtfile(agg_amp), agg_amp,
+                                  mask_files=mask_files)
         sys_xtalk.set_row(agg_amp, ratios)
+    print time.time() - tstart
     sys_xtalk.write('sys_xtalk.txt')
-
     #
     # Read it back in from the text file and plot.
     #
@@ -207,13 +224,31 @@ if __name__ == '__main__':
     # Compute detector crosstalk from spot image datasets. (Use
     # system file as proxy.)
     #
+    tstart = time.time()
     det_xtalk = CrosstalkMatrix()
     for agg_amp in imutils.allAmps:
-        det_ratios = detector_crosstalk(sys_xtfile(agg_amp), agg_amp)
+        det_ratios = detector_crosstalk(sys_xtfile(agg_amp), agg_amp,
+                                        mask_files=mask_files)
         det_xtalk.set_row(agg_amp, det_ratios)
+    print time.time() - tstart
 
-    #
-    # Take difference and display
-    #
-    diff_xtalk = det_xtalk - sys_xtalk
-    diff_xtalk.plot_matrix('Device crosstalk')
+    tstart = time.time()
+    det_xtalk_2 = CrosstalkMatrix()
+    for agg_amp in imutils.allAmps:
+        det_ratios = detector_crosstalk(sys_xtfile(agg_amp), agg_amp,
+                                        signal_extractor=extract_mean_signal_2,
+                                        mask_files=mask_files)
+        det_xtalk_2.set_row(agg_amp, det_ratios)
+    print time.time() - tstart
+
+    sys_diff = sys_xtalk - det_xtalk
+    print max(sys_diff.matrix.flat)
+    print min(sys_diff.matrix.flat)
+
+    sys_diff_2 = sys_xtalk - det_xtalk_2
+    print max(sys_diff_2.matrix.flat)
+    print min(sys_diff_2.matrix.flat)
+
+    det_diff = det_xtalk - det_xtalk_2
+    print max(det_diff.matrix.flat)
+    print min(det_diff.matrix.flat)
