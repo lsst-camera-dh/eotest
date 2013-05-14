@@ -1,5 +1,5 @@
 """
-@brief Calculations for system and detector crosstalk inputs.
+@brief Crosstalk calculations for system and detector inputs.
 
 @author J. Chiang <jchiang@slac.stanford.edu>
 """
@@ -19,12 +19,17 @@ def column_mean(raw_image, col, stat_ctrl, imaging=imutils.imaging):
                         afwGeom.Extent2I(1, imaging.getHeight()))
     image = imutils.unbias_and_trim(raw_image, imaging=imaging)
     subim = image.Factory(image, reg)
-    return afwMath.makeStatistics(subim, afwMath.MEAN, stat_ctrl).getValue()
+    flags = afwMath.MEAN | afwMath.STDEV | afwMath.NPOINTS
+    stats = afwMath.makeStatistics(subim, flags, stat_ctrl) 
+    mean = stats.getValue(afwMath.MEAN)
+    npts = stats.getValue(afwMath.NPOINTS)
+    sigma = stats.getValue(afwMath.STDEV)/np.sqrt(npts)
+    return np.array((mean, sigma))
 
-def system_crosstalk(imfile, aggressor_amp, ethresh=10000,
+def system_crosstalk(imfile, aggressor_amp, dnthresh=10000,
                      mask_files=()):
     """
-    Compute the system crosstalk.  ethresh is the threshold in DN for
+    Compute the system crosstalk.  dnthresh is the threshold in DN for
     detecting the illuminated column in the aggressor amplifier.  This
     is optimized for system crosstalk input, i.e., for which the
     aggressor amp has a single illuminated column.
@@ -42,14 +47,14 @@ def system_crosstalk(imfile, aggressor_amp, ethresh=10000,
     exptime = 1  
     gain = 1
     bp = BrightPixels(ccd[aggressor_amp], exptime=exptime, gain=gain,
-                      ethresh=ethresh)
+                      ethresh=dnthresh)
     pixels, columns = bp.find()
 
     if len(columns) > 1:
         raise RuntimeError("More than one aggressor column found.")
 
     agg_col = columns[0]
-    agg_mean = column_mean(ccd[aggressor_amp], agg_col, ccd.stat_ctrl)
+    agg_mean = column_mean(ccd[aggressor_amp], agg_col, ccd.stat_ctrl)[0]
     
     ratios = dict([(amp, column_mean(ccd[amp], agg_col, ccd.stat_ctrl)/agg_mean)
                    for amp in imutils.allAmps])
@@ -66,6 +71,7 @@ def get_footprint(fp_set):
 
 def extract_mean_signal_2(masked_image, footprint, stat_ctrl):
     masked_image -= imutils.bias_image(masked_image)
+    stdev = afwMath.makeStatistics(masked_image, afwMath.STDEVCLIP).getValue()
     signal = 0
     npix = 0
     for span in footprint.getSpans():
@@ -77,12 +83,13 @@ def extract_mean_signal_2(masked_image, footprint, stat_ctrl):
                                        stat_ctrl)
         signal += stats.getValue(afwMath.SUM)
         npix += stats.getValue(afwMath.NPOINT)
-    return signal/npix
+    return np.array((signal/npix, stdev))
 
 def extract_mean_signal(masked_image, footprint, stat_ctrl):
     image = masked_image.getImage()
     maskarr = masked_image.getMask().getArray()
     image -= imutils.bias_image(image)
+    stdev = afwMath.makeStatistics(image, afwMath.STDEVCLIP).getValue()
     imarr = image.getArray()
     signal = 0
     npix = 0
@@ -92,9 +99,9 @@ def extract_mean_signal(masked_image, footprint, stat_ctrl):
             npix += 1
             if maskarr[y][x] == 0:
                 signal += imarr[y][x]
-    return signal/float(npix)
+    return np.array((signal/float(npix), stdev))
 
-def detector_crosstalk(imfile, aggressor_amp, ethresh=10000,
+def detector_crosstalk(imfile, aggressor_amp, dnthresh=10000,
                        peak_frac=0.5, mask_files=(),
                        signal_extractor=extract_mean_signal):
     """
@@ -107,7 +114,7 @@ def detector_crosstalk(imfile, aggressor_amp, ethresh=10000,
     # Extract footprint of spot image using nominal detection
     # threshold.
     #
-    threshold = afwDetect.Threshold(ethresh)
+    threshold = afwDetect.Threshold(dnthresh)
     fp_set = afwDetect.FootprintSet(image, threshold)
     fp, peak_value = get_footprint(fp_set)
     #
@@ -118,7 +125,7 @@ def detector_crosstalk(imfile, aggressor_amp, ethresh=10000,
     creg_fp_set = afwDetect.FootprintSet(image, creg_threshold)
     footprint, peak_value = get_footprint(creg_fp_set)
 
-    agg_mean = signal_extractor(ccd[aggressor_amp], footprint, ccd.stat_ctrl)
+    agg_mean = signal_extractor(ccd[aggressor_amp], footprint, ccd.stat_ctrl)[0]
     ratios = dict([(amp, signal_extractor(ccd[amp], footprint, ccd.stat_ctrl)
                     /agg_mean) for amp in imutils.allAmps])
     return ratios
@@ -132,7 +139,8 @@ class CrosstalkMatrix(object):
         else:
             self._set_matrix()
     def set_row(self, agg, ratios):
-        self.matrix[agg-1] = np.array([ratios[amp] for amp in imutils.allAmps])
+        self.matrix[agg-1] = np.array([ratios[amp][0] for amp 
+                                       in imutils.allAmps])
     def _set_matrix(self):
         self.matrix = np.zeros((self.namps, self.namps), dtype=np.float)
     def _read_matrix(self):
