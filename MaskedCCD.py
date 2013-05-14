@@ -24,6 +24,8 @@ class Metadata(object):
             self.md = afwImage.readMetadata(imfile, hdu)
         except:
             self.header = pyfits.open(imfile)[hdu-1].header
+    def get(self, key):
+        return self(key)
     def __call__(self, key):
         if self.header is None:
             return self.md.get(key)
