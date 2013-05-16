@@ -14,6 +14,24 @@ import image_utils as imutils
 from MaskedCCD import MaskedCCD
 from BrightPixels import BrightPixels
 
+def get_stats(raw_image, stat_ctrl, imaging=imutils.imaging):
+    image = imutils.unbias_and_trim(raw_image, imaging=imaging)
+    flags = afwMath.MEDIAN | afwMath.STDEV
+    stats = afwMath.makeStatistics(image, flags, stat_ctrl)
+    return stats.getValue(afwMath.MEDIAN), stats.getValue(afwMath.STDEV)
+
+def aggressor(ccd):
+    """Guess the aggressor amp based on the maximum pixel value."""
+    max_pix = lambda amp : max(ccd[amp].getImage().getArray().flat)
+    candidate = imutils.allAmps[0]
+    max_pix_val = max_pix(candidate)
+    for amp in imutils.allAmps[1:]:
+        val = max_pix(amp)
+        if val > max_pix_val:
+            candidate = amp
+            max_pix_val = val
+    return candidate, max_pix_val
+
 def column_mean(raw_image, col, stat_ctrl, imaging=imutils.imaging):
     reg = afwGeom.Box2I(afwGeom.Point2I(col, imaging.getMinY()),
                         afwGeom.Extent2I(1, imaging.getHeight()))
@@ -26,12 +44,15 @@ def column_mean(raw_image, col, stat_ctrl, imaging=imutils.imaging):
     sigma = stats.getValue(afwMath.STDEV)/np.sqrt(npts)
     return np.array((mean, sigma))
 
-def system_crosstalk(ccd, aggressor_amp, dnthresh=5000):
+def system_crosstalk(ccd, aggressor_amp, dnthresh=None, nsig=5):
     """
     Compute the system crosstalk.  dnthresh is the threshold in DN for
-    detecting the illuminated column in the aggressor amplifier.  This
-    is optimized for system crosstalk input, i.e., for which the
-    aggressor amp has a single illuminated column.
+    detecting the illuminated column in the aggressor amplifier; if
+    set to None, then nsig*clipped_stdev above median is used for
+    the threshold.
+    
+    This routine is optimized for system crosstalk input, i.e., for
+    which the aggressor amp has a single illuminated column.
     """
     #
     # Find bright column of aggressor amplifier.
@@ -39,8 +60,11 @@ def system_crosstalk(ccd, aggressor_amp, dnthresh=5000):
     # Set exptime and gain to unity so that the e- threshold used by
     # BrightPixels converts directly to DN.
     #
-    exptime = 1  
+    exptime = 1
     gain = 1
+    if dnthresh is None:
+        median, stdev = get_stats(ccd[aggressor_amp], ccd.stat_ctrl)
+        dnthresh = median + nsig*stdev
     bp = BrightPixels(ccd[aggressor_amp], exptime=exptime, gain=gain,
                       ethresh=dnthresh)
     pixels, columns = bp.find()
@@ -99,27 +123,25 @@ def extract_mean_signal(masked_image, footprint, stat_ctrl):
                 signal += imarr[y][x]
     return np.array((signal/float(npix), stdev))
 
-def detector_crosstalk(ccd, aggressor_amp, dnthresh=5000,
-                       peak_frac=0.2, signal_extractor=extract_mean_signal):
+def detector_crosstalk(ccd, aggressor_amp, dnthresh=None, nsig=5,
+                       signal_extractor=extract_mean_signal):
     """
     Compute detector crosstalk from a spot image in the aggressor
-    amplifier.
+    amplifier. dnthresh is the threshold in DN for detecting the
+    illuminated column in the aggressor amplifier; if set to None,
+    then nsig*clipped_stdev above median is used for the threshold.
     """
     image = imutils.unbias_and_trim(ccd[aggressor_amp])
     #
     # Extract footprint of spot image using nominal detection
     # threshold.
     #
+    if dnthresh is None:
+        median, stdev = get_stats(ccd[aggressor_amp], ccd.stat_ctrl)
+        dnthresh = median + nsig*stdev
     threshold = afwDetect.Threshold(dnthresh)
     fp_set = afwDetect.FootprintSet(image, threshold)
-    fp, peak_value = get_footprint(fp_set)
-    #
-    # Re-extract using threshold of peak_frac*peak_value to define the
-    # "central region" of the spot image.
-    #
-    creg_threshold = afwDetect.Threshold(peak_frac*peak_value)
-    creg_fp_set = afwDetect.FootprintSet(image, creg_threshold)
-    footprint, peak_value = get_footprint(creg_fp_set)
+    footprint, peak_value = get_footprint(fp_set)
 
     agg_mean = signal_extractor(ccd[aggressor_amp], footprint, ccd.stat_ctrl)[0]
     ratios = dict([(amp, signal_extractor(ccd[amp], footprint, ccd.stat_ctrl)
