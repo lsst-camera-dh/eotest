@@ -19,25 +19,20 @@ def column_mean(raw_image, col, stat_ctrl, imaging=imutils.imaging):
                         afwGeom.Extent2I(1, imaging.getHeight()))
     image = imutils.unbias_and_trim(raw_image, imaging=imaging)
     subim = image.Factory(image, reg)
-    flags = afwMath.MEAN | afwMath.STDEV | afwMath.NPOINTS
+    flags = afwMath.MEAN | afwMath.STDEV | afwMath.NPOINT
     stats = afwMath.makeStatistics(subim, flags, stat_ctrl) 
     mean = stats.getValue(afwMath.MEAN)
-    npts = stats.getValue(afwMath.NPOINTS)
+    npts = stats.getValue(afwMath.NPOINT)
     sigma = stats.getValue(afwMath.STDEV)/np.sqrt(npts)
     return np.array((mean, sigma))
 
-def system_crosstalk(imfile, aggressor_amp, dnthresh=10000,
-                     mask_files=()):
+def system_crosstalk(ccd, aggressor_amp, dnthresh=5000):
     """
     Compute the system crosstalk.  dnthresh is the threshold in DN for
     detecting the illuminated column in the aggressor amplifier.  This
     is optimized for system crosstalk input, i.e., for which the
     aggressor amp has a single illuminated column.
     """
-    #
-    # Read in the system cross-talk images.
-    #
-    ccd = MaskedCCD(imfile, mask_files=mask_files)
     #
     # Find bright column of aggressor amplifier.
     #
@@ -63,8 +58,11 @@ def system_crosstalk(imfile, aggressor_amp, dnthresh=10000,
 def get_footprint(fp_set):
     footprints = [fp for fp in fp_set.getFootprints()]
     if len(footprints) > 1:
-        raise RuntimeError("More than one spot image found in " +
-                           "aggressor amplifier.")
+        message = "More than one spot image found in aggressor amplifier:\n"
+        for i, fp in enumerate(footprints):
+            message += '%3i  %6i\n' % (i, [x.getPeakValue() 
+                                           for x in fp.getPeaks()][0])
+        raise RuntimeError(message)
     fp = footprints[0]
     peak_value = max([x.getPeakValue() for x in fp.getPeaks()])
     return fp, peak_value
@@ -101,14 +99,12 @@ def extract_mean_signal(masked_image, footprint, stat_ctrl):
                 signal += imarr[y][x]
     return np.array((signal/float(npix), stdev))
 
-def detector_crosstalk(imfile, aggressor_amp, dnthresh=10000,
-                       peak_frac=0.5, mask_files=(),
-                       signal_extractor=extract_mean_signal):
+def detector_crosstalk(ccd, aggressor_amp, dnthresh=5000,
+                       peak_frac=0.2, signal_extractor=extract_mean_signal):
     """
     Compute detector crosstalk from a spot image in the aggressor
     amplifier.
     """
-    ccd = MaskedCCD(imfile, mask_files=mask_files)
     image = imutils.unbias_and_trim(ccd[aggressor_amp])
     #
     # Extract footprint of spot image using nominal detection
@@ -217,8 +213,8 @@ if __name__ == '__main__':
     tstart = time.time()
     sys_xtalk = CrosstalkMatrix()
     for agg_amp in imutils.allAmps:
-        ratios = system_crosstalk(sys_xtfile(agg_amp), agg_amp,
-                                  mask_files=mask_files)
+        ccd = MaskedCCD(sys_xtfile(agg_amp), mask_files=mask_files)
+        ratios = system_crosstalk(ccd, agg_amp)
         sys_xtalk.set_row(agg_amp, ratios)
     print time.time() - tstart
     sys_xtalk.write('sys_xtalk.txt')
@@ -235,17 +231,17 @@ if __name__ == '__main__':
     tstart = time.time()
     det_xtalk = CrosstalkMatrix()
     for agg_amp in imutils.allAmps:
-        det_ratios = detector_crosstalk(sys_xtfile(agg_amp), agg_amp,
-                                        mask_files=mask_files)
+        ccd = MaskedCCD(sys_xtfile(agg_amp), mask_files=mask_files)
+        det_ratios = detector_crosstalk(ccd, agg_amp)
         det_xtalk.set_row(agg_amp, det_ratios)
     print time.time() - tstart
 
     tstart = time.time()
     det_xtalk_2 = CrosstalkMatrix()
     for agg_amp in imutils.allAmps:
-        det_ratios = detector_crosstalk(sys_xtfile(agg_amp), agg_amp,
-                                        signal_extractor=extract_mean_signal_2,
-                                        mask_files=mask_files)
+        ccd = MaskedCCD(sys_xtfile(agg_amp), mask_files=mask_files)
+        det_ratios = detector_crosstalk(ccd, agg_amp,
+                                        signal_extractor=extract_mean_signal_2)
         det_xtalk_2.set_row(agg_amp, det_ratios)
     print time.time() - tstart
 
