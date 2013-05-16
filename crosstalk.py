@@ -226,6 +226,18 @@ class CrosstalkMatrix(object):
         result.matrix = self.matrix + other.matrix
         return result
 
+def make_crosstalk_matrix(file_list, mask_files=(),
+                          extractor=detector_crosstalk, verbose=True):
+    det_xtalk = CrosstalkMatrix()
+    for infile in file_list:
+        if verbose:
+            print "processing", infile
+        ccd = MaskedCCD(infile, mask_files=mask_files)
+        agg_amp, max_dn = aggressor(ccd)
+        ratios = extractor(ccd, agg_amp)
+        det_xtalk.set_row(agg_amp, ratios)
+    return det_xtalk
+
 if __name__ == '__main__':
     sys_xtfile = lambda amp : '/nfs/farm/g/lsst/u1/testData/eotestData/System/xtalk/data/xtalk_seg%02i.fits' % amp
     mask_files = ('CCD250_DEFECTS_mask.fits', )
