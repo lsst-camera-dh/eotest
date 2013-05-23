@@ -124,6 +124,12 @@ class SegmentExposure(object):
             else:
                 signal = self.fe55_yield.alpha()/self.gain
             self.imarr[y0][x0] += int(signal)
+    def add_spot_image(self, dn, xref, yref, radius):
+        r2 = radius**2
+        for x in range(xref-radius, xref+radius, 1):
+            for y in range(yref-radius, yref+radius, 1):
+                if ( (x - xref)**2 + (y - yref)**2 < r2 ):
+                    self.imarr[y][x] += dn
                 
 def fitsFile(ccd_segments):
     output = pyfits.HDUList()
@@ -181,9 +187,10 @@ if __name__ == '__main__':
     seg.add_bias(1e4, 10)
     seg.add_dark_current(1e-2)
     seg.expose_flat(200)
-    cols = seg.add_bright_cols(ncols=1, nsig=5)
-    pix = seg.add_bright_pix(npix=100, nsig=10)
+#    cols = seg.add_bright_cols(ncols=1, nsig=5)
+#    pix = seg.add_bright_pix(npix=100, nsig=10)
+    seg.add_spot_image(2000, 250, 250, 20)
 
     writeFits((seg,), 'test_image.fits')
 
-#    ds9.mtv(exp.image)
+    ds9.mtv(seg.image)

@@ -138,7 +138,9 @@ def detector_crosstalk(ccd, aggressor_amp, dnthresh=None, nsig=5,
     #
     if dnthresh is None:
         median, stdev = get_stats(ccd[aggressor_amp], ccd.stat_ctrl)
-        dnthresh = median + nsig*stdev
+        #dnthresh = median + nsig*stdev
+        dnthresh = (np.max(ccd[aggressor_amp].getImage().getArray()) 
+                    + median)/4. + median
     threshold = afwDetect.Threshold(dnthresh)
     fp_set = afwDetect.FootprintSet(image, threshold)
     footprint, peak_value = get_footprint(fp_set)
@@ -152,17 +154,15 @@ class CrosstalkMatrix(object):
     def __init__(self, filename=None, namps=16):
         self.filename = filename
         self.namps = namps
+        self._set_matrix()
         if self.filename is not None and os.path.isfile(self.filename):
             self._read_matrix()
-        else:
-            self._set_matrix()
     def set_row(self, agg, ratios):
         self.matrix[agg-1] = np.array([ratios[amp][0] for amp 
                                        in imutils.allAmps])
     def _set_matrix(self):
         self.matrix = np.zeros((self.namps, self.namps), dtype=np.float)
     def _read_matrix(self):
-        self._set_matrix()
         input = open(self.filename, 'r')
         amp = 0
         for line in input:
@@ -187,7 +187,7 @@ class CrosstalkMatrix(object):
             output.write('\n')
         output.close()
     def plot_matrix(self, title=None, cmap_range=(0.6, 0.4), precision=3, 
-                    scale_factor=1e2, fontsize=10, figsize=(10, 6)):
+                    scale_factor=1e2, fontsize=10, figsize=(12, 6)):
         cmin, cmax = cmap_range
         my_matrix = np.copy(self.matrix)*scale_factor
         for i in range(self.namps):
@@ -200,8 +200,8 @@ class CrosstalkMatrix(object):
                                                                      cdict, 256)
         fig = pylab.figure(figsize=figsize)
         axes = fig.add_subplot(111)
-        pylab.imshow(np.abs(my_matrix), interpolation='nearest',
-                     cmap=unsat_grey, aspect='auto')
+        image = pylab.imshow(np.abs(my_matrix), interpolation='nearest',
+                             aspect='auto', cmap=unsat_grey)
         axes.set_xticks(range(self.namps))
         axes.set_yticks(range(self.namps))
         axes.set_xticklabels(['%i' % i for i in range(1, self.namps+1)])
@@ -217,6 +217,7 @@ class CrosstalkMatrix(object):
                     label = '%.3f' % my_matrix[y][x]
                 pylab.text(x, y, label, horizontalalignment='center', 
                            fontsize=fontsize)
+        pylab.colorbar(image)
     def __sub__(self, other):
         result = CrosstalkMatrix()
         result.matrix = self.matrix - other.matrix
@@ -234,59 +235,64 @@ def make_crosstalk_matrix(file_list, mask_files=(),
             print "processing", infile
         ccd = MaskedCCD(infile, mask_files=mask_files)
         agg_amp, max_dn = aggressor(ccd)
-        ratios = extractor(ccd, agg_amp)
-        det_xtalk.set_row(agg_amp, ratios)
+        try:
+            ratios = extractor(ccd, agg_amp)
+            det_xtalk.set_row(agg_amp, ratios)
+        except RuntimeError, message:
+            print "Error extracting victim/aggressor ratios:"
+            print message
+            print "Skipping."
     return det_xtalk
 
 if __name__ == '__main__':
-    sys_xtfile = lambda amp : '/nfs/farm/g/lsst/u1/testData/eotestData/System/xtalk/data/xtalk_seg%02i.fits' % amp
-    mask_files = ('CCD250_DEFECTS_mask.fits', )
-    #
-    # System crosstalk calculation
-    #
-    tstart = time.time()
-    sys_xtalk = CrosstalkMatrix()
-    for agg_amp in imutils.allAmps:
-        ccd = MaskedCCD(sys_xtfile(agg_amp), mask_files=mask_files)
-        ratios = system_crosstalk(ccd, agg_amp)
-        sys_xtalk.set_row(agg_amp, ratios)
-    print time.time() - tstart
-    sys_xtalk.write('sys_xtalk.txt')
-    #
-    # Read it back in from the text file and plot.
-    #
+#    sys_xtfile = lambda amp : '/nfs/farm/g/lsst/u1/testData/eotestData/System/xtalk/data/xtalk_seg%02i.fits' % amp
+#    mask_files = ('CCD250_DEFECTS_mask.fits', )
+#    #
+#    # System crosstalk calculation
+#    #
+#    tstart = time.time()
+#    sys_xtalk = CrosstalkMatrix()
+#    for agg_amp in imutils.allAmps:
+#        ccd = MaskedCCD(sys_xtfile(agg_amp), mask_files=mask_files)
+#        ratios = system_crosstalk(ccd, agg_amp)
+#        sys_xtalk.set_row(agg_amp, ratios)
+#    print time.time() - tstart
+#    sys_xtalk.write('sys_xtalk.txt')
+#    #
+#    # Read it back in from the text file and plot.
+#    #
     foo = CrosstalkMatrix('sys_xtalk.txt')
     foo.plot_matrix('System crosstalk')
 
-    #
-    # Compute detector crosstalk from spot image datasets. (Use
-    # system file as proxy.)
-    #
-    tstart = time.time()
-    det_xtalk = CrosstalkMatrix()
-    for agg_amp in imutils.allAmps:
-        ccd = MaskedCCD(sys_xtfile(agg_amp), mask_files=mask_files)
-        det_ratios = detector_crosstalk(ccd, agg_amp)
-        det_xtalk.set_row(agg_amp, det_ratios)
-    print time.time() - tstart
-
-    tstart = time.time()
-    det_xtalk_2 = CrosstalkMatrix()
-    for agg_amp in imutils.allAmps:
-        ccd = MaskedCCD(sys_xtfile(agg_amp), mask_files=mask_files)
-        det_ratios = detector_crosstalk(ccd, agg_amp,
-                                        signal_extractor=extract_mean_signal_2)
-        det_xtalk_2.set_row(agg_amp, det_ratios)
-    print time.time() - tstart
-
-    sys_diff = sys_xtalk - det_xtalk
-    print max(sys_diff.matrix.flat)
-    print min(sys_diff.matrix.flat)
-
-    sys_diff_2 = sys_xtalk - det_xtalk_2
-    print max(sys_diff_2.matrix.flat)
-    print min(sys_diff_2.matrix.flat)
-
-    det_diff = det_xtalk - det_xtalk_2
-    print max(det_diff.matrix.flat)
-    print min(det_diff.matrix.flat)
+#    #
+#    # Compute detector crosstalk from spot image datasets. (Use
+#    # system file as proxy.)
+#    #
+#    tstart = time.time()
+#    det_xtalk = CrosstalkMatrix()
+#    for agg_amp in imutils.allAmps:
+#        ccd = MaskedCCD(sys_xtfile(agg_amp), mask_files=mask_files)
+#        det_ratios = detector_crosstalk(ccd, agg_amp)
+#        det_xtalk.set_row(agg_amp, det_ratios)
+#    print time.time() - tstart
+#
+#    tstart = time.time()
+#    det_xtalk_2 = CrosstalkMatrix()
+#    for agg_amp in imutils.allAmps:
+#        ccd = MaskedCCD(sys_xtfile(agg_amp), mask_files=mask_files)
+#        det_ratios = detector_crosstalk(ccd, agg_amp,
+#                                        signal_extractor=extract_mean_signal_2)
+#        det_xtalk_2.set_row(agg_amp, det_ratios)
+#    print time.time() - tstart
+#
+#    sys_diff = sys_xtalk - det_xtalk
+#    print max(sys_diff.matrix.flat)
+#    print min(sys_diff.matrix.flat)
+#
+#    sys_diff_2 = sys_xtalk - det_xtalk_2
+#    print max(sys_diff_2.matrix.flat)
+#    print min(sys_diff_2.matrix.flat)
+#
+#    det_diff = det_xtalk - det_xtalk_2
+#    print max(det_diff.matrix.flat)
+#    print min(det_diff.matrix.flat)
