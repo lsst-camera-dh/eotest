@@ -245,54 +245,54 @@ def make_crosstalk_matrix(file_list, mask_files=(),
     return det_xtalk
 
 if __name__ == '__main__':
-#    sys_xtfile = lambda amp : '/nfs/farm/g/lsst/u1/testData/eotestData/System/xtalk/data/xtalk_seg%02i.fits' % amp
-#    mask_files = ('CCD250_DEFECTS_mask.fits', )
-#    #
-#    # System crosstalk calculation
-#    #
-#    tstart = time.time()
-#    sys_xtalk = CrosstalkMatrix()
-#    for agg_amp in imutils.allAmps:
-#        ccd = MaskedCCD(sys_xtfile(agg_amp), mask_files=mask_files)
-#        ratios = system_crosstalk(ccd, agg_amp)
-#        sys_xtalk.set_row(agg_amp, ratios)
-#    print time.time() - tstart
-#    sys_xtalk.write('sys_xtalk.txt')
-#    #
-#    # Read it back in from the text file and plot.
-#    #
+    sys_xtfile = lambda amp : '/nfs/farm/g/lsst/u1/testData/eotestData/System/xtalk/data/xtalk_seg%02i.fits' % amp
+    mask_files = ('CCD250_DEFECTS_mask.fits', )
+    #
+    # System crosstalk calculation
+    #
+    tstart = time.time()
+    sys_xtalk = CrosstalkMatrix()
+    for agg_amp in imutils.allAmps:
+        ccd = MaskedCCD(sys_xtfile(agg_amp), mask_files=mask_files)
+        ratios = system_crosstalk(ccd, agg_amp)
+        sys_xtalk.set_row(agg_amp, ratios)
+    print time.time() - tstart
+    sys_xtalk.write('sys_xtalk.txt')
+    #
+    # Read it back in from the text file and plot.
+    #
     foo = CrosstalkMatrix('sys_xtalk.txt')
     foo.plot_matrix('System crosstalk')
 
-#    #
-#    # Compute detector crosstalk from spot image datasets. (Use
-#    # system file as proxy.)
-#    #
-#    tstart = time.time()
-#    det_xtalk = CrosstalkMatrix()
-#    for agg_amp in imutils.allAmps:
-#        ccd = MaskedCCD(sys_xtfile(agg_amp), mask_files=mask_files)
-#        det_ratios = detector_crosstalk(ccd, agg_amp)
-#        det_xtalk.set_row(agg_amp, det_ratios)
-#    print time.time() - tstart
-#
-#    tstart = time.time()
-#    det_xtalk_2 = CrosstalkMatrix()
-#    for agg_amp in imutils.allAmps:
-#        ccd = MaskedCCD(sys_xtfile(agg_amp), mask_files=mask_files)
-#        det_ratios = detector_crosstalk(ccd, agg_amp,
-#                                        signal_extractor=extract_mean_signal_2)
-#        det_xtalk_2.set_row(agg_amp, det_ratios)
-#    print time.time() - tstart
-#
-#    sys_diff = sys_xtalk - det_xtalk
-#    print max(sys_diff.matrix.flat)
-#    print min(sys_diff.matrix.flat)
-#
-#    sys_diff_2 = sys_xtalk - det_xtalk_2
-#    print max(sys_diff_2.matrix.flat)
-#    print min(sys_diff_2.matrix.flat)
-#
-#    det_diff = det_xtalk - det_xtalk_2
-#    print max(det_diff.matrix.flat)
-#    print min(det_diff.matrix.flat)
+    #
+    # Compute detector crosstalk from spot image datasets. (Use
+    # system file as proxy.)
+    #
+    tstart = time.time()
+    det_xtalk = CrosstalkMatrix()
+    for agg_amp in imutils.allAmps:
+        ccd = MaskedCCD(sys_xtfile(agg_amp), mask_files=mask_files)
+        det_ratios = detector_crosstalk(ccd, agg_amp)
+        det_xtalk.set_row(agg_amp, det_ratios)
+    print time.time() - tstart
+
+    tstart = time.time()
+    det_xtalk_2 = CrosstalkMatrix()
+    for agg_amp in imutils.allAmps:
+        ccd = MaskedCCD(sys_xtfile(agg_amp), mask_files=mask_files)
+        det_ratios = detector_crosstalk(ccd, agg_amp,
+                                        signal_extractor=extract_mean_signal_2)
+        det_xtalk_2.set_row(agg_amp, det_ratios)
+    print time.time() - tstart
+
+    sys_diff = sys_xtalk - det_xtalk
+    print max(sys_diff.matrix.flat)
+    print min(sys_diff.matrix.flat)
+
+    sys_diff_2 = sys_xtalk - det_xtalk_2
+    print max(sys_diff_2.matrix.flat)
+    print min(sys_diff_2.matrix.flat)
+
+    det_diff = det_xtalk - det_xtalk_2
+    print max(det_diff.matrix.flat)
+    print min(det_diff.matrix.flat)
