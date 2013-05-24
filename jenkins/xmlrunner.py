@@ -12,6 +12,7 @@ import time
 from unittest import TestResult, _TextTestResult, TextTestRunner
 from cStringIO import StringIO
 
+_test_timing_info = dict()
 
 class _TestInfo(object):
     """This class is used to keep useful information about the execution of a
@@ -75,7 +76,8 @@ class _XMLTestResult(_TextTestResult):
             # Ignore the elapsed times for a more reliable unit testing
             if not self.elapsed_times:
                 self.start_time = self.stop_time = 0
-            
+
+            _test_timing_info[test_info.test_method] = test_info.get_elapsed_time()
             if self.showAll:
                 self.stream.writeln('%s (%.3fs)' % \
                     (verbose_str, test_info.get_elapsed_time()))
@@ -158,7 +160,8 @@ class _XMLTestResult(_TextTestResult):
         testsuite.setAttribute('tests', str(len(tests)))
         
         testsuite.setAttribute('time', '%.3f' % \
-            sum(map(lambda e: e.get_elapsed_time(), tests)))
+            #sum(map(lambda e: e.get_elapsed_time(), tests)))
+            sum(map(lambda e: _test_timing_info[e.test_method], tests)))
         
         failures = filter(lambda e: e.outcome==_TestInfo.FAILURE, tests)
         testsuite.setAttribute('failures', str(len(failures)))
@@ -184,7 +187,8 @@ class _XMLTestResult(_TextTestResult):
         
         testcase.setAttribute('classname', suite_name)
         testcase.setAttribute('name', _XMLTestResult._test_method_name(test_result.test_method))
-        testcase.setAttribute('time', '%.3f' % test_result.get_elapsed_time())
+        #testcase.setAttribute('time', '%.3f' % test_result.get_elapsed_time())
+        testcase.setAttribute('time', '%.3f' % _test_timing_info[test_result.test_method])
         
         if (test_result.outcome != _TestInfo.SUCCESS):
             elem_name = ('failure', 'error')[test_result.outcome-1]

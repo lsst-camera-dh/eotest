@@ -9,14 +9,12 @@ subdirectory.
 """
 import unittest
 
-loader = unittest.TestLoader()
-testsuite = loader.discover('.', pattern='*tests.py')
-print "Found %i tests" % testsuite.countTestCases()
-
 try:
     import xmlrunner
     runner = xmlrunner.XMLTestRunner(output='test-reports', verbose=True)
-    runner.run(testsuite)
 except ImportError:
     runner = unittest.TextTestRunner()
-    runner.run(testsuite)
+
+loader = unittest.TestLoader()
+testsuite = loader.discover('.', pattern='*tests.py')
+runner.run(testsuite)
