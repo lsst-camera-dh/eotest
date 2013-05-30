@@ -4,6 +4,10 @@
 default TextTestRunner.
 
 https://github.com/danielfm/unittest-xml-reporting
+
+@brief This has been hacked from the original so that the correct run
+times are saved in the xml reports for TestCases that have multiple
+test methods.
 """
 
 import os
