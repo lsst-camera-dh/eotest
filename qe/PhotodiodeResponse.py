@@ -49,13 +49,13 @@ class PhotodiodeResponse(Interpolator):
         Interpolator.__init__(self, self.wavelength, self.resp)
 
 class CcdIllumination(Interpolator):
-    def __init__(self, scan_file, ccd_pd_file, sph_pd_file):
+    def __init__(self, scan_file, ccd_cal_file, sph_cal_file):
         data = np.recfromtxt(scan_file, names=True)
         self.wavelengths = data['wl']
-        ccd_pd = PhotodiodeResponse(ccd_pd_file)
-        sph_pd = PhotodiodeResponse(sph_pd_file)
-        intsphere = data['intsphere']/sph_pd(self.wavelengths)
-        ccdpos = data['ccdpos']/ccd_pd(self.wavelengths)
+        pd_ccd = PhotodiodeResponse(ccd_cal_file)
+        pd_sph = PhotodiodeResponse(sph_cal_file)
+        intsphere = data['intsphere']/pd_sph(self.wavelengths)
+        ccdpos = data['ccdpos']/pd_ccd(self.wavelengths)
         self.ccdfrac = ccdpos/intsphere
         Interpolator.__init__(self, self.wavelengths, self.ccdfrac)
 

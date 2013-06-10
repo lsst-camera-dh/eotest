@@ -84,7 +84,7 @@ if __name__ == '__main__':
     sph_cal_file = 'OD143.csv'
     wlscan_file = 'WLscan.txt'
 
-    gains = dict([(amp, 5) for amp in imutils.allAmps])
+    gains = dict([(amp, 4.5) for amp in imutils.allAmps])
 
 #    pattern = '/nfs/farm/g/lsst/u1/testData/HarvardData/112-01/final/bss50/qe/*.fits.gz'
     pattern = None
@@ -104,17 +104,33 @@ if __name__ == '__main__':
         wlarrs[amp] = []
         for i, wl_nm in enumerate(qe_data.wl):
             try:
-                power = qe_data.pd[i]/pd_sph(wl_nm)*ccd_frac(wl_nm)/pd_area
                 wl = wl_nm*1e-9
-                numerator = 100.*planck*clight*qe_data.medians[amp][i]
-                denominator = gains[amp]*qe_data.exptime[i]*power*pixel_area*wl
-                if denominator == 0:
-                    raise ZeroDivisionError("Zero-valued denominator in "
+                hnu = planck*clight/wl   # photon energy (J)
+                #
+                # Incident illumination power per pixel (J/s)
+                #
+                power = ((qe_data.pd[i]/pd_sph(wl_nm))*ccd_frac(wl_nm)
+                         *(pixel_area/pd_area))
+                #
+                # Median number of photo-electrons per pixel
+                #
+                Ne = qe_data.medians[amp][i]*gains[amp]
+                #
+                # Number of incident photons per pixel.
+                #
+                nphot = qe_data.exptime[i]*power/hnu
+                if nphot == 0:
+                    raise ZeroDivisionError("Zero-valued #photons in "
                                             "qe_value calculation")
-                qe_value = numerator/denominator
-                qe[amp].append(qe_value)
+                qe_value = Ne/nphot
+                qe[amp].append(100*qe_value)
                 wlarrs[amp].append(wl_nm)
             except RuntimeError:
+                # Expect a RuntimeError if the requested wavelength is
+                # outside of the photo-diode calibration or outside of
+                # the wavelength scan that compares the illumination at
+                # the CCD vs at the integrating sphere.  Skip these
+                # cases.
                 continue
     for i, amp in enumerate(imutils.allAmps):
         wlarrs[amp] = np.array(wlarrs[amp])
