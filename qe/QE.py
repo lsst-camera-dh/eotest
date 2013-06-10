@@ -6,17 +6,29 @@ taken as a function of wavelength.
 """
 import os
 import glob
+from collections import OrderedDict
 import numpy as np
 import lsst.afw.math as afwMath
 import image_utils as imutils
 from MaskedCCD import MaskedCCD, Metadata
 from PhotodiodeResponse import PhotodiodeResponse, CcdIllumination
 
+planck = 6.626e-34      # Planck constant in SI
+clight = 2.99792458e8   # speed of light in m/s
+
 class QE_Data(object):
     """Class to contain sequences of image medians (in DN) indexed by
     amplifier for a set of exposures made at a series of incident
     illumination wavelengths.  The wavelength, exposure time, and
     photodiode current are also recorded for each exposure."""
+    band_pass = OrderedDict()
+    band_pass['u'] = (321, 391)
+    band_pass['g'] = (402, 552)
+    band_pass['r'] = (552, 691)
+    band_pass['i'] = (691, 818)
+    band_pass['z'] = (818, 922)
+    band_pass['y'] = (930, 1070)
+    band_wls = np.array([sum(band_pass[b])/2. for b in band_pass.keys()])
     def __init__(self, results_file, pattern=None, verbose=True,
                  pd_scaling=1e-12, clobber=False):
         self.results_file = results_file
@@ -73,12 +85,66 @@ class QE_Data(object):
         self.pd = data[2]
         self.medians = dict([(amp, col) for amp, col
                              in zip(imutils.allAmps, data[3:])])
+    def calculate_QE(self, ccd_cal_file, sph_cal_file, wlscan_file,
+                     gains, pixel_area=1e-10, pd_area=1e-4):
+        pd_sph = PhotodiodeResponse(sph_cal_file)
+        ccd_frac = CcdIllumination(wlscan_file, ccd_cal_file, sph_cal_file)
+        qe = {}
+        wlarrs = {}
+        for amp in imutils.allAmps:
+            qe[amp] = []
+            wlarrs[amp] = []
+            for i, wl_nm in enumerate(self.wl):
+                try:
+                    wl = wl_nm*1e-9
+                    hnu = planck*clight/wl   # photon energy (J)
+                    #
+                    # Incident illumination power per pixel (J/s)
+                    #
+                    power = ((self.pd[i]/pd_sph(wl_nm))*ccd_frac(wl_nm)
+                             *(pixel_area/pd_area))
+                    #
+                    # Median number of photo-electrons per pixel
+                    #
+                    Ne = self.medians[amp][i]*gains[amp]
+                    #
+                    # Number of incident photons per pixel.
+                    #
+                    nphot = self.exptime[i]*power/hnu
+                    qe_value = Ne/nphot
+                    qe[amp].append(100*qe_value)
+                    wlarrs[amp].append(wl_nm)
+                except RuntimeError:
+                    # Expect a RuntimeError if the requested wavelength is
+                    # outside of the photo-diode calibration or outside of
+                    # the wavelength scan that compares the illumination at
+                    # the CCD vs at the integrating sphere.  Skip these
+                    # cases.
+                    continue
+            qe[amp] = np.abs(np.array(qe[amp]))
+            wlarrs[amp] = np.array(wlarrs[amp])
+        self.qe = qe
+        self.wlarrs = wlarrs
+        self.qe_band = dict([(amp, {}) for amp in self.qe])
+        for amp in self.qe:
+            self.qe_band[amp] = self.compute_band_qe(self.wlarrs[amp],
+                                                     self.qe[amp])
+        self.ccd_qe = sum(self.qe.values())/len(self.qe.values())
+        self.ccd_qe_band = self.compute_band_qe(self.wlarrs[1], self.ccd_qe)
+    def _index(self, wl, band_pass):
+        indx = np.where((wl >= band_pass[0]) & (wl <= band_pass[1]))
+        return indx
+    def compute_band_qe(self, wl, qe):
+        band_qe = {}
+        for band in self.band_pass:
+            indx = self._index(wl, self.band_pass[band])
+            if len(indx[0]) != 0:
+                mean_value = sum(qe[indx])/len(indx[0])
+                band_qe[band] = mean_value
+        return band_qe
 
 if __name__ == '__main__':
     import pylab_plotter as plot
-
-    planck = 6.626e-34      # Planck constant in SI
-    clight = 2.99792458e8   # speed of light in m/s
 
     ccd_cal_file = 'OD142.csv'
     sph_cal_file = 'OD143.csv'
@@ -89,51 +155,17 @@ if __name__ == '__main__':
 #    pattern = '/nfs/farm/g/lsst/u1/testData/HarvardData/112-01/final/bss50/qe/*.fits.gz'
     pattern = None
     outfile = 'med_vs_wl.txt'
+
     qe_data = QE_Data(outfile, pattern=pattern)
+    qe_data.calculate_QE(ccd_cal_file, sph_cal_file, wlscan_file, gains)
 
-    pd_sph = PhotodiodeResponse(sph_cal_file)
-    ccd_frac = CcdIllumination(wlscan_file, ccd_cal_file, sph_cal_file)
-
-    pixel_area = (1e-5)**2         # pixel area (10 micron x 10 micron)
-    pd_area = 1e-4                 # photodiode surface area in m^2 from
-                                   # Hamamatsu S2281 data sheet
-    qe = {}
-    wlarrs = {}
-    for amp in imutils.allAmps:
-        qe[amp] = []
-        wlarrs[amp] = []
-        for i, wl_nm in enumerate(qe_data.wl):
-            try:
-                wl = wl_nm*1e-9
-                hnu = planck*clight/wl   # photon energy (J)
-                #
-                # Incident illumination power per pixel (J/s)
-                #
-                power = ((qe_data.pd[i]/pd_sph(wl_nm))*ccd_frac(wl_nm)
-                         *(pixel_area/pd_area))
-                #
-                # Median number of photo-electrons per pixel
-                #
-                Ne = qe_data.medians[amp][i]*gains[amp]
-                #
-                # Number of incident photons per pixel.
-                #
-                nphot = qe_data.exptime[i]*power/hnu
-                if nphot == 0:
-                    raise ZeroDivisionError("Zero-valued #photons in "
-                                            "qe_value calculation")
-                qe_value = Ne/nphot
-                qe[amp].append(100*qe_value)
-                wlarrs[amp].append(wl_nm)
-            except RuntimeError:
-                # Expect a RuntimeError if the requested wavelength is
-                # outside of the photo-diode calibration or outside of
-                # the wavelength scan that compares the illumination at
-                # the CCD vs at the integrating sphere.  Skip these
-                # cases.
-                continue
     for i, amp in enumerate(imutils.allAmps):
-        wlarrs[amp] = np.array(wlarrs[amp])
-        qe[amp] = np.abs(np.array(qe[amp]))
-        plot.curve(wlarrs[amp], qe[amp], oplot=i,
-                   xname='wavelength (nm)', yname='QE (%)')
+        plot.curve(qe_data.wlarrs[amp], qe_data.qe[amp], oplot=i,
+                   xname='wavelength (nm)', yname='QE (%)',
+                   xrange=(350, 1100))
+        plot.xyplot(qe_data.wlarrs[amp], qe_data.qe[amp], oplot=1)
+        wl = [sum(qe_data.band_pass[band])/2. for band in qe_data.qe_band[amp]]
+        plot.xyplot(wl, qe_data.qe_band[amp].values(), oplot=1, color='r')
+
+    plot.curve(qe_data.wlarrs[1], qe_data.ccd_qe, oplot=1, color='g')
+    plot.xyplot(wl, qe_data.ccd_qe_band.values(), oplot=1, color='b')
