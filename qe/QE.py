@@ -8,6 +8,7 @@ import os
 import glob
 from collections import OrderedDict
 import numpy as np
+import pyfits
 import lsst.afw.math as afwMath
 import image_utils as imutils
 from MaskedCCD import MaskedCCD, Metadata
@@ -89,8 +90,8 @@ class QE_Data(object):
                      gains, pixel_area=1e-10, pd_area=1e-4):
         pd_sph = PhotodiodeResponse(sph_cal_file)
         ccd_frac = CcdIllumination(wlscan_file, ccd_cal_file, sph_cal_file)
-        qe = {}
-        wlarrs = {}
+        qe = OrderedDict()
+        wlarrs = OrderedDict()
         for amp in imutils.allAmps:
             qe[amp] = []
             wlarrs[amp] = []
@@ -135,13 +136,51 @@ class QE_Data(object):
         indx = np.where((wl >= band_pass[0]) & (wl <= band_pass[1]))
         return indx
     def compute_band_qe(self, wl, qe):
-        band_qe = {}
+        band_qe = OrderedDict()
         for band in self.band_pass:
             indx = self._index(wl, self.band_pass[band])
             if len(indx[0]) != 0:
                 mean_value = sum(qe[indx])/len(indx[0])
                 band_qe[band] = mean_value
         return band_qe
+    def write_fits_tables(self, outfile, clobber=True):
+        amps = self.qe.keys()
+        colnames = ['WAVELENGTH']
+        colnames.extend(['AMP%02i' % i for i in amps])
+        colnames.append('DEVICE_MEAN')
+
+        columns = [self.wlarrs[1]]
+        columns.extend([self.qe[i] for i in amps])
+        columns.append(self.ccd_qe)
+
+        formats = ["E"]*len(columns)
+        units = ["nm"]
+        units.extend(["e-/photon %"]*(len(columns)-1))
+
+        fits_cols = lambda coldata : [pyfits.Column(name=colname,
+                                                    format=format,
+                                                    unit=unit, array=column) 
+                                      for colname, format, unit, column
+                                      in coldata]
+
+        HDUList = pyfits.HDUList()
+        HDUList.append(pyfits.PrimaryHDU())
+        HDUList.append(pyfits.new_table(fits_cols(zip(colnames, formats,
+                                                      units, columns))))
+        HDUList[-1].name = 'QE_CURVES'
+
+        columns = [self.ccd_qe_band.keys()]
+        columns.extend([np.array(self.qe_band[amp].values()) for amp in amps])
+        columns.append(np.array(self.ccd_qe_band.values()))
+
+        colnames[0] = 'BAND'
+        formats[0] = '2A'
+        units[0] = None
+
+        HDUList.append(pyfits.new_table(fits_cols(zip(colnames, formats,
+                                                      units, columns))))
+        HDUList[-1].name = 'QE_BANDS'
+        HDUList.writeto(outfile, clobber=clobber)
 
 if __name__ == '__main__':
     import pylab_plotter as plot
@@ -150,22 +189,26 @@ if __name__ == '__main__':
     sph_cal_file = 'OD143.csv'
     wlscan_file = 'WLscan.txt'
 
-    gains = dict([(amp, 4.5) for amp in imutils.allAmps])
-
+    gains = dict([(amp, 2.5) for amp in imutils.allAmps])
+#    pattern = '/nfs/farm/g/lsst/u1/testData/HarvardData/112-01/final/bss70/qe/112_01_qe*.fits.gz'
 #    pattern = '/nfs/farm/g/lsst/u1/testData/HarvardData/112-01/final/bss50/qe/*.fits.gz'
     pattern = None
-    outfile = 'med_vs_wl.txt'
+#    outfile = 'med_vs_wl.txt'
+    outfile = 'med_vs_wl_bss70.txt'
 
     qe_data = QE_Data(outfile, pattern=pattern)
     qe_data.calculate_QE(ccd_cal_file, sph_cal_file, wlscan_file, gains)
+    qe_data.write_fits_tables('qe_tables.fits')
 
+    indx = np.argsort(qe_data.wlarrs[1])
     for i, amp in enumerate(imutils.allAmps):
-        plot.curve(qe_data.wlarrs[amp], qe_data.qe[amp], oplot=i,
+        plot.curve(qe_data.wlarrs[amp][indx], qe_data.qe[amp][indx], oplot=i,
                    xname='wavelength (nm)', yname='QE (%)',
                    xrange=(350, 1100))
-        plot.xyplot(qe_data.wlarrs[amp], qe_data.qe[amp], oplot=1)
+        plot.xyplot(qe_data.wlarrs[amp][indx], qe_data.qe[amp][indx], oplot=1)
         wl = [sum(qe_data.band_pass[band])/2. for band in qe_data.qe_band[amp]]
         plot.xyplot(wl, qe_data.qe_band[amp].values(), oplot=1, color='r')
 
-    plot.curve(qe_data.wlarrs[1], qe_data.ccd_qe, oplot=1, color='g')
+    plot.curve(qe_data.wlarrs[1][indx], qe_data.ccd_qe[indx], oplot=1,
+               color='g')
     plot.xyplot(wl, qe_data.ccd_qe_band.values(), oplot=1, color='b')
