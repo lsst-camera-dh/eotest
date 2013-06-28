@@ -202,6 +202,8 @@ class CrosstalkMatrix(object):
         axes = fig.add_subplot(111)
         image = pylab.imshow(np.abs(my_matrix), interpolation='nearest',
                              aspect='auto', cmap=unsat_grey)
+        pylab.xlabel('victim')
+        pylab.ylabel('aggressor')
         axes.set_xticks(range(self.namps))
         axes.set_yticks(range(self.namps))
         axes.set_xticklabels(['%i' % i for i in range(1, self.namps+1)])
