@@ -193,6 +193,7 @@ class CrosstalkMatrix(object):
         for i in range(self.namps):
             my_matrix[i][i] = 0
         thresh = 10**(-precision)
+        pylab.ion()
         cdict = dict(red=((0, cmin, cmin), (1, cmax, cmax)),
                      green=((0, cmin, cmin), (1, cmax, cmax)),
                      blue=((0, cmin, cmin), (1, cmax, cmax)))

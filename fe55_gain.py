@@ -68,13 +68,18 @@ class Xrays(object):
                             fpset.getFootprints() if fp.getNpix() < max_npix])
         indx = np.where(signals > sigmin)
         return signals[indx]
-    def gain(self, nsig=2, max_npix=9, gain_max=10., make_plot=False):
+    def gain(self, nsig=2, max_npix=9, gain_max=10., make_plot=False,
+             xrange=None, bins=100, hist_nsig=10):
         signals = self.signals(nsig, max_npix, gain_max)
         flags = afwMath.MEDIAN | afwMath.STDEVCLIP
         stats = afwMath.makeStatistics(signals, flags, self.stat_ctrl)
         median = stats.getValue(afwMath.MEDIAN)
         stdev = stats.getValue(afwMath.STDEVCLIP)
-        xrange = (median - 10*stdev, median + 10*stdev)
+        if xrange is None:
+            # Set range of histogram to include both Kalpha and Kbeta peaks.
+            xmin = median - hist_nsig*stdev
+            xmax = median*1785./1620. + hist_nsig*stdev
+            xrange = xmin, xmax
         if make_plot:
             pylab.ion()
             fig = pylab.figure(self._fig_num)
@@ -82,7 +87,7 @@ class Xrays(object):
         else:
             pylab.ioff()
             
-        hist = pylab.hist(signals, bins=100, range=xrange,
+        hist = pylab.hist(signals, bins=bins, range=xrange,
                           histtype='bar', color='b')
         x = (hist[1][1:] + hist[1][:-1])/2.
         y = hist[0]
