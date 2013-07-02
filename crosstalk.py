@@ -188,6 +188,7 @@ class CrosstalkMatrix(object):
         output.close()
     def plot_matrix(self, title=None, cmap_range=(0.6, 0.4), precision=3, 
                     scale_factor=1e2, fontsize=10, figsize=(12, 6)):
+        pylab.ion()
         cmin, cmax = cmap_range
         my_matrix = np.copy(self.matrix)*scale_factor
         for i in range(self.namps):

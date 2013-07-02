@@ -1,3 +1,12 @@
+"""
+
+@brief Compute system gain from Fe55 data.  Use afwDetect to find
+thresholded footprints of Fe55 hits, and fit the histogram of the ADU
+signals associated with those footprints with a pair of Gaussian lines
+with mean ratios fixed to the Mn Kalpha/Kbeta line energy ratio.
+
+@author J. Chiang <jchiang@slac.stanford.edu>
+"""
 import os
 import numpy as np
 import scipy.stats
@@ -18,6 +27,8 @@ def fe55_lines(x, *args):
     """
     k1, m1, s1, k2 = args
     m2 = 6.49/5.889*m1
+#    m2 = 1778./1620.*m1  # These are the nominal Kbeta/Kalpha e- from
+                         # Janesick, but the Kbeta number looks wrong.
     s2 = s1
     value = k1*scipy.stats.norm.pdf(x, loc=m1, scale=s1)
     value += k2*scipy.stats.norm.pdf(x, loc=m2, scale=s2)
@@ -68,13 +79,15 @@ class Xrays(object):
                             fpset.getFootprints() if fp.getNpix() < max_npix])
         indx = np.where(signals > sigmin)
         return signals[indx]
-    def gain(self, nsig=2, max_npix=9, gain_max=10., make_plot=False):
+    def gain(self, nsig=2, max_npix=9, gain_max=10., make_plot=False,
+             bins=100, xrange=None):
         signals = self.signals(nsig, max_npix, gain_max)
         flags = afwMath.MEDIAN | afwMath.STDEVCLIP
         stats = afwMath.makeStatistics(signals, flags, self.stat_ctrl)
         median = stats.getValue(afwMath.MEDIAN)
         stdev = stats.getValue(afwMath.STDEVCLIP)
-        xrange = (median - 10*stdev, median + 10*stdev)
+        if xrange is None:
+            xrange = (median - 10*stdev, median + 10*stdev)
         if make_plot:
             pylab.ion()
             fig = pylab.figure(self._fig_num)
@@ -82,7 +95,7 @@ class Xrays(object):
         else:
             pylab.ioff()
             
-        hist = pylab.hist(signals, bins=100, range=xrange,
+        hist = pylab.hist(signals, bins=bins, range=xrange,
                           histtype='bar', color='b')
         x = (hist[1][1:] + hist[1][:-1])/2.
         y = hist[0]
