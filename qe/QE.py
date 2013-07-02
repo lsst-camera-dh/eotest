@@ -11,6 +11,7 @@ import numpy as np
 import pyfits
 import lsst.afw.math as afwMath
 import image_utils as imutils
+import pylab_plotter as plot
 from MaskedCCD import MaskedCCD, Metadata
 from PhotodiodeResponse import PhotodiodeResponse, CcdIllumination
 
@@ -30,30 +31,32 @@ class QE_Data(object):
     band_pass['z'] = (818, 922)
     band_pass['y'] = (930, 1070)
     band_wls = np.array([sum(band_pass[b])/2. for b in band_pass.keys()])
-    def __init__(self, results_file, pattern=None, verbose=True,
-                 pd_scaling=1e-12, clobber=False):
-        self.results_file = results_file
+    def __init__(self, verbose=True, pd_scaling=1e-12):
         self.verbose = verbose
         self.pd_scaling = pd_scaling
-        if pattern is not None:
-            self._calculate_medians(pattern, clobber)
-        else:
-            self._read_medians()
-    def _calculate_medians(self, pattern, clobber):
-        files = glob.glob(pattern)
-        files.sort()
+    def read_medians(self, medians_file):
+        data = np.recfromtxt(medians_file)
+        data = data.transpose()
+        self.wl = data[0]
+        self.exptime = data[1]
+        self.pd = data[2]
+        self.medians = dict([(amp, col) for amp, col
+                             in zip(imutils.allAmps, data[3:])])
+    def calculate_medians(self, infiles, outfile, mask_files=(),
+                          clobber=False):
+        files = sorted([x for x in infiles])
         self.medians = dict([(amp, []) for amp in imutils.allAmps])
         self.wl = []          # wavelength in nanometers
         self.exptime = []     # exposure time in seconds
         self.pd = []          # photodiode current in amps
 
-        if os.path.isfile(self.results_file) and not clobber:
-            raise RuntimeError("Results file already exists.")
-        output = open(self.results_file, 'w')
+        if os.path.isfile(outfile) and not clobber:
+            raise RuntimeError("Output file for image medians already exists.")
+        output = open(outfile, 'w')
         for item in files:
             if self.verbose:
                 print 'processing', item
-            ccd = MaskedCCD(item)
+            ccd = MaskedCCD(item, mask_files=mask_files)
             md = Metadata(item, 1)
             exptime = md.get('EXPTIME')
             if exptime == 0:
@@ -78,14 +81,6 @@ class QE_Data(object):
         self.wl = np.array(self.wl)
         self.exptime = np.array(self.exptime)
         self.pd = np.abs(np.array(self.pd))
-    def _read_medians(self):
-        data = np.recfromtxt(self.results_file)
-        data = data.transpose()
-        self.wl = data[0]
-        self.exptime = data[1]
-        self.pd = data[2]
-        self.medians = dict([(amp, col) for amp, col
-                             in zip(imutils.allAmps, data[3:])])
     def calculate_QE(self, ccd_cal_file, sph_cal_file, wlscan_file,
                      gains, pixel_area=1e-10, pd_area=1e-4):
         pd_sph = PhotodiodeResponse(sph_cal_file)
@@ -181,34 +176,40 @@ class QE_Data(object):
                                                       units, columns))))
         HDUList[-1].name = 'QE_BANDS'
         HDUList.writeto(outfile, clobber=clobber)
+    def plot_curves(self, outfile=None, interactive=False):
+        if interactive:
+            plot.pylab.ion()
+        else:
+            plot.pylab.ioff()
+        indx = np.argsort(qe_data.wlarrs[1])
+        for i, amp in enumerate(imutils.allAmps):
+            plot.curve(qe_data.wlarrs[amp][indx], qe_data.qe[amp][indx],
+                       oplot=i, xname='wavelength (nm)', yname='QE (%)',
+                       xrange=(350, 1100))
+            plot.xyplot(qe_data.wlarrs[amp][indx], qe_data.qe[amp][indx],
+                        oplot=1)
+            wl = [sum(qe_data.band_pass[band])/2.
+                  for band in qe_data.qe_band[amp]]
+            plot.xyplot(wl, qe_data.qe_band[amp].values(), oplot=1, color='r')
+        plot.curve(qe_data.wlarrs[1][indx], qe_data.ccd_qe[indx], oplot=1,
+                   color='g')
+        plot.xyplot(wl, qe_data.ccd_qe_band.values(), oplot=1, color='b')
+        if outfile is not None:
+            plot.save(outfile)
 
 if __name__ == '__main__':
-    import pylab_plotter as plot
-
     ccd_cal_file = 'OD142.csv'
     sph_cal_file = 'OD143.csv'
     wlscan_file = 'WLscan.txt'
 
     gains = dict([(amp, 2.5) for amp in imutils.allAmps])
-#    pattern = '/nfs/farm/g/lsst/u1/testData/HarvardData/112-01/final/bss70/qe/112_01_qe*.fits.gz'
-#    pattern = '/nfs/farm/g/lsst/u1/testData/HarvardData/112-01/final/bss50/qe/*.fits.gz'
-    pattern = None
-#    outfile = 'med_vs_wl.txt'
-    outfile = 'med_vs_wl_bss70.txt'
+    infiles = glob.glob('/nfs/farm/g/lsst/u1/testData/HarvardData/112-01/final/bss70/qe/112_01_qe_[0-9]*.fits.gz')
+#    medians_file = 'med_vs_wl.txt'
+    medians_file = 'med_vs_wl_bss70.txt'
 
-    qe_data = QE_Data(outfile, pattern=pattern)
+    qe_data = QE_Data()
+#    qe_data.calculate_medians(infiles, medians_file)
+    qe_data.read_medians(medians_file)
     qe_data.calculate_QE(ccd_cal_file, sph_cal_file, wlscan_file, gains)
     qe_data.write_fits_tables('qe_tables.fits')
-
-    indx = np.argsort(qe_data.wlarrs[1])
-    for i, amp in enumerate(imutils.allAmps):
-        plot.curve(qe_data.wlarrs[amp][indx], qe_data.qe[amp][indx], oplot=i,
-                   xname='wavelength (nm)', yname='QE (%)',
-                   xrange=(350, 1100))
-        plot.xyplot(qe_data.wlarrs[amp][indx], qe_data.qe[amp][indx], oplot=1)
-        wl = [sum(qe_data.band_pass[band])/2. for band in qe_data.qe_band[amp]]
-        plot.xyplot(wl, qe_data.qe_band[amp].values(), oplot=1, color='r')
-
-    plot.curve(qe_data.wlarrs[1][indx], qe_data.ccd_qe[indx], oplot=1,
-               color='g')
-    plot.xyplot(wl, qe_data.ccd_qe_band.values(), oplot=1, color='b')
+    qe_data.plot_curves(interactive=True)
