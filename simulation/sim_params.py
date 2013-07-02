@@ -14,12 +14,14 @@ bias_level = 1e4
 bias_sigma = 4
 read_noise = 5.
 dark_current = 2e-3
+full_well = 150000
 
 flat_fields = Params(min_charge=100,
-                     max_charge=2e5,
+                     max_charge=3e5,
                      exptime_min=1,
                      exptime_max=100,
-                     nframes=50)
+                     nframes=100,
+                     ccdtemp=-100)
 
 pocket_pumping = Params(charge_levels=(100, 200, 500, 1000),
                         bias_frames=True)

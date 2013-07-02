@@ -24,7 +24,8 @@ def setup(pars, testtype):
     return outputdir, sensor_id
 
 def simulate_frame(exptime, pars, ccdtemp=-100):
-    sensor = CCD(exptime=exptime, gain=pars.system_gain, ccdtemp=ccdtemp)
+    sensor = CCD(exptime=exptime, gain=pars.system_gain, ccdtemp=ccdtemp,
+                 full_well=pars.full_well)
     #
     # Add test-independent effects.
     #
@@ -92,17 +93,32 @@ def generate_flats(pars):
     for exptime, Ne in zip(exptimes, Nes):
         intensity = Ne/exptime
         for flat_id in ('flat1', 'flat2'):
-            sensor = simulate_frame(exptime, pars)
+            sensor = CCD(exptime=exptime, gain=pars.system_gain,
+                         ccdtemp=pars.flat_fields.ccdtemp,
+                         full_well=pars.full_well)
+            sensor.md['K_PHOT_CURRENT'] = intensity
             sensor.expose_flat(intensity)
+            #
+            # Test-independent effects. These need to be added after
+            # exposure so that full_well can be applied to the
+            # collected charge.  (Need to determine if dark current
+            # should be applied here or earlier.)
+            #
+            sensor.add_bias(level=pars.bias_level, sigma=pars.bias_sigma)
+            sensor.add_bias(level=0, sigma=pars.read_noise)
+            sensor.add_dark_current(pars.dark_current)
             filename = "%(sensor_id)s_flat_%(exptime)06.2fs_%(flat_id)s.fits" \
                        % locals()
             sensor.writeto(os.path.join(outputdir, filename))
 
 if __name__ == '__main__':
     import simulation.sim_params as pars
-#    pars.rootdir = '/nfs/farm/g/lsst/u1/testData/SIMData'
-    pars.rootdir = '/nfs/slac/g/ki/ki18/jchiang/LSST/SensorTests/test_scripts/work'
-    pars.sensor_id = '001-00'
+    try:
+        pars.rootdir = os.environ['ROOTDIR']
+    except KeyError:
+        #pars.rootdir = '/nfs/farm/g/lsst/u1/testData/SIMData'
+        pars.rootdir = '/nfs/slac/g/ki/ki18/jchiang/LSST/SensorTests/test_scripts/work'
+    pars.sensor_id = '000-00'
     generate_flats(pars)
     generate_darks(pars)
     generate_Fe55(pars)
