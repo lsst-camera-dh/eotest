@@ -41,8 +41,9 @@ class DetectorResponse(object):
         # Solve for specified fractional difference between
         # linear and polynomial fits to determine full well.
         #
-        indxp = np.where((dNe_frac > -(frac_offset+dfrac)) &
-                         (Ne > poly_fit_min))
+#        indxp = np.where((dNe_frac > -(frac_offset+dfrac)) &
+#                         (Ne > poly_fit_min))
+        indxp = np.where((Ne > poly_fit_min))
         fp = np.poly1d(np.polyfit(flux[indxp], Ne[indxp], order))
         df = lambda xx : 1 - fp(xx)/f1(xx) - frac_offset
         x = flux[indxp]
@@ -50,17 +51,22 @@ class DetectorResponse(object):
         full_well = int(fp(flux0))
         
         if make_plot:
-            plot.xyplot(flux, Ne, xname='Incident flux',
-                        yname='e- per pixel', yrange=(0, 180000))
+            plot.pylab.ion()
+            yrange = (0, max(max(Ne), full_well)*1.1)
+            plot.xyplot(flux, Ne,
+                        xname='Illumination (flux*exptime, arb. units)',
+                        yname='e- per pixel',
+                        yrange=yrange)
             plot.curve(flux, f1(flux), oplot=1, color='g')
             plot.xyplot(flux[indxp], Ne[indxp], oplot=1, color='r')
-            plot.curve(flux, fp(flux), oplot=1, color='b')
+            xx = np.linspace(0, max(flux), 100)
+            plot.curve(xx, fp(xx), oplot=1, color='b')
             plot.vline(flux0)
             plot.hline(full_well)
             plot.pylab.annotate('Segment %s\nfull well = %i'
                                 % (imutils.channelIds[amp], int(full_well)),
                                 (0.1, 0.8), xycoords='axes fraction')
-        return full_well
+        return full_well, fp
     def linearity(self, amp, fit_range=(1e4, 9e4), max_dev=0.02,
                   make_plot=False):
         flux, Ne = self.flux, self.Ne[amp]
@@ -69,6 +75,7 @@ class DetectorResponse(object):
         f1 = np.poly1d(f1_pars)
         dNfrac = 1 - Ne/f1(flux)
         if make_plot:
+            plot.pylab.ion()
             plot.xyplot(Ne, dNfrac, xname='e-/pixel',
                         yname='frac. deviation of e-/pixel from linear fit',
                         xrange=(1e2, 2e5),

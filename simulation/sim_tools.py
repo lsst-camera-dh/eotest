@@ -18,11 +18,16 @@ from fe55_yield import Fe55Yield
 import image_utils as imutils
 
 class CCD(object):
-    def __init__(self, exptime=1, gain=5, ccdtemp=-100,
+    def __init__(self, exptime=1, gain=5, ccdtemp=-100, full_well=None,
                  bbox=imutils.full_segment, amps=imutils.allAmps):
         self.segments = OrderedDict()
         for amp in amps:
-            self.segments[amp] = SegmentExposure(exptime, gain, ccdtemp, bbox)
+            self.segments[amp] = SegmentExposure(exptime=exptime, 
+                                                 gain=gain, 
+                                                 ccdtemp=ccdtemp,
+                                                 full_well=full_well, 
+                                                 bbox=bbox)
+        self.md = dict()
     def add_bias(self, level=1e4, sigma=4):
         for amp in self.segments:
             self.segments[amp].add_bias(level=level, sigma=sigma)
@@ -61,14 +66,17 @@ class CCD(object):
             output[0].header['SYSNOISE'] = pars.bias_sigma
             output[0].header['RDNOISE'] = pars.read_noise
             output[0].header['DARKCURR'] = pars.dark_current
+        for key, value in self.md.items():
+            output[0].header[key] = value
         output.writeto(outfile, clobber=True)
 
 class SegmentExposure(object):
-    def __init__(self, exptime=1, gain=5, ccdtemp=-100,
+    def __init__(self, exptime=1, gain=5, ccdtemp=-100, full_well=None,
                  bbox=imutils.full_segment):
         self.exptime = exptime
-        self.ccdtemp = ccdtemp
         self.gain = gain
+        self.ccdtemp = ccdtemp
+        self.full_well = full_well
         self.fe55_yield = Fe55Yield(ccdtemp)
         self.image = afwImage.ImageF(bbox)
         self.imarr = self.image.Factory(self.image, imutils.imaging).getArray()
@@ -89,9 +97,14 @@ class SegmentExposure(object):
         dark_arr = self._poisson_imarr(level*self.exptime)/self.gain
         self.imarr += dark_arr
     def expose_flat(self, intensity=0):
-        """level is in units of incident photons per pixel per unit time."""
-        flat_arr = self._poisson_imarr(intensity*self.exptime)/self.gain
+        """The parameter intensity is in units of incident photons per
+        pixel per unit time."""
+        Ne_pred = intensity*self.exptime  # Number of e-/pixel assuming QE=1.
+        flat_arr = self._poisson_imarr(Ne_pred)/self.gain
         self.imarr += flat_arr
+        if self.full_well is not None:
+            indx = np.where(self.imarr > self.full_well/self.gain)
+            self.imarr[indx] = self.full_well/self.gain
     def _poisson_imarr(self, Ne):
         return random.poisson(Ne, self.npix).reshape(self.ny, self.nx)
     def sigma(self):
