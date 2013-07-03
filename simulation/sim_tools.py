@@ -17,6 +17,18 @@ from fe55_yield import Fe55Yield
 
 import image_utils as imutils
 
+def xtalk_pattern(aggressor, frac_scale=0.02):
+    xtalk_frac = {}
+    nside = len(imutils.allAmps)/2
+    for victim in imutils.allAmps:
+        if (victim != aggressor and
+            (victim-1)/nside == (aggressor-1)/nside):
+            dist = abs(victim - aggressor)
+            xtalk_frac[victim] = 0.02/dist**2
+        else:
+            xtalk_frac[victim] = 0
+    return xtalk_frac
+
 class CCD(object):
     def __init__(self, exptime=1, gain=5, ccdtemp=-100, full_well=None,
                  bbox=imutils.full_segment, amps=imutils.allAmps):

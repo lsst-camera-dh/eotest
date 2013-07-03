@@ -5,20 +5,8 @@
 """
 import os
 import unittest
-from simulation.sim_tools import CCD
+from simulation.sim_tools import CCD, xtalk_pattern
 from crosstalk import *
-
-def xtalk_pattern(aggressor, frac_scale=0.02):
-    xtalk_frac = {}
-    nside = len(imutils.allAmps)/2
-    for victim in imutils.allAmps:
-        if (victim != aggressor and
-            (victim-1)/nside == (aggressor-1)/nside):
-            dist = abs(victim - aggressor)
-            xtalk_frac[victim] = 0.02/dist**2
-        else:
-            xtalk_frac[victim] = 0
-    return xtalk_frac
 
 class CrosstalkTestCase(unittest.TestCase):
     """Test case for crosstalk code."""

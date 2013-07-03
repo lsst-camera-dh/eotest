@@ -1,12 +1,13 @@
 """
-@brief Example parameter file for simulations.  We may want a more structured
-configuration file in the future.
+@brief Example parameter file for simulations.  We may want a more
+structured configuration file in the future.
 
 @author J. Chiang <jchiang@slac.stanford.edu>
 """
 import os
 import numpy as np
 from qe.PhotodiodeResponse import Interpolator
+from sim_tools import xtalk_pattern
 
 class Params(object):
     def __init__(self, **kwargs):
@@ -19,24 +20,28 @@ read_noise = 5.
 dark_current = 2e-3
 full_well = 150000
 
-flat_fields = Params(min_charge=100,
-                     max_charge=3e5,
+flat_fields = Params(test_type='flat',
+                     min_charge=100,
+                     max_charge=2e5,
                      exptime_min=1,
                      exptime_max=100,
                      nframes=100,
-                     ccdtemp=-100)
+                     ccdtemp=-95)
 
-pocket_pumping = Params(charge_levels=(100, 200, 500, 1000),
+pocket_pumping = Params(test_type='trap',
+                        charge_levels=(20000,),
                         bias_frames=True)
 
-darks = Params(ccdtemps=(-100, -95, -90),
+darks = Params(test_type='dark',
+               ccdtemp=-95,
                exptime=500,
                nframes=5,
                bright_ncols=1,
                bright_npix=100,
                bright_nsig=5)
 
-fe55 = Params(nframes=25,
+fe55 = Params(test_type='fe55',
+              nframes=25,
               nxrays=1000,
               exptime=10,
               ccdtemp=-95)
@@ -46,7 +51,8 @@ datapath = lambda x : os.path.join(os.environ['SCRIPTDIR'], 'qe', x)
 #qe = lambda wl_nm : 1
 qe_curve = np.recfromtxt(datapath('qe_curve.txt')).transpose()
 qe = Interpolator(*qe_curve)
-wavelength_scan = Params(wavelengths=range(400, 1000, 10),
+wavelength_scan = Params(test_type='lambda',
+                         wavelengths=range(400, 1000, 10),
                          exptime=1,
                          ccdtemp=-95,
                          wlscan_file=datapath('WLscan.txt'),
@@ -55,11 +61,20 @@ wavelength_scan = Params(wavelengths=range(400, 1000, 10),
                          qe=qe,
                          incident_power=1e-16)
 #wavelength_scan.wavelengths.extend((325, 355, 385))
-wavelength_scan.wavelengths.sort()
+#wavelength_scan.wavelengths.sort()
 
-superflat = Params(nframes=25,
+superflat = Params(test_type='superflat_500',
+                   nframes=25,
+                   wavelength=500.,
                    exptime=100)
 
-spot = Params(charge_level=9e4)
+spot = Params(test_type='spot',
+              exptime=1,
+              ccdtemp=-95,
+              xtalk_pattern=xtalk_pattern,
+              frac_scale=0.02,
+              dn=200,
+              x=250, y=250, radius=20)
 
-sysnoise = Params(nframes=10)
+sysnoise = Params(test_type='system',
+                  nframes=10)
