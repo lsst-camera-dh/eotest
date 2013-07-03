@@ -125,7 +125,7 @@ def generate_flats(pars):
                            np.log10(flats.exptime_max),
                            flats.nframes)
     for exptime, Ne in zip(exptimes, Nes):
-        print "  exptime %06.2fs", exptime
+        print "  exptime %06.2fs" % exptime
         intensity = Ne/exptime
         for flat_id in ('flat1', 'flat2'):
             sensor = CCD(exptime=exptime, gain=pars.system_gain,
@@ -158,7 +158,7 @@ def generate_qe_dataset(pars):
     qe = wlscan.qe
     incident_power = wlscan.incident_power  # J/s per pixel
     for wl_nm in wlscan.wavelengths:
-        print "  wavelength %06.1 nm" % wl_nm
+        print "  wavelength %06.1f nm" % wl_nm
         sensor = CCD(exptime=wlscan.exptime, gain=pars.system_gain, 
                      ccdtemp=wlscan.ccdtemp)
         hnu = planck*clight/wl_nm/1e-9    # photon energy (J)

@@ -5,6 +5,7 @@ These data are to be used for linearity and full-well measurments.
 @author J. Chiang <jchiang@slac.stanford.edu>
 """
 import os
+import glob
 from DetectorResponse import DetectorResponse
 import lsst.afw.math as afwMath
 import image_utils as imutils
@@ -33,6 +34,11 @@ def pair_mean(flat1, flat2, amp):
                       stats1.getValue(afwMath.MEAN))/2.
     return avg_mean_value
 
+def find_flat2(flat1):
+    pattern = flat1.split('flat1')[0] + 'flat2_*.fits'
+    flat2 = glob.glob(pattern)[0]
+    return flat2
+
 def extract_det_response(args, outfile):
     files = args.files(args.flats, args.flats_file_list)
     file1s = sorted([item.strip() for item in files
@@ -44,7 +50,7 @@ def extract_det_response(args, outfile):
     output = open(outfile, 'w')
     for file1 in file1s:
         print "processing", file1
-        file2 = file1.replace('flat1', 'flat2')
+        file2 = find_flat2(file1)
     
         flat1 = MaskedCCD(file1, mask_files=mask_files)
         flat2 = MaskedCCD(file2, mask_files=mask_files)
@@ -90,9 +96,9 @@ if __name__ == '__main__':
     full_well_values = []
     for amp in imutils.allAmps:
         try:
-            full_well = detresp.full_well(amp)
+            full_well, fp = detresp.full_well(amp)
         except RuntimeError:
-            full_well = detresp.full_well(amp, frac_offset=0.05)
+            full_well, fp = detresp.full_well(amp, frac_offset=0.05)
         print '%s            %.1f' % (imutils.channelIds[amp], full_well)
         full_well_values.append(full_well)
         sensor.add_seg_result(amp, 'fullWell', full_well)
