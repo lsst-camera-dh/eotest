@@ -42,14 +42,14 @@ fe55 = Params(nframes=25,
 datapath = lambda x : os.path.join(os.environ['SCRIPTDIR'], 'qe', x)
 
 qe = lambda wl_nm : 1
-wavelength_scan = Params(wavelengths=range(400, 1000, 10),
+wavelength_scan = Params(wavelengths=range(400, 1000, 100),
                          exptime=1,
                          ccdtemp=-95,
                          wlscan_file=datapath('WLscan.txt'),
                          ccd_cal_file=datapath('OD142.csv'),
                          sph_cal_file=datapath('OD143.csv'),
                          qe=qe,
-                         intensity=1)
+                         incident_power=1e-16)
 #wavelength_scan.wavelengths.extend((325, 355, 385))
 wavelength_scan.wavelengths.sort()
 

@@ -13,6 +13,8 @@ if __name__ == '__main__':
                         help='wavelength scan file pattern')
     parser.add_argument('-F', '--qe_file_list', type=str,
                         help='list of wavelength scan files')
+    parser.add_argument('-q', '--qe_medians_file', default=None, type=str,
+                        help='file of median image values from wl scan dataset')
     parser.add_argument('-c', '--ccd_cal_file', type=str,
                         help='calibration file for photodiode at CCD location')
     parser.add_argument('-i', '--int_sph_cal_file', type=str,
@@ -25,7 +27,11 @@ if __name__ == '__main__':
     sensor = args.sensor()
     sensor_id = args.sensor_id
     
-    medians_file = os.path.join(args.output_dir, '%s_QE.txt' % sensor_id)
+    if args.qe_medians_file is None:
+        medians_file = os.path.join(args.output_dir, '%s_QE.txt' % sensor_id)
+    else:
+        medians_file = args.qe_medians_file
+
     fits_outfile = os.path.join(args.output_dir, '%s_QE.fits' % sensor_id)
 
     ccd_cal_file = args.ccd_cal_file
@@ -35,8 +41,9 @@ if __name__ == '__main__':
     infiles = args.files(args.qe_files, args.qe_file_list)
 
     qe_data = QE_Data()
-#    qe_data.calculate_medians(infiles, medians_file,
-#                              mask_files=args.mask_files())
+    if args.qe_medians_file is None:
+        qe_data.calculate_medians(infiles, medians_file,
+                                  mask_files=args.mask_files())
     qe_data.read_medians(medians_file)
     qe_data.calculate_QE(ccd_cal_file, sph_cal_file, wlscan_file, gains)
     qe_data.write_fits_tables(fits_outfile)

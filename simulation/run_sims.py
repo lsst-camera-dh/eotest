@@ -9,8 +9,11 @@ import os
 import numpy as np
 import image_utils as imutils
 from qe.PhotodiodeResponse import PhotodiodeResponse, CcdIllumination
-
+from qe.QE import planck, clight
 from sim_tools import *
+
+pd_area = 1e-4          # Sensitive area of photodiode
+pixel_area = 1e-10      # Nominal pixel area (10 micron x 10 micron)
 
 def mkdir(path):
     try:
@@ -21,7 +24,8 @@ def mkdir(path):
 def setup(pars, testtype):
     outputdir = os.path.join(pars.rootdir, pars.sensor_id, testtype, 'data')
     mkdir(outputdir)
-    sensor_id = pars.sensor_id.replace('-', '_')
+    #sensor_id = pars.sensor_id.replace('-', '_')
+    sensor_id = pars.sensor_id
     return outputdir, sensor_id
 
 def simulate_frame(exptime, pars, ccdtemp=-100):
@@ -120,23 +124,26 @@ def generate_qe_dataset(pars):
                                wlscan.ccd_cal_file,
                                wlscan.sph_cal_file)
     qe = wlscan.qe
-    intensity = wlscan.intensity
+    incident_power = wlscan.incident_power  # J/s per pixel
     for wl_nm in wlscan.wavelengths:
         sensor = CCD(exptime=wlscan.exptime, gain=pars.system_gain, 
                      ccdtemp=wlscan.ccdtemp)
+        hnu = planck*clight/wl_nm/1e-9    # photon energy (J)
         sensor.md['MONOWL'] = wl_nm
         #
         # The photodiode current is measured at integrating sphere.
+        # Units are nA.
         #
-        sensor.md['MONDIODE'] = intensity*pd_sph(wl_nm)/ccd_frac(wl_nm)
+        sensor.md['MONDIODE'] = (incident_power*pd_sph(wl_nm)/ccd_frac(wl_nm)
+                                 *(pd_area/pixel_area))*1e9
         #
-        sensor.expose_flat(intensity*qe(wl_nm))
+        sensor.expose_flat(incident_power*qe(wl_nm)/hnu)
         #
         sensor.add_bias(level=pars.bias_level, sigma=pars.bias_sigma)
         sensor.add_bias(level=0, sigma=pars.read_noise)
         sensor.add_dark_current(pars.dark_current)
         #
-        filename = "%(sensor_id)s_qe_%(wl_nm)04.2f.fits" % locals()
+        filename = "%(sensor_id)s_qe_%(wl_nm)06.1f.fits" % locals()
         sensor.writeto(os.path.join(outputdir, filename))
 
 if __name__ == '__main__':

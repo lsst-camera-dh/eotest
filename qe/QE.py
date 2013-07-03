@@ -31,7 +31,7 @@ class QE_Data(object):
     band_pass['z'] = (818, 922)
     band_pass['y'] = (930, 1070)
     band_wls = np.array([sum(band_pass[b])/2. for b in band_pass.keys()])
-    def __init__(self, verbose=True, pd_scaling=1e-12):
+    def __init__(self, verbose=True, pd_scaling=1e-9):
         self.verbose = verbose
         self.pd_scaling = pd_scaling
     def read_medians(self, medians_file):
@@ -181,19 +181,17 @@ class QE_Data(object):
             plot.pylab.ion()
         else:
             plot.pylab.ioff()
-        indx = np.argsort(qe_data.wlarrs[1])
+        indx = np.argsort(self.wlarrs[1])
         for i, amp in enumerate(imutils.allAmps):
-            plot.curve(qe_data.wlarrs[amp][indx], qe_data.qe[amp][indx],
+            plot.curve(self.wlarrs[amp][indx], self.qe[amp][indx],
                        oplot=i, xname='wavelength (nm)', yname='QE (%)',
                        xrange=(350, 1100))
-            plot.xyplot(qe_data.wlarrs[amp][indx], qe_data.qe[amp][indx],
-                        oplot=1)
-            wl = [sum(qe_data.band_pass[band])/2.
-                  for band in qe_data.qe_band[amp]]
-            plot.xyplot(wl, qe_data.qe_band[amp].values(), oplot=1, color='r')
-        plot.curve(qe_data.wlarrs[1][indx], qe_data.ccd_qe[indx], oplot=1,
+            plot.xyplot(self.wlarrs[amp][indx], self.qe[amp][indx], oplot=1)
+            wl = [sum(self.band_pass[band])/2. for band in self.qe_band[amp]]
+            plot.xyplot(wl, self.qe_band[amp].values(), oplot=1, color='r')
+        plot.curve(self.wlarrs[1][indx], self.ccd_qe[indx], oplot=1,
                    color='g')
-        plot.xyplot(wl, qe_data.ccd_qe_band.values(), oplot=1, color='b')
+        plot.xyplot(wl, self.ccd_qe_band.values(), oplot=1, color='b')
         if outfile is not None:
             plot.save(outfile)
 
