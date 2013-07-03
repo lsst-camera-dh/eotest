@@ -53,8 +53,8 @@ def extract_det_response(args, outfile):
             raise RuntimeError("Exposure times do not match for:\n%s\n%s\n"
                                % (file1, file2))
     
-        flux = abs(flat1.md.get('EXPTIME')*flat1.md.get('K_PHOT_CURRENT') +
-                   flat2.md.get('EXPTIME')*flat2.md.get('K_PHOT_CURRENT'))/2.
+        flux = abs(flat1.md.get('EXPTIME')*flat1.md.get('MONDIODE') +
+                   flat2.md.get('EXPTIME')*flat2.md.get('MONDIODE'))/2.
 
         output.write('%12.4e' % flux)
         #

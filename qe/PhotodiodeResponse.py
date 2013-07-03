@@ -49,6 +49,11 @@ class PhotodiodeResponse(Interpolator):
         Interpolator.__init__(self, self.wavelength, self.resp)
 
 class CcdIllumination(Interpolator):
+    """
+    This functor returns the ratio of the intensity at the photodiode
+    at the CCD position to the intensity at the photodiode located on
+    the integrating sphere as a function of wavelength.
+    """
     def __init__(self, scan_file, ccd_cal_file, sph_cal_file):
         data = np.recfromtxt(scan_file, names=True)
         self.wavelengths = data['wl']

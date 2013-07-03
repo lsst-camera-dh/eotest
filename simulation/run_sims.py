@@ -8,6 +8,7 @@ import os
 
 import numpy as np
 import image_utils as imutils
+from qe.PhotodiodeResponse import PhotodiodeResponse, CcdIllumination
 
 from sim_tools import *
 
@@ -96,7 +97,7 @@ def generate_flats(pars):
             sensor = CCD(exptime=exptime, gain=pars.system_gain,
                          ccdtemp=pars.flat_fields.ccdtemp,
                          full_well=pars.full_well)
-            sensor.md['K_PHOT_CURRENT'] = intensity
+            sensor.md['MONDIODE'] = intensity
             sensor.expose_flat(intensity)
             #
             # Test-independent effects. These need to be added after
@@ -111,6 +112,33 @@ def generate_flats(pars):
                        % locals()
             sensor.writeto(os.path.join(outputdir, filename))
 
+def generate_qe_dataset(pars):
+    outputdir, sensor_id = setup(pars, 'qe')
+    wlscan = pars.wavelength_scan
+    pd_sph = PhotodiodeResponse(wlscan.sph_cal_file)
+    ccd_frac = CcdIllumination(wlscan.wlscan_file, 
+                               wlscan.ccd_cal_file,
+                               wlscan.sph_cal_file)
+    qe = wlscan.qe
+    intensity = wlscan.intensity
+    for wl_nm in wlscan.wavelengths:
+        sensor = CCD(exptime=wlscan.exptime, gain=pars.system_gain, 
+                     ccdtemp=wlscan.ccdtemp)
+        sensor.md['MONOWL'] = wl_nm
+        #
+        # The photodiode current is measured at integrating sphere.
+        #
+        sensor.md['MONDIODE'] = intensity*pd_sph(wl_nm)/ccd_frac(wl_nm)
+        #
+        sensor.expose_flat(intensity*qe(wl_nm))
+        #
+        sensor.add_bias(level=pars.bias_level, sigma=pars.bias_sigma)
+        sensor.add_bias(level=0, sigma=pars.read_noise)
+        sensor.add_dark_current(pars.dark_current)
+        #
+        filename = "%(sensor_id)s_qe_%(wl_nm)04.2f.fits" % locals()
+        sensor.writeto(os.path.join(outputdir, filename))
+
 if __name__ == '__main__':
     import simulation.sim_params as pars
     try:
@@ -119,6 +147,7 @@ if __name__ == '__main__':
         #pars.rootdir = '/nfs/farm/g/lsst/u1/testData/SIMData'
         pars.rootdir = '/nfs/slac/g/ki/ki18/jchiang/LSST/SensorTests/test_scripts/work'
     pars.sensor_id = '000-00'
-    generate_flats(pars)
-    generate_darks(pars)
-    generate_Fe55(pars)
+#    generate_flats(pars)
+#    generate_darks(pars)
+#    generate_Fe55(pars)
+    generate_qe_dataset(pars)

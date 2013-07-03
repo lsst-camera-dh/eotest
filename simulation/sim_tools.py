@@ -61,9 +61,9 @@ class CCD(object):
         ccd_segments = [self.segments[amp] for amp in self.segments]
         output = fitsFile(ccd_segments)
         if pars is not None:
-            output[0].header['GAIN'] = pars.system_gain
+            output[0].header['CCDGAIN'] = pars.system_gain
             output[0].header['BIASLVL'] = pars.bias_level
-            output[0].header['SYSNOISE'] = pars.bias_sigma
+            output[0].header['CCDNOISE'] = pars.bias_sigma
             output[0].header['RDNOISE'] = pars.read_noise
             output[0].header['DARKCURR'] = pars.dark_current
         for key, value in self.md.items():

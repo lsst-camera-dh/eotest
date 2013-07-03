@@ -49,7 +49,7 @@ def compute_mean_signal(flat_list, outfile='linearity_results.txt',
             print "processing", infile
         md = afwImage.readMetadata(infile, 1)
         exptime = md.get('EXPTIME')
-        kphot = np.abs(md.get('K_PHOT_CURRENT'))
+        kphot = np.abs(md.get('MONDIODE'))
         output.write('%12.4e  %12.4e' % (exptime, kphot))
         mean_signals = signal_estimator(infile)
         for amp in imUtils.allAmps:

@@ -62,11 +62,11 @@ class QE_Data(object):
             if exptime == 0:
                 print "Zero exposure time in %s. Skipping." % item
                 continue
-            self.wl.append(md.get('MONO.WAVELENG'))
+            self.wl.append(md.get('MONOWL'))
             self.exptime.append(exptime)
             if self.exptime[-1] == 0:
                 raise RuntimeError("Zero exposure time in ", item)
-            self.pd.append(np.abs(md.get('K_PHOT.CURRENT')*self.pd_scaling))
+            self.pd.append(np.abs(md.get('MONDIODE')*self.pd_scaling))
             output.write('%.3f' % self.wl[-1])
             output.write('  %.3e' % self.exptime[-1])
             output.write('  %.3e' % self.pd[-1])
