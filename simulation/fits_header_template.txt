@@ -1,3 +1,4 @@
+# Primary HDU
 SIMPLE      = T                      / file does conform to FITS standard
 BITPIX      = 8                      / number of bits per data pixel
 NAXIS       = 0                      / number of data axes
@@ -28,14 +29,16 @@ SHUT_DEL    = 100.00                 / Delay between shutter close command and r
 CTLRCFG     = 'reflex_012.xml'       / CCD controller configuration file
 FILENAME    =                        / Original name of file
 DETSIZE     = '[0:4336,0:4044]'      / NOAO mosaic keywords
-BINX        = 1                      /
-BINY        = 1                      /
-HEADVER     = 1                      /
+BINX        = 1                      / Binning along x-axis
+BINY        = 1                      / Binning along y-axis
+HEADVER     = 1                      / Version number of header
 CCDGAIN     = 5                      / Estimate of overal system gain (e-/DN)
 CCDNOISE    = 7                      / Estimate of system noise (e- rms)
 CHECKSUM    =                        / checksum for entire HDU
 DATASUM     =                        / checksum for data portion of HDU
+END
 
+# Image extension
 XTENSION    = 'IMAGE '               / IMAGE extension
 EXTNAME     = 'Segment10'            /
 BITPIX      = 16                     / number of bits per data pixel
@@ -46,7 +49,7 @@ PCOUNT      = 0                      / required keyword; must = 0
 GCOUNT      = 1                      / required keyword; must = 1
 BZERO       = 32768                  /
 BSCALE      = 1                      /
-CHANNEL     = 1                      /channel number
+CHANNEL     = 1                      / channel number
 AVERAGE     = 12345.7                /
 STDEV       = 6789.01                /
 DETSIZE     = '[1:4096,1:4004]'      /
@@ -71,6 +74,6 @@ ATM1_1      = 1.00000                /
 ATM1_2      = 0.00000                /
 ATM2_1      = 0.00000                /
 ATM2_2      = 1.00000                /
-CHECKSUM    = 'VVdCWTZ9VTbCVTZ9'     /
-DATASUM     = '2189405276'           /
-ENDx
+CHECKSUM    =                        /
+DATASUM     =                        /
+END
