@@ -5,6 +5,8 @@ configuration file in the future.
 @author J. Chiang <jchiang@slac.stanford.edu>
 """
 import os
+import numpy as np
+from qe.PhotodiodeResponse import Interpolator
 
 class Params(object):
     def __init__(self, **kwargs):
@@ -41,8 +43,10 @@ fe55 = Params(nframes=25,
 
 datapath = lambda x : os.path.join(os.environ['SCRIPTDIR'], 'qe', x)
 
-qe = lambda wl_nm : 1
-wavelength_scan = Params(wavelengths=range(400, 1000, 100),
+#qe = lambda wl_nm : 1
+qe_curve = np.recfromtxt(datapath('qe_curve.txt')).transpose()
+qe = Interpolator(*qe_curve)
+wavelength_scan = Params(wavelengths=range(400, 1000, 10),
                          exptime=1,
                          ccdtemp=-95,
                          wlscan_file=datapath('WLscan.txt'),
@@ -59,4 +63,3 @@ superflat = Params(nframes=25,
 spot = Params(charge_level=9e4)
 
 sysnoise = Params(nframes=10)
-

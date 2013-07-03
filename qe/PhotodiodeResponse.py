@@ -24,7 +24,7 @@ class Interpolator(object):
             return self._value(x)
     def _value(self, x):
         if x < self.xx[0] or x > self.xx[-1]:
-            raise RuntimeError("Requested x-value is out-of-range.")
+            raise RuntimeError("Requested x-value, %s, is out-of-range." % x)
         elif x == self.xx[0]:
             return self.yy[0]
         elif x == self.xx[-1]:
