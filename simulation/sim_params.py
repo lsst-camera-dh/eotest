@@ -65,8 +65,12 @@ wavelength_scan = Params(test_type='lambda',
 
 superflat = Params(test_type='superflat_500',
                    nframes=25,
+#                   nframes=2,
                    wavelength=500.,
-                   exptime=100)
+                   exptime=100,
+                   pcti=1e-3,
+                   scti=1e-3,
+                   verbose=True)
 
 spot = Params(test_type='spot',
               exptime=1,

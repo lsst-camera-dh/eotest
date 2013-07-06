@@ -60,6 +60,7 @@ class EPERConfig(pexConfig.Config):
     direction = pexConfig.Field("Select either parallel or serial direction", 
                                 str, default="p")
     verbose = pexConfig.Field("Turn verbosity on", bool, default=True)
+    cti = pexConfig.Field('Return CTI instead of CTE', bool, default=False)
 
 class EPERTask(pipeBase.Task):
     """Task to calculate either parallel or serial charge transfer 
@@ -74,7 +75,7 @@ class EPERTask(pipeBase.Task):
             sys.exit(1)
 
         # iterate through amps
-        cte = []
+        cte = {}
         for amp in amps:
             subimage = SubImage(infilename, amp, overscans, self)
             lastpix = subimage.lastpix
@@ -110,9 +111,15 @@ class EPERTask(pipeBase.Task):
             # charge loss per transfer = (trailed/signal)/N
             chargelosspt = (trailed/sig)/(lastpix + 1.)
 
-            cte.append(1. - chargelosspt)
+            if self.config.cti:
+                cte[amp] = chargelosspt
+            else:
+                cte[amp] = 1. - chargelosspt
             if self.config.verbose:
-                print 'cte, amp ' + str(amp) + " = " + '{0:.16f}'.format(cte[-1])
+                if self.config.cti:
+                    print 'cti, amp ' + str(amp) + " = " + '{0:.16f}'.format(cte[amp])
+                else:
+                    print 'cte, amp ' + str(amp) + " = " + '{0:.16f}'.format(cte[amp])
         return cte
 			
 if __name__ == '__main__':
@@ -123,10 +130,13 @@ if __name__ == '__main__':
     parser.add_argument('-d', '--direction', help="specify either parallel ('p') or serial ('s') direction", default='p')
     parser.add_argument('-a', '--amps', help="amps to be analyzed, separated by a space", type=int, nargs = '+', default=range(1, 17))
     parser.add_argument('-v', '--verbose', help="turn verbosity on", action='store_true', default=False)
+    parser.add_argument('-i', '--cti', help='return CTI (not CTE)',
+                        action='store_true', default=False)
     args = parser.parse_args()
 	
     task = EPERTask()
     task.config.direction = args.direction
     task.config.verbose = args.verbose
+    task.config.cti = args.cti
 
     task.run(args.infilename, args.amps, args.overscans)

@@ -22,7 +22,7 @@ def fitsFile(segments, exptime=1):
         output[amp].header.update('DETSEC', imutils.detsec(amp))
     return output
 
-def ctesim(infile, pcti=0, scti=0):
+def ctesim(infile, pcti=0, scti=0, verbose=False):
     pcte = 1 - pcti
     scte = 1 - scti
 
@@ -30,7 +30,8 @@ def ctesim(infile, pcti=0, scti=0):
     amps = [i for i in range(1, len(foo)) if foo[i].is_image]
     segments = {}
     for amp in amps:
-        print "working on amp", amp
+        if verbose:
+            print "ctesim: working on amp", amp
         image = afwImage.ImageF(infile, imutils.dm_hdu(amp))
         #
         # Temporarily remove readout bias median.
@@ -47,7 +48,7 @@ def ctesim(infile, pcti=0, scti=0):
             # Parallel charge transfer.
             # Loop over rows:
             for j in range(ny-2):
-                if j % 100 == 0:
+                if j % 100 == 0 and verbose:
                     print "  row", j
                 # Copy bottom row to output.
                 outarr[j, :] = pcte*imarr[0, :]
@@ -62,7 +63,7 @@ def ctesim(infile, pcti=0, scti=0):
             # Serial charge transfer.
             # Loop over columns:
             for i in range(nx-2):
-                if i % 100 == 0:
+                if i % 100 == 0 and verbose:
                     print "  column", i
                 outarr[:, i] = scte*imarr[:, 0]
                 for ii in range(nx - 2 - i):

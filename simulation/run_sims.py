@@ -11,6 +11,7 @@ import image_utils as imutils
 from qe.PhotodiodeResponse import PhotodiodeResponse, CcdIllumination
 from qe.QE import planck, clight
 from simulation.sim_tools import *
+from simulation.ctesim import ctesim
 
 pd_area = 1e-4          # Sensitive area of photodiode
 pixel_area = 1e-10      # Nominal pixel area (10 micron x 10 micron)
@@ -51,6 +52,8 @@ def setup(pars, testtype):
 def simulate_frame(exptime, pars, ccdtemp=-100, set_full_well=True):
     if set_full_well:
         full_well = pars.full_well
+    else:
+        full_well = None
     sensor = CCD(exptime=exptime, gain=pars.system_gain, ccdtemp=ccdtemp,
                  full_well=full_well)
     #
@@ -115,6 +118,28 @@ def generate_darks(pars):
                     % (sensor_id, darks.test_type, frame, time_stamp()))
         sensor.writeto(os.path.join(outputdir, filename))
 
+def generate_superflat(pars):
+    print "Generating superflat dataset..."
+    superflat = pars.superflat
+    outputdir, sensor_id = setup(pars, superflat.test_type)
+    tempfile = os.path.join(outputdir, 'superflat_temp.fits')
+    #
+    # Set incident flux (ph/s/pixel) so that full well is attained in
+    # a single exposure (but also disable full well below).
+    #
+    intensity = pars.full_well*pars.system_gain/superflat.exptime
+    for frame in range(superflat.nframes):
+        print "  frame", frame
+        sensor = simulate_frame(superflat.exptime, pars, set_full_well=False)
+        sensor.expose_flat(intensity)
+        sensor.md['MONOWL'] = superflat.wavelength
+        sensor.writeto(tempfile)
+        foo = ctesim(tempfile, pcti=superflat.pcti, scti=superflat.scti,
+                     verbose=superflat.verbose)
+        filename = ("%s_%s_%02i_%s.fits" 
+                    % (sensor_id, superflat.test_type, frame, time_stamp()))
+        foo.writeto(os.path.join(outputdir, filename), clobber=True)
+
 def generate_flats(pars):
     print "Generating flats dataset..."
     flats = pars.flat_fields
@@ -142,9 +167,9 @@ def generate_flats(pars):
             sensor.add_bias(level=pars.bias_level, sigma=pars.bias_sigma)
             sensor.add_bias(level=0, sigma=pars.read_noise)
             sensor.add_dark_current(pars.dark_current)
-            filename = ("%s_%s_%06.2fs_%s_%s.fits" \
-                       % (sensor_id, flats.test_type, exptime, flat_id,
-                          time_stamp()))
+            filename = ("%s_%s_%06.2fs_%s_%s.fits" 
+                        % (sensor_id, flats.test_type, exptime, flat_id,
+                           time_stamp()))
             sensor.writeto(os.path.join(outputdir, filename))
 
 def generate_qe_dataset(pars):
@@ -213,8 +238,9 @@ if __name__ == '__main__':
         #pars.rootdir = '/nfs/farm/g/lsst/u1/testData/SIMData'
         pars.rootdir = '/nfs/slac/g/ki/ki18/jchiang/LSST/SensorTests/test_scripts/work'
     pars.sensor_id = '000-00'
-    generate_flats(pars)
-    generate_darks(pars)
-    generate_Fe55(pars)
-    generate_qe_dataset(pars)
-    generate_crosstalk_dataset(pars)
+#    generate_flats(pars)
+#    generate_darks(pars)
+#    generate_Fe55(pars)
+#    generate_qe_dataset(pars)
+#    generate_crosstalk_dataset(pars)
+    generate_superflat(pars)
