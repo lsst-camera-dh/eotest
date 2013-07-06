@@ -42,6 +42,11 @@ def mkdir(path):
     except OSError:
         pass
 
+def system_dir(pars, testtype):
+    outputdir = os.path.join(pars.rootdir, 'system', testtype, date_stamp())
+    mkdir(outputdir)
+    return outputdir
+
 def setup(pars, testtype):
     outputdir = os.path.join(pars.rootdir, 'sensorData', pars.sensor_id,
                              testtype, date_stamp())
@@ -63,82 +68,6 @@ def simulate_frame(exptime, pars, ccdtemp=-100, set_full_well=True):
     sensor.add_bias(level=0, sigma=pars.read_noise)
     sensor.add_dark_current(pars.dark_current)
     return sensor
-
-def generate_Fe55(pars):
-    print "Generating Fe55 dataset..."
-    fe55 = pars.fe55
-    outputdir, sensor_id = setup(pars, fe55.test_type)
-    for frame in range(fe55.nframes):
-        print "  frame", frame
-        #
-        # Fe55 exposure
-        #
-        sensor = simulate_frame(fe55.exptime, pars, ccdtemp=fe55.ccdtemp)
-        sensor.add_Fe55_hits(nxrays=fe55.nxrays)
-        filename = ("%s_%s_fe55_%02i_%s.fits"
-                    % (sensor_id, fe55.test_type, frame, time_stamp()))
-        sensor.writeto(os.path.join(outputdir, filename))
-        #
-        # Bias frame
-        #
-        exptime = 0
-        sensor = simulate_frame(exptime, pars, ccdtemp=fe55.ccdtemp)
-        filename = ("%s_%s_bias_%02i_%s.fits"
-                    % (sensor_id, fe55.test_type, frame, time_stamp()))
-        sensor.writeto(os.path.join(outputdir, filename))
-
-def generate_darks(pars):
-    print "Generating darks dataset..."
-    darks = pars.darks
-    outputdir, sensor_id = setup(pars, darks.test_type)
-    bright_cols = None
-    bright_pix = None
-    ccdtemp = darks.ccdtemp
-    for frame in range(darks.nframes):
-        print "  frame", frame
-        #
-        # Bias frame
-        #
-        exptime = 0
-        sensor = simulate_frame(exptime, pars)
-        filename = ("%s_%s_bias_%02i_%s.fits"
-                    % (sensor_id, darks.test_type, frame, time_stamp()))
-        sensor.writeto(os.path.join(outputdir, filename))
-        #
-        # Dark frame
-        #
-        sensor = simulate_frame(darks.exptime, pars)
-        if bright_cols is None:
-            bright_cols = sensor.generate_bright_cols(darks.bright_ncols)
-        if bright_pix is None:
-            bright_pix = sensor.generate_bright_pix(darks.bright_npix)
-        sensor.add_bright_cols(bright_cols, nsig=darks.bright_nsig)
-        sensor.add_bright_pix(bright_pix, nsig=darks.bright_nsig)
-        filename = ("%s_%s_dark_%02i_%s.fits"
-                    % (sensor_id, darks.test_type, frame, time_stamp()))
-        sensor.writeto(os.path.join(outputdir, filename))
-
-def generate_superflat(pars):
-    print "Generating superflat dataset..."
-    superflat = pars.superflat
-    outputdir, sensor_id = setup(pars, superflat.test_type)
-    tempfile = os.path.join(outputdir, 'superflat_temp.fits')
-    #
-    # Set incident flux (ph/s/pixel) so that full well is attained in
-    # a single exposure (but also disable full well below).
-    #
-    intensity = pars.full_well*pars.system_gain/superflat.exptime
-    for frame in range(superflat.nframes):
-        print "  frame", frame
-        sensor = simulate_frame(superflat.exptime, pars, set_full_well=False)
-        sensor.expose_flat(intensity)
-        sensor.md['MONOWL'] = superflat.wavelength
-        sensor.writeto(tempfile)
-        foo = ctesim(tempfile, pcti=superflat.pcti, scti=superflat.scti,
-                     verbose=superflat.verbose)
-        filename = ("%s_%s_%02i_%s.fits" 
-                    % (sensor_id, superflat.test_type, frame, time_stamp()))
-        foo.writeto(os.path.join(outputdir, filename), clobber=True)
 
 def generate_flats(pars):
     print "Generating flats dataset..."
@@ -171,6 +100,63 @@ def generate_flats(pars):
                         % (sensor_id, flats.test_type, exptime, flat_id,
                            time_stamp()))
             sensor.writeto(os.path.join(outputdir, filename))
+
+def generate_traps(pars):
+    pass
+
+def generate_darks(pars):
+    print "Generating darks dataset..."
+    darks = pars.darks
+    outputdir, sensor_id = setup(pars, darks.test_type)
+    bright_cols = None
+    bright_pix = None
+    ccdtemp = darks.ccdtemp
+    for frame in range(darks.nframes):
+        print "  frame", frame
+        #
+        # Bias frame
+        #
+        exptime = 0
+        sensor = simulate_frame(exptime, pars)
+        filename = ("%s_%s_bias_%02i_%s.fits"
+                    % (sensor_id, darks.test_type, frame, time_stamp()))
+        sensor.writeto(os.path.join(outputdir, filename))
+        #
+        # Dark frame
+        #
+        sensor = simulate_frame(darks.exptime, pars)
+        if bright_cols is None:
+            bright_cols = sensor.generate_bright_cols(darks.bright_ncols)
+        if bright_pix is None:
+            bright_pix = sensor.generate_bright_pix(darks.bright_npix)
+        sensor.add_bright_cols(bright_cols, nsig=darks.bright_nsig)
+        sensor.add_bright_pix(bright_pix, nsig=darks.bright_nsig)
+        filename = ("%s_%s_dark_%02i_%s.fits"
+                    % (sensor_id, darks.test_type, frame, time_stamp()))
+        sensor.writeto(os.path.join(outputdir, filename))
+
+def generate_Fe55(pars):
+    print "Generating Fe55 dataset..."
+    fe55 = pars.fe55
+    outputdir, sensor_id = setup(pars, fe55.test_type)
+    for frame in range(fe55.nframes):
+        print "  frame", frame
+        #
+        # Fe55 exposure
+        #
+        sensor = simulate_frame(fe55.exptime, pars, ccdtemp=fe55.ccdtemp)
+        sensor.add_Fe55_hits(nxrays=fe55.nxrays)
+        filename = ("%s_%s_fe55_%02i_%s.fits"
+                    % (sensor_id, fe55.test_type, frame, time_stamp()))
+        sensor.writeto(os.path.join(outputdir, filename))
+        #
+        # Bias frame
+        #
+        exptime = 0
+        sensor = simulate_frame(exptime, pars, ccdtemp=fe55.ccdtemp)
+        filename = ("%s_%s_bias_%02i_%s.fits"
+                    % (sensor_id, fe55.test_type, frame, time_stamp()))
+        sensor.writeto(os.path.join(outputdir, filename))
 
 def generate_qe_dataset(pars):
     print "Generating wavelength scan dataset..."
@@ -205,6 +191,28 @@ def generate_qe_dataset(pars):
                     % (sensor_id, wlscan.test_type, wl_nm, time_stamp()))
         sensor.writeto(os.path.join(outputdir, filename))
 
+def generate_superflat(pars):
+    print "Generating superflat dataset..."
+    superflat = pars.superflat
+    outputdir, sensor_id = setup(pars, superflat.test_type)
+    tempfile = os.path.join(outputdir, 'superflat_temp.fits')
+    #
+    # Set incident flux (ph/s/pixel) so that full well is attained in
+    # a single exposure (but also disable full well below).
+    #
+    intensity = pars.full_well*pars.system_gain/superflat.exptime
+    for frame in range(superflat.nframes):
+        print "  frame", frame
+        sensor = simulate_frame(superflat.exptime, pars, set_full_well=False)
+        sensor.expose_flat(intensity)
+        sensor.md['MONOWL'] = superflat.wavelength
+        sensor.writeto(tempfile)
+        foo = ctesim(tempfile, pcti=superflat.pcti, scti=superflat.scti,
+                     verbose=superflat.verbose)
+        filename = ("%s_%s_%02i_%s.fits" 
+                    % (sensor_id, superflat.test_type, frame, time_stamp()))
+        foo.writeto(os.path.join(outputdir, filename), clobber=True)
+
 def generate_crosstalk_dataset(pars):
     print "Generating spot dataset..."
     spot = pars.spot
@@ -230,6 +238,18 @@ def generate_crosstalk_dataset(pars):
                     % (sensor_id, spot.test_type, aggressor, time_stamp()))
         sensor.writeto(os.path.join(outputdir, filename))
 
+def generate_system_read_noise(pars):
+    print "Generating system read noise..."
+    sysnoise = pars.sysnoise
+    outputdir = system_dir(pars, sysnoise.test_type)
+    for frame in range(sysnoise.nframes):
+        print "  frame", frame
+        sensor = CCD(exptime=0, gain=pars.system_gain)
+        sensor.add_bias(level=pars.bias_level, sigma=pars.bias_sigma)
+        filename = ("%s_%02i_%s.fits"
+                    % (sysnoise.test_type, frame, time_stamp()))
+        sensor.writeto(os.path.join(outputdir, filename))
+
 if __name__ == '__main__':
     import simulation.sim_params as pars
     try:
@@ -238,9 +258,11 @@ if __name__ == '__main__':
         #pars.rootdir = '/nfs/farm/g/lsst/u1/testData/SIMData'
         pars.rootdir = '/nfs/slac/g/ki/ki18/jchiang/LSST/SensorTests/test_scripts/work'
     pars.sensor_id = '000-00'
-#    generate_flats(pars)
-#    generate_darks(pars)
-#    generate_Fe55(pars)
-#    generate_qe_dataset(pars)
-#    generate_crosstalk_dataset(pars)
+    generate_flats(pars)
+    generate_traps(pars)
+    generate_darks(pars)
+    generate_Fe55(pars)
+    generate_qe_dataset(pars)
     generate_superflat(pars)
+    generate_crosstalk_dataset(pars)
+    generate_system_read_noise(pars)

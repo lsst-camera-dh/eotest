@@ -80,5 +80,5 @@ spot = Params(test_type='spot',
               dn=200,
               x=250, y=250, radius=20)
 
-sysnoise = Params(test_type='system',
+sysnoise = Params(test_type='noise',
                   nframes=10)
