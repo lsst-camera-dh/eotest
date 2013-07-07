@@ -13,6 +13,9 @@ class Params(object):
     def __init__(self, **kwargs):
         self.__dict__.update(kwargs)
 
+sensor_id = '000-00'
+rootdir = '.'
+
 system_gain = 5.
 bias_level = 1e4
 bias_sigma = 4
@@ -65,7 +68,6 @@ wavelength_scan = Params(test_type='lambda',
 
 superflat = Params(test_type='superflat_500',
                    nframes=25,
-#                   nframes=2,
                    wavelength=500.,
                    exptime=100,
                    pcti=1e-3,
@@ -82,3 +84,7 @@ spot = Params(test_type='spot',
 
 sysnoise = Params(test_type='noise',
                   nframes=10)
+
+sysxtalk = Params(test_type='xtalk',
+                  dn=6e4,
+                  column=260)

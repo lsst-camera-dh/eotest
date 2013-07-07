@@ -155,6 +155,8 @@ class SegmentExposure(object):
             for y in range(yref-radius, yref+radius, 1):
                 if ( (x - xref)**2 + (y - yref)**2 < r2 ):
                     self.imarr[y][x] += dn
+    def add_sys_xtalk_col(self, dn, column):
+        self.imarr[:, column] += dn
                 
 def fitsFile(ccd_segments):
     output = pyfits.HDUList()

@@ -250,14 +250,34 @@ def generate_system_read_noise(pars):
                     % (sysnoise.test_type, frame, time_stamp()))
         sensor.writeto(os.path.join(outputdir, filename))
 
+def generate_system_crosstalk_dataset(pars):
+    print "Generating system crosstalk dataset..."
+    sysxtalk = pars.sysxtalk
+    outputdir = system_dir(pars, sysxtalk.test_type)
+    for aggressor in imutils.allAmps:
+        print "  aggressor amp", aggressor
+        sensor = CCD(exptime=0, gain=pars.system_gain)
+        sensor.segments[aggressor].add_sys_xtalk_col(sysxtalk.dn,
+                                                     sysxtalk.column)
+        sensor.add_bias(level=pars.bias_level, sigma=pars.bias_sigma)
+        #
+        filename = ("%s_%02i_%s.fits"
+                    % (sysxtalk.test_type, aggressor, time_stamp()))
+        sensor.writeto(os.path.join(outputdir, filename))
+
 if __name__ == '__main__':
-    import simulation.sim_params as pars
-    try:
-        pars.rootdir = os.environ['ROOTDIR']
-    except KeyError:
-        #pars.rootdir = '/nfs/farm/g/lsst/u1/testData/SIMData'
-        pars.rootdir = '/nfs/slac/g/ki/ki18/jchiang/LSST/SensorTests/test_scripts/work'
-    pars.sensor_id = '000-00'
+    import sys
+    #
+    # Import the parameter file.
+    #
+    if sys.argv[1:]:
+        parfile = sys.argv[1]
+        tmp_path = os.path.join(os.path.split(parfile)[:-1])[0]
+        sys.path.insert(0, tmp_path)
+        exec('import %s as pars' % os.path.basename(parfile).strip('.py'))
+    else:
+        import simulation.sim_params as pars
+
     generate_flats(pars)
     generate_traps(pars)
     generate_darks(pars)
@@ -266,3 +286,4 @@ if __name__ == '__main__':
     generate_superflat(pars)
     generate_crosstalk_dataset(pars)
     generate_system_read_noise(pars)
+    generate_system_crosstalk_dataset(pars)
