@@ -1,5 +1,4 @@
 """
-
 @brief Compute system gain from Fe55 data.  Use afwDetect to find
 thresholded footprints of Fe55 hits, and fit the histogram of the ADU
 signals associated with those footprints with a pair of Gaussian lines
