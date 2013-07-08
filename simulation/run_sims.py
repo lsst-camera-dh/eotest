@@ -212,6 +212,16 @@ def generate_superflat(pars):
         filename = ("%s_%s_%02i_%s.fits" 
                     % (sensor_id, superflat.test_type, frame, time_stamp()))
         foo.writeto(os.path.join(outputdir, filename), clobber=True)
+    #
+    # Generate non-uniform illumination correction file.  For these
+    # simulations, we set every pixel to unity, i.e., no correction.
+    #
+    print "  generating the non-uniform illumination correction file..."
+    sensor = CCD(exptime=0)
+    for amp in imutils.allAmps:
+        sensor.segments[amp].image += 1
+    filename = "%s_illumation_correction_%s.fits" % (sensor_id, time_stamp())
+    sensor.writeto(os.path.join(outputdir, filename))
 
 def generate_crosstalk_dataset(pars):
     print "Generating spot dataset..."

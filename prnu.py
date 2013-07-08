@@ -6,6 +6,7 @@ the pixel mean, pixel median, and pixel standard deviation.
 @author J. Chiang <jchiang@slac.stanford.edu>
 """
 import numpy as np
+import lsst.afw.image as afwImage
 import lsst.afw.math as afwMath
 import image_utils as imutils
 from MaskedCCD import MaskedCCD
@@ -19,19 +20,21 @@ def extract_unmasked_pixels(masked_image, gain):
     indx = np.where(maskarr == 0)
     return [x*gain for x in imarr[indx].flat]
 
-def prnu(infile, mask_files, gains):
+def prnu(infile, mask_files, gains, correction_image=None):
     ccd = MaskedCCD(infile, mask_files=mask_files)
     active_pixels = []
     for amp in ccd:
+        if correction_image is not None:
+            correction = afwImage.ImageF(correction_image, imutils.dm_hdu(amp))
+            image = ccd[amp].getImage()
+            image /= correction
         active_pixels.extend(extract_unmasked_pixels(ccd[amp], gains[amp]))
-
     active_pixels = np.array(active_pixels, dtype=np.float)
-    flags = afwMath.MEAN | afwMath.MEDIAN | afwMath.STDEV
+    flags = afwMath.MEDIAN | afwMath.STDEV
     stats = afwMath.makeStatistics(active_pixels, flags)
-    pix_mean = stats.getValue(afwMath.MEAN)
     pix_median = stats.getValue(afwMath.MEDIAN)
     pix_stdev = stats.getValue(afwMath.STDEV)
-    return pix_mean, pix_median, pix_stdev
+    return pix_stdev, pix_median
 
 if __name__ == '__main__':
     from MaskedCCD import Metadata
@@ -42,10 +45,10 @@ if __name__ == '__main__':
     gains = dict([(amp, md.get('GAIN%s' % imutils.channelIds[amp]))
                   for amp in imutils.allAmps])
 
-    pix_mean, pix_median, pix_stdev = prnu(infile, mask_files, gains)
+    pix_stdev, pix_median = prnu(infile, mask_files, gains)
 
-    excess_variance = pix_stdev**2 - pix_mean
-    print "Excess pixel variance/pixel mean:", excess_variance/pix_mean
+    excess_variance = pix_stdev**2 - pix_median
+    print "Excess pixel variance/pixel mean:", excess_variance/pix_median
     if excess_variance > 0:
         print "Fractional excess noise: %.2f" \
-            % (np.sqrt(excess_variance)/pix_mean*100, )
+            % (np.sqrt(excess_variance)/pix_median*100, )

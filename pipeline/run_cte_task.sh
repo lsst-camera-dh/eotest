@@ -14,6 +14,6 @@ export PYTHONPATH=.:${PYTHONPATH}
 # Interactive example
 #
 python cte_task.py \
-    -f /home/jchiang/work/LSST/Camera/Sensors/test_scripts/work/sensorData/000-00/superflat_500/130705-104715/000-00_superflat_500_\*.fits \
+    -f ../work/sensorData/000-00/superflat_500/130705-104715/000-00_superflat_500_\*.fits \
     -g 000-00_gain.fits \
     -s 000-00 -V e2v -o superflat/data -v
