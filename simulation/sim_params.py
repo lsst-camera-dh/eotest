@@ -22,6 +22,7 @@ bias_sigma = 4
 read_noise = 5.
 dark_current = 2e-3
 full_well = 150000
+debug = True
 
 flat_fields = Params(test_type='flat',
                      min_charge=100,
@@ -31,9 +32,14 @@ flat_fields = Params(test_type='flat',
                      nframes=100,
                      ccdtemp=-95)
 
-pocket_pumping = Params(test_type='trap',
-                        charge_levels=(20000,),
-                        bias_frames=True)
+traps = Params(test_type='trap',
+               Ne=20000,
+               exptime=1,
+               ccdtemp=-95,
+               cycles=100,
+               size=200,
+               ndefects=100,
+               bias_frames=True)
 
 darks = Params(test_type='dark',
                ccdtemp=-95,

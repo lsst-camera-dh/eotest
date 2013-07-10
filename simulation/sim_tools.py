@@ -69,6 +69,12 @@ class CCD(object):
     def add_bright_pix(self, bright_pix, nsig=5):
         for amp in self.segments:
             self.segments[amp].add_bright_pix(bright_pix[amp], nsig=nsig)
+    def add_traps(self, ndefects, cycles, trap_size):
+        traps = OrderedDict()
+        for amp in self.segments:
+            traps[amp] = self.segments[amp].add_traps(ndefects, cycles,
+                                                      trap_size)
+        return traps
     def writeto(self, outfile, pars=None):
         ccd_segments = [self.segments[amp] for amp in self.segments]
         output = fitsFile(ccd_segments)
@@ -137,6 +143,18 @@ class SegmentExposure(object):
         return bright_pix
     def add_bright_pix(self, bright_pix, nsig=5):
         self.imarr += bright_pix*nsig*self.sigma()
+    def add_traps(self, ndefects, cycles, trap_size):
+        traps = self.generate_bright_pix(npix=ndefects)
+        y, x = np.where(traps != 0)
+        xy_pairs = []
+        for i, j in zip(x, y):
+            # Avoid depleted pixel below first row of imaging area
+            if j == 0:
+                continue
+            self.imarr[j-1][i] -= cycles*(trap_size/self.gain)
+            self.imarr[j][i] += cycles*(trap_size/self.gain)
+            xy_pairs.append((i, j))
+        return xy_pairs
     def add_Fe55_hits(self, nxrays=1000, beta_frac=0.12):
         """Single pixel hits for now.  Need to investigate effects of
         charge diffusion."""

@@ -16,7 +16,9 @@ from simulation.ctesim import ctesim
 pd_area = 1e-4          # Sensitive area of photodiode
 pixel_area = 1e-10      # Nominal pixel area (10 micron x 10 micron)
 
-def time_stamp(gmtime=False):
+def time_stamp(gmtime=False, debug=False):
+    if debug:
+        return "debug"
     if gmtime:
         now = time.gmtime()
     else:
@@ -26,7 +28,9 @@ def time_stamp(gmtime=False):
                      now.tm_hour, now.tm_min, now.tm_sec))
     return time_stamp
 
-def date_stamp(gmtime=False):
+def date_stamp(gmtime=False, debug=False):
+    if debug:
+        return "debug"
     if gmtime:
         now = time.gmtime()
     else:
@@ -43,13 +47,14 @@ def mkdir(path):
         pass
 
 def system_dir(pars, testtype):
-    outputdir = os.path.join(pars.rootdir, 'system', testtype, date_stamp())
+    outputdir = os.path.join(pars.rootdir, 'system', testtype,
+                             date_stamp(debug=pars.debug))
     mkdir(outputdir)
     return outputdir
 
 def setup(pars, testtype):
     outputdir = os.path.join(pars.rootdir, 'sensorData', pars.sensor_id,
-                             testtype, date_stamp())
+                             testtype, date_stamp(debug=pars.debug))
     mkdir(outputdir)
     sensor_id = pars.sensor_id
     return outputdir, sensor_id
@@ -98,11 +103,52 @@ def generate_flats(pars):
             sensor.add_dark_current(pars.dark_current)
             filename = ("%s_%s_%06.2fs_%s_%s.fits" 
                         % (sensor_id, flats.test_type, exptime, flat_id,
-                           time_stamp()))
+                           time_stamp(debug=pars.debug)))
             sensor.writeto(os.path.join(outputdir, filename))
 
 def generate_traps(pars):
-    pass
+    print "Generating trap frames..."
+    traps = pars.traps
+    outputdir, sensor_id = setup(pars, traps.test_type)
+    intensity = traps.Ne/traps.exptime
+    frames = []
+    #
+    # First bias image
+    #
+    frames.append(CCD(exptime=0, gain=pars.system_gain,
+                      ccdtemp=traps.ccdtemp))
+    #
+    # Pocket pumped image
+    #
+    ppump = CCD(exptime=traps.exptime, gain=pars.system_gain,
+                ccdtemp=traps.ccdtemp)
+    ppump.expose_flat(intensity)
+    ppump.add_traps(traps.ndefects, traps.cycles, traps.size)
+    frames.append(ppump)
+    #
+    # Second bias image
+    #
+    frames.append(CCD(exptime=0, gain=pars.system_gain,
+                      ccdtemp=traps.ccdtemp))
+    #
+    # Un-pumped image (i.e., a normal flat)
+    #
+    flat = CCD(exptime=traps.exptime, gain=pars.system_gain,
+               ccdtemp=traps.ccdtemp)
+    flat.expose_flat(intensity)
+    frames.append(flat)
+    #
+    # Add bias and dark current (accounting for zero exposure in bias
+    # frames) and write.
+    #
+    for frame, imgtype in zip(frames, ('bias_1', 'ppump', 'bias_2', 'flat')):
+        frame.add_bias(level=pars.bias_level, sigma=pars.bias_sigma)
+        frame.add_bias(level=0, sigma=pars.read_noise)
+        frame.add_dark_current(pars.dark_current)
+        filename = ("%s_%s_%s_%s.fits" 
+                    % (sensor_id, traps.test_type, imgtype,
+                       time_stamp(debug=pars.debug)))
+        frame.writeto(os.path.join(outputdir, filename))
 
 def generate_darks(pars):
     print "Generating darks dataset..."
@@ -119,7 +165,8 @@ def generate_darks(pars):
         exptime = 0
         sensor = simulate_frame(exptime, pars)
         filename = ("%s_%s_bias_%02i_%s.fits"
-                    % (sensor_id, darks.test_type, frame, time_stamp()))
+                    % (sensor_id, darks.test_type, frame,
+                       time_stamp(debug=pars.debug)))
         sensor.writeto(os.path.join(outputdir, filename))
         #
         # Dark frame
@@ -132,7 +179,8 @@ def generate_darks(pars):
         sensor.add_bright_cols(bright_cols, nsig=darks.bright_nsig)
         sensor.add_bright_pix(bright_pix, nsig=darks.bright_nsig)
         filename = ("%s_%s_dark_%02i_%s.fits"
-                    % (sensor_id, darks.test_type, frame, time_stamp()))
+                    % (sensor_id, darks.test_type, frame,
+                       time_stamp(debug=pars.debug)))
         sensor.writeto(os.path.join(outputdir, filename))
 
 def generate_Fe55(pars):
@@ -147,7 +195,8 @@ def generate_Fe55(pars):
         sensor = simulate_frame(fe55.exptime, pars, ccdtemp=fe55.ccdtemp)
         sensor.add_Fe55_hits(nxrays=fe55.nxrays)
         filename = ("%s_%s_fe55_%02i_%s.fits"
-                    % (sensor_id, fe55.test_type, frame, time_stamp()))
+                    % (sensor_id, fe55.test_type, frame,
+                       time_stamp(debug=pars.debug)))
         sensor.writeto(os.path.join(outputdir, filename))
         #
         # Bias frame
@@ -155,7 +204,8 @@ def generate_Fe55(pars):
         exptime = 0
         sensor = simulate_frame(exptime, pars, ccdtemp=fe55.ccdtemp)
         filename = ("%s_%s_bias_%02i_%s.fits"
-                    % (sensor_id, fe55.test_type, frame, time_stamp()))
+                    % (sensor_id, fe55.test_type, frame,
+                       time_stamp(debug=pars.debug)))
         sensor.writeto(os.path.join(outputdir, filename))
 
 def generate_qe_dataset(pars):
@@ -188,7 +238,8 @@ def generate_qe_dataset(pars):
         sensor.add_dark_current(pars.dark_current)
         #
         filename = ("%s_%s_%06.1f_%s.fits"
-                    % (sensor_id, wlscan.test_type, wl_nm, time_stamp()))
+                    % (sensor_id, wlscan.test_type, wl_nm,
+                       time_stamp(debug=pars.debug)))
         sensor.writeto(os.path.join(outputdir, filename))
 
 def generate_superflat(pars):
@@ -210,7 +261,8 @@ def generate_superflat(pars):
         foo = ctesim(tempfile, pcti=superflat.pcti, scti=superflat.scti,
                      verbose=superflat.verbose)
         filename = ("%s_%s_%02i_%s.fits" 
-                    % (sensor_id, superflat.test_type, frame, time_stamp()))
+                    % (sensor_id, superflat.test_type, frame,
+                       time_stamp(debug=pars.debug)))
         foo.writeto(os.path.join(outputdir, filename), clobber=True)
     #
     # Generate non-uniform illumination correction file.  For these
@@ -220,7 +272,8 @@ def generate_superflat(pars):
     sensor = CCD(exptime=0)
     for amp in imutils.allAmps:
         sensor.segments[amp].image += 1
-    filename = "%s_illumation_correction_%s.fits" % (sensor_id, time_stamp())
+    filename = ("%s_illumation_correction_%s.fits"
+                % (sensor_id, time_stamp(debug=pars.debug)))
     sensor.writeto(os.path.join(outputdir, filename))
 
 def generate_crosstalk_dataset(pars):
@@ -245,7 +298,8 @@ def generate_crosstalk_dataset(pars):
         sensor.add_dark_current(pars.dark_current)
         #
         filename = ("%s_%s_%02i_%s.fits"
-                    % (sensor_id, spot.test_type, aggressor, time_stamp()))
+                    % (sensor_id, spot.test_type, aggressor,
+                       time_stamp(debug=pars.debug)))
         sensor.writeto(os.path.join(outputdir, filename))
 
 def generate_system_read_noise(pars):
@@ -257,7 +311,8 @@ def generate_system_read_noise(pars):
         sensor = CCD(exptime=0, gain=pars.system_gain)
         sensor.add_bias(level=pars.bias_level, sigma=pars.bias_sigma)
         filename = ("%s_%02i_%s.fits"
-                    % (sysnoise.test_type, frame, time_stamp()))
+                    % (sysnoise.test_type, frame,
+                       time_stamp(debug=pars.debug)))
         sensor.writeto(os.path.join(outputdir, filename))
 
 def generate_system_crosstalk_dataset(pars):
@@ -272,7 +327,8 @@ def generate_system_crosstalk_dataset(pars):
         sensor.add_bias(level=pars.bias_level, sigma=pars.bias_sigma)
         #
         filename = ("%s_%02i_%s.fits"
-                    % (sysxtalk.test_type, aggressor, time_stamp()))
+                    % (sysxtalk.test_type, aggressor,
+                       time_stamp(debug=pars.debug)))
         sensor.writeto(os.path.join(outputdir, filename))
 
 if __name__ == '__main__':
