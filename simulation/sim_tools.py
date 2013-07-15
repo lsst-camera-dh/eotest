@@ -7,7 +7,6 @@ from collections import OrderedDict
 
 import numpy as np
 import numpy.random as random
-
 import pyfits
 
 import lsst.afw.geom as afwGeom
@@ -16,6 +15,8 @@ import lsst.afw.display.ds9 as ds9
 from fe55_yield import Fe55Yield
 
 import image_utils as imutils
+
+_sqrt2 = np.sqrt(2.)
 
 def xtalk_pattern(aggressor, frac_scale=0.02):
     xtalk_frac = {}
@@ -49,10 +50,10 @@ class CCD(object):
     def expose_flat(self, intensity=0):
         for amp in self.segments:
             self.segments[amp].expose_flat(intensity=intensity)
-    def add_Fe55_hits(self, nxrays=1000, beta_frac=0.12):
+    def add_Fe55_hits(self, nxrays=1000, beta_frac=0.12, sigma=None):
         for amp in self.segments:
-            self.segments[amp].add_Fe55_hits(nxrays=nxrays,
-                                             beta_frac=beta_frac)
+            self.segments[amp].add_Fe55_hits(nxrays=nxrays, beta_frac=beta_frac,
+                                             sigma=sigma)
     def generate_bright_cols(self, ncols=1):
         bright_cols = OrderedDict()
         for amp in self.segments:
@@ -155,18 +156,44 @@ class SegmentExposure(object):
             self.imarr[j][i] += cycles*(trap_size/self.gain)
             xy_pairs.append((i, j))
         return xy_pairs
-    def add_Fe55_hits(self, nxrays=1000, beta_frac=0.12):
-        """Single pixel hits for now.  Need to investigate effects of
-        charge diffusion."""
+    def add_Fe55_hits(self, nxrays=1000, beta_frac=0.12, sigma=None):
+        """
+        If sigma is not None, then the e- will be dispersed following a
+        2D normal distribution.  sigma is expressed in units of linear
+        pixel size.
+        """
+        Ne_alpha = self.fe55_yield.alpha()
+        Ne_beta = self.fe55_yield.beta()
         ny, nx = self.imarr.shape
-        for i in range(nxrays):
-            x0 = random.randint(nx)
-            y0 = random.randint(ny)
-            if random.random() < beta_frac:
-                signal = self.fe55_yield.beta()/self.gain
-            else:
-                signal = self.fe55_yield.alpha()/self.gain
-            self.imarr[y0][x0] += int(signal)
+        if sigma is None:
+            # Generated charge per hit is contained within a single pixel.
+            for i in range(nxrays):
+                x0 = random.randint(nx)
+                y0 = random.randint(ny)
+                if random.random() < beta_frac:
+                    signal = Ne_beta/self.gain
+                else:
+                    signal = Ne_alpha/self.gain
+                self.imarr[y0][x0] += signal
+        else:
+            # Draw interaction point from full imaging region and e- 
+            # pixel distribution from 2D Gaussian.
+            x0_values = random.uniform(0, nx, nxrays)
+            y0_values = random.uniform(0, ny, nxrays)
+            for x0, y0 in zip(x0_values, y0_values):
+                if random.random() < beta_frac:
+                    Ne = Ne_beta
+                else:
+                    Ne = Ne_alpha
+                xvals = random.normal(x0, sigma, size=Ne)
+                yvals = random.normal(y0, sigma, size=Ne)
+                for xx, yy in zip(xvals, yvals):
+                    try:
+                        self.imarr[yy][xx] += 1./self.gain
+                    except IndexError:
+                        pass
+        # Round DN/pixel to nearest integer.
+        self.imarr = np.round(self.imarr)
     def add_spot_image(self, dn, xref, yref, radius):
         r2 = radius**2
         for x in range(xref-radius, xref+radius, 1):

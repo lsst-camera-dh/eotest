@@ -53,7 +53,8 @@ fe55 = Params(test_type='fe55',
               nframes=25,
               nxrays=1000,
               exptime=10,
-              ccdtemp=-95)
+              ccdtemp=-95,
+              sigma=0.36)
 
 datapath = lambda x : os.path.join(os.environ['SCRIPTDIR'], 'qe', x)
 

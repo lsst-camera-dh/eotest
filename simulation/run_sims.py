@@ -193,7 +193,7 @@ def generate_Fe55(pars):
         # Fe55 exposure
         #
         sensor = simulate_frame(fe55.exptime, pars, ccdtemp=fe55.ccdtemp)
-        sensor.add_Fe55_hits(nxrays=fe55.nxrays)
+        sensor.add_Fe55_hits(nxrays=fe55.nxrays, sigma=fe55.sigma)
         filename = ("%s_%s_fe55_%02i_%s.fits"
                     % (sensor_id, fe55.test_type, frame,
                        time_stamp(debug=pars.debug)))
