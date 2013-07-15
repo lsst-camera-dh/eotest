@@ -1,12 +1,20 @@
+"""
+@brief Fit 2D Gaussian to Fe55 footprints to determine the Gaussian
+width of the charge dispersed signals.  For each footprint, also
+compute the probability of the chi-square fit.
+
+@author J. Chiang <jchiang@slac.stanford.edu>
+"""
 import numpy as np
-from scipy.special import erf, gammaincc
 import scipy.optimize
+from scipy.special import erf, gammaincc
+
 import lsst.afw.detection as afwDetect
 import lsst.afw.image as afwImage
 import lsst.afw.math as afwMath
+
 import image_utils as imutils
 from MaskedCCD import MaskedCCD
-import pylab_plotter as plot
 
 _sqrt2 = np.sqrt(2)
 
@@ -24,24 +32,36 @@ def pixel_integral(x, y, x0, y0, sigma):
     return Fx*Fy
 
 def psf_func(pos, *args):
-    x0, y0, N0, sigma = args
+    """
+    For a pixel location or list of pixel locations, pos, compute the
+    DN for a 2D Gaussian with parameters args.
+    """
+    x0, y0, sigma, DN = args
     if type(pos) == type([]):
-        return N0*np.array([pixel_integral(x[0], x[1], x0, y0, sigma) 
+        return DN*np.array([pixel_integral(x[0], x[1], x0, y0, sigma) 
                             for x in pos])
-    return N0*pixel_integral(x[0], x[1], x0, y0, sigma)
+    return DN*pixel_integral(x[0], x[1], x0, y0, sigma)
 
 def chisq(pos, dn, args):
+    "The chi-square of the fit of the data to psf_func."
     return sum((psf_func(pos, *tuple(args)) - np.array(dn))**2)
 
 class PsfGaussFit(object):
-    def __init__(self, nsig=3, min_npix=5, gain=5, Ne0=1590, sigma0=0.36):
+    def __init__(self, nsig=3, min_npix=5):
+        """
+        nsig is the threshold in number of clipped stdev above median.
+        min_npix is the minimum number of pixels to be used in the
+        4-parameter fit.
+        """
         self.nsig = nsig
         self.min_npix = min_npix
-        self.gain = gain
-        self.Ne0 = Ne0
-        self.sigma0 = sigma0
-        self.sig_fit, self.chiprob = [], []
-    def process_image(self, image):
+        self.sigma, self.dn, self.chiprob = [], [], []
+    def process_image(self, image, sigma0=0.36, dn0=1590./5.):
+        """
+        Process a segment and accumulate the results in self.sigma,
+        and self.chiprob. The dn0 and sigma0 parameters are the
+        starting values used for each fit.
+        """
         image -= imutils.bias_image(image)
         try:
             imarr = image.getArray()
@@ -63,7 +83,7 @@ class PsfGaussFit(object):
             positions = []
             dn = []
             peak = [pk for pk in fp.getPeaks()][0]
-            p0 = (pk.getIx(), pk.getIy(), self.Ne0/self.gain, self.sigma0)
+            p0 = (pk.getIx(), pk.getIy(), sigma0, dn0)
             for span in spans:
                 y = span.getY()
                 for x in range(span.getX0(), span.getX1() + 1):
@@ -72,19 +92,27 @@ class PsfGaussFit(object):
             try:
                 pars, _ = scipy.optimize.curve_fit(psf_func, positions, 
                                                    dn, p0=p0)
-                self.sig_fit.append(pars[3])
+                self.sigma.append(pars[2])
+                self.dn.append(pars[3])
                 chi2 = chisq(positions, dn, pars)
                 dof = fp.getNpix() - 4
                 self.chiprob.append(gammaincc(dof/2., chi2/2.))
             except RuntimeError:
                 pass
     def results(self, min_prob=0.1):
-        sig_fit = np.array(self.sig_fit, dtype=np.float)
+        """
+        Return sigma, dn, chiprob for chiprob > min_prob.
+        """
+        sigma = np.array(self.sigma, dtype=np.float)
+        dn = np.array(self.dn, dtype=np.float)
         chiprob = np.array(self.chiprob, dtype=np.float)
         indx = np.where(chiprob > min_prob)
-        return sig_fit[indx], chiprob[indx]
+        return sigma[indx], dn[indx], chiprob[indx]
 
 if __name__ == '__main__':
+    import pylab_plotter as plot
+    plot.pylab.ion()
+
     #infile = 'simulation/sensorData/000-00/fe55/debug/000-00_fe55_fe55_00_debug.fits'
     infile = 'fe55_0060s_000.fits'
 
@@ -95,15 +123,17 @@ if __name__ == '__main__':
         print 'processing amp:', amp
         fitter.process_image(ccd[amp])
 
-    sig_fit, chiprob = fitter.results()
-
-    plot.pylab.ion()
+    sigma, dn, chiprob = fitter.results()
 
     flags = afwMath.MEDIAN | afwMath.STDEVCLIP
-    stats = afwMath.makeStatistics(sig_fit, flags)
+
+    stats = afwMath.makeStatistics(sigma, flags)
     median = stats.getValue(afwMath.MEDIAN)
     stdev = stats.getValue(afwMath.STDEVCLIP)
-    plot.histogram(sig_fit, xname='Fitted sigma values',
+    plot.histogram(sigma, xname='Fitted sigma values',
                    xrange=(median-3*stdev, median+3*stdev))
 
-    plot.xyplot(chiprob, sig_fit, xname='chi-square prob.', yname='sigma')
+    plot.histogram(dn, xname='Fitted DN values', xrange=(250, 450),
+                   yrange=(0, 100))
+
+    plot.xyplot(chiprob, sigma, xname='chi-square prob.', yname='sigma')
