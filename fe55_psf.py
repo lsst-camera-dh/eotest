@@ -6,6 +6,7 @@ compute the probability of the chi-square fit.
 @author J. Chiang <jchiang@slac.stanford.edu>
 """
 import numpy as np
+import pyfits
 import scipy.optimize
 from scipy.special import erf, gammaincc
 
@@ -56,7 +57,9 @@ class PsfGaussFit(object):
         self.nsig = nsig
         self.min_npix = min_npix
         self.sigma, self.dn, self.chiprob = [], [], []
-    def process_image(self, image, sigma0=0.36, dn0=1590./5.):
+        self.output = pyfits.HDUList()
+        self.output.append(pyfits.PrimaryHDU())
+    def process_image(self, image, amp, sigma0=0.36, dn0=1590./5.):
         """
         Process a segment and accumulate the results in self.sigma,
         and self.chiprob. The dn0 and sigma0 parameters are the
@@ -76,29 +79,56 @@ class PsfGaussFit(object):
         threshold = afwDetect.Threshold(median + self.nsig*stdev)
         fpset = afwDetect.FootprintSet(image, threshold)
 
+        x0, y0 = [], []
+        sigma, dn, chiprob = [], [], []
         for fp in fpset.getFootprints():
             if fp.getNpix() < self.min_npix:
                 continue
             spans = fp.getSpans()
             positions = []
-            dn = []
+            zvals = []
             peak = [pk for pk in fp.getPeaks()][0]
             p0 = (pk.getIx(), pk.getIy(), sigma0, dn0)
             for span in spans:
                 y = span.getY()
                 for x in range(span.getX0(), span.getX1() + 1):
                     positions.append((x, y))
-                    dn.append(imarr[y][x])
+                    zvals.append(imarr[y][x])
             try:
                 pars, _ = scipy.optimize.curve_fit(psf_func, positions, 
-                                                   dn, p0=p0)
-                self.sigma.append(pars[2])
-                self.dn.append(pars[3])
-                chi2 = chisq(positions, dn, pars)
+                                                   zvals, p0=p0)
+                x0.append(pars[0])
+                y0.append(pars[1])
+                sigma.append(pars[2])
+                dn.append(pars[3])
+                chi2 = chisq(positions, zvals, pars)
                 dof = fp.getNpix() - 4
-                self.chiprob.append(gammaincc(dof/2., chi2/2.))
+                chiprob.append(gammaincc(dof/2., chi2/2.))
             except RuntimeError:
                 pass
+        self._save_ext_data(amp, x0, y0, sigma, dn, chiprob)
+        self.sigma.extend(sigma)
+        self.dn.extend(dn)
+        self.chiprob.extend(chiprob)
+    def _save_ext_data(self, amp, x0, y0, sigma, dn, chiprob):
+        """
+        Fill a FITS extension with results from source detection and
+        Gaussian fitting.
+        """
+        colnames = ['XPOS', 'YPOS', 'SIGMA', 'DN', 'CHIPROB']
+        columns = [np.array(x0), np.array(y0), np.array(sigma),
+                   np.array(dn), np.array(chiprob)]
+        formats = ['E']*len(columns)
+        units = ['pixel', 'pixel', 'pixel', 'ADU', 'None']
+        fits_cols = lambda coldata : [pyfits.Column(name=colname,
+                                                    format=format,
+                                                    unit=unit,
+                                                    array=column)
+                                      for colname, format, unit, column
+                                      in coldata]
+        self.output.append(pyfits.new_table(fits_cols(zip(colnames, formats,
+                                                          units, columns))))
+        self.output[-1].name = 'Segment%s' % imutils.channelIds[amp]
     def results(self, min_prob=0.1):
         """
         Return sigma, dn, chiprob for chiprob > min_prob.
@@ -108,6 +138,8 @@ class PsfGaussFit(object):
         chiprob = np.array(self.chiprob, dtype=np.float)
         indx = np.where(chiprob > min_prob)
         return sigma[indx], dn[indx], chiprob[indx]
+    def write_results(self, outfile='fe55_psf_params.fits'):
+        self.output.writeto(outfile, clobber=True)
 
 if __name__ == '__main__':
     import pylab_plotter as plot
@@ -115,13 +147,15 @@ if __name__ == '__main__':
 
     #infile = 'simulation/sensorData/000-00/fe55/debug/000-00_fe55_fe55_00_debug.fits'
     infile = 'fe55_0060s_000.fits'
+    outfile = '000-00_fe55_psf.fits'
 
     ccd = MaskedCCD(infile)
 
     fitter = PsfGaussFit()
     for amp in imutils.allAmps:
         print 'processing amp:', amp
-        fitter.process_image(ccd[amp])
+        fitter.process_image(ccd[amp], amp)
+    fitter.write_results(outfile)
 
     sigma, dn, chiprob = fitter.results()
 
