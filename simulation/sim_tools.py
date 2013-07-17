@@ -4,6 +4,7 @@ conditions.  Darks, flats, Fe55, etc..
 """
 import os
 from collections import OrderedDict
+from datetime import datetime
 
 import numpy as np
 import numpy.random as random
@@ -15,8 +16,12 @@ import lsst.afw.display.ds9 as ds9
 from fe55_yield import Fe55Yield
 
 import image_utils as imutils
+from simulation.fits_headers import fits_headers
 
 _sqrt2 = np.sqrt(2.)
+
+def utcnow():
+    return datetime.now().isoformat()[:19]
 
 def xtalk_pattern(aggressor, frac_scale=0.02):
     xtalk_frac = {}
@@ -31,6 +36,7 @@ def xtalk_pattern(aggressor, frac_scale=0.02):
     return xtalk_frac
 
 class CCD(object):
+    dtypes = dict([(-32, np.float32), (16, np.int16)])
     def __init__(self, exptime=1, gain=5, ccdtemp=-100, full_well=None,
                  bbox=imutils.full_segment, amps=imutils.allAmps):
         self.segments = OrderedDict()
@@ -52,7 +58,8 @@ class CCD(object):
             self.segments[amp].expose_flat(intensity=intensity)
     def add_Fe55_hits(self, nxrays=1000, beta_frac=0.12, sigma=None):
         for amp in self.segments:
-            self.segments[amp].add_Fe55_hits(nxrays=nxrays, beta_frac=beta_frac,
+            self.segments[amp].add_Fe55_hits(nxrays=nxrays,
+                                             beta_frac=beta_frac,
                                              sigma=sigma)
     def generate_bright_cols(self, ncols=1):
         bright_cols = OrderedDict()
@@ -76,7 +83,7 @@ class CCD(object):
             traps[amp] = self.segments[amp].add_traps(ndefects, cycles,
                                                       trap_size)
         return traps
-    def writeto(self, outfile, pars=None):
+    def writeto(self, outfile, pars=None, bitpix=-32):
         ccd_segments = [self.segments[amp] for amp in self.segments]
         output = fitsFile(ccd_segments)
         if pars is not None:
@@ -87,6 +94,27 @@ class CCD(object):
             output[0].header['DARKCURR'] = pars.dark_current
         for key, value in self.md.items():
             output[0].header[key] = value
+        if bitpix > 0:
+            my_round = np.round
+        else:
+            #
+            # Delete any BSCALE and BZERO entries, since we are
+            # writing image data as floats.
+            #
+            try:
+                del output[amp].header['BSCALE']
+                del output[amp].header['BZERO']
+            except KeyError:
+                pass
+            my_round = lambda x : x
+        for hdu in output[1:]:
+            hdu.data = np.array(my_round(hdu.data),
+                                dtype=self.dtypes[bitpix])
+        output[0].header['DATE-OBS'] = utcnow()
+        output[0].header['DATE'] = utcnow()
+        for hdu in output:
+            hdu.add_checksum()
+            hdu.add_datasum()
         output.writeto(outfile, clobber=True)
 
 class SegmentExposure(object):
@@ -204,15 +232,19 @@ class SegmentExposure(object):
         self.imarr[:, column] += dn
                 
 def fitsFile(ccd_segments):
+    phdr, ihdr = fits_headers()
     output = pyfits.HDUList()
     output.append(pyfits.PrimaryHDU())
+    output[0].header = phdr.copy()
     output[0].header["EXPTIME"] = ccd_segments[0].exptime
     output[0].header["CCDTEMP"] = ccd_segments[0].ccdtemp
     for amp, segment in zip(imutils.allAmps, ccd_segments):
         output.append(pyfits.ImageHDU(data=segment.image.getArray()))
-        output[amp].name = 'AMP%s' % imutils.channelIds[amp]
+        output[amp].header = ihdr.copy()
+        output[amp].name = 'SEGMENT%s' % imutils.channelIds[amp]
         output[amp].header.update('DETSIZE', imutils.detsize)
         output[amp].header.update('DETSEC', imutils.detsec(amp))
+        output[amp].header.update('CHANNEL', amp)
     return output
                 
 def writeFits(ccd_segments, outfile, clobber=True):
@@ -222,6 +254,9 @@ def writeFits(ccd_segments, outfile, clobber=True):
             os.remove(outfile)
         except OSError:
             pass
+    for hdu in output:
+        hdu.add_checksum()
+        hdu.add_datasum()
     output.writeto(outfile)
     return outfile
     

@@ -25,10 +25,10 @@ MONDIODE    = 143.12                 / Current in monitoring diode (nA)
 MONOWL      = 550.00                 / Monochrometer wavelength (nm)
 FILTER      = '550LP'                / Filter name
 EXPTIME     = 10.00                  / Exposure time (s)
-SHUT_DEL    = 100.00                 / Delay between shutter close command and readout (ms)
+SHUT_DEL    = 100.00                 / Readout delay post-shutter closing (ms)
 CTLRCFG     = 'reflex_012.xml'       / CCD controller configuration file
 FILENAME    =                        / Original name of file
-DETSIZE     = '[0:4336,0:4044]'      / NOAO mosaic keywords
+DETSIZE     = '[1:4336,1:4044]'      / NOAO mosaic keywords
 BINX        = 1                      / Binning along x-axis
 BINY        = 1                      / Binning along y-axis
 HEADVER     = 1                      / Version number of header
@@ -40,21 +40,21 @@ END
 
 # Image extension
 XTENSION    = 'IMAGE '               / IMAGE extension
-EXTNAME     = 'Segment10'            /
 BITPIX      = 16                     / number of bits per data pixel
 NAXIS       = 2                      / number of data axes
 NAXIS1      = 542                    / length of data axis 1
 NAXIS2      = 2022                   / length of data axis 2
 PCOUNT      = 0                      / required keyword; must = 0
 GCOUNT      = 1                      / required keyword; must = 1
-BZERO       = 32768                  /
+EXTNAME     = 'Segment10'            /
+BZERO       = 0                      /
 BSCALE      = 1                      /
 CHANNEL     = 1                      / channel number
 AVERAGE     = 12345.7                /
 STDEV       = 6789.01                /
-DETSIZE     = '[1:4096,1:4004]'      /
-DATASEC     = '[11:522,1:2002]'      /
-DETSEC      = '[512:1,1:2002]'       /
+DETSIZE     = '[1:4336,1:4044]'      / Why is this keyword needed?
+DATASEC     = '[11:522,1:2002]'      / ds9 does not display pixels outside DATASEC
+DETSEC      = '[542:1,1:2022]'       /
 CCDSUM      = '1 1 '                 / CCD binning
 LTV1        = -3574.00               /
 LTV2        = 0.00000                /
