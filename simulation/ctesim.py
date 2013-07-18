@@ -11,23 +11,32 @@ import lsst.afw.image as afwImage
 import image_utils as imutils
 import simulation.sim_tools as sim_tools
 
-def fitsFile(segments, exptime=1):
+_dtypes = dict([(-32, np.float32), (16, np.int16)])
+
+def convert(imarr, bitpix):
+    if bitpix > 0:
+        my_round = np.round
+    else:
+        my_round = lambda x : x
+    return np.array(my_round(imarr), dtype=_dtypes[bitpix])
+
+def fitsFile(segments, input):
     output = pyfits.HDUList()
     output.append(pyfits.PrimaryHDU())
-    output[0].header["EXPTIME"] = exptime
+    output[0].header = input[0].header
     for amp in segments:
-        output.append(pyfits.ImageHDU(data=segments[amp].getArray()))
-        output[amp].name = 'AMP%s' % imutils.channelIds[amp]
-        output[amp].header.update('DETSIZE', imutils.detsize)
-        output[amp].header.update('DETSEC', imutils.detsec(amp))
+        bitpix = input[amp].header['BITPIX']
+        imarr = convert(segments[amp].getArray(), bitpix)
+        output.append(pyfits.ImageHDU(data=imarr))
+        output[amp].header = input[amp].header
     return output
 
 def ctesim(infile, pcti=0, scti=0, verbose=False):
     pcte = 1 - pcti
     scte = 1 - scti
 
-    foo = pyfits.open(infile)
-    amps = [i for i in range(1, len(foo)) if foo[i].is_image]
+    input = pyfits.open(infile)
+    amps = [i for i in range(1, len(input)) if input[i].is_image]
     segments = {}
     for amp in amps:
         if verbose:
@@ -75,7 +84,7 @@ def ctesim(infile, pcti=0, scti=0, verbose=False):
         outarr += bias_med
         segments[amp] = outimage
 
-    return fitsFile(segments)
+    return fitsFile(segments, input)
 
 def make_fe55(outfile, nxrays, bias_level=2000, bias_sigma=4,
               amps=imutils.allAmps):

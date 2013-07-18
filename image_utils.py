@@ -45,7 +45,7 @@ stdev = lambda x : afwMath.makeStatistics(x, afwMath.STDEV).getValue()
 
 detsize = '[1:4336,1:4044]'
 
-def detsec(amp, dx=542, dy=2022):
+def detsec(amp, dx=512, dy=2002):
     """DETSEC header keyword value for iraf mosaicking"""
     namps = len(allAmps)
     if amp < allAmps[namps/2]:

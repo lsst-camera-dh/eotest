@@ -10,7 +10,7 @@ import lsst.afw.image as afwImage
 import lsst.daf.base as dafBase
 import image_utils as imutils
 from MaskedCCD import MaskedCCD
-from simulation.sim_tools import CCD
+from simulation.sim_tools import CCD, fits_headers
 
 class BrightPixels(object):
     """
@@ -42,6 +42,7 @@ class BrightPixels(object):
         self.fp_set.setMask(self.mask, self.mask_plane)
         self._write_fits(outfile, amp)
     def _write_fits(self, outfile, amp):
+        phdr, ihdr = fits_headers()
         if not os.path.isfile(outfile):
             output = pyfits.HDUList()
             output.append(pyfits.PrimaryHDU())
@@ -50,9 +51,10 @@ class BrightPixels(object):
             output[0].header['CTHRESH'] = self.colthresh
             output.writeto(outfile, clobber=True)
         md = dafBase.PropertySet()
-        md.set('EXTNAME', 'AMP%s' % imutils.channelIds[amp])
-        md.set('DETSIZE', imutils.detsize)
+        md.set('EXTNAME', 'SEGMENT%s' % imutils.channelIds[amp])
+        md.set('DETSIZE', ihdr['DETSIZE'])
         md.set('DETSEC', imutils.detsec(amp))
+        md.set('DATASEC', ihdr['DATASEC'])
         self.mask.writeFits(outfile, md, 'a')
     def find(self, imaging=imutils.imaging):
         """

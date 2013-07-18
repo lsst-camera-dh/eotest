@@ -13,6 +13,8 @@ class Params(object):
     def __init__(self, **kwargs):
         self.__dict__.update(kwargs)
 
+bitpix = 16
+
 sensor_id = '000-00'
 rootdir = '.'
 

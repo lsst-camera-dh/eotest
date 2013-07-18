@@ -91,6 +91,9 @@ def generate_flats(pars):
                          ccdtemp=pars.flat_fields.ccdtemp,
                          full_well=pars.full_well)
             sensor.md['MONDIODE'] = intensity
+            sensor.md['TESTTYPE'] = flats.test_type.upper()
+            sensor.md['IMGTYPE'] = 'FLAT'
+            sensor.md['LSST_NUM'] = sensor_id
             sensor.expose_flat(intensity)
             #
             # Test-independent effects. These need to be added after
@@ -104,7 +107,8 @@ def generate_flats(pars):
             filename = ("%s_%s_%06.2fs_%s_%s.fits" 
                         % (sensor_id, flats.test_type, exptime, flat_id,
                            time_stamp(debug=pars.debug)))
-            sensor.writeto(os.path.join(outputdir, filename))
+            sensor.writeto(os.path.join(outputdir, filename),
+                           bitpix=pars.bitpix)
 
 def generate_traps(pars):
     print "Generating trap frames..."
@@ -145,10 +149,14 @@ def generate_traps(pars):
         frame.add_bias(level=pars.bias_level, sigma=pars.bias_sigma)
         frame.add_bias(level=0, sigma=pars.read_noise)
         frame.add_dark_current(pars.dark_current)
+        frame.md['TESTTYPE'] = traps.test_type.upper()
+        frame.md['IMGTYPE'] = imgtype.split('_')[0].upper()
+        frame.md['LSST_NUM'] = sensor_id
         filename = ("%s_%s_%s_%s.fits" 
                     % (sensor_id, traps.test_type, imgtype,
                        time_stamp(debug=pars.debug)))
-        frame.writeto(os.path.join(outputdir, filename))
+        frame.writeto(os.path.join(outputdir, filename),
+                      bitpix=pars.bitpix)
 
 def generate_darks(pars):
     print "Generating darks dataset..."
@@ -164,10 +172,14 @@ def generate_darks(pars):
         #
         exptime = 0
         sensor = simulate_frame(exptime, pars)
+        sensor.md['TESTTYPE'] = darks.test_type.upper()
+        sensor.md['IMGTYPE'] = 'BIAS'
+        sensor.md['LSST_NUM'] = sensor_id
         filename = ("%s_%s_bias_%02i_%s.fits"
                     % (sensor_id, darks.test_type, frame,
                        time_stamp(debug=pars.debug)))
-        sensor.writeto(os.path.join(outputdir, filename))
+        sensor.writeto(os.path.join(outputdir, filename),
+                       bitpix=pars.bitpix)
         #
         # Dark frame
         #
@@ -178,10 +190,14 @@ def generate_darks(pars):
             bright_pix = sensor.generate_bright_pix(darks.bright_npix)
         sensor.add_bright_cols(bright_cols, nsig=darks.bright_nsig)
         sensor.add_bright_pix(bright_pix, nsig=darks.bright_nsig)
+        sensor.md['TESTTYPE'] = darks.test_type.upper()
+        sensor.md['IMGTYPE'] = 'DARK'
+        sensor.md['LSST_NUM'] = sensor_id
         filename = ("%s_%s_dark_%02i_%s.fits"
                     % (sensor_id, darks.test_type, frame,
                        time_stamp(debug=pars.debug)))
-        sensor.writeto(os.path.join(outputdir, filename))
+        sensor.writeto(os.path.join(outputdir, filename),
+                       bitpix=pars.bitpix)
 
 def generate_Fe55(pars):
     print "Generating Fe55 dataset..."
@@ -194,19 +210,27 @@ def generate_Fe55(pars):
         #
         sensor = simulate_frame(fe55.exptime, pars, ccdtemp=fe55.ccdtemp)
         sensor.add_Fe55_hits(nxrays=fe55.nxrays, sigma=fe55.sigma)
+        sensor.md['TESTTYPE'] = fe55.test_type.upper()
+        sensor.md['IMGTYPE'] = 'FE55'
+        sensor.md['LSST_NUM'] = sensor_id
         filename = ("%s_%s_fe55_%02i_%s.fits"
                     % (sensor_id, fe55.test_type, frame,
                        time_stamp(debug=pars.debug)))
-        sensor.writeto(os.path.join(outputdir, filename))
+        sensor.writeto(os.path.join(outputdir, filename),
+                           bitpix=pars.bitpix)
         #
         # Bias frame
         #
         exptime = 0
         sensor = simulate_frame(exptime, pars, ccdtemp=fe55.ccdtemp)
+        sensor.md['TESTTYPE'] = fe55.test_type.upper()
+        sensor.md['IMGTYPE'] = 'BIAS'
+        sensor.md['LSST_NUM'] = sensor_id
         filename = ("%s_%s_bias_%02i_%s.fits"
                     % (sensor_id, fe55.test_type, frame,
                        time_stamp(debug=pars.debug)))
-        sensor.writeto(os.path.join(outputdir, filename))
+        sensor.writeto(os.path.join(outputdir, filename),
+                           bitpix=pars.bitpix)
 
 def generate_qe_dataset(pars):
     print "Generating wavelength scan dataset..."
@@ -237,10 +261,14 @@ def generate_qe_dataset(pars):
         sensor.add_bias(level=0, sigma=pars.read_noise)
         sensor.add_dark_current(pars.dark_current)
         #
+        sensor.md['TESTTYPE'] = wlscan.test_type.upper()
+        sensor.md['IMGTYPE'] = 'FLAT'
+        sensor.md['LSST_NUM'] = sensor_id
         filename = ("%s_%s_%06.1f_%s.fits"
                     % (sensor_id, wlscan.test_type, wl_nm,
                        time_stamp(debug=pars.debug)))
-        sensor.writeto(os.path.join(outputdir, filename))
+        sensor.writeto(os.path.join(outputdir, filename),
+                       bitpix=pars.bitpix)
 
 def generate_superflat(pars):
     print "Generating superflat dataset..."
@@ -257,6 +285,9 @@ def generate_superflat(pars):
         sensor = simulate_frame(superflat.exptime, pars, set_full_well=False)
         sensor.expose_flat(intensity)
         sensor.md['MONOWL'] = superflat.wavelength
+        sensor.md['TESTTYPE'] = superflat.test_type.upper()
+        sensor.md['IMGTYPE'] = 'FLAT'
+        sensor.md['LSST_NUM'] = sensor_id
         sensor.writeto(tempfile)
         foo = ctesim(tempfile, pcti=superflat.pcti, scti=superflat.scti,
                      verbose=superflat.verbose)
@@ -274,7 +305,8 @@ def generate_superflat(pars):
         sensor.segments[amp].image += 1
     filename = ("%s_illumation_correction_%s.fits"
                 % (sensor_id, time_stamp(debug=pars.debug)))
-    sensor.writeto(os.path.join(outputdir, filename))
+    sensor.writeto(os.path.join(outputdir, filename),
+                   bitpix=pars.bitpix)
 
 def generate_crosstalk_dataset(pars):
     print "Generating spot dataset..."
@@ -297,10 +329,14 @@ def generate_crosstalk_dataset(pars):
         sensor.add_bias(level=0, sigma=pars.read_noise)
         sensor.add_dark_current(pars.dark_current)
         #
+        sensor.md['TESTTYPE'] = spot.test_type.upper()
+        sensor.md['IMGTYPE'] = 'SPOT'
+        sensor.md['LSST_NUM'] = sensor_id
         filename = ("%s_%s_%02i_%s.fits"
                     % (sensor_id, spot.test_type, aggressor,
                        time_stamp(debug=pars.debug)))
-        sensor.writeto(os.path.join(outputdir, filename))
+        sensor.writeto(os.path.join(outputdir, filename),
+                       bitpix=pars.bitpix)
 
 def generate_system_read_noise(pars):
     print "Generating system read noise..."
@@ -313,7 +349,8 @@ def generate_system_read_noise(pars):
         filename = ("%s_%02i_%s.fits"
                     % (sysnoise.test_type, frame,
                        time_stamp(debug=pars.debug)))
-        sensor.writeto(os.path.join(outputdir, filename))
+        sensor.writeto(os.path.join(outputdir, filename),
+                       bitpix=pars.bitpix)
 
 def generate_system_crosstalk_dataset(pars):
     print "Generating system crosstalk dataset..."
@@ -329,7 +366,8 @@ def generate_system_crosstalk_dataset(pars):
         filename = ("%s_%02i_%s.fits"
                     % (sysxtalk.test_type, aggressor,
                        time_stamp(debug=pars.debug)))
-        sensor.writeto(os.path.join(outputdir, filename))
+        sensor.writeto(os.path.join(outputdir, filename),
+                       bitpix=pars.bitpix)
 
 if __name__ == '__main__':
     import sys
