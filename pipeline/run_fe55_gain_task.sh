@@ -1,19 +1,18 @@
 #!/bin/bash
 
-export PYTHONPATH=.:${PYTHONPATH}
-
-export SENSOR_DIR=/nfs/farm/g/lsst/u1/testData/eotestData/000_00
+source ./pipeline_setup.sh
 
 #
 # Pipeline example
 #
 python fe55_gain_task.py \
-    -F /nfs/farm/g/lsst/u1/testData/SIMData/pipeline/000-00_FE55.txt \
-    -d /nfs/farm/g/lsst/u1/testData/SIMData/pipeline/db_test_app.par \
-    -s 000-00 -V e2v -v
-#
-# Interactive example
-#
+    -F ${SENSOR_ID}_FE55.txt \
+    -d ${DB_CREDENTIALS} \
+    -s ${SENSOR_ID} -V e2v -o ${SENSOR_ID}/results/fe55 -v
+
+##
+## Interactive example
+##
 #python fe55_gain_task.py \
-#    -f ${SENSOR_DIR}/xray/data/000_00_fe55_0600s_\?\?\[01\].fits \
-#    -s 000-00 -V e2v -v
+#    -f ${DATADIR}/sensorData/${SENSOR_ID}/fe55/debug/${SENSOR_ID}_fe55_fe55\*.fits \
+#    -s ${SENSOR_ID} -V e2v -O ${SENSOR_ID}_gains.fits -v

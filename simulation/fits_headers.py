@@ -63,9 +63,6 @@ if __name__ == '__main__':
         output[-1].data = np.ones((2022, 542), dtype=np.float32)*amp
         del output[-1].header['BSCALE']
         del output[-1].header['BZERO']
-
-    for hdu in output:
-        hdu.add_checksum()
-        hdu.add_datasum()
         
-    output.writeto('test_output.fits', clobber=True, output_verify='fix')
+    output.writeto('test_output.fits', clobber=True, output_verify='fix',
+                   checksum=True)

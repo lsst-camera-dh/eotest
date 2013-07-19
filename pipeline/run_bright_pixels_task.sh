@@ -1,19 +1,19 @@
 #!/bin/bash
 
-export PYTHONPATH=.:${PYTHONPATH}
+source ./pipeline_setup.sh
 
 #
 # Pipeline example
 #
 python bright_pixels_task.py \
-   -F /nfs/farm/g/lsst/u1/testData/SIMData/pipeline/000-00_DARK.txt \
-   -d /nfs/farm/g/lsst/u1/testData/SIMData/pipeline/db_test_app.par \
-   -s 000-00 -V e2v -o bright_pixels/data -v
+   -F ${SENSOR_ID}_DARK.txt \
+   -d ${DB_CREDENTIALS} \
+   -s ${SENSOR_ID} -V e2v -o ${SENSOR_ID}/results/bright_pixels -v
 
-#
-# Interactive example
-#
+##
+## Interactive example
+##
 #python bright_pixels_task.py \
-#    -f /nfs/farm/g/lsst/u1/testData/eotestData/000_00/dark/data/dark100_\?\?\?.fits \
-#    -g 000-00_gain.fits \
-#    -s 000-00 -V e2v -o bright_pixels/data -v
+#    -f ${DATADIR}/sensorData/${SENSOR_ID}/dark/debug/${SENSOR_ID}_dark_dark_\*_debug.fits \
+#    -g ${SENSOR_ID}_gains.fits \
+#    -s ${SENSOR_ID} -V e2v -o ${SENSOR_ID}/results/bright_pixels -v

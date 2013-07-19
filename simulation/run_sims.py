@@ -13,9 +13,6 @@ from qe.QE import planck, clight
 from simulation.sim_tools import *
 from simulation.ctesim import ctesim
 
-pd_area = 1e-4          # Sensitive area of photodiode
-pixel_area = 1e-10      # Nominal pixel area (10 micron x 10 micron)
-
 def time_stamp(gmtime=False, debug=False):
     if debug:
         return "debug"
@@ -91,7 +88,7 @@ def generate_flats(pars):
                          ccdtemp=pars.flat_fields.ccdtemp,
                          full_well=pars.full_well)
             sensor.md['MONDIODE'] = intensity
-            sensor.md['TESTTYPE'] = flats.test_type.upper()
+            sensor.md['TESTTYPE'] = 'FLAT'
             sensor.md['IMGTYPE'] = 'FLAT'
             sensor.md['LSST_NUM'] = sensor_id
             sensor.expose_flat(intensity)
@@ -149,7 +146,7 @@ def generate_traps(pars):
         frame.add_bias(level=pars.bias_level, sigma=pars.bias_sigma)
         frame.add_bias(level=0, sigma=pars.read_noise)
         frame.add_dark_current(pars.dark_current)
-        frame.md['TESTTYPE'] = traps.test_type.upper()
+        frame.md['TESTTYPE'] = 'PPUMP'
         frame.md['IMGTYPE'] = imgtype.split('_')[0].upper()
         frame.md['LSST_NUM'] = sensor_id
         filename = ("%s_%s_%s_%s.fits" 
@@ -172,7 +169,7 @@ def generate_darks(pars):
         #
         exptime = 0
         sensor = simulate_frame(exptime, pars)
-        sensor.md['TESTTYPE'] = darks.test_type.upper()
+        sensor.md['TESTTYPE'] = 'DARK'
         sensor.md['IMGTYPE'] = 'BIAS'
         sensor.md['LSST_NUM'] = sensor_id
         filename = ("%s_%s_bias_%02i_%s.fits"
@@ -190,7 +187,7 @@ def generate_darks(pars):
             bright_pix = sensor.generate_bright_pix(darks.bright_npix)
         sensor.add_bright_cols(bright_cols, nsig=darks.bright_nsig)
         sensor.add_bright_pix(bright_pix, nsig=darks.bright_nsig)
-        sensor.md['TESTTYPE'] = darks.test_type.upper()
+        sensor.md['TESTTYPE'] = 'DARK'
         sensor.md['IMGTYPE'] = 'DARK'
         sensor.md['LSST_NUM'] = sensor_id
         filename = ("%s_%s_dark_%02i_%s.fits"
@@ -210,7 +207,7 @@ def generate_Fe55(pars):
         #
         sensor = simulate_frame(fe55.exptime, pars, ccdtemp=fe55.ccdtemp)
         sensor.add_Fe55_hits(nxrays=fe55.nxrays, sigma=fe55.sigma)
-        sensor.md['TESTTYPE'] = fe55.test_type.upper()
+        sensor.md['TESTTYPE'] = 'FE55'
         sensor.md['IMGTYPE'] = 'FE55'
         sensor.md['LSST_NUM'] = sensor_id
         filename = ("%s_%s_fe55_%02i_%s.fits"
@@ -223,7 +220,7 @@ def generate_Fe55(pars):
         #
         exptime = 0
         sensor = simulate_frame(exptime, pars, ccdtemp=fe55.ccdtemp)
-        sensor.md['TESTTYPE'] = fe55.test_type.upper()
+        sensor.md['TESTTYPE'] = 'FE55'
         sensor.md['IMGTYPE'] = 'BIAS'
         sensor.md['LSST_NUM'] = sensor_id
         filename = ("%s_%s_bias_%02i_%s.fits"
@@ -253,7 +250,7 @@ def generate_qe_dataset(pars):
         # Units are nA.
         #
         sensor.md['MONDIODE'] = (incident_power*pd_sph(wl_nm)/ccd_frac(wl_nm)
-                                 *(pd_area/pixel_area))*1e9
+                                 *(pars.pd_area/pars.pixel_area))*1e9
         #
         sensor.expose_flat(incident_power*qe(wl_nm)/hnu)
         #
@@ -261,7 +258,7 @@ def generate_qe_dataset(pars):
         sensor.add_bias(level=0, sigma=pars.read_noise)
         sensor.add_dark_current(pars.dark_current)
         #
-        sensor.md['TESTTYPE'] = wlscan.test_type.upper()
+        sensor.md['TESTTYPE'] = 'QE'
         sensor.md['IMGTYPE'] = 'FLAT'
         sensor.md['LSST_NUM'] = sensor_id
         filename = ("%s_%s_%06.1f_%s.fits"
@@ -285,7 +282,7 @@ def generate_superflat(pars):
         sensor = simulate_frame(superflat.exptime, pars, set_full_well=False)
         sensor.expose_flat(intensity)
         sensor.md['MONOWL'] = superflat.wavelength
-        sensor.md['TESTTYPE'] = superflat.test_type.upper()
+        sensor.md['TESTTYPE'] = 'SFLAT'
         sensor.md['IMGTYPE'] = 'FLAT'
         sensor.md['LSST_NUM'] = sensor_id
         sensor.writeto(tempfile)
@@ -329,7 +326,7 @@ def generate_crosstalk_dataset(pars):
         sensor.add_bias(level=0, sigma=pars.read_noise)
         sensor.add_dark_current(pars.dark_current)
         #
-        sensor.md['TESTTYPE'] = spot.test_type.upper()
+        sensor.md['TESTTYPE'] = 'SPOT'
         sensor.md['IMGTYPE'] = 'SPOT'
         sensor.md['LSST_NUM'] = sensor_id
         filename = ("%s_%s_%02i_%s.fits"
@@ -381,13 +378,8 @@ if __name__ == '__main__':
         exec('import %s as pars' % os.path.basename(parfile).strip('.py'))
     else:
         import simulation.sim_params as pars
-
-    generate_flats(pars)
-    generate_traps(pars)
-    generate_darks(pars)
-    generate_Fe55(pars)
-    generate_qe_dataset(pars)
-    generate_superflat(pars)
-    generate_crosstalk_dataset(pars)
-    generate_system_read_noise(pars)
-    generate_system_crosstalk_dataset(pars)
+    #
+    # Generate the desired datasets
+    #
+    for dataset in pars.datasets:
+        exec('generate_%s(pars)' % dataset)

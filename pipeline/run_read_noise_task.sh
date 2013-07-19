@@ -1,21 +1,21 @@
 #!/bin/bash
 
-export PYTHONPATH=.:${PYTHONPATH}
+source ./pipeline_setup.sh
 
 #
 # Pipeline example
 #
 python read_noise_task.py \
-    -B /nfs/farm/g/lsst/u1/testData/SIMData/pipeline/000-00_BIAS.txt \
-    -N /nfs/farm/g/lsst/u1/testData/SIMData/pipeline/000-00_SYSNOISE.txt \
-    -d /nfs/farm/g/lsst/u1/testData/SIMData/pipeline/db_test_app.par \
-    -s 000-00 -V e2v -o read_noise/data -v
+    -B ${SENSOR_ID}_BIAS.txt \
+    -N ${SENSOR_ID}_SYSNOISE.txt \
+    -d ${DB_CREDENTIALS} \
+    -s ${SENSOR_ID} -V e2v -o ${SENSOR_ID}/results/read_noise -v
 
-#
-# Interactive example
-#
+##
+## Interactive example
+##
 #python read_noise_task.py \
-#    -b /nfs/farm/g/lsst/u1/testData/SIMData/000-00/Fe55/Fe55_bias_000-00_\*.fits \
-#    -n /nfs/farm/g/lsst/u1/testData/SIMData/000-00/system_noise/system_noise_000-00_\*.fits \
-#    -g 000-00_gain.fits \
-#    -s 000-00 -V e2v -o read_noise/data -v
+#    -b ${DATADIR}/sensorData/${SENSOR_ID}/fe55/debug/${SENSOR_ID}_fe55_bias\*.fits \
+#    -n ${DATADIR}/system/noise/debug/noise_\*_debug.fits \
+#    -g ${SENSOR_ID}_gains.fits \
+#    -s ${SENSOR_ID} -V e2v -o ${SENSOR_ID}/results/read_noise -v

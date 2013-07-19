@@ -1,22 +1,28 @@
 #!/bin/bash
 
-export PYTHONPATH=.:${PYTHONPATH}
+source ./pipeline_setup.sh
+#
+# The following will be installation-dependent (obviously).
+SCRIPTDIR=/u/gl/jchiang/ki18/LSST/SensorTests/test_scripts
 
 #
 # Pipeline example
 #
-#python qe_task.py \
-#   -F /nfs/farm/g/lsst/u1/testData/SIMData/pipeline/000-00_QE_files.txt \
-#   -d /nfs/farm/g/lsst/u1/testData/SIMData/pipeline/db_test_app.par \
-#   -s 000-00 -V e2v -o qe/data -v
-
-#
-# Interactive example
-#
 python qe_task.py \
-    -f /nfs/farm/g/lsst/u1/testData/HarvardData/112-01/final/bss70/qe/112_01_qe_\[0-9\]\*.fits.gz\
-    -g 000-00_gains.fits \
-    --ccd_cal_file /u/gl/jchiang/ki18/LSST/SensorTests/test_scripts/qe/OD142.csv \
-    --int_sph_cal_file /u/gl/jchiang/ki18/LSST/SensorTests/test_scripts/qe/OD143.csv \
-    --wavelength_scan_file /u/gl/jchiang/ki18/LSST/SensorTests/test_scripts/qe/WLscan.txt \
-    -s 000-00 -V e2v -o qe/data -v
+    -F ${SENSOR_ID}_QE_files.txt \
+    -d ${DB_CREDENTIALS} \
+    --ccd_cal_file ${SCRIPTDIR}/qe/OD142.csv \
+    --int_sph_cal_file ${SCRIPTDIR}/qe/OD143.csv \
+    --wavelength_scan_file ${SCRIPTDIR}/qe/WLscan.txt \
+    -s ${SENSOR_ID} -V e2v -o ${SENSOR_ID}/results/qe -v
+
+##
+## Interactive example
+##
+#python qe_task.py \
+#    -f ${DATADIR}/sensorData/${SENSOR_ID}/lambda/debug/${SENSOR_ID}_lambda_\*_debug.fits \
+#    -g 000-00_gains.fits \
+#    --ccd_cal_file ${SCRIPTDIR}/qe/OD142.csv \
+#    --int_sph_cal_file ${SCRIPTDIR}/qe/OD143.csv \
+#    --wavelength_scan_file ${SCRIPTDIR}/qe/WLscan.txt \
+#    -s ${SENSOR_ID} -V e2v -o qe/data -v

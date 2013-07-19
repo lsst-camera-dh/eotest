@@ -1,19 +1,19 @@
 #!/bin/bash
 
-export PYTHONPATH=.:${PYTHONPATH}
-
-##
-## Pipeline example
-##
-#python cte_task.py \
-#    -F /nfs/farm/g/lsst/u1/testData/SIMData/pipeline/000-00_SUPERFLAT.txt \
-#    -d /nfs/farm/g/lsst/u1/testData/SIMData/pipeline/db_test_app.par \
-#    -s 000-00 -V e2v -o cte/data -v
+source ./pipeline_setup.sh
 
 #
-# Interactive example
+# Pipeline example
 #
 python cte_task.py \
-    -f ../work/sensorData/000-00/superflat_500/130705-104715/000-00_superflat_500_\*.fits \
-    -g 000-00_gain.fits \
-    -s 000-00 -V e2v -o superflat/data -v
+    -F ${SENSOR_ID}_SUPERFLAT.txt \
+    -d ${DB_CREDENTIALS} \
+    -s ${SENSOR_ID} -V e2v -o ${SENSOR_ID}/results/cte -v
+#
+##
+## Interactive example
+##
+#python cte_task.py \
+#    -f ${DATADIR}/sensorData/${SENSOR_ID}/superflat_500/debug/${SENSOR_ID}_superflat_500_\*.fits \
+#    -g ${SENSOR_ID}_gains.fits \
+#    -s ${SENSOR_ID} -V e2v -o ${SENSOR_ID}/results/cte -v

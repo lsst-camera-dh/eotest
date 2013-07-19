@@ -112,10 +112,7 @@ class CCD(object):
                                 dtype=self.dtypes[bitpix])
         output[0].header['DATE-OBS'] = utcnow()
         output[0].header['DATE'] = utcnow()
-        for hdu in output:
-            hdu.add_checksum()
-            hdu.add_datasum()
-        output.writeto(outfile, clobber=True)
+        output.writeto(outfile, clobber=True, checksum=True)
 
 class SegmentExposure(object):
     def __init__(self, exptime=1, gain=5, ccdtemp=-100, full_well=None,
@@ -254,10 +251,7 @@ def writeFits(ccd_segments, outfile, clobber=True):
             os.remove(outfile)
         except OSError:
             pass
-    for hdu in output:
-        hdu.add_checksum()
-        hdu.add_datasum()
-    output.writeto(outfile)
+    output.writeto(outfile, clobber=clobber, checksum=True)
     return outfile
     
 def simulateDark(outfile, dark_curr, exptime=1, hdus=16, verbose=True):

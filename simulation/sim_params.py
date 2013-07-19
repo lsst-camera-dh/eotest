@@ -13,7 +13,10 @@ class Params(object):
     def __init__(self, **kwargs):
         self.__dict__.update(kwargs)
 
-bitpix = 16
+pd_area = 1e-4          # Sensitive area of photodiode
+pixel_area = 1e-10      # Nominal pixel area (10 micron x 10 micron)
+
+bitpix = 16             # Only bitpix = 16, -32 are supported. 
 
 sensor_id = '000-00'
 rootdir = '.'
@@ -24,7 +27,26 @@ bias_sigma = 4
 read_noise = 5.
 dark_current = 2e-3
 full_well = 150000
-debug = True
+#
+# If debug=true, then 'debug' will be used in place of the date and time
+# stamp strings in the directory and file names.
+#
+debug = True     
+
+#
+# Leave desired datasets uncommented to generate them.
+#
+datasets = [
+    'flats',
+    'traps',
+    'darks',
+    'Fe55',
+    'qe_dataset',
+    'superflat',
+    'crosstalk_dataset',
+    'system_read_noise',
+    'system_crosstalk_dataset'
+    ]
 
 flat_fields = Params(test_type='flat',
                      min_charge=100,
@@ -57,21 +79,31 @@ fe55 = Params(test_type='fe55',
               exptime=10,
               ccdtemp=-95,
               sigma=0.36)
+#
+# Determine the path to the qe subdirectory via import command.
+#
+import qe as _qe_module
+_qe_dir = os.path.dirname(_qe_module.__file__)
+qe_path = lambda x : os.path.join(_qe_dir, x)
 
-datapath = lambda x : os.path.join(os.environ['SCRIPTDIR'], 'qe', x)
-
-#qe = lambda wl_nm : 1
-qe_curve = np.recfromtxt(datapath('qe_curve.txt')).transpose()
+#qe = lambda wl_nm : 1   # 100% quantum efficiency
+qe_curve = np.recfromtxt(qe_path('qe_curve.txt')).transpose()
 qe = Interpolator(*qe_curve)
 wavelength_scan = Params(test_type='lambda',
+#                         wavelengths=range(320, 1100, 10),
                          wavelengths=range(400, 1000, 10),
                          exptime=1,
                          ccdtemp=-95,
-                         wlscan_file=datapath('WLscan.txt'),
-                         ccd_cal_file=datapath('OD142.csv'),
-                         sph_cal_file=datapath('OD143.csv'),
+                         wlscan_file=qe_path('WLscan.txt'),
+                         ccd_cal_file=qe_path('OD142.csv'),
+                         sph_cal_file=qe_path('OD143.csv'),
                          qe=qe,
                          incident_power=1e-16)
+#
+# The above photodiode calibration files and wavelength scan do not
+# cover the full range, 320 to 1100 nm, specified in the EO test
+# document, hence, the commented out lines above and below.
+#
 #wavelength_scan.wavelengths.extend((325, 355, 385))
 #wavelength_scan.wavelengths.sort()
 

@@ -1,4 +1,7 @@
 """
+@brief Pixel response non-uniformity.
+
+@author J. Chiang <jchiang@slac.stanford.edu>
 """
 import os
 from MaskedCCD import MaskedCCD, Metadata

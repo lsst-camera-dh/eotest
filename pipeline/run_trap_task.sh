@@ -1,17 +1,19 @@
 #!/bin/bash
 
+source ./pipeline_setup.sh
+
 #
 # Pipeline example
 #
-#python trap_task.py \
-#    -f /u/gl/jchiang/ki18/LSST/SensorTests/test_scripts/work/sensorData/000-00/trap/debug/000-00_trap_ppump_debug.fits \
-#    -d /nfs/farm/g/lsst/u1/testData/SIMData/pipeline/db_test_app.par \
-#    -s 000-00 -V e2v -v
-
-#
-# Interactive example
-#
 python trap_task.py \
-    -f /u/gl/jchiang/ki18/LSST/SensorTests/test_scripts/work/sensorData/000-00/trap/debug/000-00_trap_ppump_debug.fits \
-    -g 000-00_gains.fits \
-    -s 000-00 -V e2v -o traps/data -v
+    -f /u/gl/jchiang/ki18/LSST/SensorTests/test_scripts/work/sensorData/${SENSOR_ID}/trap/debug/${SENSOR_ID}_trap_ppump_debug.fits \
+    -d ${DB_CREDENTIALS} \
+    -s ${SENSOR_ID} -V e2v -o ${SENSOR_ID}/results/traps -v
+#
+##
+## Interactive example
+##
+#python trap_task.py \
+#    -f ${DATADIR}/sensorData/${SENSOR_ID}/trap/debug/${SENSOR_ID}_trap_ppump_debug.fits \
+#    -g ${SENSOR_ID}_gains.fits \
+#    -s ${SENSOR_ID} -V e2v -o ${SENSOR_ID}/results/traps -v
