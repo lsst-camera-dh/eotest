@@ -56,23 +56,26 @@ class PsfGaussFit(object):
         """
         self.nsig = nsig
         self.min_npix = min_npix
-        self.sigma, self.dn, self.chiprob = [], [], []
+        self.sigma, self.dn, self.chiprob, self.amp = [], [], [], []
         self.output = pyfits.HDUList()
         self.output.append(pyfits.PrimaryHDU())
-    def process_image(self, ccd, amp, sigma0=0.36, dn0=1590./5.):
+    def _bg_image(self, ccd, amp, nx, ny):
+        bg_ctrl = afwMath.BackgroundControl(nx, ny, ccd.stat_ctrl)
+        bg = afwMath.makeBackground(ccd[amp], bg_ctrl)
+        return bg.getImageF()
+    def process_image(self, ccd, amp, sigma0=0.36, dn0=1590./5.,
+                      bg_reg=(10, 10)):
         """
         Process a segment and accumulate the results in self.sigma,
         and self.chiprob. The dn0 and sigma0 parameters are the
         starting values used for each fit.
         """
         image = ccd.bias_subtracted_image(amp)
-        try:
-            imarr = image.getArray()
-        except AttributeError:
-            imarr = image.getImage().getArray()
+        image -= self._bg_image(ccd, amp, *bg_reg)
+        imarr = image.getImage().getArray()
 
         flags = afwMath.MEDIAN | afwMath.STDEVCLIP
-        statistics = afwMath.makeStatistics(image, flags) 
+        statistics = afwMath.makeStatistics(image, flags, ccd.stat_ctrl)
         median = statistics.getValue(afwMath.MEDIAN)
         stdev = statistics.getValue(afwMath.STDEVCLIP)
 
@@ -110,6 +113,7 @@ class PsfGaussFit(object):
         self.sigma.extend(sigma)
         self.dn.extend(dn)
         self.chiprob.extend(chiprob)
+        self.amp.extend(np.ones(len(sigma))*amp)
     def _save_ext_data(self, amp, x0, y0, sigma, dn, chiprob):
         """
         Write results from the source detection and Gaussian fitting
@@ -162,17 +166,18 @@ class PsfGaussFit(object):
         sigma = np.array(self.sigma, dtype=np.float)
         dn = np.array(self.dn, dtype=np.float)
         chiprob = np.array(self.chiprob, dtype=np.float)
+        amp = np.array(self.amp, dtype=np.int)
         indx = np.where(chiprob > min_prob)
-        return sigma[indx], dn[indx], chiprob[indx]
+        return sigma[indx], dn[indx], chiprob[indx], amp[indx]
     def write_results(self, outfile='fe55_psf_params.fits'):
-        self.output.writeto(outfile, clobber=True)
+        self.output.writeto(outfile, clobber=True, checksum=True)
 
 if __name__ == '__main__':
     import pylab_plotter as plot
     plot.pylab.ion()
 
-    #infile = 'simulation/sensorData/000-00/fe55/debug/000-00_fe55_fe55_00_debug.fits'
-    infile = 'fe55_0060s_000.fits'
+    infile = 'work/sensorData/000-00/fe55/debug/000-00_fe55_fe55_00_debug.fits'
+    #infile = 'fe55_0060s_000.fits'
     outfile = '000-00_fe55_psf_test.fits'
 
     ccd = MaskedCCD(infile)
@@ -183,7 +188,7 @@ if __name__ == '__main__':
         fitter.process_image(ccd, amp)
     fitter.write_results(outfile)
 
-    sigma, dn, chiprob = fitter.results()
+    sigma, dn, chiprob, amp = fitter.results()
 
     flags = afwMath.MEDIAN | afwMath.STDEVCLIP
 

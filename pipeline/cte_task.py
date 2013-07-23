@@ -78,3 +78,7 @@ if __name__ == '__main__':
         output.write('%s  %12.4e  %12.4e\n' % (imutils.channelIds[amp],
                                                pcti[amp], scti[amp]))
     output.close()
+    #
+    # Clean up
+    #
+    os.remove(superflat_file)

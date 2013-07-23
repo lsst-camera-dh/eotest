@@ -32,7 +32,7 @@ if __name__ == '__main__':
     outfile = os.path.join(args.output_dir, '%s_psf_params.fits' % sensor_id)
     fitter.write_results(outfile=outfile)
 
-    sigma, dn, chiprob = fitter.results()
+    sigma, dn, chiprob, amp = fitter.results()
 
     flags = afwMath.MEDIAN | afwMath.STDEVCLIP
 

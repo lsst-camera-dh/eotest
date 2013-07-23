@@ -35,7 +35,8 @@ def fe55_lines(x, *args):
 
 class Xrays(object):
     _fig_num = 0
-    def __init__(self, ccd, amp, stat_ctrl=afwMath.StatisticsControl()):
+    def __init__(self, ccd, amp, stat_ctrl=afwMath.StatisticsControl(),
+                 bg_reg=(10, 10)):
         self.ccd = ccd
         self.amp = amp
         self.ccdtemp = ccd.md.get('CCDTEMP')
@@ -48,12 +49,18 @@ class Xrays(object):
             self.imarr = raw_image.getImage().getArray()
         self.image = imutils.trim(raw_image,
                                   imaging=ccd.seg_regions[amp].imaging)
+        self.image -= self._bg_image(*bg_reg)
         flags = afwMath.MEANCLIP | afwMath.STDEVCLIP
         stats = afwMath.makeStatistics(self.image, flags, self.stat_ctrl)
         self.mean = stats.getValue(afwMath.MEANCLIP)
         self.stdev = stats.getValue(afwMath.STDEVCLIP)
         self.footprint_signal = self._footprint_signal_spans
-#        self.footprint_signal = self._footprint_signal_bbox
+        #self.footprint_signal = self._footprint_signal_bbox
+    def _bg_image(self, nx, ny):
+        bg_ctrl = afwMath.BackgroundControl(nx, ny, self.ccd.stat_ctrl)
+        bg = afwMath.makeBackground(self.ccd[self.amp], bg_ctrl)
+        image_region = self.ccd.seg_regions[amp].imaging
+        return imutils.trim(bg.getImageF(), imaging=image_region)
     def _footprint_signal_spans(self, footprint, buff=None):
         spans = footprint.getSpans()
         total = 0
@@ -145,17 +152,17 @@ def hdu_gains(fe55_file, mask_files=()):
 if __name__ == '__main__':
     from MaskedCCD import MaskedCCD
     
-#    data_dir = '/nfs/farm/g/lsst/u1/testData/eotestData/000_00/xray/data' 
-#    infile = os.path.join(data_dir, '000_00_fe55_0600s_000.fits')
-    data_dir = '/nfs/slac/g/ki/ki18/jchiang/LSST/SensorTests/test_scripts/work/sensorData/000-00/fe55/debug'
-    infile = os.path.join(data_dir, '000-00_fe55_fe55_00_debug.fits')
+    data_dir = '/nfs/farm/g/lsst/u1/testData/eotestData/000_00/xray/data' 
+    infile = os.path.join(data_dir, '000_00_fe55_0600s_000.fits')
+#    data_dir = '/nfs/slac/g/ki/ki18/jchiang/LSST/SensorTests/test_scripts/work/sensorData/000-00/fe55/debug'
+#    infile = os.path.join(data_dir, '000-00_fe55_fe55_00_debug.fits')
     
-    make_plot = False
+    make_plot = True
 
     ccd = MaskedCCD(infile)
 
     print 'AMP   gain    noise'
-    for amp in imutils.allAmps:
+    for amp in imutils.allAmps[:1]:
         xrays = Xrays(ccd, amp, stat_ctrl=ccd.stat_ctrl)
         gain, noise = xrays.gain(make_plot=make_plot)
         print '%s    %.2f    %.2f' % (imutils.channelIds[amp], gain, noise)
