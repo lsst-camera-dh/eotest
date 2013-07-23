@@ -61,6 +61,31 @@ class BiasHandlingTestCase(unittest.TestCase):
             image = imutils.unbias_and_trim(ccd[amp])
             imarr = image.getImage().getArray()
             self.assertTrue(max(np.abs(imarr.flat)) < 1e-6)
+            #
+            # Test of corresponding MaskedCCD method.
+            #
+            image = ccd.unbiased_and_trimmed_image(amp)
+            imarr = image.getImage().getArray()
+            self.assertTrue(max(np.abs(imarr.flat)) < 1e-6)
+
+class FitsMedianTestCase(unittest.TestCase):
+    def setUp(self):
+        self.values = (0, 1, 2, 3, 4)
+        self.files = []
+        for i in self.values:
+            self.files.append('test_fits_median_image_%02i.fits' % i)
+            ccd = CCD(exptime=1)
+            for amp in imutils.allAmps:
+                ccd.segments[amp].image += i
+            ccd.writeto(self.files[-1])
+    def tearDown(self):
+        for item in self.files:
+            os.remove(item)
+    def test_fits_median(self):
+        median_image = imutils.fits_median(self.files, hdu=2, fix=True)
+        imarr = median_image.getArray()
+        for x in imarr.flat:
+            self.assertEqual(self.values[len(self.values)/2], x)
 
 if __name__ == '__main__':
     unittest.main()

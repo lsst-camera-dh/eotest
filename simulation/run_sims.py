@@ -181,12 +181,17 @@ def generate_darks(pars):
         # Dark frame
         #
         sensor = simulate_frame(darks.exptime, pars)
+        #
+        # Compute desired signal level in terms of image stdev.
+        #
+        sigma = sensor.segments[1].sigma()
+        nsig = darks.bright_Ne_per_sec*darks.exptime/pars.system_gain/sigma
         if bright_cols is None:
             bright_cols = sensor.generate_bright_cols(darks.bright_ncols)
         if bright_pix is None:
             bright_pix = sensor.generate_bright_pix(darks.bright_npix)
-        sensor.add_bright_cols(bright_cols, nsig=darks.bright_nsig)
-        sensor.add_bright_pix(bright_pix, nsig=darks.bright_nsig)
+        sensor.add_bright_cols(bright_cols, nsig=nsig)
+        sensor.add_bright_pix(bright_pix, nsig=nsig)
         sensor.md['TESTTYPE'] = 'DARK'
         sensor.md['IMGTYPE'] = 'DARK'
         sensor.md['LSST_NUM'] = sensor_id

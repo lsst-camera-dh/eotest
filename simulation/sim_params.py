@@ -71,7 +71,7 @@ darks = Params(test_type='dark',
                nframes=5,
                bright_ncols=1,
                bright_npix=100,
-               bright_nsig=5)
+               bright_Ne_per_sec=10)
 
 fe55 = Params(test_type='fe55',
               nframes=25,

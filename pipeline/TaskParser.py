@@ -23,7 +23,8 @@ class TaskNamespace(object):
         self.args = args
     def files(self, file_pattern, file_list):
         if file_list is not None:
-            my_files = [x.strip() for x in open(file_list)]
+            my_files = [x.strip() for x in open(file_list)
+                        if x[0] != '#']
         elif file_pattern is not None:
             my_pattern = file_pattern.replace('\\', '')
             my_files = glob.glob(my_pattern)
@@ -50,7 +51,8 @@ class TaskNamespace(object):
     def mask_files(self):
         if self.args.mask_file == 'ccd250_defects':
             my_mask_files = ('ccd250_defects.fits',)
-            ccd250_mask(my_mask_files[0])
+            if not os.path.isfile(my_mask_files[0]):
+                ccd250_mask(my_mask_files[0])
         elif self.args.mask_file is not None:
             my_mask_files = (self.args.mask_file,)
         else:

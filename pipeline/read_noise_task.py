@@ -9,6 +9,7 @@ import os
 import numpy as np
 import pyfits
 import image_utils as imutils
+from MaskedCCD import MaskedCCD
 from TaskParser import TaskParser
 from read_noise import noise_dists
 
@@ -67,7 +68,13 @@ for i, bias, sysnoise in zip(range(len(bias_files)), bias_files,
     if args.verbose:
         print "Processing", bias, sysnoise, "->", outfile 
 
-    sampler = imutils.SubRegionSampler(args.dx, args.dy, args.nsamp)
+    #
+    # Determine the nominal imaging region from the bias file.
+    #
+    ccd = MaskedCCD(bias)
+    imaging = ccd.seg_regions[imutils.allAmps[0]].imaging
+    sampler = imutils.SubRegionSampler(args.dx, args.dy, args.nsamp,
+                                       imaging=imaging)
 
     Ntot = noise_dists(bias, gains, sampler, mask_files=mask_files)
     Nsys = noise_dists(sysnoise, gains, sampler, mask_files=mask_files)

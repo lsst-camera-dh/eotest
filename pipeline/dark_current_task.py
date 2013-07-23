@@ -37,7 +37,7 @@ md = afwImage.readMetadata(dark_files[0], 1)
 for amp in imutils.allAmps:
     median_images[amp] = imutils.fits_median(dark_files, imutils.dm_hdu(amp))
 medfile = os.path.join(args.output_dir, '%s_dark_current_map.fits' % sensor_id)
-imutils.writeFits(median_images, medfile, md)
+imutils.writeFits(median_images, medfile, dark_files[0])
 
 ccd = MaskedCCD(medfile, mask_files=mask_files)
 
@@ -45,8 +45,9 @@ dark95s = {}
 exptime = md.get('EXPTIME')
 print "Segment    95 percentile    median"
 for amp in imutils.allAmps:
-    image = imutils.unbias_and_trim(ccd[amp].getImage())
-    mask = imutils.trim(ccd[amp].getMask())
+    imaging_region = ccd.seg_regions[amp].imaging
+    image = imutils.unbias_and_trim(ccd[amp].getImage(), imaging=imaging_region)
+    mask = imutils.trim(ccd[amp].getMask(), imaging=imaging_region)
     imarr = image.getArray()
     mskarr = mask.getArray()
     pixels = imarr.reshape(1, imarr.shape[0]*imarr.shape[1])[0]

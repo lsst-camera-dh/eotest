@@ -98,17 +98,10 @@ def unbias_and_trim(im, overscan=serial_overscan, imaging=imaging,
                     apply_trim=True, fit_order=1):
     """Subtract bias calculated from overscan region and optionally trim 
     prescan and overscan regions."""
-#    imarr = im.getArray()
-#    ny, nx = imarr.shape
-#
-#    my_bias = bias_func(im, overscan, fit_order)
-#    for row in range(ny):
-#        imarr[row] -= my_bias(row)
     im -= bias_image(im, serial_overscan, fit_order)
     if apply_trim:
         return trim(im, imaging)
-    else:
-        return im
+    return im
 
 def fits_median(files, hdu=2, fix=True):
     """Compute the median image from a set of image FITS files."""
@@ -119,31 +112,25 @@ def fits_median(files, hdu=2, fix=True):
         raise RuntimeError("Error: unequal exposure times")
 
     if fix:
-        medians = np.array([np.median(im.getArray()) for im in ims])
+        medians = np.array([median(im) for im in ims])
         med = sum(medians)/len(medians)
         errs = medians - med
         for im, err in zip(ims, errs):
             im -= err
+            
+    images = afwImage.vectorImageF()
+    for image in ims:
+        images.push_back(image)
+    median_image = afwMath.statisticsStack(images, afwMath.MEDIAN)
 
-    imcube = np.array([im.getArray() for im in ims])
-    medim = afwImage.ImageF(np.median(imcube, axis=0))
+    return median_image
 
-    return medim
-
-def writeFits(images, outfile, md):
-    output = pyfits.HDUList()
-    output.append(pyfits.PrimaryHDU())
-    output[0].header['EXPTIME'] = md.get('EXPTIME')
-#    output[0].header['CCD_MANU'] = md.get('CCD_MANU')
-#    output[0].header['CCD_TYPE'] = md.get('CCD_TYPE')
-#    output[0].header['CCD_SERN'] = md.get('CCD_SERN')
-#    output[0].header['LSST_NUM'] = md.get('LSST_NUM')
-    for amp in allAmps:
-        output.append(pyfits.ImageHDU(data=images[amp].getArray()))
-        output[amp].name = 'AMP%s' % channelIds[amp]
-        output[amp].header.update('DETSIZE', detsize)
-        output[amp].header.update('DETSEC', detsec(amp))
-    output.writeto(outfile, clobber=True)
+def writeFits(images, outfile, template_file):
+    output = pyfits.open(template_file)
+    output[0].header.update('FILENAME', outfile)
+    for amp in images:
+        output[amp].data = images[amp].getArray()
+    output.writeto(outfile, clobber=True, checksum=True)
 
 def check_temperatures(files, tol):
     ccd_temps = [afwImage.readMetadata(x, 1).get('CCDTEMP') for x in files]
@@ -157,7 +144,7 @@ class SubRegionSampler(object):
         self.dx = dx
         self.dy = dy
         #
-        # Generate sub-regions at random locations on the segement
+        # Generate sub-regions at random locations on the segment
         # imaging region.
         #
         self.xarr = random.randint(imaging.getWidth() - dx - 1, size=nsamp)

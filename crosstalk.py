@@ -14,8 +14,7 @@ import image_utils as imutils
 from MaskedCCD import MaskedCCD
 from BrightPixels import BrightPixels
 
-def get_stats(raw_image, stat_ctrl, imaging=imutils.imaging):
-    image = imutils.unbias_and_trim(raw_image, imaging=imaging)
+def get_stats(image, stat_ctrl):
     flags = afwMath.MEDIAN | afwMath.STDEV
     stats = afwMath.makeStatistics(image, flags, stat_ctrl)
     return stats.getValue(afwMath.MEDIAN), stats.getValue(afwMath.STDEV)
@@ -63,7 +62,8 @@ def system_crosstalk(ccd, aggressor_amp, dnthresh=None, nsig=5):
     exptime = 1
     gain = 1
     if dnthresh is None:
-        median, stdev = get_stats(ccd[aggressor_amp], ccd.stat_ctrl)
+        image = ccd.unbiased_and_trimmed_image(aggressor_amp)
+        median, stdev = get_stats(image, ccd.stat_ctrl)
         dnthresh = median + nsig*stdev
     bp = BrightPixels(ccd[aggressor_amp], exptime=exptime, gain=gain,
                       ethresh=dnthresh)
@@ -131,13 +131,14 @@ def detector_crosstalk(ccd, aggressor_amp, dnthresh=None, nsig=5,
     illuminated column in the aggressor amplifier; if set to None,
     then nsig*clipped_stdev above median is used for the threshold.
     """
-    image = imutils.unbias_and_trim(ccd[aggressor_amp])
+#    image = imutils.unbias_and_trim(ccd[aggressor_amp])
+    image = ccd.unbiased_and_trimmed_image(aggressor_amp)
     #
     # Extract footprint of spot image using nominal detection
     # threshold.
     #
     if dnthresh is None:
-        median, stdev = get_stats(ccd[aggressor_amp], ccd.stat_ctrl)
+        median, stdev = get_stats(image, ccd.stat_ctrl)
         #dnthresh = median + nsig*stdev
         dnthresh = (np.max(ccd[aggressor_amp].getImage().getArray()) 
                     + median)/4. + median

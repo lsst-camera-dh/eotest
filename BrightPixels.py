@@ -20,9 +20,11 @@ class BrightPixels(object):
     exclusive of the bright columns.  The mask that is generated will
     be identified as mask_plane.
     """
-    def __init__(self, raw_image, exptime, gain,
+    def __init__(self, ccd, amp, exptime, gain,
                  ethresh=5, colthresh=20, mask_plane='BAD'):
-        self.raw_image = raw_image
+        self.ccd = ccd
+        self.amp = amp
+        self.raw_image = ccd[amp]
         self.exptime = exptime
         self.gain = gain
         self.ethresh = ethresh
@@ -30,18 +32,18 @@ class BrightPixels(object):
         self.mask_plane = mask_plane
         self.bright_pixels = None
         self.bright_columns = None
-    def generate_mask(self, outfile, amp, imaging=imutils.imaging):
+    def generate_mask(self, outfile):
         """
         Find bright pixels and columns, and write the mask for this
         amplifier to a FITS file using the afwImage.MaskU.writeFits
         method.
         """
         if self.bright_pixels is None or self.bright_columns is None:
-            self.find(imaging)
+            self.find()
         self.mask = afwImage.MaskU(self.raw_image.getDimensions())
         self.fp_set.setMask(self.mask, self.mask_plane)
-        self._write_fits(outfile, amp)
-    def _write_fits(self, outfile, amp):
+        self._write_fits(outfile)
+    def _write_fits(self, outfile):
         phdr, ihdr = fits_headers()
         if not os.path.isfile(outfile):
             output = pyfits.HDUList()
@@ -50,17 +52,19 @@ class BrightPixels(object):
             output[0].header['ETHRESH'] = self.ethresh
             output[0].header['CTHRESH'] = self.colthresh
             output.writeto(outfile, clobber=True)
+        imaging = self.ccd.seg_regions[self.amp].imaging
         md = dafBase.PropertySet()
-        md.set('EXTNAME', 'SEGMENT%s' % imutils.channelIds[amp])
+        md.set('EXTNAME', 'SEGMENT%s' % imutils.channelIds[self.amp])
         md.set('DETSIZE', ihdr['DETSIZE'])
-        md.set('DETSEC', imutils.detsec(amp))
+        md.set('DETSEC', imutils.detsec(self.amp, dx=imaging.getWidth(),
+                                        dy=imaging.getHeight()))
         md.set('DATASEC', ihdr['DATASEC'])
         self.mask.writeFits(outfile, md, 'a')
-    def find(self, imaging=imutils.imaging):
+    def find(self):
         """
         Find and return the bright pixels and bright columns.
         """
-        image = imutils.unbias_and_trim(self.raw_image, imaging=imaging)
+        image = self.ccd.unbiased_and_trimmed_image(self.amp)
         #
         # Multiply e- threshold rate by exptime and convert to DN;
         # create Threshold object.
@@ -85,8 +89,8 @@ class BrightPixels(object):
         #
         bright_pixs = []
         bright_cols = []
-        x0 = imaging.getMinX()
-        y0 = imaging.getMinY()
+        x0 = image.getX0()
+        y0 = image.getY0()
         for x in columns:
             if len(columns[x]) > self.colthresh:
                 bright_cols.append(x - x0)
@@ -136,7 +140,7 @@ if __name__ == '__main__':
 
     ccd = MaskedCCD(dark_file)
     for amp in imutils.allAmps:
-        bright_pixels = BrightPixels(ccd[amp], ccd.md.get('EXPTIME'), gain)
+        bright_pixels = BrightPixels(ccd, amp, ccd.md.get('EXPTIME'), gain)
         pixels, columns = bright_pixels.find()
-        bright_pixels.generate_mask(mask_file, amp)
+        bright_pixels.generate_mask(mask_file)
         print imutils.channelIds[amp], len(pixels), columns

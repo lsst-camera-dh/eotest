@@ -35,16 +35,19 @@ def fe55_lines(x, *args):
 
 class Xrays(object):
     _fig_num = 0
-    def __init__(self, raw_image, ccdtemp, imaging=imutils.imaging,
-                 stat_ctrl = afwMath.StatisticsControl()):
-        self.ccdtemp = ccdtemp
+    def __init__(self, ccd, amp, stat_ctrl=afwMath.StatisticsControl()):
+        self.ccd = ccd
+        self.amp = amp
+        self.ccdtemp = ccd.md.get('CCDTEMP')
         self.stat_ctrl = stat_ctrl
         self.fe55_yield = Fe55Yield(self.ccdtemp)
+        raw_image = ccd[amp]
         try:
             self.imarr = raw_image.getArray()
         except AttributeError:
             self.imarr = raw_image.getImage().getArray()
-        self.image = imutils.trim(raw_image, imaging=imaging)
+        self.image = imutils.trim(raw_image,
+                                  imaging=ccd.seg_regions[amp].imaging)
         flags = afwMath.MEANCLIP | afwMath.STDEVCLIP
         stats = afwMath.makeStatistics(self.image, flags, self.stat_ctrl)
         self.mean = stats.getValue(afwMath.MEANCLIP)
@@ -58,11 +61,12 @@ class Xrays(object):
             total += sum(self.imarr[span.getY()][span.getX0():span.getX1()+1])
         return total - footprint.getNpix()*self.mean
     def _footprint_signal_bbox(self, footprint, buff=1):
+        imaging = self.ccd.seg_regions[self.amp].imaging
         bbox = footprint.getBBox()
-        xmin = max(imutils.imaging.getMinX(), bbox.getMinX() - buff)
-        xmax = min(imutils.imaging.getMaxX(), bbox.getMaxX() + buff)
-        ymin = max(imutils.imaging.getMinY(), bbox.getMinY() - buff)
-        ymax = min(imutils.imaging.getMaxY(), bbox.getMaxY() + buff)
+        xmin = max(imaging.getMinX(), bbox.getMinX() - buff)
+        xmax = min(imaging.getMaxX(), bbox.getMaxX() + buff)
+        ymin = max(imaging.getMinY(), bbox.getMinY() - buff)
+        ymax = min(imaging.getMaxY(), bbox.getMaxY() + buff)
         subarr = self.imarr[ymin:ymax+1, xmin:xmax+1] 
         signal = sum(subarr.flat) - self.mean*len(subarr.flat)
         return signal
@@ -134,22 +138,24 @@ def hdu_gains(fe55_file, mask_files=()):
     ccdtemp = ccd.md.get('CCDTEMP')
     gains = {}
     for amp in imutils.allAmps:
-        xrays = Xrays(ccd[amp], ccdtemp)
+        xrays = Xrays(ccd, amp)
         gains[amp], noise = xrays.gain()
     return gains
 
 if __name__ == '__main__':
     from MaskedCCD import MaskedCCD
     
-    data_dir = '/nfs/farm/g/lsst/u1/testData/eotestData/000_00/xray/data' 
-    infile = os.path.join(data_dir, '000_00_fe55_0600s_000.fits')
+#    data_dir = '/nfs/farm/g/lsst/u1/testData/eotestData/000_00/xray/data' 
+#    infile = os.path.join(data_dir, '000_00_fe55_0600s_000.fits')
+    data_dir = '/nfs/slac/g/ki/ki18/jchiang/LSST/SensorTests/test_scripts/work/sensorData/000-00/fe55/debug'
+    infile = os.path.join(data_dir, '000-00_fe55_fe55_00_debug.fits')
     
     make_plot = False
 
-    CCD = MaskedCCD(infile)
+    ccd = MaskedCCD(infile)
 
     print 'AMP   gain    noise'
     for amp in imutils.allAmps:
-        xrays = Xrays(CCD[amp], CCD.md.get('CCDTEMP'), stat_ctrl=CCD.stat_ctrl)
+        xrays = Xrays(ccd, amp, stat_ctrl=ccd.stat_ctrl)
         gain, noise = xrays.gain(make_plot=make_plot)
         print '%s    %.2f    %.2f' % (imutils.channelIds[amp], gain, noise)

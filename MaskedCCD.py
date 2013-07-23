@@ -7,6 +7,7 @@ afwMath.makeStatistics object.
 """
 import pyfits
 import lsst.daf.base as dafBase
+import lsst.afw.geom as afwGeom
 import lsst.afw.image as afwImage
 import lsst.afw.math as afwMath
 
@@ -32,13 +33,49 @@ class Metadata(object):
         else:
             return self.header[key]
 
+class SegmentRegions(object):
+    """
+    This class constructs the imaging, prescan, and overscan regions
+    of a CCD segment based on the NAXIS[12] and DATASEC keyword values
+    in the FITS header for the corresponding image extension.
+    """
+    def __init__(self, decorated_image):
+        Box2I, Point2I, Extent2I = (afwGeom.Box2I, afwGeom.Point2I, 
+                                    afwGeom.Extent2I)
+        md = decorated_image.getMetadata()
+        nx, ny = decorated_image.getWidth(), decorated_image.getHeight()
+        self.full_segment = Box2I(Point2I(0, 0), Extent2I(nx, ny))
+        datasec = md.get('DATASEC')[1:-1]
+        minX, maxX = [int(x) - 1 for x in datasec.split(',')[0].split(':')]
+        minY, maxY = [int(x) - 1 for x in datasec.split(',')[1].split(':')]
+        self.imaging = Box2I(Point2I(minX, minY), Point2I(maxX, maxY))
+        self.prescan = Box2I(Point2I(0, 0), Point2I(minX-1, ny-1))
+        self.serial_overscan = Box2I(Point2I(maxX+1, 0), Point2I(nx-1, ny-1))
+        self.parallel_overscan = Box2I(Point2I(minX, maxY+1),
+                                       Point2I(maxX+1, ny-1))
+
 class MaskedCCD(dict):
+    """
+    This is the main abstraction for handling CCD data in the sensor
+    acceptance test scripts.  The pixel data for each segment is
+    represented by a MaskedImageF object and are accessed via the
+    amplifier number.  Masks can be added and manipulated separately
+    by various methods.
+    """
     def __init__(self, imfile, mask_files=()):
         dict.__init__(self)
         self.imfile = imfile
         self.md = Metadata(imfile, 1)
+        self.seg_regions = {}
         for amp in imutils.allAmps:
-            image = afwImage.ImageF(imfile, imutils.dm_hdu(amp))
+            #
+            # It sure would be nice if afwImage.DecoratedImageF was a
+            # subclass of ImageF.
+            # 
+            decorated_image = afwImage.DecoratedImageF(imfile,
+                                                       imutils.dm_hdu(amp))
+            self.seg_regions[amp] = SegmentRegions(decorated_image)
+            image = decorated_image.getImage()
             mask = afwImage.MaskU(image.getDimensions())
             self[amp] = afwImage.MaskedImageF(image, mask)
         for mask_file in mask_files:
@@ -76,6 +113,33 @@ class MaskedCCD(dict):
         mask_bits = 2**len(mpd) - 1
         self.stat_ctrl.setAndMask(mask_bits)
         return self.stat_ctrl
+    def bias_image(self, amp, overscan=None, fit_order=1):
+        """
+        Use separately stored metadata to determine file-specified
+        overscan region.
+        """
+        # This method would not be needed if DecoratedImage was a
+        # subclass of Image and could then be used in MaskedImage.
+        if overscan is None:
+            overscan = self.seg_regions[amp].serial_overscan
+        return imutils.bias_image(self[amp], overscan=overscan,
+                                  fit_order=fit_order)
+    def bias_subtracted_image(self, amp, overscan=None, fit_order=1):
+        return self[amp] - self.bias_image(amp, overscan, fit_order)
+    def unbiased_and_trimmed_image(self, amp, overscan=None,
+                                   imaging=None, fit_order=1):
+        """
+        Use separately stored metadata to determine file-specified
+        overscan and imaging regions.
+        """
+        # This method would not be needed if DecoratedImage was a
+        # subclass of Image and could then be used in MaskedImage.
+        if overscan is None:
+            overscan = self.seg_regions[amp].serial_overscan
+        if imaging is None:
+            imaging = self.seg_regions[amp].imaging
+        return imutils.unbias_and_trim(self[amp], overscan=overscan,
+                                       imaging=imaging, fit_order=fit_order)
 
 def add_mask_files(mask_files, outfile, clobber=True):
     masks = dict([(amp, afwImage.MaskU(mask_files[0], imutils.dm_hdu(amp)))
@@ -88,7 +152,7 @@ def add_mask_files(mask_files, outfile, clobber=True):
     output.writeto(outfile, clobber=clobber)
     for amp in imutils.allAmps:
         md = dafBase.PropertySet()
-        md.set('EXTNAME', 'AMP%s' % imutils.channelIds[amp])
+        md.set('EXTNAME', 'SEGMENT%s' % imutils.channelIds[amp])
         md.set('DETSIZE', imutils.detsize)
         md.set('DETSEC', imutils.detsec(amp))
         masks[amp].writeFits(outfile, md, 'a')

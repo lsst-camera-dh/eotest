@@ -5,6 +5,7 @@
 """
 import os
 import unittest
+import numpy as np
 import pyfits
 import lsst.afw.image as afwImage
 import lsst.afw.math as afwMath
@@ -12,6 +13,12 @@ import image_utils as imutils
 from simulation.sim_tools import CCD
 from BrightPixels import BrightPixels
 from MaskedCCD import MaskedCCD, add_mask_files
+
+class BiasFunc(object):
+    def __init__(self, slope, intercept):
+        self.pars = slope, intercept
+    def __call__(self, x):
+        return x*self.pars[0] + self.pars[1]
 
 class MaskedCCDTestCase(unittest.TestCase):
     gain = 1
@@ -70,6 +77,45 @@ class MaskedCCDTestCase(unittest.TestCase):
         for mp, bit in self.mpd.items():
             sctrl = ccd.setMask(mask_name=mp, clear=True)
             self.assertEqual(sctrl.getAndMask(), 2**bit)
+
+class MaskedCCD_biasHandlingTestCase(unittest.TestCase):
+    bias_slope = 1e-3
+    bias_intercept = 0.5
+    exptime = 1
+    gain = 1
+    image_file = 'test_image.fits'
+    @classmethod
+    def setUpClass(cls):
+        cls.bias_image = afwImage.ImageF(imutils.full_segment)
+        imarr = cls.bias_image.getArray()
+        ny, nx = imarr.shape
+        yvals = np.arange(0, ny, dtype=np.float)
+        bias_func = BiasFunc(cls.bias_slope, cls.bias_intercept)
+        for x in range(nx):
+            imarr[:,x] += bias_func(yvals)
+        ccd = CCD(exptime=cls.exptime, gain=cls.gain)
+        for amp in imutils.allAmps:
+            ccd.segments[amp].image += cls.bias_image
+        ccd.writeto(cls.image_file)
+    @classmethod
+    def tearDownClass(cls):
+        os.remove(cls.image_file)
+    def test_bias_image(self):
+        ccd = MaskedCCD(self.image_file)
+        for amp in imutils.allAmps:
+            my_bias_image = ccd.bias_image(amp)
+            fracdiff = ( (self.bias_image.getArray()-my_bias_image.getArray())
+                         /self.bias_image.getArray() )
+            self.assertTrue(max(np.abs(fracdiff.flat)) < 1e-6)
+    def test_unbias_and_trim(self):
+        ccd = MaskedCCD(self.image_file)
+        for amp in imutils.allAmps:
+            #
+            # Test of corresponding MaskedCCD method.
+            #
+            image = ccd.unbiased_and_trimmed_image(amp)
+            imarr = image.getImage().getArray()
+            self.assertTrue(max(np.abs(imarr.flat)) < 1e-6)
 
 if __name__ == '__main__':
     unittest.main()

@@ -38,10 +38,10 @@ class BrightPixelsTestCase(unittest.TestCase):
     def test_generate_mask(self):
         ccd = MaskedCCD(self.dark_file)
         for amp in imutils.allAmps:
-            bp = BrightPixels(ccd[amp], ccd.md.get('EXPTIME'), self.gain,
+            bp = BrightPixels(ccd, amp, ccd.md.get('EXPTIME'), self.gain,
                               ethresh=self.emin/2., colthresh=100)
             results = bp.find()
-            bp.generate_mask(self.mask_file, amp)
+            bp.generate_mask(self.mask_file)
             pixels = np.array(np.where(self.pixels[amp] == 1))
             pixels = pixels.transpose()
             pixels = [(x, y) for y, x in pixels]
@@ -75,10 +75,10 @@ class BrightColumnsTestCase(unittest.TestCase):
     def test_generate_mask(self):
         ccd = MaskedCCD(self.dark_file)
         for amp in imutils.allAmps:
-            bp = BrightPixels(ccd[amp], ccd.md.get('EXPTIME'), self.gain,
+            bp = BrightPixels(ccd, amp, ccd.md.get('EXPTIME'), self.gain,
                               ethresh=self.emin/2., colthresh=100)
             results = bp.find()
-            bp.generate_mask(self.mask_file, amp)
+            bp.generate_mask(self.mask_file)
             columns = sorted(self.columns[amp])
             self.assertEqual(columns, results[1])
 
