@@ -31,13 +31,14 @@ def aggressor(ccd):
             max_pix_val = val
     return candidate, max_pix_val
 
-def column_mean(raw_image, col, stat_ctrl, imaging=imutils.imaging):
+def column_mean(ccd, amp, col):
+    imaging = ccd.seg_regions[amp].imaging
     reg = afwGeom.Box2I(afwGeom.Point2I(col, imaging.getMinY()),
                         afwGeom.Extent2I(1, imaging.getHeight()))
-    image = imutils.unbias_and_trim(raw_image, imaging=imaging)
+    image = ccd.unbiased_and_trimmed_image(amp)
     subim = image.Factory(image, reg)
     flags = afwMath.MEAN | afwMath.STDEV | afwMath.NPOINT
-    stats = afwMath.makeStatistics(subim, flags, stat_ctrl) 
+    stats = afwMath.makeStatistics(subim, flags, ccd.stat_ctrl) 
     mean = stats.getValue(afwMath.MEAN)
     npts = stats.getValue(afwMath.NPOINT)
     sigma = stats.getValue(afwMath.STDEV)/np.sqrt(npts)
@@ -65,17 +66,16 @@ def system_crosstalk(ccd, aggressor_amp, dnthresh=None, nsig=5):
         image = ccd.unbiased_and_trimmed_image(aggressor_amp)
         median, stdev = get_stats(image, ccd.stat_ctrl)
         dnthresh = median + nsig*stdev
-    bp = BrightPixels(ccd[aggressor_amp], exptime=exptime, gain=gain,
-                      ethresh=dnthresh)
+    bp = BrightPixels(ccd, aggressor_amp, exptime, gain, ethresh=dnthresh)
     pixels, columns = bp.find()
 
     if len(columns) > 1:
         raise RuntimeError("More than one aggressor column found.")
 
     agg_col = columns[0]
-    agg_mean = column_mean(ccd[aggressor_amp], agg_col, ccd.stat_ctrl)[0]
+    agg_mean = column_mean(ccd, aggressor_amp, agg_col)[0]
     
-    ratios = dict([(amp, column_mean(ccd[amp], agg_col, ccd.stat_ctrl)/agg_mean)
+    ratios = dict([(amp, column_mean(ccd, amp, agg_col)/agg_mean)
                    for amp in imutils.allAmps])
     return ratios
 
@@ -91,9 +91,10 @@ def get_footprint(fp_set):
     peak_value = max([x.getPeakValue() for x in fp.getPeaks()])
     return fp, peak_value
 
-def extract_mean_signal_2(masked_image, footprint, stat_ctrl):
-    masked_image -= imutils.bias_image(masked_image)
-    stdev = afwMath.makeStatistics(masked_image, afwMath.STDEVCLIP).getValue()
+def extract_mean_signal_2(ccd, amp, footprint):
+    masked_image = ccd.bias_subtracted_image(amp)
+    stdev = afwMath.makeStatistics(masked_image, afwMath.STDEVCLIP,
+                                   ccd.stat_ctrl).getValue()
     signal = 0
     npix = 0
     for span in footprint.getSpans():
@@ -102,17 +103,17 @@ def extract_mean_signal_2(masked_image, footprint, stat_ctrl):
                              afwGeom.Extent2I(width, 1))
         subim = masked_image.Factory(masked_image, bbox)
         stats = afwMath.makeStatistics(subim, afwMath.SUM | afwMath.NPOINT,
-                                       stat_ctrl)
+                                       ccd.stat_ctrl)
         signal += stats.getValue(afwMath.SUM)
         npix += stats.getValue(afwMath.NPOINT)
     return np.array((signal/npix, stdev))
 
-def extract_mean_signal(masked_image, footprint, stat_ctrl):
-    image = masked_image.getImage()
-    maskarr = masked_image.getMask().getArray()
-    image -= imutils.bias_image(image)
-    stdev = afwMath.makeStatistics(image, afwMath.STDEVCLIP).getValue()
-    imarr = image.getArray()
+def extract_mean_signal(ccd, amp, footprint):
+    maskarr = ccd[amp].getMask().getArray()
+    image = ccd.bias_subtracted_image(amp)
+    stdev = afwMath.makeStatistics(image, afwMath.STDEVCLIP,
+                                   ccd.stat_ctrl).getValue()
+    imarr = image.getImage().getArray()
     signal = 0
     npix = 0
     for span in footprint.getSpans():
@@ -131,7 +132,6 @@ def detector_crosstalk(ccd, aggressor_amp, dnthresh=None, nsig=5,
     illuminated column in the aggressor amplifier; if set to None,
     then nsig*clipped_stdev above median is used for the threshold.
     """
-#    image = imutils.unbias_and_trim(ccd[aggressor_amp])
     image = ccd.unbiased_and_trimmed_image(aggressor_amp)
     #
     # Extract footprint of spot image using nominal detection
@@ -146,8 +146,8 @@ def detector_crosstalk(ccd, aggressor_amp, dnthresh=None, nsig=5,
     fp_set = afwDetect.FootprintSet(image, threshold)
     footprint, peak_value = get_footprint(fp_set)
 
-    agg_mean = signal_extractor(ccd[aggressor_amp], footprint, ccd.stat_ctrl)[0]
-    ratios = dict([(amp, signal_extractor(ccd[amp], footprint, ccd.stat_ctrl)
+    agg_mean = signal_extractor(ccd, aggressor_amp, footprint)[0]
+    ratios = dict([(amp, signal_extractor(ccd, amp, footprint)
                     /agg_mean) for amp in imutils.allAmps])
     return ratios
 

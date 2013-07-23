@@ -22,8 +22,8 @@ def pair_mean(flat1, flat2, amp):
     #
     # Remove bias using fit to overscan region and trim to imaging region.
     #
-    im1 = imutils.unbias_and_trim(flat1[amp])
-    im2 = imutils.unbias_and_trim(flat2[amp])
+    im1 = flat1.unbiased_and_trimmed_image(amp)
+    im2 = flat2.unbiased_and_trimmed_image(amp)
     #
     # Compute the mean DN of the images.
     #
@@ -67,7 +67,7 @@ def extract_det_response(args, outfile):
         # Convert to e- and write out for each segment.
         #
         for amp in imutils.allAmps:
-            output.write('  %12.4e'%(pair_mean(flat1, flat2, amp)*gains[amp]))
+            output.write('  %12.4e' % (pair_mean(flat1, flat2, amp)*gains[amp]))
         output.write('\n')
         output.flush()
     output.close()

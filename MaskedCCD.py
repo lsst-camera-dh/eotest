@@ -125,7 +125,8 @@ class MaskedCCD(dict):
         return imutils.bias_image(self[amp], overscan=overscan,
                                   fit_order=fit_order)
     def bias_subtracted_image(self, amp, overscan=None, fit_order=1):
-        return self[amp] - self.bias_image(amp, overscan, fit_order)
+        self[amp] -= self.bias_image(amp, overscan, fit_order)
+        return self[amp]
     def unbiased_and_trimmed_image(self, amp, overscan=None,
                                    imaging=None, fit_order=1):
         """

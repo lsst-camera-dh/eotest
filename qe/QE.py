@@ -71,8 +71,9 @@ class QE_Data(object):
             output.write('  %.3e' % self.exptime[-1])
             output.write('  %.3e' % self.pd[-1])
             for amp in imutils.allAmps:
-                im = imutils.unbias_and_trim(ccd[amp])
-                value = afwMath.makeStatistics(im, afwMath.MEDIAN).getValue()
+                im = ccd.unbiased_and_trimmed_image(amp)
+                value = afwMath.makeStatistics(im, afwMath.MEDIAN,
+                                               ccd.stat_ctrl).getValue()
                 self.medians[amp].append(value)
                 output.write('  %.5f' % self.medians[amp][-1])
             output.write('\n')
