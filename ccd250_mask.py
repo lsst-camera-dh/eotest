@@ -19,6 +19,7 @@ from BrightPixels import BrightPixels
 from simulation.sim_tools import CCD
 
 def ccd250_mask(outfile, mask_plane='CCD250_DEFECTS',
+                imaging_region=imutils.imaging,
                 tmp_mask_image='temp_mask_image.fits',
                 outer_edge_width=10, bloom_stop_width=5, signal=10,
                 cleanup=True):
@@ -64,7 +65,7 @@ def ccd250_mask(outfile, mask_plane='CCD250_DEFECTS',
     #
     # Amps 8 & 16 have roll-off adjacent to the prescan:
     # 
-    xmin = imutils.imaging.getMinX()
+    xmin = imaging_region.getMinX()
     xmax = xmin + outer_edge_width
     for amp in (8, 16):
         imarr = ccd.segments[amp].image.getArray()
@@ -72,7 +73,7 @@ def ccd250_mask(outfile, mask_plane='CCD250_DEFECTS',
     #
     # Amps 1 & 9 have roll-off adjacent to the serial overscan:
     #
-    xmax = imutils.imaging.getMaxX() + 1
+    xmax = imaging_region.getMaxX() + 1
     xmin = xmax - outer_edge_width
     for amp in (1, 9):
         imarr = ccd.segments[amp].image.getArray()
@@ -81,7 +82,7 @@ def ccd250_mask(outfile, mask_plane='CCD250_DEFECTS',
     # Loop over all amps, set signal in perimeter and around blooming
     # stop.
     #
-    ymax = imutils.imaging.getMaxY() + 1
+    ymax = imaging_region.getMaxY() + 1
     ymin = ymax - bloom_stop_width
     for i, amp in enumerate(imutils.allAmps):
         image = ccd.segments[amp].image

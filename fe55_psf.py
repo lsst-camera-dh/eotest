@@ -59,13 +59,13 @@ class PsfGaussFit(object):
         self.sigma, self.dn, self.chiprob = [], [], []
         self.output = pyfits.HDUList()
         self.output.append(pyfits.PrimaryHDU())
-    def process_image(self, image, amp, sigma0=0.36, dn0=1590./5.):
+    def process_image(self, ccd, amp, sigma0=0.36, dn0=1590./5.):
         """
         Process a segment and accumulate the results in self.sigma,
         and self.chiprob. The dn0 and sigma0 parameters are the
         starting values used for each fit.
         """
-        image -= imutils.bias_image(image)
+        image = ccd.bias_subtracted_image(amp)
         try:
             imarr = image.getArray()
         except AttributeError:
@@ -154,7 +154,7 @@ if __name__ == '__main__':
     fitter = PsfGaussFit()
     for amp in imutils.allAmps:
         print 'processing amp:', amp
-        fitter.process_image(ccd[amp], amp)
+        fitter.process_image(ccd, amp)
     fitter.write_results(outfile)
 
     sigma, dn, chiprob = fitter.results()

@@ -28,7 +28,7 @@ if __name__ == '__main__':
         ccd = MaskedCCD(infile, mask_files=args.mask_files())
         for amp in ccd:
             print "   amp", amp
-            fitter.process_image(ccd[amp], amp)
+            fitter.process_image(ccd, amp)
     outfile = os.path.join(args.output_dir, '%s_psf_params.fits' % sensor_id)
     fitter.write_results(outfile=outfile)
 

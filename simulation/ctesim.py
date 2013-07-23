@@ -9,6 +9,7 @@ import numpy.random as random
 import pyfits
 import lsst.afw.image as afwImage
 import image_utils as imutils
+from MaskedCCD import SegmentRegions
 import simulation.sim_tools as sim_tools
 
 _dtypes = dict([(-32, np.float32), (16, np.int16)])
@@ -41,11 +42,13 @@ def ctesim(infile, pcti=0, scti=0, verbose=False):
     for amp in amps:
         if verbose:
             print "ctesim: working on amp", amp
-        image = afwImage.ImageF(infile, imutils.dm_hdu(amp))
+        decorated_image = afwImage.DecoratedImageF(infile, imutils.dm_hdu(amp))
+        image = decorated_image.getImage()
+        sr = SegmentRegions(decorated_image)
         #
         # Temporarily remove readout bias median.
         #
-        bias_med = imutils.bias(image)
+        bias_med = imutils.median(image.Factory(image, sr.serial_overscan))
         image -= bias_med
 
         imarr = image.getArray()

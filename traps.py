@@ -12,8 +12,7 @@ import image_utils as imutils
 from MaskedCCD import MaskedCCD
 import pylab_plotter as plot
 
-def traps(ccd, gains, imaging=imutils.imaging, outfile=None,
-          cycles=100, nsig=6, amps=imutils.allAmps):
+def traps(ccd, gains, outfile=None, cycles=100, nsig=6, amps=imutils.allAmps):
     if outfile is None:
         output = open(os.devnull, 'w')
     else:
@@ -22,14 +21,16 @@ def traps(ccd, gains, imaging=imutils.imaging, outfile=None,
     traps = {}
     for amp in amps:
         traps[amp] = []
-        image = imutils.unbias_and_trim(ccd[amp], imaging=imaging)
+        image = ccd.unbiased_and_trimmed_image(amp)
         stats = afwMath.makeStatistics(image,
-                                       afwMath.MEDIAN | afwMath.STDEVCLIP)
+                                       afwMath.MEDIAN | afwMath.STDEVCLIP,
+                                       ccd.stat_ctrl)
         median = stats.getValue(afwMath.MEDIAN)
         stdev = stats.getValue(afwMath.STDEVCLIP)
         threshold = afwDetect.Threshold(median + nsig*stdev)
         fpset = afwDetect.FootprintSet(image, threshold)
 
+        imaging = ccd.seg_regions[amp].imaging
         for fp in fpset.getFootprints():
             peak = [pk for pk in fp.getPeaks()][0]
             x, y = (peak.getIx() - imaging.getMinX(),

@@ -11,8 +11,8 @@ import lsst.afw.math as afwMath
 import image_utils as imutils
 from MaskedCCD import MaskedCCD
 
-def extract_unmasked_pixels(masked_image, gain):
-    subimage = imutils.unbias_and_trim(masked_image)
+def extract_unmasked_pixels(ccd, amp, gain):
+    subimage = ccd.unbiased_and_trimmed_image(amp)
     imarr = subimage.getImage().getArray()
     maskarr = subimage.getMask().getArray()
     if imarr.shape != maskarr.shape:
@@ -28,7 +28,7 @@ def prnu(infile, mask_files, gains, correction_image=None):
             correction = afwImage.ImageF(correction_image, imutils.dm_hdu(amp))
             image = ccd[amp].getImage()
             image /= correction
-        active_pixels.extend(extract_unmasked_pixels(ccd[amp], gains[amp]))
+        active_pixels.extend(extract_unmasked_pixels(ccd, amp, gains[amp]))
     active_pixels = np.array(active_pixels, dtype=np.float)
     flags = afwMath.MEDIAN | afwMath.STDEV
     stats = afwMath.makeStatistics(active_pixels, flags)
@@ -38,7 +38,7 @@ def prnu(infile, mask_files, gains, correction_image=None):
 
 if __name__ == '__main__':
     from MaskedCCD import Metadata
-    infile = 'work/000-00_lambda_0450.0_20130703151405.fits'
+    infile = 'work/sensorData/000-00/lambda/debug/000-00_lambda_0450.0_debug.fits'
     mask_files = ('work/ccd250_defects.fits', )
 
     md = Metadata('work/000-00_gains.fits', 1)
