@@ -112,23 +112,49 @@ class PsfGaussFit(object):
         self.chiprob.extend(chiprob)
     def _save_ext_data(self, amp, x0, y0, sigma, dn, chiprob):
         """
-        Fill a FITS extension with results from source detection and
-        Gaussian fitting.
+        Write results from the source detection and Gaussian fitting
+        to the FITS extension corresponding to the specified
+        amplifier.
         """
-        colnames = ['XPOS', 'YPOS', 'SIGMA', 'DN', 'CHIPROB']
-        columns = [np.array(x0), np.array(y0), np.array(sigma),
-                   np.array(dn), np.array(chiprob)]
-        formats = ['E']*len(columns)
-        units = ['pixel', 'pixel', 'pixel', 'ADU', 'None']
-        fits_cols = lambda coldata : [pyfits.Column(name=colname,
-                                                    format=format,
-                                                    unit=unit,
-                                                    array=column)
-                                      for colname, format, unit, column
-                                      in coldata]
-        self.output.append(pyfits.new_table(fits_cols(zip(colnames, formats,
-                                                          units, columns))))
-        self.output[-1].name = 'Segment%s' % imutils.channelIds[amp]
+        extname = 'Segment%s' % imutils.channelIds[amp]
+        try:
+            #
+            # Append new rows if HDU for this segment already exists.
+            #
+            table_hdu = self.output[extname]
+            row0 = table_hdu.header['NAXIS2']
+            nrows = row0 + len(x0)
+            table_hdu = pyfits.new_table(table_hdu.data, nrows=nrows)
+            for i in range(len(x0)):
+                row = i + row0
+                table_hdu.data[row]['AMPLIFIER'] = amp
+                table_hdu.data[row]['XPOS'] = x0[i]
+                table_hdu.data[row]['YPOS'] = y0[i]
+                table_hdu.data[row]['SIGMA'] = sigma[i]
+                table_hdu.data[row]['DN'] = dn[i]
+                table_hdu.data[row]['CHIPROB'] = chiprob[i]
+            table_hdu.name = extname
+            self.output[extname] = table_hdu
+        except KeyError:
+            #
+            # Extension for this segment does not yet exist, so add it.
+            #
+            colnames = ['AMPLIFIER', 'XPOS', 'YPOS', 'SIGMA', 'DN', 'CHIPROB']
+            columns = [np.ones(len(x0))*amp, np.array(x0), np.array(y0),
+                       np.array(sigma), np.array(dn), np.array(chiprob)]
+            formats = ['I'] + ['E']*(len(columns)-1)
+            units = ['None', 'pixel', 'pixel', 'pixel', 'ADU', 'None']
+            fits_cols = lambda coldata : [pyfits.Column(name=colname,
+                                                        format=format,
+                                                        unit=unit,
+                                                        array=column)
+                                          for colname, format, unit, column
+                                          in coldata]
+            self.output.append(pyfits.new_table(fits_cols(zip(colnames,
+                                                              formats,
+                                                              units,
+                                                              columns))))
+            self.output[-1].name = extname
     def results(self, min_prob=0.1):
         """
         Return sigma, dn, chiprob for chiprob > min_prob.
@@ -147,7 +173,7 @@ if __name__ == '__main__':
 
     #infile = 'simulation/sensorData/000-00/fe55/debug/000-00_fe55_fe55_00_debug.fits'
     infile = 'fe55_0060s_000.fits'
-    outfile = '000-00_fe55_psf.fits'
+    outfile = '000-00_fe55_psf_test.fits'
 
     ccd = MaskedCCD(infile)
 
