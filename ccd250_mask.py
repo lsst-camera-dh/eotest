@@ -105,9 +105,9 @@ def ccd250_mask(outfile, mask_plane='CCD250_DEFECTS',
     mask.addMaskPlane(mask_plane)
     maskedCCD = MaskedCCD(tmp_mask_image)
     for amp in imutils.allAmps:
-        bright_pixels = BrightPixels(maskedCCD[amp], exptime, gain,
+        bright_pixels = BrightPixels(maskedCCD, amp, exptime, gain,
                                      ethresh=signal/2., mask_plane=mask_plane)
-        bright_pixels.generate_mask(outfile, amp)
+        bright_pixels.generate_mask(outfile)
     if cleanup:
         os.remove(tmp_mask_image)
         

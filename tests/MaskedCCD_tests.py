@@ -41,9 +41,9 @@ class MaskedCCDTestCase(unittest.TestCase):
             cls.mask_files.append(mask_file)
             masked_ccd = MaskedCCD(cls.mask_image)
             for amp in imutils.allAmps:
-                bp = BrightPixels(masked_ccd[amp], cls.exptime, cls.gain,
+                bp = BrightPixels(masked_ccd, amp, cls.exptime, cls.gain,
                                   mask_plane=mask_plane, ethresh=cls.signal/2.)
-                bp.generate_mask(mask_file, amp)
+                bp.generate_mask(mask_file)
         cls.summed_mask_file = 'summed_mask_file.fits'
         add_mask_files(cls.mask_files, cls.summed_mask_file)
     @classmethod
