@@ -35,12 +35,10 @@ def fe55_lines(x, *args):
 
 class Xrays(object):
     _fig_num = 0
-    def __init__(self, ccd, amp, stat_ctrl=afwMath.StatisticsControl(),
-                 bg_reg=(10, 10)):
+    def __init__(self, ccd, amp, bg_reg=(10, 10)):
         self.ccd = ccd
         self.amp = amp
         self.ccdtemp = ccd.md.get('CCDTEMP')
-        self.stat_ctrl = stat_ctrl
         self.fe55_yield = Fe55Yield(self.ccdtemp)
         raw_image = ccd[amp]
         try:
@@ -51,7 +49,7 @@ class Xrays(object):
                                   imaging=ccd.seg_regions[amp].imaging)
         self.image -= self._bg_image(*bg_reg)
         flags = afwMath.MEANCLIP | afwMath.STDEVCLIP
-        stats = afwMath.makeStatistics(self.image, flags, self.stat_ctrl)
+        stats = afwMath.makeStatistics(self.image, flags, self.ccd.stat_ctrl)
         self.mean = stats.getValue(afwMath.MEANCLIP)
         self.stdev = stats.getValue(afwMath.STDEVCLIP)
         self.footprint_signal = self._footprint_signal_spans
@@ -93,7 +91,7 @@ class Xrays(object):
              xrange=None, bins=100, hist_nsig=10):
         signals = self.signals(nsig, max_npix, gain_max)
         flags = afwMath.MEDIAN | afwMath.STDEVCLIP
-        stats = afwMath.makeStatistics(signals, flags, self.stat_ctrl)
+        stats = afwMath.makeStatistics(signals, flags)
         median = stats.getValue(afwMath.MEDIAN)
         stdev = stats.getValue(afwMath.STDEVCLIP)
         if xrange is None:
@@ -163,6 +161,6 @@ if __name__ == '__main__':
 
     print 'AMP   gain    noise'
     for amp in imutils.allAmps[:1]:
-        xrays = Xrays(ccd, amp, stat_ctrl=ccd.stat_ctrl)
+        xrays = Xrays(ccd, amp)
         gain, noise = xrays.gain(make_plot=make_plot)
         print '%s    %.2f    %.2f' % (imutils.channelIds[amp], gain, noise)

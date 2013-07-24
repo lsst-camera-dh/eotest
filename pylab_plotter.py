@@ -78,7 +78,11 @@ def histogram(x, bin_edges=None, bins=50, histtype='step',
     if not oplot:
         pylab.xlabel(xname)
         pylab.ylabel(yname)
-    setAxis(xrange, yrange)
+    if xrange is not None and yrange is not None:
+        setAxis(xrange, yrange)
+    if xrange is not None and yrange is None and not ylog:
+        yrange = (0, max(handle[0])*1.05)
+        setAxis(xrange, yrange)
     win.handles.append(handle)
     return win
 

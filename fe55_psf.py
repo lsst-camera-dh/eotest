@@ -56,18 +56,20 @@ class PsfGaussFit(object):
         """
         self.nsig = nsig
         self.min_npix = min_npix
-        self.sigma, self.dn, self.chiprob, self.amp = [], [], [], []
+        self.sigma, self.dn, self.dn_fp, self.chiprob = [], [], [], []
+        self.amp = []
         self.output = pyfits.HDUList()
         self.output.append(pyfits.PrimaryHDU())
     def _bg_image(self, ccd, amp, nx, ny):
+        "Compute background image based on clipped local mean."
         bg_ctrl = afwMath.BackgroundControl(nx, ny, ccd.stat_ctrl)
         bg = afwMath.makeBackground(ccd[amp], bg_ctrl)
         return bg.getImageF()
     def process_image(self, ccd, amp, sigma0=0.36, dn0=1590./5.,
                       bg_reg=(10, 10)):
         """
-        Process a segment and accumulate the results in self.sigma,
-        and self.chiprob. The dn0 and sigma0 parameters are the
+        Process a segment and accumulate the fit results for each
+        charge cluster.  The dn0 and sigma0 parameters are the
         starting values used for each fit.
         """
         image = ccd.bias_subtracted_image(amp)
@@ -83,7 +85,7 @@ class PsfGaussFit(object):
         fpset = afwDetect.FootprintSet(image, threshold)
 
         x0, y0 = [], []
-        sigma, dn, chiprob = [], [], []
+        sigma, dn, dn_fp, chiprob = [], [], [], []
         for fp in fpset.getFootprints():
             if fp.getNpix() < self.min_npix:
                 continue
@@ -92,11 +94,13 @@ class PsfGaussFit(object):
             zvals = []
             peak = [pk for pk in fp.getPeaks()][0]
             p0 = (pk.getIx(), pk.getIy(), sigma0, dn0)
+            dn_sum = 0
             for span in spans:
                 y = span.getY()
                 for x in range(span.getX0(), span.getX1() + 1):
                     positions.append((x, y))
                     zvals.append(imarr[y][x])
+                    dn_sum += imarr[y][x]
             try:
                 pars, _ = scipy.optimize.curve_fit(psf_func, positions, 
                                                    zvals, p0=p0)
@@ -104,17 +108,19 @@ class PsfGaussFit(object):
                 y0.append(pars[1])
                 sigma.append(pars[2])
                 dn.append(pars[3])
+                dn_fp.append(dn_sum)
                 chi2 = chisq(positions, zvals, pars)
                 dof = fp.getNpix() - 4
                 chiprob.append(gammaincc(dof/2., chi2/2.))
             except RuntimeError:
                 pass
-        self._save_ext_data(amp, x0, y0, sigma, dn, chiprob)
+        self._save_ext_data(amp, x0, y0, sigma, dn, dn_fp, chiprob)
         self.sigma.extend(sigma)
         self.dn.extend(dn)
+        self.dn_fp.extend(dn_fp)
         self.chiprob.extend(chiprob)
         self.amp.extend(np.ones(len(sigma))*amp)
-    def _save_ext_data(self, amp, x0, y0, sigma, dn, chiprob):
+    def _save_ext_data(self, amp, x0, y0, sigma, dn, dn_fp, chiprob):
         """
         Write results from the source detection and Gaussian fitting
         to the FITS extension corresponding to the specified
@@ -136,6 +142,7 @@ class PsfGaussFit(object):
                 table_hdu.data[row]['YPOS'] = y0[i]
                 table_hdu.data[row]['SIGMA'] = sigma[i]
                 table_hdu.data[row]['DN'] = dn[i]
+                table_hdu.data[row]['DN_FP_SUM'] = dn_fp[i]
                 table_hdu.data[row]['CHIPROB'] = chiprob[i]
             table_hdu.name = extname
             self.output[extname] = table_hdu
@@ -143,11 +150,13 @@ class PsfGaussFit(object):
             #
             # Extension for this segment does not yet exist, so add it.
             #
-            colnames = ['AMPLIFIER', 'XPOS', 'YPOS', 'SIGMA', 'DN', 'CHIPROB']
+            colnames = ['AMPLIFIER', 'XPOS', 'YPOS', 'SIGMA', 'DN',
+                        'DN_FP_SUM', 'CHIPROB']
             columns = [np.ones(len(x0))*amp, np.array(x0), np.array(y0),
-                       np.array(sigma), np.array(dn), np.array(chiprob)]
+                       np.array(sigma), np.array(dn), np.array(dn_fp),
+                       np.array(chiprob)]
             formats = ['I'] + ['E']*(len(columns)-1)
-            units = ['None', 'pixel', 'pixel', 'pixel', 'ADU', 'None']
+            units = ['None', 'pixel', 'pixel', 'pixel', 'ADU', 'ADU', 'None']
             fits_cols = lambda coldata : [pyfits.Column(name=colname,
                                                         format=format,
                                                         unit=unit,
@@ -165,10 +174,11 @@ class PsfGaussFit(object):
         """
         sigma = np.array(self.sigma, dtype=np.float)
         dn = np.array(self.dn, dtype=np.float)
+        dn_fp = np.array(self.dn_fp, dtype=np.float)
         chiprob = np.array(self.chiprob, dtype=np.float)
         amp = np.array(self.amp, dtype=np.int)
         indx = np.where(chiprob > min_prob)
-        return sigma[indx], dn[indx], chiprob[indx], amp[indx]
+        return sigma[indx], dn[indx], dn_fp[indx], chiprob[indx], amp[indx]
     def write_results(self, outfile='fe55_psf_params.fits'):
         self.output.writeto(outfile, clobber=True, checksum=True)
 
@@ -178,17 +188,17 @@ if __name__ == '__main__':
 
     infile = 'work/sensorData/000-00/fe55/debug/000-00_fe55_fe55_00_debug.fits'
     #infile = 'fe55_0060s_000.fits'
-    outfile = '000-00_fe55_psf_test.fits'
+    outfile = '000-00_fe55_psf.fits'
 
     ccd = MaskedCCD(infile)
 
-    fitter = PsfGaussFit()
+    fitter = PsfGaussFit(nsig=2)
     for amp in imutils.allAmps:
         print 'processing amp:', amp
         fitter.process_image(ccd, amp)
     fitter.write_results(outfile)
 
-    sigma, dn, chiprob, amp = fitter.results()
+    sigma, dn, dn_fp, chiprob, amp = fitter.results()
 
     flags = afwMath.MEDIAN | afwMath.STDEVCLIP
 
@@ -198,7 +208,9 @@ if __name__ == '__main__':
     plot.histogram(sigma, xname='Fitted sigma values',
                    xrange=(median-3*stdev, median+3*stdev))
 
-    plot.histogram(dn, xname='Fitted DN values', xrange=(250, 450),
-                   yrange=(0, 100))
+    plot.histogram(dn, xname='Fitted DN values', xrange=(250, 450))
 
     plot.xyplot(chiprob, sigma, xname='chi-square prob.', yname='sigma')
+
+    plot.xyplot(dn, dn_fp, xname='DN (fitted value)',
+                yname='DN (footprint sum)')
