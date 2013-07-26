@@ -11,11 +11,12 @@ import lsst.afw.image as afwImage
 import lsst.afw.math as afwMath
 import image_utils as imutils
 from pipeline.TaskParser import TaskParser
+from pair_stats_new import pair_stats
 
-from pair_stats import pair_stats
-from full_well import full_well
-
-from pipeline.flat_pair_task import find_flat2
+def find_flat2(flat1):
+    pattern = flat1.split('flat1')[0] + 'flat2*.fits'
+    flat2 = glob.glob(pattern)[0]
+    return flat2
 
 exptime = lambda x : afwImage.readMetadata(x, 1).get('EXPTIME')
 
@@ -27,7 +28,7 @@ def glob_flats(full_path, outfile='ptc_flats.txt'):
     output.close()
 
 def find_flats(args):
-    files = args.files(args.flats, args.flat_file_list)
+    files = args.files(args.flats, args.flats_file_list)
     file1s = sorted([item.strip() for item in files
                      if item.find('flat1') != -1])
     return [(f1, find_flat2(f1)) for f1 in file1s]
@@ -45,8 +46,7 @@ def accumulate_stats(flats, outfile='ptc_results.txt', mask_files=(),
         exposure = exptime(file1)
         output.write('%12.4e' % exposure)
         for amp in imutils.allAmps:
-            results, b1, b2 = pair_stats(file1, file2, imutils.dm_hdu(amp),
-                                         mask_files=mask_files)
+            results = pair_stats(file1, file2, amp, mask_files=mask_files)
             output.write('  %12.4e  %12.4e' % (results.flat_mean,
                                                results.flat_var))
         output.write('\n')
@@ -57,7 +57,7 @@ if __name__ == '__main__':
     parser = TaskParser('Compute photon transfer curve.')
     parser.add_argument('-f', '--flats', type=str,
                         help='flat pairs file pattern')
-    parser.add_arugment('-F', '--flats_file_list', type=str,
+    parser.add_argument('-F', '--flats_file_list', type=str,
                         help='list of flat pairs')
     args = parser.parse_args()
 

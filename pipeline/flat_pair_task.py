@@ -35,7 +35,7 @@ def pair_mean(flat1, flat2, amp):
     return avg_mean_value
 
 def find_flat2(flat1):
-    pattern = flat1.split('flat1')[0] + 'flat2_*.fits'
+    pattern = flat1.split('flat1')[0] + 'flat2*.fits'
     flat2 = glob.glob(pattern)[0]
     return flat2
 

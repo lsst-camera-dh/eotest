@@ -1,10 +1,19 @@
 #!/bin/bash
 
-export PYTHONPATH=.:${PYTHONPATH}
+source ./pipeline_setup.sh
 
-export OUTPUTDIR=ptc/data
-export CCD_VENDOR=e2v
-export SENSOR_ID=000-00
-export DB_CREDENTIALS=/nfs/farm/g/lsst/u1/testData/SIMData/pipeline/db_test_app.par
+#
+# Pipeline example
+#
+python ptc_task.py \
+    -F ${SENSOR_ID}_FLAT.txt \
+    -d ${DB_CREDENTIALS} \
+    -s ${SENSOR_ID} -V e2v -o ${SENSOR_ID}/results/ptc -v
 
-python ptc_task.py
+##
+## Interactive example
+##
+#python ptc_task.py \
+#    -f ${DATADIR}/sensorData/${SENSOR_ID}/flat/debug/${SENSOR_ID}_flat_\*s_flat\*.fits \
+#    -g ${SENSOR_ID}_gains.fits \
+#    -s ${SENSOR_ID} -V e2v -o ${SENSOR_ID}/results/ptc -v

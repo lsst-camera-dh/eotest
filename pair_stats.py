@@ -1,23 +1,15 @@
-import copy
-import numpy as np
-import numpy.random as random
-import pyfits
+"""
+@brief Compute flat pair statistics.  This implementation is based on
+Peter D.'s IDL routine pair_stats.pro.  Use of DM stack enables the
+handling of masks when computing the various statistical quantities.
 
-import lsst.afw.geom as afwGeom
+@author J. Chiang <jchiang@slac.stanford.edu>
+"""
+import os
+import numpy as np
 import lsst.afw.image as afwImage
 import lsst.afw.math as afwMath
-
-from image_utils import bias, overscan
-
-varclip = lambda x : afwMath.makeStatistics(x, afwMath.VARIANCECLIP).getValue()
-
-def exptime(infile):
-    try:
-        md = afwImage.readMetadata(infile, 1)
-        return md.get('EXPTIME')
-    except:
-        foo = pyfits.open(infile)
-        return foo[0].header['EXPTIME']
+from MaskedCCD import MaskedCCD
 
 class PairStats(object):
     def __init__(self, bias_mean, bias_stddev, flat_mean, flat_var, 
@@ -29,58 +21,84 @@ class PairStats(object):
         self.gain = gain
         self.noise = noise
     def header(self):
-        return """ Exp     Bias Mean   Bias RMS    Flat Mean   Flat Var   Gain e-/DN   Noise e-  
+        return """  Exp    Bias Mean   Bias RMS    Flat Mean   Flat Var   Gain e-/DN   Noise e-  
  ------ ----------- ----------- ----------- ----------- ----------- -----------"""
     def summary(self, i=0):
-        return ("%5.2f" % i)  + self.__repr__()
+        return ("%5i" % i)  + self.__repr__()
     def __repr__(self):
         format = 6*"%12.3F"
         return format % (self.bias_mean, self.bias_stddev, 
                          self.flat_mean, self.flat_var,
                          self.gain, self.noise)
 
-def pair_stats(file1, file2, hdu=2):
-    if exptime(file1) != exptime(file2):
+def pair_stats(file1, file2, amp, mask_files=()):
+    ccd1 = MaskedCCD(file1, mask_files=mask_files)
+    ccd2 = MaskedCCD(file2, mask_files=mask_files)
+
+    if ccd1.md.get('EXPTIME') != ccd2.md.get('EXPTIME'):
         raise RuntimeError("Exposure times for files %s, %s do not match"
                            % (file1, file2))
-    flat_region = afwGeom.Box2I(afwGeom.Point2I(200, 900), 
-                                afwGeom.Extent2I(100, 100))
-    im1 = afwImage.ImageF(file1, hdu)
-    im2 = afwImage.ImageF(file2, hdu)
-    # Use overscan region for bias regions.  Make a deep copy since these
-    # will be used after im1 and im2 are manipulated.
-    b1 = copy.deepcopy(im1.Factory(im1, overscan).getArray())
-    b2 = copy.deepcopy(im2.Factory(im2, overscan).getArray())
-    bmean = (np.mean(b1) + np.mean(b2))/2.
-    f1 = im1.Factory(im1, flat_region).getArray() - bmean
-    f2 = im2.Factory(im2, flat_region).getArray() - bmean
-    fratio = np.mean(f1/f2)
-    f2 *= fratio
-    fmean = (np.mean(f1) + np.mean(f2))/2.
-    fdiff = f1 - f2
-    bdiff = b1 - b2
     #
-    # Use clipped variance to handle bright pixels and columns
+    # Mean and variance calculations that account for masks (via
+    # ccd1.stat_ctrl, which is the same for both MaskedImages).
     #
-    fvar = varclip(np.array(fdiff.flat, dtype=np.float))/2.
-    bvar = varclip(np.array(bdiff.flat, dtype=np.float))/2.
-    gain = fvar/fmean
-#    gain = (fvar - bvar)/fmean  # seems like we should subtract bvar.
-    bias_rms = np.std(b1)
-    noise = gain*np.std(b1)
-    return PairStats(bmean, bias_rms, fmean, fvar, gain, noise), b1, b2
+    mean = lambda im : afwMath.makeStatistics(im, afwMath.MEAN,
+                                              ccd1.stat_ctrl).getValue()
+    var = lambda im : afwMath.makeStatistics(im, afwMath.VARIANCE,
+                                             ccd1.stat_ctrl).getValue()
+    #
+    # Extract imaging region for segments of both CCDs.
+    #
+    image1 = ccd1[amp].Factory(ccd1[amp], ccd1.seg_regions[amp].imaging)
+    image2 = ccd2[amp].Factory(ccd2[amp], ccd2.seg_regions[amp].imaging)
+    #
+    # Use serial overscan for bias region.
+    #
+    b1 = ccd1[amp].Factory(ccd1[amp], ccd1.seg_regions[amp].serial_overscan)
+    b2 = ccd2[amp].Factory(ccd2[amp], ccd2.seg_regions[amp].serial_overscan)
+    bmean = (mean(b1) + mean(b2))/2.
+
+    image1 = ccd1.unbiased_and_trimmed_image(amp)
+    image2 = ccd2.unbiased_and_trimmed_image(amp)
+    #
+    # Make a deep copy since otherwise the pixel values in image1
+    # would be altered in the ratio calculation.
+    #
+    fratio_im = afwImage.MaskedImageF(image1, True)
+    fratio_im /= image2
+    fratio = mean(fratio_im)
+    image2 *= fratio
+    fmean = (mean(image1) + mean(image2))/2.
+
+    fdiff = afwImage.MaskedImageF(image1, True)
+    fdiff -= image2
+    fvar = var(fdiff)/2.
+
+    bdiff = afwImage.MaskedImageF(b1, True)
+    bdiff -= b2
+    bvar = var(bdiff)/2.
+    
+    gain = fmean/(fvar - bvar)
+    bias_rms = np.sqrt(bvar)
+    noise = gain*bias_rms
+    return PairStats(bmean, bias_rms, fmean, fvar, gain, noise)
 
 if __name__ == '__main__':
+    import image_utils as imutils
     from simulation.sim_tools import simulateFlat
 
-    file1 = 'test_flat1.fits'
-    file2 = 'test_flat2.fits'
+    #file1 = 'test_flat1.fits'
+    #file2 = 'test_flat2.fits'
+    #simulateFlat(file1, 200, 5, hdus=16)
+    #simulateFlat(file2, 200, 5, hdus=16)
 
-    simulateFlat(file1, 200, 5, hdus=16)
-    simulateFlat(file2, 200, 5, hdus=16)
+    datadir = '/nfs/slac/g/ki/ki18/jchiang/LSST/SensorTests/test_scripts/work/sensorData/000-00/flat/debug'
+    datapath = lambda x : os.path.join(datadir, x)
+    file1 = datapath('000-00_flat_005.09s_flat1_debug.fits')
+    file2 = datapath('000-00_flat_005.09s_flat2_debug.fits')
 
-    for hdu in range(16):
-        my_pair_stats, b1, b2 = pair_stats(file1, file2, hdu=hdu+2)
-        if hdu == 0:
+    for i, amp in enumerate(imutils.allAmps):
+        my_pair_stats = pair_stats(file1, file2, amp)
+        if i == 0:
             print my_pair_stats.header()
         print my_pair_stats.summary()
