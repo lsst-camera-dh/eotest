@@ -1,7 +1,7 @@
 """
 @brief Class to parse named parameters in a text file as key/value
 pairs and return the output as a dict subclass, performing conversions
-to float as appropriate.
+to int and float as appropriate.
 
 @author J. Chiang <jchiang@slac.stanford.edu>
 """
@@ -9,9 +9,10 @@ import os
 
 class Parfile(dict):
     def __init__(self, filename, fixed_keys=True):
-        """fixed_keys=True indicates that the input file has all
-        of the valid keys already specified and that new keys cannot
-        be added.
+        """
+        fixed_keys=True indicates that the input file has all of the
+        valid keys already specified and that new keys cannot be
+        added.
         """
         self.filename = os.path.abspath(filename)
         self.fixed_keys = fixed_keys
@@ -23,7 +24,7 @@ class Parfile(dict):
                 raise
             pass
     def _readfile(self):
-        for line in open(self.filename).readlines():
+        for line in open(self.filename):
             if line.find('#') == 0:
                 continue
             if line.find(" #") != -1 or line.find("\t#") != -1:
@@ -48,7 +49,8 @@ class Parfile(dict):
         self._addkey(key)
         dict.__setitem__(self, key, value)
     def write(self, outfile=None):
-        """Write current set of parameters to an output par file. If
+        """
+        Write current set of parameters to an output par file. If
         outfile is given, then reset self.filename to the absolute
         path of outfile.
         """
@@ -62,59 +64,11 @@ class Parfile(dict):
                 output.write('%s = %s\n' % (key, `self[key]`))
         output.close()
     def update(self, pars):
-        """Reimplement from base class to check self.fixed_keys and
+        """
+        Reimplement from dict base class to check self.fixed_keys and
         to update self.keylist.
         """
         if not self.fixed_keys:
             for key in pars.keylist:
                 self._addkey(key)
                 self[key] = pars[key]
-
-if __name__ == '__main__':
-    import unittest
-
-    class ParfileTestCase(unittest.TestCase):
-        def setUp(self):
-            try:
-                os.remove('foo.pars')
-            except OSError:
-                pass
-        def tearDown(self):
-            try:
-                os.remove('drp_pars.txt')
-            except OSError:
-                pass
-        def testEmptyFile(self):
-            self.assertRaises(IOError, Parfile, 'foo.pars')
-        def testFixedKeys(self):
-            pars = Parfile('foo.pars', fixed_keys=False)
-            pars['ft2file'] = 'ft2.fits'
-            pars.write()
-            pars = Parfile('foo.pars')
-            self.assertRaises(KeyError, pars.__setitem__, 'ft1file', '')
-        def testReadWrite(self):
-            pars = Parfile('foo.pars', fixed_keys=False)
-            pars['ft1file'] = 'ft1.fits'
-            pars['ft2file'] = 'ft2.fits'
-            pars['ra'] = 83.57
-            pars['dec'] = 22.01
-            pars['ft1file'] = 'ft1_file.fits'
-            pars.write()
-            foo = Parfile('foo.pars')
-            self.assertEquals(foo['ft1file'], 'ft1_file.fits')
-            self.assertEquals(foo['ft2file'], 'ft2.fits')
-            self.assertEquals(foo['ra'], 83.57)
-            self.assertEquals(foo['dec'], 22.01)
-        def testWriteMethod(self):
-            filename = 'drp_pars.txt'
-            inputfile = os.path.join(os.environ['PYASPROOT'], 'data',
-                                     filename)
-            pars = Parfile(inputfile)
-            pars.write(filename)
-            bar = Parfile(inputfile)
-            foo = Parfile(filename)
-            self.assertEquals(foo, bar)
-            foo['ft1file'] = 'ft1.fits'
-            self.assertNotEquals(foo, bar)
-
-    unittest.main()
