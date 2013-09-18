@@ -238,6 +238,7 @@ def fitsFile(ccd_segments):
     for amp, segment in zip(imutils.allAmps, ccd_segments):
         output.append(pyfits.ImageHDU(data=segment.image.getArray()))
         output[amp].header = headers[amp].copy()
+        output[amp].header['BZERO'] = 0
 # Rely on FITS template for the following keywords.        
 #        output[amp].name = 'Segment%s' % imutils.channelIds[amp]
 #        output[amp].header.update('DETSIZE', imutils.detsize)
