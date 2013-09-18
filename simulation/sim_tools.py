@@ -229,19 +229,20 @@ class SegmentExposure(object):
         self.imarr[:, column] += dn
                 
 def fitsFile(ccd_segments):
-    phdr, ihdr = fits_headers()
+    headers = fits_headers()
     output = pyfits.HDUList()
     output.append(pyfits.PrimaryHDU())
-    output[0].header = phdr.copy()
+    output[0].header = headers[0].copy()
     output[0].header["EXPTIME"] = ccd_segments[0].exptime
     output[0].header["CCDTEMP"] = ccd_segments[0].ccdtemp
     for amp, segment in zip(imutils.allAmps, ccd_segments):
         output.append(pyfits.ImageHDU(data=segment.image.getArray()))
-        output[amp].header = ihdr.copy()
-        output[amp].name = 'SEGMENT%s' % imutils.channelIds[amp]
-        output[amp].header.update('DETSIZE', imutils.detsize)
-        output[amp].header.update('DETSEC', imutils.detsec(amp))
-        output[amp].header.update('CHANNEL', amp)
+        output[amp].header = headers[amp].copy()
+# Rely on FITS template for the following keywords.        
+#        output[amp].name = 'Segment%s' % imutils.channelIds[amp]
+#        output[amp].header.update('DETSIZE', imutils.detsize)
+#        output[amp].header.update('DETSEC', imutils.detsec(amp))
+#        output[amp].header.update('CHANNEL', amp)
     return output
                 
 def writeFits(ccd_segments, outfile, clobber=True):
