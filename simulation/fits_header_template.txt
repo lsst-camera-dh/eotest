@@ -38,42 +38,642 @@ CHECKSUM    =                        / checksum for entire HDU
 DATASUM     =                        / checksum for data portion of HDU
 END
 
-# Image extension
-XTENSION    = 'IMAGE '               / IMAGE extension
-BITPIX      = 16                     / number of bits per data pixel
-NAXIS       = 2                      / number of data axes
-NAXIS1      = 542                    / length of data axis 1
-NAXIS2      = 2022                   / length of data axis 2
-PCOUNT      = 0                      / required keyword; must = 0
-GCOUNT      = 1                      / required keyword; must = 1
-EXTNAME     = 'Segment10'            /
-BZERO       = 0                      /
-BSCALE      = 1                      /
-CHANNEL     = 1                      / channel number
-AVERAGE     = 12345.7                /
-STDEV       = 6789.01                /
-DETSIZE     = '[1:4096,1:4004]'      / 
-DATASEC     = '[11:522,1:2002]'      / 
-DETSEC      = '[542:1,1:2022]'       /
-CCDSUM      = '1 1 '                 / CCD binning
-LTV1        = -3574.00               /
-LTV2        = 0.00000                /
-DTV1        = 0.00000                /
-DTV2        = 0.00000                /
-DTM1_1      = 1.00000                /
-DTM1_2      = 0.00000                /
-DTM2_1      = 0.00000                /
-DTM2_2      = 1.00000                /
-LTM1_1      = 1.00000                /
-LTM1_2      = 0.00000                /
-LTM2_1      = 0.00000                /
-LTM2_2      = 1.00000                /
-ATV1        = -3584.00               /
-ATV2        = 0.00000                /
-ATM1_1      = 1.00000                /
-ATM1_2      = 0.00000                /
-ATM2_1      = 0.00000                /
-ATM2_2      = 1.00000                /
-CHECKSUM    =                        /
-DATASUM     =                        /
+# Image extension 1
+XTENSION= 'IMAGE '                   / IMAGE extension
+BITPIX = 16                          / number of bits per data pixel
+NAXIS = 2                            / number of data axes
+NAXIS1 = 542                         / length of data axis 1
+NAXIS2 = 2022                        / length of data axis 2
+PCOUNT = 0                           / required keyword; must = 0
+GCOUNT = 1                           / required keyword; must = 1
+EXTNAME = 'Segment10'                /
+BZERO = 32768                        /
+BSCALE = 1                           /
+CHANNEL = 1                          / channel number
+AVERAGE = 12345.7                    /
+STDEV = 6789.01                      /
+DETSIZE = '[1:4096,1:4004]'
+DATASEC = '[11:522,1:2002]'
+DETSEC = '[512:1,1:2002]'
+CCDSUM = '1 1 '                      / CCD binning
+LTV1 = -3574.00
+LTV2 = 0.00000
+DTV1 = 0.00000
+DTV2 = 0.00000
+DTM1_1 = 1.00000
+DTM1_2 = 0.00000
+DTM2_1 = 0.00000
+DTM2_2 = 1.00000
+LTM1_1 = 1.00000
+LTM1_2 = 0.00000
+LTM2_1 = 0.00000
+LTM2_2 = 1.00000
+ATV1 = -3584.00
+ATV2 = 0.00000
+ATM1_1 = 1.00000
+ATM1_2 = 0.00000
+ATM2_1 = 0.00000
+ATM2_2 = 1.00000
+CHECKSUM= 'VVdCWTZ9VTbCVTZ9'
+DATASUM = '2189405276'
+END
+
+# Image extension 2
+XTENSION= 'IMAGE ' / IMAGE extension
+BITPIX = 16 / number of bits per data pixel
+NAXIS = 2 / number of data axes
+NAXIS1 = 542 / length of data axis 1
+NAXIS2 = 2022 / length of data axis 2
+PCOUNT = 0 / required keyword; must = 0
+GCOUNT = 1 / required keyword; must = 1
+EXTNAME = 'Segment11' /
+BZERO = 32768 /
+BSCALE = 1 /
+CHANNEL = 2 / channel number
+AVERAGE = 12345.7 /
+STDEV = 6789.01 /
+DETSIZE = '[1:4096,1:4004]'
+DATASEC = '[11:522,1:2002]'
+DETSEC = '[1024:513,1:2002]'
+CCDSUM = '1 1 ' / CCD binning
+LTV1 = -3062.00 /
+LTV2 = 0.00000 /
+DTV1 = 0.00000 /
+DTV2 = 0.00000 /
+DTM1_1 = 1.00000 /
+DTM1_2 = 0.00000 /
+DTM2_1 = 0.00000 /
+DTM2_2 = 1.00000 /
+LTM1_1 = 1.00000 /
+LTM1_2 = 0.00000 /
+LTM2_1 = 0.00000 /
+LTM2_2 = 1.00000 /
+ATV1 = -3072.00 /
+ATV2 = 0.00000 /
+ATM1_1 = 1.00000 /
+ATM1_2 = 0.00000 /
+ATM2_1 = 0.00000 /
+ATM2_2 = 1.00000 /
+CHECKSUM= 'VVdCWTZ9VTbCVTZ9' /
+DATASUM = '2189405276' /
+END
+
+# Image extension 3
+XTENSION= 'IMAGE ' / IMAGE extension
+BITPIX = 16 / number of bits per data pixel
+NAXIS = 2 / number of data axes
+NAXIS1 = 542 / length of data axis 1
+NAXIS2 = 2022 / length of data axis 2
+PCOUNT = 0 / required keyword; must = 0
+GCOUNT = 1 / required keyword; must = 1
+EXTNAME = 'Segment12' /
+BZERO = 32768 /
+BSCALE = 1 /
+CHANNEL = 3 / channel number
+AVERAGE = 12345.7 /
+STDEV = 6789.01 /
+DETSIZE = '[1:4096,1:4004]'
+DATASEC = '[11:522,1:2002]'
+DETSEC = '[1536:1025,1:2002]'
+CCDSUM = '1 1 ' / CCD binning
+LTV1 = -2550.00 /
+LTV2 = 0.00000 /
+DTV1 = 0.00000 /
+DTV2 = 0.00000 /
+DTM1_1 = 1.00000 /
+DTM1_2 = 0.00000 /
+DTM2_1 = 0.00000 /
+DTM2_2 = 1.00000 /
+LTM1_1 = 1.00000 /
+LTM1_2 = 0.00000 /
+LTM2_1 = 0.00000 /
+LTM2_2 = 1.00000 /
+ATV1 = -2560.00 /
+ATV2 = 0.00000 /
+ATM1_1 = 1.00000 /
+ATM1_2 = 0.00000 /
+ATM2_1 = 0.00000 /
+ATM2_2 = 1.00000 /
+CHECKSUM= 'VVdCWTZ9VTbCVTZ9' /
+DATASUM = '2189405276' /
+END
+
+# Image extension 4
+XTENSION= 'IMAGE ' / IMAGE extension
+BITPIX = 16 / number of bits per data pixel
+NAXIS = 2 / number of data axes
+NAXIS1 = 542 / length of data axis 1
+NAXIS2 = 2022 / length of data axis 2
+PCOUNT = 0 / required keyword; must = 0
+GCOUNT = 1 / required keyword; must = 1
+EXTNAME = 'Segment13' /
+BZERO = 32768 /
+BSCALE = 1 /
+CHANNEL = 4 / channel number
+AVERAGE = 12345.7 /
+STDEV = 6789.01 /
+DETSIZE = '[1:4096,1:4004]'
+DATASEC = '[11:522,1:2002]'
+DETSEC = '[2048:1537,1:2002]'
+CCDSUM = '1 1 ' / CCD binning
+LTV1 = -2038.00 /
+LTV2 = 0.00000 /
+DTV1 = 0.00000 /
+DTV2 = 0.00000 /
+DTM1_1 = 1.00000 /
+DTM1_2 = 0.00000 /
+DTM2_1 = 0.00000 /
+DTM2_2 = 1.00000 /
+LTM1_1 = 1.00000 /
+LTM1_2 = 0.00000 /
+LTM2_1 = 0.00000 /
+LTM2_2 = 1.00000 /
+ATV1 = -2048.00 /
+ATV2 = 0.00000 /
+ATM1_1 = 1.00000 /
+ATM1_2 = 0.00000 /
+ATM2_1 = 0.00000 /
+ATM2_2 = 1.00000 /
+CHECKSUM= 'VVdCWTZ9VTbCVTZ9' /
+DATASUM = '2189405276' /
+END
+
+# Image extension 5
+XTENSION= 'IMAGE ' / IMAGE extension
+BITPIX = 16 / number of bits per data pixel
+NAXIS = 2 / number of data axes
+NAXIS1 = 542 / length of data axis 1
+NAXIS2 = 2022 / length of data axis 2
+PCOUNT = 0 / required keyword; must = 0
+GCOUNT = 1 / required keyword; must = 1
+EXTNAME = 'Segment14' /
+BZERO = 32768 /
+BSCALE = 1 /
+CHANNEL = 5 / channel number
+AVERAGE = 12345.7 /
+STDEV = 6789.01 /
+DETSIZE = '[1:4096,1:4004]'
+DATASEC = '[11:522,1:2002]'
+DETSEC = '[2560:2049,1:2002]'
+CCDSUM = '1 1 ' / CCD binning
+LTV1 = -1526.00 /
+LTV2 = 0.00000 /
+DTV1 = 0.00000 /
+DTV2 = 0.00000 /
+DTM1_1 = 1.00000 /
+DTM1_2 = 0.00000 /
+DTM2_1 = 0.00000 /
+DTM2_2 = 1.00000 /
+LTM1_1 = 1.00000 /
+LTM1_2 = 0.00000 /
+LTM2_1 = 0.00000 /
+LTM2_2 = 1.00000 /
+ATV1 = -1536.00 /
+ATV2 = 0.00000 /
+ATM1_1 = 1.00000 /
+ATM1_2 = 0.00000 /
+ATM2_1 = 0.00000 /
+ATM2_2 = 1.00000 /
+CHECKSUM= 'VVdCWTZ9VTbCVTZ9' /
+DATASUM = '2189405276' /
+END
+
+# Image extension 6
+XTENSION= 'IMAGE ' / IMAGE extension
+BITPIX = 16 / number of bits per data pixel
+NAXIS = 2 / number of data axes
+NAXIS1 = 542 / length of data axis 1
+NAXIS2 = 2022 / length of data axis 2
+PCOUNT = 0 / required keyword; must = 0
+GCOUNT = 1 / required keyword; must = 1
+EXTNAME = 'Segment15' /
+BZERO = 32768 /
+BSCALE = 1 /
+CHANNEL = 6 / channel number
+AVERAGE = 12345.7 /
+STDEV = 6789.01 /
+DETSIZE = '[1:4096,1:4004]'
+DATASEC = '[11:522,1:2002]'
+DETSEC = '[3072:2561,1:2002]'
+CCDSUM = '1 1 ' / CCD binning
+LTV1 = -1014.00 /
+LTV2 = 0.00000 /
+DTV1 = 0.00000 /
+DTV2 = 0.00000 /
+DTM1_1 = 1.00000 /
+DTM1_2 = 0.00000 /
+DTM2_1 = 0.00000 /
+DTM2_2 = 1.00000 /
+LTM1_1 = 1.00000 /
+LTM1_2 = 0.00000 /
+LTM2_1 = 0.00000 /
+LTM2_2 = 1.00000 /
+ATV1 = -1024.00 /
+ATV2 = 0.00000 /
+ATM1_1 = 1.00000 /
+ATM1_2 = 0.00000 /
+ATM2_1 = 0.00000 /
+ATM2_2 = 1.00000 /
+CHECKSUM= 'VVdCWTZ9VTbCVTZ9' /
+DATASUM = '2189405276' /
+END
+
+# Image extension 7
+XTENSION= 'IMAGE ' / IMAGE extension
+BITPIX = 16 / number of bits per data pixel
+NAXIS = 2 / number of data axes
+NAXIS1 = 542 / length of data axis 1
+NAXIS2 = 2022 / length of data axis 2
+PCOUNT = 0 / required keyword; must = 0
+GCOUNT = 1 / required keyword; must = 1
+EXTNAME = 'Segment16' /
+BZERO = 32768 /
+BSCALE = 1 /
+CHANNEL = 7 / channel number
+AVERAGE = 12345.7 /
+STDEV = 6789.01 /
+DETSIZE = '[1:4096,1:4004]'
+DATASEC = '[11:522,1:2002]'
+DETSEC = '[3584:3073,1:2002]'
+CCDSUM = '1 1 ' / CCD binning
+LTV1 = -502.000 /
+LTV2 = 0.00000 /
+DTV1 = 0.00000 /
+DTV2 = 0.00000 /
+DTM1_1 = 1.00000 /
+DTM1_2 = 0.00000 /
+DTM2_1 = 0.00000 /
+DTM2_2 = 1.00000 /
+LTM1_1 = 1.00000 /
+LTM1_2 = 0.00000 /
+LTM2_1 = 0.00000 /
+LTM2_2 = 1.00000 /
+ATV1 = -512.000 /
+ATV2 = 0.00000 /
+ATM1_1 = 1.00000 /
+ATM1_2 = 0.00000 /
+ATM2_1 = 0.00000 /
+ATM2_2 = 1.00000 /
+CHECKSUM= 'VVdCWTZ9VTbCVTZ9' /
+DATASUM = '2189405276' /
+END
+
+# Image extension 8
+XTENSION= 'IMAGE ' / IMAGE extension
+BITPIX = 16 / number of bits per data pixel
+NAXIS = 2 / number of data axes
+NAXIS1 = 542 / length of data axis 1
+NAXIS2 = 2022 / length of data axis 2
+PCOUNT = 0 / required keyword; must = 0
+GCOUNT = 1 / required keyword; must = 1
+EXTNAME = 'Segment17' /
+BZERO = 32768 /
+BSCALE = 1 /
+CHANNEL = 8 / channel number
+AVERAGE = 12345.7 /
+STDEV = 6789.01 /
+DETSIZE = '[1:4096,1:4004]'
+DATASEC = '[11:522,1:2002]'
+DETSEC = '[4096:3585,1:2002]'
+CCDSUM = '1 1 ' / CCD binning
+LTV1 = 10.0000 /
+LTV2 = 0.00000 /
+DTV1 = 0.00000 /
+DTV2 = 0.00000 /
+DTM1_1 = 1.00000 /
+DTM1_2 = 0.00000 /
+DTM2_1 = 0.00000 /
+DTM2_2 = 1.00000 /
+LTM1_1 = 1.00000 /
+LTM1_2 = 0.00000 /
+LTM2_1 = 0.00000 /
+LTM2_2 = 1.00000 /
+ATV1 = 0.00000 /
+ATV2 = 0.00000 /
+ATM1_1 = 1.00000 /
+ATM1_2 = 0.00000 /
+ATM2_1 = 0.00000 /
+ATM2_2 = 1.00000 /
+CHECKSUM= 'VVdCWTZ9VTbCVTZ9' /
+DATASUM = '2189405276' /
+END
+
+# Image extension 9
+XTENSION= 'IMAGE ' / IMAGE extension
+BITPIX = 16 / number of bits per data pixel
+NAXIS = 2 / number of data axes
+NAXIS1 = 542 / length of data axis 1
+NAXIS2 = 2022 / length of data axis 2
+PCOUNT = 0 / required keyword; must = 0
+GCOUNT = 1 / required keyword; must = 1
+EXTNAME = 'Segment07' /
+BZERO = 32768 /
+BSCALE = 1 /
+CHANNEL = 9 / channel number
+AVERAGE = 12345.7 /
+STDEV = 6789.01 /
+DETSIZE = '[1:4096,1:4004]'
+DATASEC = '[11:522,1:2002]'
+DETSEC = '[3585:4096,4004:2003]'
+CCDSUM = '1 1 ' / CCD binning
+LTV1 = 523.000 /
+LTV2 = 4005.00 /
+DTV1 = 0.00000 /
+DTV2 = 0.00000 /
+DTM1_1 = 1.00000 /
+DTM1_2 = 0.00000 /
+DTM2_1 = 0.00000 /
+DTM2_2 = 1.00000 /
+LTM1_1 = -1.00000 /
+LTM1_2 = 0.00000 /
+LTM2_1 = 0.00000 /
+LTM2_2 = -1.00000 /
+ATV1 = 513.000 /
+ATV2 = 4005.00 /
+ATM1_1 = -1.00000 /
+ATM1_2 = 0.00000 /
+ATM2_1 = 0.00000 /
+ATM2_2 = -1.00000 /
+CHECKSUM= 'VVdCWTZ9VTbCVTZ9' /
+DATASUM = '2189405276' /
+END
+
+# Image extension 10
+XTENSION= 'IMAGE ' / IMAGE extension
+BITPIX = 16 / number of bits per data pixel
+NAXIS = 2 / number of data axes
+NAXIS1 = 542 / length of data axis 1
+NAXIS2 = 2022 / length of data axis 2
+PCOUNT = 0 / required keyword; must = 0
+GCOUNT = 1 / required keyword; must = 1
+EXTNAME = 'Segment06' /
+BZERO = 32768 /
+BSCALE = 1 /
+CHANNEL = 10 / channel number
+AVERAGE = 12345.7 /
+STDEV = 6789.01 /
+DETSIZE = '[1:4096,1:4004]'
+DATASEC = '[11:522,1:2002]'
+DETSEC = '[3073:3584,4004:2003]'
+CCDSUM = '1 1 ' / CCD binning
+LTV1 = 1035.00 /
+LTV2 = 4005.00 /
+DTV1 = 0.00000 /
+DTV2 = 0.00000 /
+DTM1_1 = 1.00000 /
+DTM1_2 = 0.00000 /
+DTM2_1 = 0.00000 /
+DTM2_2 = 1.00000 /
+LTM1_1 = -1.00000 /
+LTM1_2 = 0.00000 /
+LTM2_1 = 0.00000 /
+LTM2_2 = -1.00000 /
+ATV1 = 1025.00 /
+ATV2 = 4005.00 /
+ATM1_1 = -1.00000 /
+ATM1_2 = 0.00000 /
+ATM2_1 = 0.00000 /
+ATM2_2 = -1.00000 /
+CHECKSUM= 'VVdCWTZ9VTbCVTZ9' /
+DATASUM = '2189405276' /
+END
+
+# Image extension 11
+XTENSION= 'IMAGE ' / IMAGE extension
+BITPIX = 16 / number of bits per data pixel
+NAXIS = 2 / number of data axes
+NAXIS1 = 542 / length of data axis 1
+NAXIS2 = 2022 / length of data axis 2
+PCOUNT = 0 / required keyword; must = 0
+GCOUNT = 1 / required keyword; must = 1
+EXTNAME = 'Segment05' /
+BZERO = 32768 /
+BSCALE = 1 /
+CHANNEL = 11 / channel number
+AVERAGE = 12345.7 /
+STDEV = 6789.01 /
+DETSIZE = '[1:4096,1:4004]'
+DATASEC = '[11:522,1:2002]'
+DETSEC = '[2561:3072,4004:2003]'
+CCDSUM = '1 1 ' / CCD binning
+LTV1 = 1547.00 /
+LTV2 = 4005.00 /
+DTV1 = 0.00000 /
+DTV2 = 0.00000 /
+DTM1_1 = 1.00000 /
+DTM1_2 = 0.00000 /
+DTM2_1 = 0.00000 /
+DTM2_2 = 1.00000 /
+LTM1_1 = -1.00000 /
+LTM1_2 = 0.00000 /
+LTM2_1 = 0.00000 /
+LTM2_2 = -1.00000 /
+ATV1 = 1537.00 /
+ATV2 = 4005.00 /
+ATM1_1 = -1.00000 /
+ATM1_2 = 0.00000 /
+ATM2_1 = 0.00000 /
+ATM2_2 = -1.00000 /
+CHECKSUM= 'VVdCWTZ9VTbCVTZ9' /
+DATASUM = '2189405276' /
+END
+
+# Image extension 12
+XTENSION= 'IMAGE ' / IMAGE extension
+BITPIX = 16 / number of bits per data pixel
+NAXIS = 2 / number of data axes
+NAXIS1 = 542 / length of data axis 1
+NAXIS2 = 2022 / length of data axis 2
+PCOUNT = 0 / required keyword; must = 0
+GCOUNT = 1 / required keyword; must = 1
+EXTNAME = 'Segment04' /
+BZERO = 32768 /
+BSCALE = 1 /
+CHANNEL = 12 / channel number
+AVERAGE = 12345.7 /
+STDEV = 6789.01 /
+DETSIZE = '[1:4096,1:4004]'
+DATASEC = '[11:522,1:2002]'
+DETSEC = '[2049:2560,4004:2003]'
+CCDSUM = '1 1 ' / CCD binning
+LTV1 = 2059.00 /
+LTV2 = 4005.00 /
+DTV1 = 0.00000 /
+DTV2 = 0.00000 /
+DTM1_1 = 1.00000 /
+DTM1_2 = 0.00000 /
+DTM2_1 = 0.00000 /
+DTM2_2 = 1.00000 /
+LTM1_1 = -1.00000 /
+LTM1_2 = 0.00000 /
+LTM2_1 = 0.00000 /
+LTM2_2 = -1.00000 /
+ATV1 = 2049.00 /
+ATV2 = 4005.00 /
+ATM1_1 = -1.00000 /
+ATM1_2 = 0.00000 /
+ATM2_1 = 0.00000 /
+ATM2_2 = -1.00000 /
+CHECKSUM= 'VVdCWTZ9VTbCVTZ9' /
+DATASUM = '2189405276' /
+END
+
+# Image extension 13
+XTENSION= 'IMAGE ' / IMAGE extension
+BITPIX = 16 / number of bits per data pixel
+NAXIS = 2 / number of data axes
+NAXIS1 = 542 / length of data axis 1
+NAXIS2 = 2022 / length of data axis 2
+PCOUNT = 0 / required keyword; must = 0
+GCOUNT = 1 / required keyword; must = 1
+EXTNAME = 'Segment03' /
+BZERO = 32768 /
+BSCALE = 1 /
+CHANNEL = 13 / channel number
+AVERAGE = 12345.7 /
+STDEV = 6789.01 /
+DETSIZE = '[1:4096,1:4004]'
+DATASEC = '[11:522,1:2002]'
+DETSEC = '[1537:2048,4004:2003]'
+CCDSUM = '1 1 ' / CCD binning
+LTV1 = 2571.00 /
+LTV2 = 4005.00 /
+DTV1 = 0.00000 /
+DTV2 = 0.00000 /
+DTM1_1 = 1.00000 /
+DTM1_2 = 0.00000 /
+DTM2_1 = 0.00000 /
+DTM2_2 = 1.00000 /
+LTM1_1 = -1.00000 /
+LTM1_2 = 0.00000 /
+LTM2_1 = 0.00000 /
+LTM2_2 = -1.00000 /
+ATV1 = 2561.00 /
+ATV2 = 4005.00 /
+ATM1_1 = -1.00000 /
+ATM1_2 = 0.00000 /
+ATM2_1 = 0.00000 /
+ATM2_2 = -1.00000 /
+CHECKSUM= 'VVdCWTZ9VTbCVTZ9' /
+DATASUM = '2189405276' /
+END
+
+# Image extension 14
+XTENSION= 'IMAGE ' / IMAGE extension
+BITPIX = 16 / number of bits per data pixel
+NAXIS = 2 / number of data axes
+NAXIS1 = 542 / length of data axis 1
+NAXIS2 = 2022 / length of data axis 2
+PCOUNT = 0 / required keyword; must = 0
+GCOUNT = 1 / required keyword; must = 1
+EXTNAME = 'Segment02' /
+BZERO = 32768 /
+BSCALE = 1 /
+CHANNEL = 14 / channel number
+AVERAGE = 12345.7 /
+STDEV = 6789.01 /
+DETSIZE = '[1:4096,1:4004]'
+DATASEC = '[11:522,1:2002]'
+DETSEC = '[1025:1536,4004:2003]'
+CCDSUM = '1 1 ' / CCD binning
+LTV1 = 3083.00 /
+LTV2 = 4005.00 /
+DTV1 = 0.00000 /
+DTV2 = 0.00000 /
+DTM1_1 = 1.00000 /
+DTM1_2 = 0.00000 /
+DTM2_1 = 0.00000 /
+DTM2_2 = 1.00000 /
+LTM1_1 = -1.00000 /
+LTM1_2 = 0.00000 /
+LTM2_1 = 0.00000 /
+LTM2_2 = -1.00000 /
+ATV1 = 3073.00 /
+ATV2 = 4005.00 /
+ATM1_1 = -1.00000 /
+ATM1_2 = 0.00000 /
+ATM2_1 = 0.00000 /
+ATM2_2 = -1.00000 /
+CHECKSUM= 'VVdCWTZ9VTbCVTZ9' /
+DATASUM = '2189405276' /
+END
+
+# Image extension 15
+XTENSION= 'IMAGE ' / IMAGE extension
+BITPIX = 16 / number of bits per data pixel
+NAXIS = 2 / number of data axes
+NAXIS1 = 542 / length of data axis 1
+NAXIS2 = 2022 / length of data axis 2
+PCOUNT = 0 / required keyword; must = 0
+GCOUNT = 1 / required keyword; must = 1
+EXTNAME = 'Segment01' /
+BZERO = 32768 /
+BSCALE = 1 /
+CHANNEL = 15 / channel number
+AVERAGE = 12345.7 /
+STDEV = 6789.01 /
+DETSIZE = '[1:4096,1:4004]'
+DATASEC = '[11:522,1:2002]'
+DETSEC = '[513:1024,4004:2003]'
+CCDSUM = '1 1 ' / CCD binning
+LTV1 = 3595.00 /
+LTV2 = 4005.00 /
+DTV1 = 0.00000 /
+DTV2 = 0.00000 /
+DTM1_1 = 1.00000 /
+DTM1_2 = 0.00000 /
+DTM2_1 = 0.00000 /
+DTM2_2 = 1.00000 /
+LTM1_1 = -1.00000 /
+LTM1_2 = 0.00000 /
+LTM2_1 = 0.00000 /
+LTM2_2 = -1.00000 /
+ATV1 = 3585.00 /
+ATV2 = 4005.00 /
+ATM1_1 = -1.00000 /
+ATM1_2 = 0.00000 /
+ATM2_1 = 0.00000 /
+ATM2_2 = -1.00000 /
+CHECKSUM= 'VVdCWTZ9VTbCVTZ9' /
+DATASUM = '2189405276' /
+END
+
+# Image extension 16
+XTENSION= 'IMAGE ' / IMAGE extension
+BITPIX = 16 / number of bits per data pixel
+NAXIS = 2 / number of data axes
+NAXIS1 = 542 / length of data axis 1
+NAXIS2 = 2022 / length of data axis 2
+PCOUNT = 0 / required keyword; must = 0
+GCOUNT = 1 / required keyword; must = 1
+EXTNAME = 'Segment00' /
+BZERO = 32768 /
+BSCALE = 1 /
+CHANNEL = 16 / channel number
+AVERAGE = 12345.7 /
+STDEV = 6789.01 /
+DETSIZE = '[1:4096,1:4004]'
+DATASEC = '[11:522,1:2002]'
+DETSEC = '[1:512,4004:2003]'
+CCDSUM = '1 1 ' / CCD binning
+LTV1 = 4107.00 /
+LTV2 = 4005.00 /
+DTV1 = 0.00000 /
+DTV2 = 0.00000 /
+DTM1_1 = 1.00000 /
+DTM1_2 = 0.00000 /
+DTM2_1 = 0.00000 /
+DTM2_2 = 1.00000 /
+LTM1_1 = -1.00000 /
+LTM1_2 = 0.00000 /
+LTM2_1 = 0.00000 /
+LTM2_2 = -1.00000 /
+ATV1 = 4097.00 /
+ATV2 = 4005.00 /
+ATM1_1 = -1.00000 /
+ATM1_2 = 0.00000 /
+ATM2_1 = 0.00000 /
+ATM2_2 = -1.00000 /
+CHECKSUM= 'VVdCWTZ9VTbCVTZ9' /
+DATASUM = '2189405276' /
 END

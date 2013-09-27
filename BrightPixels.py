@@ -44,7 +44,7 @@ class BrightPixels(object):
         self.fp_set.setMask(self.mask, self.mask_plane)
         self._write_fits(outfile)
     def _write_fits(self, outfile):
-        phdr, ihdr = fits_headers()
+        hdrs = fits_headers()
         if not os.path.isfile(outfile):
             output = pyfits.HDUList()
             output.append(pyfits.PrimaryHDU())
@@ -53,6 +53,7 @@ class BrightPixels(object):
             output[0].header['CTHRESH'] = self.colthresh
             output.writeto(outfile, clobber=True)
         imaging = self.ccd.seg_regions[self.amp].imaging
+        ihdr = hdrs[self.amp]
         md = dafBase.PropertySet()
         md.set('EXTNAME', 'SEGMENT%s' % imutils.channelIds[self.amp])
         md.set('DETSIZE', ihdr['DETSIZE'])

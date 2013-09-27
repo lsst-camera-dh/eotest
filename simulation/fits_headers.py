@@ -1,11 +1,19 @@
+"""
+@brief pyfits-based tools for handling FITS header keywords.
+
+@author J. Chiang <jchiang@slac.stanford.edu>
+"""
 import os
+import sys
 import numpy as np
 import pyfits
 
 import simulation
 
 _module_path = os.path.dirname(simulation.__file__)
-_tplfile = os.path.join(_module_path, 'fits_header_template.txt')
+template_file = os.path.join(_module_path, 'fits_header_template.txt')
+template_used_file = os.path.join(_module_path,
+                                  'fits_header_template_used.txt')
 
 def _cast(value):
     """
@@ -26,7 +34,12 @@ def _cast(value):
         return False
     return value.strip("'")
 
-def fits_headers(template=_tplfile):
+def fits_headers(template=template_file):
+    """
+    Create a set of CCD-level FITS headers according to the FITS
+    template file, which is supposed to implement the FITS standard
+    for sensors (LCA-10140).
+    """
     headers = []
     hdr = pyfits.header.Header()
     for line in open(template):
@@ -43,6 +56,35 @@ def fits_headers(template=_tplfile):
         value, comment = data[0].strip(), '/'.join(data[1:]).strip()
         hdr.update(key, _cast(value), comment=comment)
     return headers
+
+def check_keywords(infile, template=template_file, verbose=True):
+    """
+    Check that the keywords in a the specified FITS header template
+    file are present.  The default file is based on the FITS standard
+    document for sensors, LCA-10140.
+
+    @return Dictionary of missing keywords by header extension number.
+    """
+    prototype_headers = fits_headers(template=template)
+    input = pyfits.open(infile)
+    report = []
+    missing_keys = {}
+    for i, prototype, input_hdu in zip(range(len(prototype_headers)),
+                                       prototype_headers, input):
+        missing_keys[i] = [keyword for keyword in prototype.keys()
+                           if not input_hdu.header.has_key(keyword)]
+        if missing_keys[i]:
+            report.append("Checking HDU #%i, '%s'. Missing required keywords:"
+                          % (i, input_hdu.name))
+            for key in missing_keys[i]:
+                report.append("  %s" % key)
+    if verbose:
+        if report:
+            for line in report:
+                print line
+        else:
+            print "No missing keywords"
+    return missing_keys
 
 if __name__ == '__main__':
     import image_utils as imutils

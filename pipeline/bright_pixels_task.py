@@ -47,8 +47,8 @@ median_images = {}
 for amp in imutils.allAmps:
     median_images[amp] = imutils.fits_median(dark_files,
                                              imutils.dm_hdu(amp))
-    medfile = os.path.join(args.output_dir,
-                           '%s_median_dark_bp.fits' % sensor_id)
+medfile = os.path.join(args.output_dir,
+                       '%s_median_dark_bp.fits' % sensor_id)
 imutils.writeFits(median_images, medfile, dark_files[0])
 
 ccd = MaskedCCD(medfile, mask_files=mask_files)
