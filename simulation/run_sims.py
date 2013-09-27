@@ -13,6 +13,15 @@ from qe.QE import planck, clight
 from simulation.sim_tools import *
 from simulation.ctesim import ctesim
 
+class AmpIndexDecorator(object):
+    def __init__(self, var):
+        self.var = var
+    def __getitem__(self, i):
+        try:
+            return self.var[i]
+        except TypeError:
+            return self.var
+
 def time_stamp(gmtime=False, debug=False):
     if debug:
         return "debug"
@@ -310,35 +319,50 @@ def generate_superflat(pars):
     sensor.writeto(os.path.join(outputdir, filename),
                    bitpix=pars.bitpix)
 
+def dark_frame(exptime, ccdtemp, pars):
+    frame = CCD(exptime=exptime, gain=pars.system_gain, ccdtemp=ccdtemp)
+    frame.add_bias(level=pars.bias_level, sigma=pars.bias_sigma)
+    frame.add_bias(level=0, sigma=pars.read_noise)
+    frame.add_dark_current(pars.dark_current)
+    return frame
+
 def generate_crosstalk_dataset(pars):
     print "Generating spot dataset..."
     spot = pars.spot
     outputdir, sensor_id = setup(pars, spot.test_type)
+    if spot.multiaggressor:
+        sensors = AmpIndexDecorator(dark_frame(spot.exptime, spot.ccdtemp,
+                                               pars))
+    else:
+        sensors = dict((amp, dark_frame(spot.exptime, spot.ccdtemp, pars))
+                       for amp in imutils.allAmps)
     for aggressor in imutils.allAmps:
         print "  aggressor amp", aggressor
-        sensor = CCD(exptime=spot.exptime, gain=pars.system_gain,
-                     ccdtemp=spot.ccdtemp)
         xtalk_frac = spot.xtalk_pattern(aggressor, spot.frac_scale)
+        sensor = sensors[aggressor]
+        xx, yy, radius = (AmpIndexDecorator(item)[aggressor] for item
+                          in (spot.x, spot.y, spot.radius))
         for amp in sensor.segments:
             if amp == aggressor:
-                sensor.segments[amp].add_spot_image(spot.dn, spot.x, spot.y,
-                                                    spot.radius)
+                sensor.segments[amp].add_spot_image(spot.dn, xx, yy, radius)
             else:
                 dn = spot.dn*xtalk_frac[amp]
-                sensor.segments[amp].add_spot_image(dn, spot.x, spot.y,
-                                                    spot.radius)
-        sensor.add_bias(level=pars.bias_level, sigma=pars.bias_sigma)
-        sensor.add_bias(level=0, sigma=pars.read_noise)
-        sensor.add_dark_current(pars.dark_current)
+                sensor.segments[amp].add_spot_image(dn, xx, yy, radius)
         #
         sensor.md['TESTTYPE'] = 'SPOT'
         sensor.md['IMGTYPE'] = 'SPOT'
         sensor.md['LSST_NUM'] = sensor_id
-        filename = ("%s_%s_%02i_%s.fits"
-                    % (sensor_id, spot.test_type, aggressor,
-                       time_stamp(debug=pars.debug)))
-        sensor.writeto(os.path.join(outputdir, filename),
-                       bitpix=pars.bitpix)
+    if spot.multiaggressor:
+        filename = ("%s_%s_multi_%s.fits" % (sensor_id, spot.test_type, 
+                                             time_stamp(debug=pars.debug)))
+        sensor.writeto(os.path.join(outputdir, filename), bitpix=pars.bitpix)
+    else:
+        for aggressor in imutils.allAmps:
+            filename = ("%s_%s_%02i_%s.fits" % (sensor_id, spot.test_type,
+                                                aggressor,
+                                                time_stamp(debug=pars.debug)))
+            sensors[aggressor].writeto(os.path.join(outputdir, filename),
+                                       bitpix=pars.bitpix)
 
 def generate_system_read_noise(pars):
     print "Generating system read noise..."

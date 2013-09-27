@@ -121,7 +121,8 @@ spot = Params(test_type='spot',
               xtalk_pattern=xtalk_pattern,
               frac_scale=0.02,
               dn=200,
-              x=250, y=250, radius=20)
+              x=250, y=250, radius=20,
+              multiaggressor=False)
 
 sysnoise = Params(test_type='noise',
                   nframes=10)

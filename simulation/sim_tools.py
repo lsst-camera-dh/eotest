@@ -30,7 +30,7 @@ def xtalk_pattern(aggressor, frac_scale=0.02):
         if (victim != aggressor and
             (victim-1)/nside == (aggressor-1)/nside):
             dist = abs(victim - aggressor)
-            xtalk_frac[victim] = 0.02/dist**2
+            xtalk_frac[victim] = frac_scale/dist**2
         else:
             xtalk_frac[victim] = 0
     return xtalk_frac
