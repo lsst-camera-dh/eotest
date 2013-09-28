@@ -235,18 +235,29 @@ class CrosstalkMatrix(object):
 def make_crosstalk_matrix(file_list, mask_files=(),
                           extractor=detector_crosstalk, verbose=True):
     det_xtalk = CrosstalkMatrix()
-    for infile in file_list:
-        if verbose:
-            print "processing", infile
-        ccd = MaskedCCD(infile, mask_files=mask_files)
-        agg_amp, max_dn = aggressor(ccd)
-        try:
-            ratios = extractor(ccd, agg_amp)
-            det_xtalk.set_row(agg_amp, ratios)
-        except RuntimeError, message:
-            print "Error extracting victim/aggressor ratios:"
-            print message
-            print "Skipping."
+    try:
+        os.path.isfile(file_list)
+        # A single file, so we assume that we have a multi-aggressor spot frame.
+        ccd = MaskedCCD(file_list, mask_files=mask_files)
+        for agg_amp in imutils.allAmps:
+            if verbose:
+                print "processing aggressor amp", agg_amp
+            det_ratios = extractor(ccd, agg_amp)
+            det_xtalk.set_row(agg_amp, det_ratios)
+    except TypeError:
+        # Presumably, we have a 16 amplifier dataset.
+        for infile in file_list:
+            if verbose:
+                print "processing", infile
+            ccd = MaskedCCD(infile, mask_files=mask_files)
+            agg_amp, max_dn = aggressor(ccd)
+            try:
+                ratios = extractor(ccd, agg_amp)
+                det_xtalk.set_row(agg_amp, ratios)
+            except RuntimeError, message:
+                print "Error extracting victim/aggressor ratios:"
+                print message
+                print "Skipping."
     return det_xtalk
 
 if __name__ == '__main__':

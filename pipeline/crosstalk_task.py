@@ -17,6 +17,11 @@ parser.add_argument('-F', '--xtalk_file_list', type=str,
 args = parser.parse_args()
 sensor_id = args.sensor_id
 xtalk_files = args.files(args.xtalk_files, args.xtalk_file_list)
+#
+# Test if we have a single (and therefore multi-aggressor) file.
+#
+if len(xtalk_files) == 1:
+    xtalk_files = xtalk_files[0]
 
 xtalk = make_crosstalk_matrix(xtalk_files, mask_files=args.mask_files())
 xtalk.plot_matrix('%s' % sensor_id)
