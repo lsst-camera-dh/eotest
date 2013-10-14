@@ -7,9 +7,9 @@ import os
 import unittest
 import numpy as np
 import lsst.afw.image as afwImage
-from simulation.sim_tools import CCD
-from MaskedCCD import MaskedCCD
-import image_utils as imutils
+import lsst.test_scripts.image_utils as imutils
+import lsst.test_scripts.sensor as sensorTest
+import lsst.test_scripts.sensor.sim_tools as sim_tools
 
 class BiasFunc(object):
     def __init__(self, slope, intercept):
@@ -32,7 +32,7 @@ class BiasHandlingTestCase(unittest.TestCase):
         bias_func = BiasFunc(cls.bias_slope, cls.bias_intercept)
         for x in range(nx):
             imarr[:,x] += bias_func(yvals)
-        ccd = CCD(exptime=cls.exptime, gain=cls.gain)
+        ccd = sim_tools.CCD(exptime=cls.exptime, gain=cls.gain)
         for amp in imutils.allAmps:
             ccd.segments[amp].image += cls.bias_image
         ccd.writeto(cls.image_file)
@@ -41,7 +41,7 @@ class BiasHandlingTestCase(unittest.TestCase):
         os.remove(cls.image_file)
     def test_bias_func(self):
         bias_func = BiasFunc(self.bias_slope, self.bias_intercept)
-        ccd = MaskedCCD(self.image_file)
+        ccd = sensorTest.MaskedCCD(self.image_file)
         for amp in imutils.allAmps:
             bf_i = imutils.bias_func(ccd[amp].getImage())
             bf_m = imutils.bias_func(ccd[amp])
@@ -49,14 +49,14 @@ class BiasHandlingTestCase(unittest.TestCase):
                 self.assertEqual(bf_i(y), bf_m(y))
                 self.assertAlmostEqual(bias_func(y), bf_m(y))
     def test_bias_image(self):
-        ccd = MaskedCCD(self.image_file)
+        ccd = sensorTest.MaskedCCD(self.image_file)
         for amp in imutils.allAmps:
             my_bias_image = imutils.bias_image(ccd[amp])
             fracdiff = ( (self.bias_image.getArray()-my_bias_image.getArray())
                          /self.bias_image.getArray() )
             self.assertTrue(max(np.abs(fracdiff.flat)) < 1e-6)
     def test_unbias_and_trim(self):
-        ccd = MaskedCCD(self.image_file)
+        ccd = sensorTest.MaskedCCD(self.image_file)
         for amp in imutils.allAmps:
             image = imutils.unbias_and_trim(ccd[amp])
             imarr = image.getImage().getArray()
@@ -74,7 +74,7 @@ class FitsMedianTestCase(unittest.TestCase):
         self.files = []
         for i in self.values:
             self.files.append('test_fits_median_image_%02i.fits' % i)
-            ccd = CCD(exptime=1)
+            ccd = sim_tools.CCD(exptime=1)
             for amp in imutils.allAmps:
                 ccd.segments[amp].image += i
             ccd.writeto(self.files[-1])

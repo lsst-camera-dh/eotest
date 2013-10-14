@@ -7,8 +7,8 @@ import os
 import unittest
 import numpy as np
 import pyfits
-import image_utils as imutils
-from ccd250_mask import ccd250_mask
+import lsst.test_scripts.image_utils as imutils
+from lsst.test_scripts.sensor.ccd250_mask import ccd250_mask
 
 class _FitsFile(dict):
     def __init__(self, infile):
