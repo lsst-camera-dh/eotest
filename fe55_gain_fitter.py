@@ -41,11 +41,12 @@ def fe55_gain_fitter(signals, ccdtemp=-95, make_plot=False, xrange=None,
         pylab.ion()
         fig = pylab.figure()
         axes = fig.add_subplot(111)
+        hist = pylab.hist(signals, bins=bins, range=xrange,
+                          histtype='bar', color='b')
     else:
         pylab.ioff()
+        hist = np.histogram(signals, bins=bins, range=xrange)
             
-    hist = pylab.hist(signals, bins=bins, range=xrange,
-                      histtype='bar', color='b')
     x = (hist[1][1:] + hist[1][:-1])/2.
     y = hist[0]
     ntot = sum(y)
