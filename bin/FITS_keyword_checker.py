@@ -1,8 +1,12 @@
 #!/usr/bin/env python
+"""
+@brief Check that FITS files have all of the header keywords specified in
+LCA-10140.
+"""
 
 import sys
 import argparse
-import simulation.fits_headers as fits_headers
+import lsst.test_scripts.sensor as sensorTest
 
 parser = argparse.ArgumentParser(description='Check FITS header keywords for sensor data files.')
 
@@ -16,12 +20,13 @@ parser.add_argument('-v', '--verbose', action='store_true', default=False,
 args = parser.parse_args()
 
 if args.used_keywords:
-    template = fits_headers.template_used_file
+    template = sensorTest.fits_headers.template_used_file
 else:
-    template = fits_headers.template_file
+    template = sensorTest.fits_headers.template_file
     
-missing = fits_headers.check_keywords(args.infile, template=template,
-                                      verbose=args.verbose)
+missing = sensorTest.fits_headers.check_keywords(args.infile,
+                                                 template=template,
+                                                 verbose=args.verbose)
 
 # Use the total number of missing keywords as the return code.
 retcode = sum(len(x) for x in missing.values())
