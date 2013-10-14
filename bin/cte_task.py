@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 """
 @brief Compute charge transfer (in)efficiency.
 
@@ -8,10 +10,8 @@ import glob
 import pyfits
 import lsst.afw.image as afwImage
 import lsst.afw.math as afwMath
-import image_utils as imutils
-from MaskedCCD import SegmentRegions
-from pipeline.TaskParser import TaskParser
-from eperTask import EPERTask
+import lsst.test_scripts.image_utils as imutils
+import lsst.test_scripts.sensor as sensorTest
 
 def superflat(files, outfile='superflat.fits'):
     """
@@ -25,7 +25,7 @@ def superflat(files, outfile='superflat.fits'):
         for infile in files:
             decorated_image = afwImage.DecoratedImageF(infile,
                                                        imutils.dm_hdu(amp))
-            sr = SegmentRegions(decorated_image)
+            sr = sensorTest.SegmentRegions(decorated_image)
             image = decorated_image.getImage()
             image -= imutils.bias_image(image, overscan=sr.serial_overscan)
             images.push_back(image)
@@ -35,7 +35,7 @@ def superflat(files, outfile='superflat.fits'):
     return outfile
 
 if __name__ == '__main__':
-    parser = TaskParser('Compute charge transfer efficiency in parallel and serial directions using extended pixel edge response technique')
+    parser = sensorTest.TaskParser('Compute charge transfer efficiency in parallel and serial directions using extended pixel edge response technique')
     parser.add_argument('-f', '--superflat_pattern', type=str,
                         help='superflat dataset file pattern')
     parser.add_argument('-F', '--superflat_file_list', type=str,
@@ -52,7 +52,7 @@ if __name__ == '__main__':
     #
     # Compute serial CTE
     #
-    s_task = EPERTask()
+    s_task = sensorTest.EPERTask()
     s_task.config.direction = 's'
     s_task.config.verbose = False
     s_task.config.cti = True

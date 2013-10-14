@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 """
 @brief Dark current task: compute 95th percentile dark current in
 units of e-/sec/pixel.
@@ -8,11 +10,10 @@ import os
 import numpy as np
 import pyfits
 import lsst.afw.image as afwImage
-import image_utils as imutils
-from MaskedCCD import MaskedCCD
-from TaskParser import TaskParser
+import lsst.test_scripts.image_utils as imutils
+import lsst.test_scripts.sensor as sensorTest
 
-parser = TaskParser('Compute 95th percentile dark current.')
+parser = sensorTest.TaskParser('Compute 95th percentile dark current.')
 parser.add_argument('-f', '--dark_files', type=str,
                     help='file pattern for darks')
 parser.add_argument('-F', '--dark_file_list', type=str,
@@ -39,7 +40,7 @@ for amp in imutils.allAmps:
 medfile = os.path.join(args.output_dir, '%s_dark_current_map.fits' % sensor_id)
 imutils.writeFits(median_images, medfile, dark_files[0])
 
-ccd = MaskedCCD(medfile, mask_files=mask_files)
+ccd = sensorTest.MaskedCCD(medfile, mask_files=mask_files)
 
 dark95s = {}
 exptime = md.get('EXPTIME')

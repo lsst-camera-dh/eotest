@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 """
 @brief Compute read noise distributions for a sample of images.  Bias
 and system readout noise exposures, the latter for determining the
@@ -8,10 +10,8 @@ noise contribution from the electronics, must be provided.
 import os
 import numpy as np
 import pyfits
-import image_utils as imutils
-from MaskedCCD import MaskedCCD
-from TaskParser import TaskParser
-from read_noise import noise_dists
+import lsst.test_scripts.image_utils as imutils
+import lsst.test_scripts.sensor as sensorTest
 
 def _write_read_noise_dists(outfile, Ntot, Nsys, gains, bias, sysnoise):
     output = pyfits.HDUList()
@@ -33,7 +33,7 @@ def _write_read_noise_dists(outfile, Ntot, Nsys, gains, bias, sysnoise):
                                 imutils.median(sigsys))
     output.writeto(outfile, clobber=True)
 
-parser = TaskParser('Compute Read Noise')
+parser = sensorTest.TaskParser('Compute Read Noise')
 parser.add_argument('-b', '--bias', type=str,
                     help='bias file pattern')
 parser.add_argument('-B', '--bias_file_list', type=str,
@@ -71,13 +71,14 @@ for i, bias, sysnoise in zip(range(len(bias_files)), bias_files,
     #
     # Determine the nominal imaging region from the bias file.
     #
-    ccd = MaskedCCD(bias)
+    ccd = sensorTest.MaskedCCD(bias)
     imaging = ccd.seg_regions[imutils.allAmps[0]].imaging
     sampler = imutils.SubRegionSampler(args.dx, args.dy, args.nsamp,
                                        imaging=imaging)
 
-    Ntot = noise_dists(bias, gains, sampler, mask_files=mask_files)
-    Nsys = noise_dists(sysnoise, gains, sampler, mask_files=mask_files)
+    Ntot = sensorTest.noise_dists(bias, gains, sampler, mask_files=mask_files)
+    Nsys = sensorTest.noise_dists(sysnoise, gains, sampler,
+                                  mask_files=mask_files)
 
     _write_read_noise_dists(outfile, Ntot, Nsys, gains, bias, sysnoise)
 

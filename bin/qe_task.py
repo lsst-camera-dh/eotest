@@ -1,14 +1,17 @@
+#!/usr/bin/env python
+
 """
 @brief Compute QE curves from the wavelength scan dataset.
 
 @author J. Chiang <jchiang@slac.stanford.edu>
 """
 import os
-from qe.QE import QE_Data
-from pipeline.TaskParser import TaskParser
+import lsst.test_scripts.sensor as sensorTest
+import lsst.test_scripts.sensor.qe as qe
+#from pipeline.TaskParser import TaskParser
 
 if __name__ == '__main__':
-    parser = TaskParser('Compute QE curves')
+    parser = sensorTest.TaskParser('Compute QE curves')
     parser.add_argument('-f', '--qe_files', type=str,
                         help='wavelength scan file pattern')
     parser.add_argument('-F', '--qe_file_list', type=str,
@@ -40,7 +43,7 @@ if __name__ == '__main__':
 
     infiles = args.files(args.qe_files, args.qe_file_list)
 
-    qe_data = QE_Data()
+    qe_data = qe.QE_Data()
     if args.qe_medians_file is None:
         qe_data.calculate_medians(infiles, medians_file,
                                   mask_files=args.mask_files())

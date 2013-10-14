@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 """
 @brief Bright pixels task: Find pixels and columns in a median image
 constructed from an ensemble of darks.  The bright pixel threshold is
@@ -11,12 +13,10 @@ import os
 import numpy as np
 import pyfits
 import lsst.afw.image as afwImage
-import image_utils as imutils
-from TaskParser import TaskParser
-from MaskedCCD import MaskedCCD
-from BrightPixels import BrightPixels
+import lsst.test_scripts.image_utils as imutils
+import lsst.test_scripts.sensor as sensorTest
 
-parser = TaskParser('Find bright pixels and columns')
+parser = sensorTest.TaskParser('Find bright pixels and columns')
 parser.add_argument('-f', '--dark_files', type=str,
                     help='file pattern for darks')
 parser.add_argument('-F', '--dark_file_list', type=str,
@@ -51,7 +51,7 @@ medfile = os.path.join(args.output_dir,
                        '%s_median_dark_bp.fits' % sensor_id)
 imutils.writeFits(median_images, medfile, dark_files[0])
 
-ccd = MaskedCCD(medfile, mask_files=mask_files)
+ccd = sensorTest.MaskedCCD(medfile, mask_files=mask_files)
 md = afwImage.readMetadata(dark_files[0], 1)
 exptime = ccd.md.get('EXPTIME')
 outfile = os.path.join(args.output_dir,
@@ -59,7 +59,7 @@ outfile = os.path.join(args.output_dir,
 total_bright_pixels = 0
 print "Segment     # bright pixels"
 for amp in imutils.allAmps:
-    bright_pixels = BrightPixels(ccd, amp, exptime, gains[amp])
+    bright_pixels = sensorTest.BrightPixels(ccd, amp, exptime, gains[amp])
     pixels, columns = bright_pixels.find()
     bright_pixels.generate_mask(outfile)
     count = len(pixels)

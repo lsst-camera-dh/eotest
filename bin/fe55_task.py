@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 """
 @brief PSF characterization and system gain from distribution of
 Gaussian fit parameters to Fe55 data.
@@ -7,15 +9,13 @@ Gaussian fit parameters to Fe55 data.
 import os
 import numpy as np
 import pyfits
-import pylab_plotter as plot
-import image_utils as imutils
-from MaskedCCD import MaskedCCD
-from pipeline.TaskParser import TaskParser
-from fe55_psf import PsfGaussFit, afwMath
-from fe55_gain_fitter import fe55_gain_fitter
+import lsst.afw.math as afwMath
+import lsst.test_scripts.image_utils as imutils
+import lsst.test_scripts.sensor as sensorTest
+import lsst.test_scripts.sensor.pylab_plotter as plot
 
 if __name__ == '__main__':
-    parser = TaskParser('PSF and system gain characterization from Fe55 data')
+    parser = sensorTest.TaskParser('PSF and system gain characterization from Fe55 data')
     parser.add_argument('-f', '--file_pattern', type=str,
                         help='file pattern for Fe55 input files')
     parser.add_argument('-F', '--Fe55_file_list', type=str,
@@ -31,10 +31,10 @@ if __name__ == '__main__':
     
     files = args.files(args.file_pattern, args.Fe55_file_list)
     
-    fitter = PsfGaussFit()
+    fitter = sensorTest.PsfGaussFit()
     for infile in files:
         print os.path.basename(infile)
-        ccd = MaskedCCD(infile, mask_files=args.mask_files())
+        ccd = sensorTest.MaskedCCD(infile, mask_files=args.mask_files())
         for amp in ccd:
             print "   amp", amp
             fitter.process_image(ccd, amp)
@@ -63,7 +63,7 @@ if __name__ == '__main__':
         dn = np.array(results[amp].data.field('DN'), dtype=np.float)
         chiprob = results[amp].data.field('CHIPROB')
         indx = np.where(chiprob > args.chiprob_min)
-        gains[amp] = fe55_gain_fitter(dn[indx], make_plot=False)
+        gains[amp] = sensorTest.fe55_gain_fitter(dn[indx], make_plot=False)
 
     #
     # Write gain results to db table and output file.

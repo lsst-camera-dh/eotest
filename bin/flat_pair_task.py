@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 """
 @brief Compute detector response vs incident flux for pairs of flats.
 These data are to be used for linearity and full-well measurments.
@@ -6,11 +8,9 @@ These data are to be used for linearity and full-well measurments.
 """
 import os
 import glob
-from DetectorResponse import DetectorResponse
+import lsst.test_scripts.image_utils as imutils
+import lsst.test_scripts.sensor as sensorTest
 import lsst.afw.math as afwMath
-import image_utils as imutils
-from MaskedCCD import MaskedCCD
-from pipeline.TaskParser import TaskParser
 
 def pair_mean(flat1, flat2, amp):
     """
@@ -52,8 +52,8 @@ def extract_det_response(args, outfile):
         print "processing", file1
         file2 = find_flat2(file1)
     
-        flat1 = MaskedCCD(file1, mask_files=mask_files)
-        flat2 = MaskedCCD(file2, mask_files=mask_files)
+        flat1 = sensorTest.MaskedCCD(file1, mask_files=mask_files)
+        flat2 = sensorTest.MaskedCCD(file2, mask_files=mask_files)
 
         if flat1.md.get('EXPTIME') != flat2.md.get('EXPTIME'):
             raise RuntimeError("Exposure times do not match for:\n%s\n%s\n"
@@ -74,7 +74,7 @@ def extract_det_response(args, outfile):
     return outfile
 
 if __name__ == '__main__':
-    parser = TaskParser('Compute detector response vs incident flux')
+    parser = sensorTest.TaskParser('Compute detector response vs incident flux')
     parser.add_argument('-f', '--flats', type=str,
                         help='flat pairs file pattern')
     parser.add_argument('-F', '--flats_file_list', type=str,
@@ -90,7 +90,7 @@ if __name__ == '__main__':
     #
     # Perform full well and linearity analyses.
     #
-    detresp = DetectorResponse(outfile)
+    detresp = sensorTest.DetectorResponse(outfile)
 
     print "Segment    full well (e-/pixel)"
     full_well_values = []

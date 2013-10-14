@@ -1,15 +1,18 @@
+#!/usr/bin/env python
+
 """
 @brief Pixel response non-uniformity.
 
 @author J. Chiang <jchiang@slac.stanford.edu>
 """
 import os
-from MaskedCCD import MaskedCCD, Metadata
-from pipeline.TaskParser import TaskParser
-from prnu import prnu
+import lsst.test_scripts.sensor as sensorTest
+#from MaskedCCD import MaskedCCD, Metadata
+#from pipeline.TaskParser import TaskParser
+#from prnu import prnu
 
 if __name__ == '__main__':
-    parser = TaskParser('Compute pixel response non-uniformity')
+    parser = sensorTest.TaskParser('Compute pixel response non-uniformity')
     parser.add_argument('-f', '--file_pattern', type=str,
                         help='file pattern for PRNU input files')
     parser.add_argument('-F', '--prnu_file_list', type=str,
@@ -30,12 +33,12 @@ if __name__ == '__main__':
     output = open(outfile, 'w')
     output.write("wavelength (nm)   pixel_stdev   pixel_median\n")
     for infile in infiles:
-        md = Metadata(infile, 1)
+        md = sensorTest.Metadata(infile, 1)
         wl = md.get('MONOWL')
         if int(wl) in (350, 450, 500, 620, 750, 870, 1000):
             print "  working on", wl
-            pix_stdev, pix_median = prnu(infile, mask_files, gains,
-                                         correction_image=correction_image)
+            pix_stdev, pix_median = sensorTest.prnu(infile, mask_files, gains,
+                                                    correction_image=correction_image)
             output.write("%6.1f  %12.4e  %12.4e\n"
                          % (wl, pix_stdev, pix_median))
             output.flush()

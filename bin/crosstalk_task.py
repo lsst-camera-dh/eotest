@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 """
 @brief Task to produce crosstalk matrix from a set of spot image files.
 
@@ -5,10 +7,10 @@
 """
 import os
 import pylab
-from TaskParser import TaskParser
-from crosstalk import make_crosstalk_matrix
+import lsst.test_scripts.sensor as sensorTest
+from lsst.test_scripts.sensor.crosstalk import make_crosstalk_matrix
 
-parser = TaskParser('Compute crosstalk from a set of spot images')
+parser = sensorTest.TaskParser('Compute crosstalk from a set of spot images')
 parser.add_argument('-f', '--xtalk_files', type=str,
                     help='file pattern for crosstalk files')
 parser.add_argument('-F', '--xtalk_file_list', type=str,
