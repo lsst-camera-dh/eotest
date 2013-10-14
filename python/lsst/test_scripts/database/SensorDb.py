@@ -3,7 +3,7 @@
 
 @author J. Chiang <jchiang@slac.stanford.edu>
 """
-from image_utils import channelIds, allAmps
+import lsst.test_scripts.image_utils as imutils
 from MySQL_Database import Database
 
 _default_callback = lambda curs : [x[0] for x in curs][0]
@@ -27,7 +27,7 @@ class Sensor(object):
         self.db.apply(sql)
     def add_seg_result(self, amp, column, value):
         ccdId = self.ccdId
-        channelId = channelIds[amp]
+        channelId = imutils.channelIds[amp]
         sql = """update Segment set %(column)s=%(value)s where
                  ccdId=%(ccdId)i and channelId='%(channelId)s'""" % locals()
         self.db.apply(sql)
@@ -37,7 +37,7 @@ class Sensor(object):
         return self.db.apply(sql, cursorFunc=_default_callback)
     def get_seg_result(self, amp, column):
         ccdId = self.ccdId
-        channelId = channelIds[amp]
+        channelId = imutils.channelIds[amp]
         sql = """select %(column)s from Segment where ccdId=%(ccdId)i 
                  and channelId='%(channelId)s'""" % locals()
         return self.db.apply(sql, cursorFunc=_default_callback)
@@ -73,8 +73,8 @@ class SensorDb(Database):
         sql = """insert into CCD_VendorIds (ccdId, vendor, vendorId) values
                  (%(ccdId)i, '%(vendor)s', '%(vendorId)s')""" % locals()
         self.apply(sql)
-        for amp in allAmps:
-            channelId = channelIds[amp]
+        for amp in imutils.allAmps:
+            channelId = imutils.channelIds[amp]
             sql = """insert into Segment (channelId, ccdId) values
                      ('%(channelId)s', %(ccdId)i)""" % locals()
             self.apply(sql)

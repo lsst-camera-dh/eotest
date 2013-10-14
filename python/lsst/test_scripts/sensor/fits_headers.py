@@ -8,11 +8,12 @@ import sys
 import numpy as np
 import pyfits
 
-import simulation
-
-_module_path = os.path.dirname(simulation.__file__)
-template_file = os.path.join(_module_path, 'fits_header_template.txt')
-template_used_file = os.path.join(_module_path,
+#import simulation
+#
+#_module_path = os.path.dirname(simulation.__file__)
+_module_path = os.environ['TEST_SCRIPTS_DIR']
+template_file = os.path.join(_module_path, 'policy', 'fits_header_template.txt')
+template_used_file = os.path.join(_module_path, 'policy',
                                   'fits_header_template_used.txt')
 
 def _cast(value):
@@ -87,7 +88,7 @@ def check_keywords(infile, template=template_file, verbose=True):
     return missing_keys
 
 if __name__ == '__main__':
-    import image_utils as imutils
+    import lsst.test_scripts.image_utils as imutils
     
     infile = 'fits_header_template.txt'
     phdr, ihdr = fits_headers(infile)

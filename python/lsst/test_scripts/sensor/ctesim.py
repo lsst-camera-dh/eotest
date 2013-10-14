@@ -8,9 +8,9 @@ import numpy as np
 import numpy.random as random
 import pyfits
 import lsst.afw.image as afwImage
-import image_utils as imutils
+import lsst.test_scripts.image_utils as imutils
 from MaskedCCD import SegmentRegions
-import simulation.sim_tools as sim_tools
+import sim_tools
 
 _dtypes = dict([(-32, np.float32), (16, np.int16)])
 

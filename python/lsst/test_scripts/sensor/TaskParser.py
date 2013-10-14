@@ -7,10 +7,10 @@ import os
 import glob
 import argparse
 import lsst.afw.image as afwImage
-import image_utils as imutils
+import lsst.test_scripts.image_utils as imutils
 from ccd250_mask import ccd250_mask
-from database.SensorDb import SensorDb, NullDbObject
-from database.SensorGains import SensorGains
+from lsst.test_scripts.database.SensorDb import SensorDb, NullDbObject
+from lsst.test_scripts.database.SensorGains import SensorGains
 
 class TaskNamespace(object):
     """

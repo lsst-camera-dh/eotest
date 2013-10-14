@@ -8,7 +8,7 @@ the pixel mean, pixel median, and pixel standard deviation.
 import numpy as np
 import lsst.afw.image as afwImage
 import lsst.afw.math as afwMath
-import image_utils as imutils
+import lsst.test_scripts.image_utils as imutils
 from MaskedCCD import MaskedCCD
 
 def extract_unmasked_pixels(ccd, amp, gain):

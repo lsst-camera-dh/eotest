@@ -84,7 +84,7 @@ def pair_stats(file1, file2, amp, mask_files=()):
     return PairStats(bmean, bias_rms, fmean, fvar, gain, noise)
 
 if __name__ == '__main__':
-    import image_utils as imutils
+    import lsst.test_scripts.image_utils as imutils
     from simulation.sim_tools import simulateFlat
 
     #file1 = 'test_flat1.fits'

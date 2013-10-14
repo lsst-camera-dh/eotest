@@ -13,10 +13,10 @@ import pyfits
 import lsst.afw.detection as afwDetect
 import lsst.afw.image as afwImage
 import lsst.daf.base as dafBase
-import image_utils as imutils
+import lsst.test_scripts.image_utils as imutils
 from MaskedCCD import MaskedCCD
 from BrightPixels import BrightPixels
-from simulation.sim_tools import CCD
+from sim_tools import CCD
 
 def ccd250_mask(outfile, mask_plane='CCD250_DEFECTS',
                 imaging_region=imutils.imaging,

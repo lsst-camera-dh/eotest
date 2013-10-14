@@ -8,7 +8,7 @@ import lsst.afw.image as afwImage
 import lsst.afw.math as afwMath
 #import lsst.afw.detection as afwDetect
 #import lsst.afw.display.ds9 as ds9
-import image_utils
+import lsst.test_scripts.image_utils
 
 class DarkPix(object):
     def __init__(self, percent):

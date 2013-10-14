@@ -13,10 +13,10 @@ import pyfits
 import lsst.afw.geom as afwGeom
 import lsst.afw.image as afwImage
 import lsst.afw.display.ds9 as ds9
-from fe55_yield import Fe55Yield
 
-import image_utils as imutils
-from simulation.fits_headers import fits_headers
+import lsst.test_scripts.image_utils as imutils
+from fe55_yield import Fe55Yield
+from fits_headers import fits_headers
 
 _sqrt2 = np.sqrt(2.)
 

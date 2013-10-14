@@ -11,7 +11,7 @@ import lsst.afw.geom as afwGeom
 import lsst.afw.image as afwImage
 import lsst.afw.math as afwMath
 
-import image_utils as imutils
+import lsst.test_scripts.image_utils as imutils
 
 class Metadata(object):
     """

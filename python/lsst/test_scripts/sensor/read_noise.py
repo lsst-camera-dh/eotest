@@ -9,7 +9,7 @@ import numpy as np
 import lsst.afw.image as afwImage
 import lsst.afw.math as afwMath
 from MaskedCCD import MaskedCCD
-import image_utils as imutils
+import lsst.test_scripts.image_utils as imutils
 
 def noise_samples(raw_image, gain, region_sampler,
                   stat_ctrl=afwMath.StatisticsControl()):

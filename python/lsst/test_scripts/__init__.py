@@ -1,2 +1,2 @@
-import lsst.utils
-from .version import *
+#import lsst.utils
+#from .version import *

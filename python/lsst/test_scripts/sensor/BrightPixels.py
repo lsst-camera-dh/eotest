@@ -5,12 +5,15 @@ in units of e- per second per pixel.
 import os
 import numpy as np
 import pyfits
+
 import lsst.afw.detection as afwDetect
 import lsst.afw.image as afwImage
 import lsst.daf.base as dafBase
-import image_utils as imutils
+
+import lsst.test_scripts.image_utils as imutils
 from MaskedCCD import MaskedCCD
-from simulation.sim_tools import CCD, fits_headers
+from fits_headers import fits_headers
+import sim_tools
 
 class BrightPixels(object):
     """
@@ -109,7 +112,7 @@ class BrightPixels(object):
 def write_test_image(outfile, emin=10, dark_curr=2e-3, exptime=10,
                      gain=5, ccdtemp=-100, bias_level=1e2,
                      bias_sigma=4, ncols=2, npix=100):
-    ccd = CCD(exptime=exptime, gain=gain, ccdtemp=ccdtemp)
+    ccd = sim_tools.CCD(exptime=exptime, gain=gain, ccdtemp=ccdtemp)
     ccd.add_bias(bias_level, bias_sigma)
     ccd.add_dark_current(level=dark_curr)
     #
@@ -132,6 +135,7 @@ def remove_file(filename):
         pass
 
 if __name__ == '__main__':
+
     dark_file = 'bright_pix_test.fits'
     mask_file = 'bright_pix_mask.fits'
     remove_file(mask_file)
