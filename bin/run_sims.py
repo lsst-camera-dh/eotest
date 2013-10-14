@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 """
 @brief Generate a standard set of simulated data for a subset of
 sensors using a specified directory structure.
@@ -7,11 +9,11 @@ sensors using a specified directory structure.
 import os
 import time
 import numpy as np
-import image_utils as imutils
-from qe.PhotodiodeResponse import PhotodiodeResponse, CcdIllumination
-from qe.QE import planck, clight
-from simulation.sim_tools import *
-from simulation.ctesim import ctesim
+import lsst.test_scripts.image_utils as imutils
+from lsst.test_scripts.sensor.qe import PhotodiodeResponse, CcdIllumination, \
+     planck, clight
+from lsst.test_scripts.sensor.sim_tools import *
+from lsst.test_scripts.sensor.ctesim import ctesim
 
 class AmpIndexDecorator(object):
     def __init__(self, var):
@@ -406,7 +408,7 @@ if __name__ == '__main__':
         sys.path.insert(0, tmp_path)
         exec('import %s as pars' % os.path.basename(parfile).strip('.py'))
     else:
-        import simulation.sim_params as pars
+        import lsst.test_scripts.sensor.sim_params as pars
     #
     # Generate the desired datasets
     #
