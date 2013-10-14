@@ -9,11 +9,12 @@ import glob
 from collections import OrderedDict
 import numpy as np
 import pyfits
-import lsst.afw.math as afwMath
-import image_utils as imutils
-import pylab_plotter as plot
-from MaskedCCD import MaskedCCD, Metadata
+import lsst.test_scripts.image_utils as imutils
+import lsst.test_scripts.sensor.pylab_plotter as plot
+import lsst.test_scripts.sensor as sensorTest
 from PhotodiodeResponse import PhotodiodeResponse, CcdIllumination
+
+import lsst.afw.math as afwMath
 
 planck = 6.626e-34      # Planck constant in SI
 clight = 2.99792458e8   # speed of light in m/s
@@ -56,8 +57,8 @@ class QE_Data(object):
         for item in files:
             if self.verbose:
                 print 'processing', item
-            ccd = MaskedCCD(item, mask_files=mask_files)
-            md = Metadata(item, 1)
+            ccd = sensorTest.MaskedCCD(item, mask_files=mask_files)
+            md = sensorTest.Metadata(item, 1)
             exptime = md.get('EXPTIME')
             if exptime == 0:
                 print "Zero exposure time in %s. Skipping." % item

@@ -8,10 +8,10 @@
 import os
 import glob
 import pyfits
-import lsst.afw.image as afwImage
-import lsst.afw.math as afwMath
 import lsst.test_scripts.image_utils as imutils
 import lsst.test_scripts.sensor as sensorTest
+import lsst.afw.image as afwImage
+import lsst.afw.math as afwMath
 
 def superflat(files, outfile='superflat.fits'):
     """
@@ -60,7 +60,7 @@ if __name__ == '__main__':
     #
     # Compute parallel CTE
     #
-    p_task = EPERTask()
+    p_task = sensorTest.EPERTask()
     p_task.config.direction = 'p'
     p_task.config.verbose = False
     p_task.config.cti = True

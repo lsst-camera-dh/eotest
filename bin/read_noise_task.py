@@ -50,8 +50,14 @@ parser.add_argument('-S', '--nsamp', default=1000, type=int,
                     help='number of subregions to sample')
 args = parser.parse_args()
 
+print args.bias
+print args.noise
+
 bias_files = args.files(args.bias, args.bias_file_list)
+print bias_files
 system_noise_files = args.files(args.noise, args.noise_file_list)
+print system_noise_files
+
 sensor_id = args.sensor_id
 sensor = args.sensor()
 gains = args.system_gains()

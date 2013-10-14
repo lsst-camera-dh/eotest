@@ -7,9 +7,6 @@
 """
 import os
 import lsst.test_scripts.sensor as sensorTest
-#from MaskedCCD import MaskedCCD, Metadata
-#from pipeline.TaskParser import TaskParser
-#from prnu import prnu
 
 if __name__ == '__main__':
     parser = sensorTest.TaskParser('Compute pixel response non-uniformity')

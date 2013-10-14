@@ -12,9 +12,9 @@ bright column is specified via the --colthresh option.
 import os
 import numpy as np
 import pyfits
-import lsst.afw.image as afwImage
 import lsst.test_scripts.image_utils as imutils
 import lsst.test_scripts.sensor as sensorTest
+import lsst.afw.image as afwImage
 
 parser = sensorTest.TaskParser('Find bright pixels and columns')
 parser.add_argument('-f', '--dark_files', type=str,

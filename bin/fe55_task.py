@@ -30,6 +30,8 @@ if __name__ == '__main__':
     sensor_id = args.sensor_id
     
     files = args.files(args.file_pattern, args.Fe55_file_list)
+    print args.file_pattern
+    print files
     
     fitter = sensorTest.PsfGaussFit()
     for infile in files:

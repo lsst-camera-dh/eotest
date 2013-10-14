@@ -8,7 +8,6 @@
 import os
 import lsst.test_scripts.sensor as sensorTest
 import lsst.test_scripts.sensor.qe as qe
-#from pipeline.TaskParser import TaskParser
 
 if __name__ == '__main__':
     parser = sensorTest.TaskParser('Compute QE curves')
@@ -46,7 +45,8 @@ if __name__ == '__main__':
     qe_data = qe.QE_Data()
     if args.qe_medians_file is None:
         qe_data.calculate_medians(infiles, medians_file,
-                                  mask_files=args.mask_files())
+                                  mask_files=args.mask_files(),
+                                  clobber=True)
     qe_data.read_medians(medians_file)
     qe_data.calculate_QE(ccd_cal_file, sph_cal_file, wlscan_file, gains)
     qe_data.write_fits_tables(fits_outfile)
