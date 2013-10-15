@@ -9,8 +9,8 @@ units of e-/sec/pixel.
 import os
 import numpy as np
 import pyfits
-import lsst.test_scripts.image_utils as imutils
-import lsst.test_scripts.sensor as sensorTest
+import lsst.eotest.image_utils as imutils
+import lsst.eotest.sensor as sensorTest
 import lsst.afw.image as afwImage
 
 parser = sensorTest.TaskParser('Compute 95th percentile dark current.')

@@ -5,7 +5,7 @@ from user input or by querying the Sensor Test database.
 @author J. Chiang <jchiang@.slac.stanford.edu>
 """
 import os
-import lsst.test_scripts.image_utils as imutils
+import lsst.eotest.image_utils as imutils
 from SensorDb import SensorDb
 
 class SensorGains(dict):

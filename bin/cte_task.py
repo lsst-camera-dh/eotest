@@ -8,8 +8,8 @@
 import os
 import glob
 import pyfits
-import lsst.test_scripts.image_utils as imutils
-import lsst.test_scripts.sensor as sensorTest
+import lsst.eotest.image_utils as imutils
+import lsst.eotest.sensor as sensorTest
 import lsst.afw.image as afwImage
 import lsst.afw.math as afwMath
 

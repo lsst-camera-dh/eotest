@@ -6,7 +6,7 @@
 @author J. Chiang <jchiang@slac.stanford.edu>
 """
 import os
-import lsst.test_scripts.sensor as sensorTest
+import lsst.eotest.sensor as sensorTest
 
 if __name__ == '__main__':
     parser = sensorTest.TaskParser('Find Charge Traps')

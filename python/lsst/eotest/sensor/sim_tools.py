@@ -14,7 +14,7 @@ import lsst.afw.geom as afwGeom
 import lsst.afw.image as afwImage
 import lsst.afw.display.ds9 as ds9
 
-import lsst.test_scripts.image_utils as imutils
+import lsst.eotest.image_utils as imutils
 from fe55_yield import Fe55Yield
 from fits_headers import fits_headers
 

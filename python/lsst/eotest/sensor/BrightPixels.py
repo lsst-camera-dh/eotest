@@ -10,7 +10,7 @@ import lsst.afw.detection as afwDetect
 import lsst.afw.image as afwImage
 import lsst.daf.base as dafBase
 
-import lsst.test_scripts.image_utils as imutils
+import lsst.eotest.image_utils as imutils
 from MaskedCCD import MaskedCCD
 from fits_headers import fits_headers
 import sim_tools

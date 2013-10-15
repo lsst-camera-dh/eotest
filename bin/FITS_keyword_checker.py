@@ -6,7 +6,7 @@ LCA-10140.
 
 import sys
 import argparse
-import lsst.test_scripts.sensor as sensorTest
+import lsst.eotest.sensor as sensorTest
 
 parser = argparse.ArgumentParser(description='Check FITS header keywords for sensor data files.')
 

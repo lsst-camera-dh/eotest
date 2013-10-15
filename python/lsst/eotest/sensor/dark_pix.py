@@ -1,14 +1,9 @@
-#import lsst.pipe.base as pipeBase
-
 import sys, traceback
 import numpy as np
 import argparse
 import lsst.afw.image as afwImage
-#import lsst.afw.geom as afwGeom
 import lsst.afw.math as afwMath
-#import lsst.afw.detection as afwDetect
-#import lsst.afw.display.ds9 as ds9
-import lsst.test_scripts.image_utils
+import lsst.eotest.image_utils as imutils
 
 class DarkPix(object):
     def __init__(self, percent):
@@ -23,13 +18,13 @@ class DarkPix(object):
 
         for amp in amps:
             try:
-                tot, pixels = self.dark_pix(fitsfile, image_utils.dm_hdu(amp))
+                tot, pixels = self.dark_pix(fitsfile, imutils.dm_hdu(amp))
                 tot_dark_ccd += tot
                 tot_dark_per_amp.append(tot)
                 pix_per_amp.append(pixels)
             except:
                 print "Failed dark pixels for hdu ", amp, " ", \
-                    image_utils.dm_hdu(amp)
+                    imutils.dm_hdu(amp)
                 traceback.print_exc(file=sys.stdout)
                 continue
 
@@ -40,7 +35,7 @@ class DarkPix(object):
             median flux, for the specified amps. """
 
         #read in and trim image area
-        im = image_utils.unbias_and_trim(afwImage.ImageF(infile, hdu))
+        im = imutils.unbias_and_trim(afwImage.ImageF(infile, hdu))
 
         #find median of image
         median = afwMath.makeStatistics(im, afwMath.MEDIAN).getValue()
@@ -55,7 +50,7 @@ class DarkPix(object):
 
         return len(pixlist), pixlist
 
-def run_dark_pix(fitsfile, percent=80, amps=image_utils.allAmps, verbose=False):
+def run_dark_pix(fitsfile, percent=80, amps=imutils.allAmps, verbose=False):
     """ Given an input FITS file, find bright pixels."""
 
     try:

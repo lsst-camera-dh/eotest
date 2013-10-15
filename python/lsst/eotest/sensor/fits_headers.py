@@ -88,7 +88,7 @@ def check_keywords(infile, template=template_file, verbose=True):
     return missing_keys
 
 if __name__ == '__main__':
-    import lsst.test_scripts.image_utils as imutils
+    import lsst.eotest.image_utils as imutils
     
     infile = 'fits_header_template.txt'
     phdr, ihdr = fits_headers(infile)

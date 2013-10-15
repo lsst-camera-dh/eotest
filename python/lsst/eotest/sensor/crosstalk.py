@@ -10,7 +10,7 @@ import pylab
 import lsst.afw.detection as afwDetect
 import lsst.afw.geom as afwGeom
 import lsst.afw.math as afwMath
-import lsst.test_scripts.image_utils as imutils
+import lsst.eotest.image_utils as imutils
 from MaskedCCD import MaskedCCD
 from BrightPixels import BrightPixels
 

@@ -8,8 +8,8 @@ These data are to be used for linearity and full-well measurments.
 """
 import os
 import glob
-import lsst.test_scripts.image_utils as imutils
-import lsst.test_scripts.sensor as sensorTest
+import lsst.eotest.image_utils as imutils
+import lsst.eotest.sensor as sensorTest
 import lsst.afw.math as afwMath
 
 def pair_mean(flat1, flat2, amp):

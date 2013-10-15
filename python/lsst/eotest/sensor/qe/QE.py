@@ -9,9 +9,9 @@ import glob
 from collections import OrderedDict
 import numpy as np
 import pyfits
-import lsst.test_scripts.image_utils as imutils
-import lsst.test_scripts.sensor.pylab_plotter as plot
-import lsst.test_scripts.sensor as sensorTest
+import lsst.eotest.image_utils as imutils
+import lsst.eotest.sensor.pylab_plotter as plot
+import lsst.eotest.sensor as sensorTest
 from PhotodiodeResponse import PhotodiodeResponse, CcdIllumination
 
 import lsst.afw.math as afwMath

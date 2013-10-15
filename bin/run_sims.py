@@ -9,11 +9,11 @@ sensors using a specified directory structure.
 import os
 import time
 import numpy as np
-import lsst.test_scripts.image_utils as imutils
-from lsst.test_scripts.sensor.qe import PhotodiodeResponse, CcdIllumination, \
+import lsst.eotest.image_utils as imutils
+from lsst.eotest.sensor.qe import PhotodiodeResponse, CcdIllumination, \
      planck, clight
-from lsst.test_scripts.sensor.sim_tools import *
-from lsst.test_scripts.sensor.ctesim import ctesim
+from lsst.eotest.sensor.sim_tools import *
+from lsst.eotest.sensor.ctesim import ctesim
 
 class AmpIndexDecorator(object):
     def __init__(self, var):
@@ -408,7 +408,7 @@ if __name__ == '__main__':
         sys.path.insert(0, tmp_path)
         exec('import %s as pars' % os.path.basename(parfile).strip('.py'))
     else:
-        import lsst.test_scripts.sensor.sim_params as pars
+        import lsst.eotest.sensor.sim_params as pars
     #
     # Generate the desired datasets
     #

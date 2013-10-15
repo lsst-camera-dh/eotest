@@ -3,7 +3,7 @@
 
 @author J. Chiang <jchiang@slac.stanford.edu>
 """
-import lsst.test_scripts.image_utils as imutils
+import lsst.eotest.image_utils as imutils
 from MySQL_Database import Database
 
 _default_callback = lambda curs : [x[0] for x in curs][0]

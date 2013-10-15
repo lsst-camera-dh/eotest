@@ -10,9 +10,9 @@ import os
 import numpy as np
 import pyfits
 import lsst.afw.math as afwMath
-import lsst.test_scripts.image_utils as imutils
-import lsst.test_scripts.sensor as sensorTest
-import lsst.test_scripts.sensor.pylab_plotter as plot
+import lsst.eotest.image_utils as imutils
+import lsst.eotest.sensor as sensorTest
+import lsst.eotest.sensor.pylab_plotter as plot
 
 if __name__ == '__main__':
     parser = sensorTest.TaskParser('PSF and system gain characterization from Fe55 data')

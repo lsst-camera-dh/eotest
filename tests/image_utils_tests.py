@@ -7,9 +7,9 @@ import os
 import unittest
 import numpy as np
 import lsst.afw.image as afwImage
-import lsst.test_scripts.image_utils as imutils
-import lsst.test_scripts.sensor as sensorTest
-import lsst.test_scripts.sensor.sim_tools as sim_tools
+import lsst.eotest.image_utils as imutils
+import lsst.eotest.sensor as sensorTest
+import lsst.eotest.sensor.sim_tools as sim_tools
 
 class BiasFunc(object):
     def __init__(self, slope, intercept):

@@ -8,7 +8,7 @@ import numpy as np
 import numpy.random as random
 import pyfits
 import lsst.afw.image as afwImage
-import lsst.test_scripts.image_utils as imutils
+import lsst.eotest.image_utils as imutils
 from MaskedCCD import SegmentRegions
 import sim_tools
 

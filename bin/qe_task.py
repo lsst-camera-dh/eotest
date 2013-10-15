@@ -6,8 +6,8 @@
 @author J. Chiang <jchiang@slac.stanford.edu>
 """
 import os
-import lsst.test_scripts.sensor as sensorTest
-import lsst.test_scripts.sensor.qe as qe
+import lsst.eotest.sensor as sensorTest
+import lsst.eotest.sensor.qe as qe
 
 if __name__ == '__main__':
     parser = sensorTest.TaskParser('Compute QE curves')

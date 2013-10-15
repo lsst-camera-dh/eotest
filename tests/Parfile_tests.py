@@ -5,7 +5,7 @@
 """
 import os
 import unittest
-from lsst.test_scripts.database.Parfile import Parfile
+from lsst.eotest.database.Parfile import Parfile
 
 class ParfileTestCase(unittest.TestCase):
     def setUp(self):

@@ -7,7 +7,7 @@ the pixel mean, pixel median, and pixel standard deviation.
 """
 import os
 import numpy as np
-import lsst.test_scripts.image_utils as imutils
+import lsst.eotest.image_utils as imutils
 from MaskedCCD import MaskedCCD
 import lsst.afw.image as afwImage
 import lsst.afw.math as afwMath

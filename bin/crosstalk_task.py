@@ -7,8 +7,8 @@
 """
 import os
 import pylab
-import lsst.test_scripts.sensor as sensorTest
-from lsst.test_scripts.sensor.crosstalk import make_crosstalk_matrix
+import lsst.eotest.sensor as sensorTest
+from lsst.eotest.sensor.crosstalk import make_crosstalk_matrix
 
 parser = sensorTest.TaskParser('Compute crosstalk from a set of spot images')
 parser.add_argument('-f', '--xtalk_files', type=str,

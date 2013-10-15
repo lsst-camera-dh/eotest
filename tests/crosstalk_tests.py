@@ -5,10 +5,10 @@
 """
 import os
 import unittest
-import lsst.test_scripts.image_utils as imutils
-import lsst.test_scripts.sensor as sensorTest
-import lsst.test_scripts.sensor.sim_tools as sim_tools
-import lsst.test_scripts.sensor.crosstalk as crosstalk
+import lsst.eotest.image_utils as imutils
+import lsst.eotest.sensor as sensorTest
+import lsst.eotest.sensor.sim_tools as sim_tools
+import lsst.eotest.sensor.crosstalk as crosstalk
 
 class CrosstalkTestCase(unittest.TestCase):
     """Test case for crosstalk code."""

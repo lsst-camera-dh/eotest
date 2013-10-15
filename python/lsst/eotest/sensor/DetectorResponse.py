@@ -7,7 +7,7 @@ linearity) from flat pairs data.
 import sys
 import numpy as np
 import scipy.optimize
-import lsst.test_scripts.image_utils as imutils
+import lsst.eotest.image_utils as imutils
 import pylab_plotter as plot
 
 class DetectorResponse(object):

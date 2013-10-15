@@ -10,8 +10,8 @@ noise contribution from the electronics, must be provided.
 import os
 import numpy as np
 import pyfits
-import lsst.test_scripts.image_utils as imutils
-import lsst.test_scripts.sensor as sensorTest
+import lsst.eotest.image_utils as imutils
+import lsst.eotest.sensor as sensorTest
 
 def _write_read_noise_dists(outfile, Ntot, Nsys, gains, bias, sysnoise):
     output = pyfits.HDUList()
