@@ -10,8 +10,9 @@ import os
 import time
 import numpy as np
 import lsst.eotest.image_utils as imutils
-from lsst.eotest.sensor.qe import PhotodiodeResponse, CcdIllumination, \
-     planck, clight
+from lsst.eotest.sensor.PhotodiodeResponse \
+     import PhotodiodeResponse, CcdIllumination
+from lsst.eotest.sensor.QE import planck, clight
 from lsst.eotest.sensor.sim_tools import *
 from lsst.eotest.sensor.ctesim import ctesim
 

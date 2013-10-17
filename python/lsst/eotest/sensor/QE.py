@@ -5,13 +5,14 @@ taken as a function of wavelength.
 @author J. Chiang <jchiang@slac.stanford.edu>
 """
 import os
+import sys
 import glob
 from collections import OrderedDict
 import numpy as np
 import pyfits
 import lsst.eotest.image_utils as imutils
-import lsst.eotest.sensor.pylab_plotter as plot
-import lsst.eotest.sensor as sensorTest
+import pylab_plotter as plot
+from MaskedCCD import MaskedCCD, Metadata
 from PhotodiodeResponse import PhotodiodeResponse, CcdIllumination
 
 import lsst.afw.math as afwMath
@@ -32,9 +33,10 @@ class QE_Data(object):
     band_pass['z'] = (818, 922)
     band_pass['y'] = (930, 1070)
     band_wls = np.array([sum(band_pass[b])/2. for b in band_pass.keys()])
-    def __init__(self, verbose=True, pd_scaling=1e-9):
+    def __init__(self, verbose=True, pd_scaling=1e-9, logger=None):
         self.verbose = verbose
         self.pd_scaling = pd_scaling
+        self.logger = logger
     def read_medians(self, medians_file):
         data = np.recfromtxt(medians_file)
         data = data.transpose()
@@ -56,12 +58,19 @@ class QE_Data(object):
         output = open(outfile, 'w')
         for item in files:
             if self.verbose:
-                print 'processing', item
-            ccd = sensorTest.MaskedCCD(item, mask_files=mask_files)
-            md = sensorTest.Metadata(item, 1)
+                if self.logger is not None:
+                    self.logger.info('processing %s' % item)
+                else:
+                    print 'processing', item
+            ccd = MaskedCCD(item, mask_files=mask_files)
+            md = Metadata(item, 1)
             exptime = md.get('EXPTIME')
             if exptime == 0:
-                print "Zero exposure time in %s. Skipping." % item
+                line = "Zero exposure time in %s. Skipping." % item
+                if self.logger is not None:
+                    self.logger.info(line + '\n')
+                else:
+                    print line 
                 continue
             self.wl.append(md.get('MONOWL'))
             self.exptime.append(exptime)

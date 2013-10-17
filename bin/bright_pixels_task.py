@@ -9,12 +9,7 @@ bright column is specified via the --colthresh option.
 
 @author J. Chiang <jchiang@slac.stanford.edu>
 """
-import os
-import numpy as np
-import pyfits
-import lsst.eotest.image_utils as imutils
 import lsst.eotest.sensor as sensorTest
-import lsst.afw.image as afwImage
 
 parser = sensorTest.TaskParser('Find bright pixels and columns')
 parser.add_argument('-f', '--dark_files', type=str,
@@ -31,41 +26,17 @@ parser.add_argument('-t', '--temp_tol', default=1.5, type=float,
                     help='temperature tolerance for CCDTEMP among dark files')
 args = parser.parse_args()
 
-dark_files = args.files(args.dark_files, args.dark_file_list)
+task = sensorTest.BrightPixelsTask()
 
+task.config.ethresh = args.ethresh
+task.config.colthresh = args.colthresh
+task.config.mask_plane = args.mask_plane
+task.config.temp_tol = args.temp_tol
+task.config.output_dir = args.output_dir
+task.config.verbose = args.verbose
+
+dark_files = args.files(args.dark_files, args.dark_file_list)
 if args.verbose:
     print "processing files: ", dark_files
 
-sensor_id = args.sensor_id
-sensor = args.sensor()
-gains = args.system_gains()
-mask_files = args.mask_files()
-
-imutils.check_temperatures(dark_files, args.temp_tol)
-
-median_images = {}
-for amp in imutils.allAmps:
-    median_images[amp] = imutils.fits_median(dark_files,
-                                             imutils.dm_hdu(amp))
-medfile = os.path.join(args.output_dir,
-                       '%s_median_dark_bp.fits' % sensor_id)
-imutils.writeFits(median_images, medfile, dark_files[0])
-
-ccd = sensorTest.MaskedCCD(medfile, mask_files=mask_files)
-md = afwImage.readMetadata(dark_files[0], 1)
-exptime = ccd.md.get('EXPTIME')
-outfile = os.path.join(args.output_dir,
-                       '%s_bright_pixel_map.fits' % sensor_id)
-total_bright_pixels = 0
-print "Segment     # bright pixels"
-for amp in imutils.allAmps:
-    bright_pixels = sensorTest.BrightPixels(ccd, amp, exptime, gains[amp])
-    pixels, columns = bright_pixels.find()
-    bright_pixels.generate_mask(outfile)
-    count = len(pixels)
-    total_bright_pixels += count
-    sensor.add_seg_result(amp, 'numBrightPixels', count)
-    print "%s          %i" % (imutils.channelIds[amp], count)
-
-print "Total bright pixels:", total_bright_pixels
-sensor.add_ccd_result('numBrightPixels', total_bright_pixels)
+task.run(args.sensor_id, dark_files, args.mask_files(), args.system_gains())

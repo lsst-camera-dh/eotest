@@ -188,17 +188,21 @@ class PsfGaussFit(object):
                                                               units,
                                                               columns))))
             self.output[-1].name = extname
-    def results(self, min_prob=0.1):
+    def results(self, min_prob=0.1, amp=None):
         """
-        Return sigma, dn, chiprob for chiprob > min_prob.
+        Return sigma, dn, chiprob for chiprob > min_prob for specified amp.
         """
         sigma = np.array(self.sigma, dtype=np.float)
         dn = np.array(self.dn, dtype=np.float)
         dn_fp = np.array(self.dn_fp, dtype=np.float)
         chiprob = np.array(self.chiprob, dtype=np.float)
-        amp = np.array(self.amp, dtype=np.int)
-        indx = np.where(chiprob > min_prob)
-        return sigma[indx], dn[indx], dn_fp[indx], chiprob[indx], amp[indx]
+        amp_array = np.array(self.amp, dtype=np.int)
+        if amp is not None:
+            indx = np.where((chiprob > min_prob) & (amp_array == amp))
+            return sigma[indx], dn[indx], dn_fp[indx], chiprob[indx]
+        else:
+            indx = np.where(chiprob > min_prob)
+            return sigma[indx], dn[indx], dn_fp[indx], chiprob[indx], amp[indx]
     def write_results(self, outfile='fe55_psf_params.fits'):
         self.output.writeto(outfile, clobber=True, checksum=True)
 

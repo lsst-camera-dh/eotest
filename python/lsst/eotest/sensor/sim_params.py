@@ -6,7 +6,7 @@ structured configuration file in the future.
 """
 import os
 import numpy as np
-from qe.PhotodiodeResponse import Interpolator
+from PhotodiodeResponse import Interpolator
 from sim_tools import xtalk_pattern
 
 class Params(object):
@@ -82,9 +82,9 @@ fe55 = Params(test_type='fe55',
 #
 # Determine the path to the qe subdirectory via import command.
 #
-import qe as _qe_module
+import QE as _qe_module
 _qe_dir = os.path.dirname(_qe_module.__file__)
-qe_path = lambda x : os.path.join(_qe_dir, x)
+qe_path = lambda x : os.path.join(_qe_dir, 'qe', x)
 
 #qe = lambda wl_nm : 1   # 100% quantum efficiency
 qe_curve = np.recfromtxt(qe_path('qe_curve.txt')).transpose()
