@@ -63,6 +63,8 @@ class BrightPixels(object):
         md.set('DETSEC', imutils.detsec(self.amp, dx=imaging.getWidth(),
                                         dy=imaging.getHeight()))
         md.set('DATASEC', ihdr['DATASEC'])
+        md.set('NBRTPIX', len(self.bright_pixels))
+        md.set('NBRTCOL', len(self.bright_columns))
         self.mask.writeFits(outfile, md, 'a')
     def find(self):
         """

@@ -25,8 +25,8 @@ class QeTask(pipeBase.Task):
         
         medians_file = os.path.join(self.config.output_dir,
                                     '%s_QE.txt' % sensor_id)
-        qe_data.calculate_medians(qe_files, medians_file, mask_files=mask_files,
-                                  clobber=True)
+        qe_data.calculate_medians(qe_files, medians_file,
+                                  mask_files=mask_files, clobber=True)
         qe_data.read_medians(medians_file)
         
         qe_data.calculate_QE(ccd_cal_file, sph_cal_file, wlscan_file, gains)

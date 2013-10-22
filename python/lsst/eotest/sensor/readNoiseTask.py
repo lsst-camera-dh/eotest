@@ -57,12 +57,14 @@ class ReadNoiseTask(pipeBase.Task):
         Nread_dists = dict([(amp, []) for amp in imutils.allAmps])
         for i, bias, sysnoise in zip(range(len(bias_files)), bias_files,
                                      system_noise_files):
-            outfile = "%s_read_noise_%03i.fits" % (sensor_id.replace('-', '_'), i)
+            outfile = "%s_read_noise_%03i.fits" \
+                      % (sensor_id.replace('-', '_'), i)
             outfile = os.path.join(self.config.output_dir, outfile)
             outfiles.append(outfile)
             
             if self.config.verbose:
-                self.log.info("Processing %s %s -> %s" % (bias, sysnoise, outfile))
+                self.log.info("Processing %s %s -> %s" % (bias, sysnoise,
+                                                          outfile))
 
             # Determine the nominal imaging region from the bias file.
             ccd = MaskedCCD(bias)
@@ -73,18 +75,26 @@ class ReadNoiseTask(pipeBase.Task):
             # noise frames.
             #
             sampler = imutils.SubRegionSampler(self.config.dx, self.config.dy,
-                                               self.config.nsamp, imaging=imaging)
+                                               self.config.nsamp,
+                                               imaging=imaging)
 
             Ntot = noise_dists(bias, gains, sampler, mask_files=mask_files)
             Nsys = noise_dists(sysnoise, gains, sampler, mask_files=mask_files)
 
             _write_read_noise_dists(outfile, Ntot, Nsys, gains, bias, sysnoise)
+            
+        outfile = '%s_read_noise_results.txt' % sensor_id
+        output = open(os.path.join(self.config.output_dir, outfile), 'w')
         if self.config.verbose:
-            self.log.info("Segment    read noise")
-            for amp in imutils.allAmps:
-                var = imutils.median(Ntot[amp])**2 - imutils.median(Nsys[amp])**2
-                if var >= 0:
-                    Nread = np.sqrt(var)
-                else:
-                    Nread = -1
-                self.log.info("%s         %.4f" % (imutils.channelIds[amp], Nread))
+            self.log.info("Amp    read noise")
+        for amp in imutils.allAmps:
+            var = imutils.median(Ntot[amp])**2 - imutils.median(Nsys[amp])**2
+            if var >= 0:
+                Nread = np.sqrt(var)
+            else:
+                Nread = -1
+            line = "%s        %.4f" % (amp, Nread)
+            output.write(line + '\n')
+            if self.config.verbose:
+                self.log.info(line)
+        output.close()

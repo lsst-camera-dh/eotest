@@ -45,6 +45,8 @@ class Fe55Task(pipeBase.Task):
                 fitter.process_image(ccd, amp)
         psf_results = os.path.join(self.config.output_dir,
                                    '%s_psf_results.fits' % sensor_id)
+        if self.config.verbose:
+            self.log.info("Writing psf results file to %s" % psf_results)
         fitter.write_results(outfile=psf_results)
         #
         # Fit the DN distributions to obtain the system gain per amp.
@@ -58,9 +60,13 @@ class Fe55Task(pipeBase.Task):
             data = fitter.results(min_prob=self.config.chiprob_min, amp=amp)
             dn = data[1]
             gains[amp] = fe55_gain_fitter(dn, make_plot=False)
-            output[0].header.update('GAIN%s' % imutils.channelIds[amp], gains[amp])
+            output[0].header.update('GAIN%s' % imutils.channelIds[amp],
+                                    gains[amp])
 
-        gain_file = os.path.join(self.config.output_dir, '%s_gains.fits' % sensor_id)
+        gain_file = os.path.join(self.config.output_dir,
+                                 '%s_gains.fits' % sensor_id)
+        if self.config.verbose:
+            self.log.info("Writing gain file to %s" % gain_file)
         output.writeto(gain_file, clobber=True, checksum=True)
 
         return gains
