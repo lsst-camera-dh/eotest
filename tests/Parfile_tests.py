@@ -1,6 +1,11 @@
+"""
+@brief Unit tests for Parfile.py module.
+
+@author J. Chiang <jchiang@slac.stanford.edu>
+"""
 import os
 import unittest
-from database.Parfile import Parfile
+from lsst.eotest.database.Parfile import Parfile
 
 class ParfileTestCase(unittest.TestCase):
     def setUp(self):
@@ -9,11 +14,16 @@ class ParfileTestCase(unittest.TestCase):
         except OSError:
             pass
         self.test_file = 'pars_test.txt'
+        self.write_test_file = 'write_test.txt'
         output = open(self.test_file, 'w')
         output.write('ft1file = ft1.fits\n')
         output.close()
     def tearDown(self):
         os.remove(self.test_file)
+        try:
+            os.remove(self.write_test_file)
+        except OSError:
+            pass
     def testEmptyFile(self):
         self.assertRaises(IOError, Parfile, 'foo.pars')
     def testFixedKeys(self):
@@ -36,7 +46,7 @@ class ParfileTestCase(unittest.TestCase):
         self.assertEquals(foo['ra'], 83.57)
         self.assertEquals(foo['dec'], 22.01)
     def testWriteMethod(self):
-        outfile = 'write_test.txt'
+        outfile = self.write_test_file
         infile = self.test_file
         pars = Parfile(infile)
         pars.write(outfile)

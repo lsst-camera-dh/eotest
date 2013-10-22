@@ -1,0 +1,5 @@
+setupRequired(afw >= 6.2.1.0)
+setupRequired(pipe_tasks >= 6.2.1.0)
+
+envPrepend(PYTHONPATH, ${PRODUCT_DIR}/python)
+envPrepend(PATH, ${PRODUCT_DIR}/bin)

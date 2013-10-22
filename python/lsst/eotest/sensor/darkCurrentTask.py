@@ -1,0 +1,76 @@
+"""
+@brief Dark current task: compute 95th percentile dark current in
+units of e-/sec/pixel.
+
+@author J. Chiang <jchiang@slac.stanford.edu>
+"""
+import os
+import numpy as np
+import pyfits
+import lsst.eotest.image_utils as imutils
+from MaskedCCD import MaskedCCD
+import lsst.afw.image as afwImage
+import lsst.pex.config as pexConfig
+import lsst.pipe.base as pipeBase
+
+class DarkCurrentConfig(pexConfig.Config):
+    """Configuration for DarkCurrentTask"""
+    temp_tol = pexConfig.Field("Temperature tolerance in degrees C for CCDTEMP among dark files", float, default=1.5)
+    output_dir = pexConfig.Field("Output directory", str, default=".")
+    verbose = pexConfig.Field("Turn verbosity on", bool, default=True)
+
+class DarkCurrentTask(pipeBase.Task):
+    """Task to evaluate dark current quantiles."""
+    ConfigClass = DarkCurrentConfig
+    _DefaultName = "DarkCurrentTask"
+
+    @pipeBase.timeMethod
+    def run(self, sensor_id, dark_files, mask_files, gains):
+        imutils.check_temperatures(dark_files, self.config.temp_tol)
+        median_images = {}
+        md = afwImage.readMetadata(dark_files[0], 1)
+        for amp in imutils.allAmps:
+            median_images[amp] = imutils.fits_median(dark_files,
+                                                     imutils.dm_hdu(amp))
+        medfile = os.path.join(self.config.output_dir,
+                               '%s_dark_current_map.fits' % sensor_id)
+        imutils.writeFits(median_images, medfile, dark_files[0])
+
+        ccd = MaskedCCD(medfile, mask_files=mask_files)
+
+        dark95s = {}
+        exptime = md.get('EXPTIME')
+        if self.config.verbose:
+            self.log.info("Segment    95 percentile    median")
+        for amp in imutils.allAmps:
+            imaging_region = ccd.seg_regions[amp].imaging
+            image = imutils.unbias_and_trim(ccd[amp].getImage(),
+                                            imaging=imaging_region)
+            mask = imutils.trim(ccd[amp].getMask(), imaging=imaging_region)
+            imarr = image.getArray()
+            mskarr = mask.getArray()
+            pixels = imarr.reshape(1, imarr.shape[0]*imarr.shape[1])[0]
+            masked = mskarr.reshape(1, mskarr.shape[0]*mskarr.shape[1])[0]
+            unmasked = [pixels[i] for i in range(len(pixels)) if masked[i] == 0]
+            unmasked.sort()
+            unmasked = np.array(unmasked)*gains[amp]/exptime
+            dark95s[amp] = unmasked[int(len(unmasked)*0.95)]
+            if self.config.verbose:
+                self.log.info("%s         %.2e         %.2e"
+                              % (imutils.channelIds[amp],
+                                 dark95s[amp], unmasked[len(unmasked)/2]))
+
+        dark95mean = np.mean(dark95s.values())
+        if self.config.verbose:
+            self.log.info("CCD: mean 95 percentile value = %s" % dark95mean)
+        #
+        # Update header of dark current median image file with dark
+        # files used and dark95 values.
+        #
+        output = pyfits.open(medfile)
+        for i, dark in enumerate(dark_files):
+            output[0].header.update('DARK%02i' % i, os.path.basename(dark))
+        for amp in imutils.allAmps:
+            output[0].header.update('DARK95%s' % imutils.channelIds[amp],
+                                    dark95s[amp])
+        output.writeto(medfile, clobber=True, checksum=True)

@@ -6,10 +6,9 @@
 import os
 import unittest
 import numpy as np
-import image_utils as imutils
-from simulation.sim_tools import CCD
-from MaskedCCD import MaskedCCD
-from BrightPixels import BrightPixels
+import lsst.eotest.image_utils as imutils
+import lsst.eotest.sensor as sensorTest
+import lsst.eotest.sensor.sim_tools as sim_tools
 
 class BrightPixelsTestCase(unittest.TestCase):
     """Test case for BrightPixels code."""
@@ -21,8 +20,8 @@ class BrightPixelsTestCase(unittest.TestCase):
         self.ccdtemp = -100
         self.bias_level, self.bias_sigma = 1e2, 4
         self.dark_curr=2e-3
-        self.ccd = CCD(exptime=self.exptime, gain=self.gain,
-                       ccdtemp=self.ccdtemp)
+        self.ccd = sim_tools.CCD(exptime=self.exptime, gain=self.gain,
+                                 ccdtemp=self.ccdtemp)
         self.ccd.add_bias(self.bias_level, self.bias_sigma)
         self.ccd.add_dark_current(level=self.dark_curr)
         self.nsig = ( (self.emin*self.exptime/self.gain)
@@ -36,10 +35,11 @@ class BrightPixelsTestCase(unittest.TestCase):
         os.remove(self.dark_file)
         os.remove(self.mask_file)
     def test_generate_mask(self):
-        ccd = MaskedCCD(self.dark_file)
+        ccd = sensorTest.MaskedCCD(self.dark_file)
         for amp in imutils.allAmps:
-            bp = BrightPixels(ccd, amp, ccd.md.get('EXPTIME'), self.gain,
-                              ethresh=self.emin/2., colthresh=100)
+            bp = sensorTest.BrightPixels(ccd, amp, ccd.md.get('EXPTIME'),
+                                         self.gain, ethresh=self.emin/2.,
+                                         colthresh=100)
             results = bp.find()
             bp.generate_mask(self.mask_file)
             pixels = np.array(np.where(self.pixels[amp] == 1))
@@ -58,8 +58,8 @@ class BrightColumnsTestCase(unittest.TestCase):
         self.ccdtemp = -100
         self.bias_level, self.bias_sigma = 1e2, 4
         self.dark_curr=2e-3
-        self.ccd = CCD(exptime=self.exptime, gain=self.gain,
-                       ccdtemp=self.ccdtemp)
+        self.ccd = sim_tools.CCD(exptime=self.exptime, gain=self.gain,
+                                 ccdtemp=self.ccdtemp)
         self.ccd.add_bias(self.bias_level, self.bias_sigma)
         self.ccd.add_dark_current(level=self.dark_curr)
         self.nsig = ( (self.emin*self.exptime/self.gain)
@@ -73,10 +73,11 @@ class BrightColumnsTestCase(unittest.TestCase):
         os.remove(self.dark_file)
         os.remove(self.mask_file)
     def test_generate_mask(self):
-        ccd = MaskedCCD(self.dark_file)
+        ccd = sensorTest.MaskedCCD(self.dark_file)
         for amp in imutils.allAmps:
-            bp = BrightPixels(ccd, amp, ccd.md.get('EXPTIME'), self.gain,
-                              ethresh=self.emin/2., colthresh=100)
+            bp = sensorTest.BrightPixels(ccd, amp, ccd.md.get('EXPTIME'),
+                                         self.gain, ethresh=self.emin/2.,
+                                         colthresh=100)
             results = bp.find()
             bp.generate_mask(self.mask_file)
             columns = sorted(self.columns[amp])

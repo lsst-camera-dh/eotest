@@ -5,11 +5,13 @@
 """
 import unittest
 import numpy as np
-from simulation.sim_tools import *
+import lsst.eotest.image_utils as imutils
+import lsst.eotest.sensor as sensorTest
+import lsst.eotest.sensor.sim_tools as sim_tools
 
 class SegmentExposureTestCase(unittest.TestCase):
     def setUp(self):
-        self.seg = SegmentExposure(exptime=100, gain=1, ccdtemp=-100)
+        self.seg = sim_tools.SegmentExposure(exptime=100, gain=1, ccdtemp=-100)
         self.intensity = 100
         self.full_well = 1.5e5
     def tearDown(self):

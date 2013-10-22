@@ -9,10 +9,9 @@ import numpy as np
 import pyfits
 import lsst.afw.image as afwImage
 import lsst.afw.math as afwMath
-import image_utils as imutils
-from simulation.sim_tools import CCD
-from BrightPixels import BrightPixels
-from MaskedCCD import MaskedCCD, add_mask_files
+import lsst.eotest.image_utils as imutils
+import lsst.eotest.sensor as sensorTest
+import lsst.eotest.sensor.sim_tools as sim_tools
 
 class BiasFunc(object):
     def __init__(self, slope, intercept):
@@ -30,7 +29,7 @@ class MaskedCCDTestCase(unittest.TestCase):
     mpd = dict(afwImage.MaskU().getMaskPlaneDict().items())
     @classmethod
     def setUpClass(cls):
-        ccd = CCD(exptime=cls.exptime, gain=cls.gain)
+        ccd = sim_tools.CCD(exptime=cls.exptime, gain=cls.gain)
         for amp in imutils.allAmps:
             imarr = ccd.segments[amp].image.getArray()
             imarr[cls.ymin:cls.ymax, cls.xmin:cls.xmax] += cls.signal
@@ -39,13 +38,14 @@ class MaskedCCDTestCase(unittest.TestCase):
         for mask_plane, bit in cls.mpd.items():
             mask_file = 'mask_file_%s.fits' % mask_plane
             cls.mask_files.append(mask_file)
-            masked_ccd = MaskedCCD(cls.mask_image)
+            masked_ccd = sensorTest.MaskedCCD(cls.mask_image)
             for amp in imutils.allAmps:
-                bp = BrightPixels(masked_ccd, amp, cls.exptime, cls.gain,
-                                  mask_plane=mask_plane, ethresh=cls.signal/2.)
+                bp = sensorTest.BrightPixels(masked_ccd, amp, cls.exptime,
+                                             cls.gain, mask_plane=mask_plane,
+                                             ethresh=cls.signal/2.)
                 bp.generate_mask(mask_file)
         cls.summed_mask_file = 'summed_mask_file.fits'
-        add_mask_files(cls.mask_files, cls.summed_mask_file)
+        sensorTest.add_mask_files(cls.mask_files, cls.summed_mask_file)
     @classmethod
     def tearDownClass(cls):
         os.remove(cls.mask_image)
@@ -54,7 +54,7 @@ class MaskedCCDTestCase(unittest.TestCase):
         os.remove(cls.summed_mask_file)
 #    @unittest.skip('skip test_add_masks')
     def test_add_masks(self):
-        ccd = MaskedCCD(self.mask_image)
+        ccd = sensorTest.MaskedCCD(self.mask_image)
         ccd.add_masks(self.summed_mask_file)
         total_signal = (self.signal*(self.ymax - self.ymin)
                         *(self.xmax - self.xmin))
@@ -73,7 +73,7 @@ class MaskedCCDTestCase(unittest.TestCase):
                                    stats.getValue(afwMath.MEAN), places=10)
 #    @unittest.skip('skip test_setMask')
     def test_setMask(self):
-        ccd = MaskedCCD(self.mask_image)
+        ccd = sensorTest.MaskedCCD(self.mask_image)
         for mp, bit in self.mpd.items():
             sctrl = ccd.setMask(mask_name=mp, clear=True)
             self.assertEqual(sctrl.getAndMask(), 2**bit)
@@ -93,7 +93,7 @@ class MaskedCCD_biasHandlingTestCase(unittest.TestCase):
         bias_func = BiasFunc(cls.bias_slope, cls.bias_intercept)
         for x in range(nx):
             imarr[:,x] += bias_func(yvals)
-        ccd = CCD(exptime=cls.exptime, gain=cls.gain)
+        ccd = sim_tools.CCD(exptime=cls.exptime, gain=cls.gain)
         for amp in imutils.allAmps:
             ccd.segments[amp].image += cls.bias_image
         ccd.writeto(cls.image_file)
@@ -101,14 +101,14 @@ class MaskedCCD_biasHandlingTestCase(unittest.TestCase):
     def tearDownClass(cls):
         os.remove(cls.image_file)
     def test_bias_image(self):
-        ccd = MaskedCCD(self.image_file)
+        ccd = sensorTest.MaskedCCD(self.image_file)
         for amp in imutils.allAmps:
             my_bias_image = ccd.bias_image(amp)
             fracdiff = ( (self.bias_image.getArray()-my_bias_image.getArray())
                          /self.bias_image.getArray() )
             self.assertTrue(max(np.abs(fracdiff.flat)) < 1e-6)
     def test_unbias_and_trim(self):
-        ccd = MaskedCCD(self.image_file)
+        ccd = sensorTest.MaskedCCD(self.image_file)
         for amp in imutils.allAmps:
             #
             # Test of corresponding MaskedCCD method.
