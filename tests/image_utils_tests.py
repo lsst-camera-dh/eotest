@@ -8,8 +8,18 @@ import unittest
 import numpy as np
 import lsst.afw.image as afwImage
 import lsst.eotest.image_utils as imutils
-import lsst.eotest.sensor as sensorTest
-import lsst.eotest.sensor.sim_tools as sim_tools
+try:
+    from lsst.eotest.sensor import MaskedCCD
+    import lsst.eotest.sensor.sim_tools as sim_tools
+except ImportError:
+    # This is to allow this unit test to run on the inadequately
+    # configured lsst-build01 on which Jenkins at SLAC runs.
+    print "Error importing lsst.eotest.sensor"
+    import sys
+    sys.path.insert(0, os.path.join(os.environ['TEST_SCRIPTS_DIR'],
+                                    'python', 'lsst', 'eotest', 'sensor'))
+    from MaskedCCD import MaskedCCD
+    import sim_tools
 
 class BiasFunc(object):
     def __init__(self, slope, intercept):
@@ -41,7 +51,7 @@ class BiasHandlingTestCase(unittest.TestCase):
         os.remove(cls.image_file)
     def test_bias_func(self):
         bias_func = BiasFunc(self.bias_slope, self.bias_intercept)
-        ccd = sensorTest.MaskedCCD(self.image_file)
+        ccd = MaskedCCD(self.image_file)
         for amp in imutils.allAmps:
             bf_i = imutils.bias_func(ccd[amp].getImage())
             bf_m = imutils.bias_func(ccd[amp])
@@ -49,14 +59,14 @@ class BiasHandlingTestCase(unittest.TestCase):
                 self.assertEqual(bf_i(y), bf_m(y))
                 self.assertAlmostEqual(bias_func(y), bf_m(y))
     def test_bias_image(self):
-        ccd = sensorTest.MaskedCCD(self.image_file)
+        ccd = MaskedCCD(self.image_file)
         for amp in imutils.allAmps:
             my_bias_image = imutils.bias_image(ccd[amp])
             fracdiff = ( (self.bias_image.getArray()-my_bias_image.getArray())
                          /self.bias_image.getArray() )
             self.assertTrue(max(np.abs(fracdiff.flat)) < 1e-6)
     def test_unbias_and_trim(self):
-        ccd = sensorTest.MaskedCCD(self.image_file)
+        ccd = MaskedCCD(self.image_file)
         for amp in imutils.allAmps:
             image = imutils.unbias_and_trim(ccd[amp])
             imarr = image.getImage().getArray()

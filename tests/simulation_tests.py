@@ -6,8 +6,17 @@
 import unittest
 import numpy as np
 import lsst.eotest.image_utils as imutils
-import lsst.eotest.sensor as sensorTest
-import lsst.eotest.sensor.sim_tools as sim_tools
+try:
+    import lsst.eotest.sensor.sim_tools as sim_tools
+except ImportError:
+    # This is to allow this unit test to run on the inadequately
+    # configured lsst-build01 on which Jenkins at SLAC runs.
+    print "Error importing lsst.eotest.sensor"
+    import os
+    import sys
+    sys.path.insert(0, os.path.join(os.environ['TEST_SCRIPTS_DIR'],
+                                    'python', 'lsst', 'eotest', 'sensor'))
+    import sim_tools
 
 class SegmentExposureTestCase(unittest.TestCase):
     def setUp(self):

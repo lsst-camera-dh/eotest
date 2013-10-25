@@ -7,8 +7,19 @@ import os
 import unittest
 import numpy as np
 import lsst.eotest.image_utils as imutils
-import lsst.eotest.sensor as sensorTest
-import lsst.eotest.sensor.sim_tools as sim_tools
+try:
+    from lsst.eotest.sensor import MaskedCCD, BrightPixels
+    import lsst.eotest.sensor.sim_tools as sim_tools
+except ImportError:
+    # This is to allow this unit test to run on the inadequately
+    # configured lsst-build01 on which Jenkins at SLAC runs.
+    print "Error importing lsst.eotest.sensor"
+    import sys
+    sys.path.insert(0, os.path.join(os.environ['TEST_SCRIPTS_DIR'],
+                                    'python', 'lsst', 'eotest', 'sensor'))
+    from MaskedCCD import MaskedCCD
+    from BrightPixels import BrightPixels
+    import sim_tools
 
 class BrightPixelsTestCase(unittest.TestCase):
     """Test case for BrightPixels code."""
@@ -35,11 +46,11 @@ class BrightPixelsTestCase(unittest.TestCase):
         os.remove(self.dark_file)
         os.remove(self.mask_file)
     def test_generate_mask(self):
-        ccd = sensorTest.MaskedCCD(self.dark_file)
+        ccd = MaskedCCD(self.dark_file)
         for amp in imutils.allAmps:
-            bp = sensorTest.BrightPixels(ccd, amp, ccd.md.get('EXPTIME'),
-                                         self.gain, ethresh=self.emin/2.,
-                                         colthresh=100)
+            bp = BrightPixels(ccd, amp, ccd.md.get('EXPTIME'),
+                              self.gain, ethresh=self.emin/2.,
+                              colthresh=100)
             results = bp.find()
             bp.generate_mask(self.mask_file)
             pixels = np.array(np.where(self.pixels[amp] == 1))
@@ -73,11 +84,11 @@ class BrightColumnsTestCase(unittest.TestCase):
         os.remove(self.dark_file)
         os.remove(self.mask_file)
     def test_generate_mask(self):
-        ccd = sensorTest.MaskedCCD(self.dark_file)
+        ccd = MaskedCCD(self.dark_file)
         for amp in imutils.allAmps:
-            bp = sensorTest.BrightPixels(ccd, amp, ccd.md.get('EXPTIME'),
-                                         self.gain, ethresh=self.emin/2.,
-                                         colthresh=100)
+            bp = BrightPixels(ccd, amp, ccd.md.get('EXPTIME'),
+                              self.gain, ethresh=self.emin/2.,
+                              colthresh=100)
             results = bp.find()
             bp.generate_mask(self.mask_file)
             columns = sorted(self.columns[amp])

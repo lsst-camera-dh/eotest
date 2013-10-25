@@ -8,7 +8,16 @@ import unittest
 import numpy as np
 import pyfits
 import lsst.eotest.image_utils as imutils
-from lsst.eotest.sensor.ccd250_mask import ccd250_mask
+try:
+    from lsst.eotest.sensor.ccd250_mask import ccd250_mask
+except ImportError:
+    # This is to allow this unit test to run on the inadequately
+    # configured lsst-build01 on which Jenkins at SLAC runs.
+    print "Error importing lsst.eotest.sensor"
+    import sys
+    sys.path.insert(0, os.path.join(os.environ['TEST_SCRIPTS_DIR'],
+                                    'python', 'lsst', 'eotest', 'sensor'))
+    from ccd250_mask import ccd250_mask
 
 class _FitsFile(dict):
     def __init__(self, infile):

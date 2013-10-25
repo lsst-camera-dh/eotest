@@ -10,8 +10,19 @@ import pyfits
 import lsst.afw.image as afwImage
 import lsst.afw.math as afwMath
 import lsst.eotest.image_utils as imutils
-import lsst.eotest.sensor as sensorTest
-import lsst.eotest.sensor.sim_tools as sim_tools
+try:
+    from lsst.eotest.sensor import MaskedCCD, add_mask_files, BrightPixels
+    import lsst.eotest.sensor.sim_tools as sim_tools
+except ImportError:
+    # This is to allow this unit test to run on the inadequately
+    # configured lsst-build01 on which Jenkins at SLAC runs.
+    print "Error importing lsst.eotest.sensor"
+    import sys
+    sys.path.insert(0, os.path.join(os.environ['TEST_SCRIPTS_DIR'],
+                                    'python', 'lsst', 'eotest', 'sensor'))
+    from MaskedCCD import MaskedCCD, add_mask_files
+    from BrightPixels import BrightPixels
+    import sim_tools
 
 class BiasFunc(object):
     def __init__(self, slope, intercept):
@@ -38,14 +49,14 @@ class MaskedCCDTestCase(unittest.TestCase):
         for mask_plane, bit in cls.mpd.items():
             mask_file = 'mask_file_%s.fits' % mask_plane
             cls.mask_files.append(mask_file)
-            masked_ccd = sensorTest.MaskedCCD(cls.mask_image)
+            masked_ccd = MaskedCCD(cls.mask_image)
             for amp in imutils.allAmps:
-                bp = sensorTest.BrightPixels(masked_ccd, amp, cls.exptime,
-                                             cls.gain, mask_plane=mask_plane,
-                                             ethresh=cls.signal/2.)
+                bp = BrightPixels(masked_ccd, amp, cls.exptime,
+                                  cls.gain, mask_plane=mask_plane,
+                                  ethresh=cls.signal/2.)
                 bp.generate_mask(mask_file)
         cls.summed_mask_file = 'summed_mask_file.fits'
-        sensorTest.add_mask_files(cls.mask_files, cls.summed_mask_file)
+        add_mask_files(cls.mask_files, cls.summed_mask_file)
     @classmethod
     def tearDownClass(cls):
         os.remove(cls.mask_image)
@@ -54,7 +65,7 @@ class MaskedCCDTestCase(unittest.TestCase):
         os.remove(cls.summed_mask_file)
 #    @unittest.skip('skip test_add_masks')
     def test_add_masks(self):
-        ccd = sensorTest.MaskedCCD(self.mask_image)
+        ccd = MaskedCCD(self.mask_image)
         ccd.add_masks(self.summed_mask_file)
         total_signal = (self.signal*(self.ymax - self.ymin)
                         *(self.xmax - self.xmin))
@@ -73,7 +84,7 @@ class MaskedCCDTestCase(unittest.TestCase):
                                    stats.getValue(afwMath.MEAN), places=10)
 #    @unittest.skip('skip test_setMask')
     def test_setMask(self):
-        ccd = sensorTest.MaskedCCD(self.mask_image)
+        ccd = MaskedCCD(self.mask_image)
         for mp, bit in self.mpd.items():
             sctrl = ccd.setMask(mask_name=mp, clear=True)
             self.assertEqual(sctrl.getAndMask(), 2**bit)
@@ -101,14 +112,14 @@ class MaskedCCD_biasHandlingTestCase(unittest.TestCase):
     def tearDownClass(cls):
         os.remove(cls.image_file)
     def test_bias_image(self):
-        ccd = sensorTest.MaskedCCD(self.image_file)
+        ccd = MaskedCCD(self.image_file)
         for amp in imutils.allAmps:
             my_bias_image = ccd.bias_image(amp)
             fracdiff = ( (self.bias_image.getArray()-my_bias_image.getArray())
                          /self.bias_image.getArray() )
             self.assertTrue(max(np.abs(fracdiff.flat)) < 1e-6)
     def test_unbias_and_trim(self):
-        ccd = sensorTest.MaskedCCD(self.image_file)
+        ccd = MaskedCCD(self.image_file)
         for amp in imutils.allAmps:
             #
             # Test of corresponding MaskedCCD method.

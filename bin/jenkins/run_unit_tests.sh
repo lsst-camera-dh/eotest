@@ -14,9 +14,6 @@ export HOME=`pwd`
 # This is used by the scripts to find the path to the policy subdir.
 export TEST_SCRIPTS_DIR=${HOME}
 
-echo LD_LIBRARY_PATH: $LD_LIBRARY_PATH
-export LD_LIBRARY_PATH=/lib:/usr/lib:${LD_LIBRARY_PATH}
-
 source /afs/slac/g/lsst/software/redhat5-x86_64-64bit-gcc44/DMstack/Winter2013-v6_2/loadLSST.sh
 
 # The Jenkins build of test_scripts can't/shouldn't be setup by eups, so
@@ -28,8 +25,6 @@ setup mysqlpython
 setup scipy
 
 export PYTHONPATH=${HOME}/python:${HOME}/bin/jenkins:${PYTHONPATH}
-
-echo LD_LIBRARY_PATH: $LD_LIBRARY_PATH
 
 echo ${HOME}
 
