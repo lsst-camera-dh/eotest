@@ -13,7 +13,8 @@ import pyfits
 import lsst.eotest.image_utils as imutils
 import pylab_plotter as plot
 from MaskedCCD import MaskedCCD, Metadata
-from PhotodiodeResponse import PhotodiodeResponse, CcdIllumination
+from PhotodiodeResponse import PhotodiodeResponse, CcdIllumination, \
+     Interpolator
 
 import lsst.afw.math as afwMath
 
@@ -92,10 +93,30 @@ class QE_Data(object):
         self.wl = np.array(self.wl)
         self.exptime = np.array(self.exptime)
         self.pd = np.abs(np.array(self.pd))
-    def calculate_QE(self, ccd_cal_file, sph_cal_file, wlscan_file,
-                     gains, pixel_area=1e-10, pd_area=1e-4):
+    def incidentPower(self, ccd_cal_file, sph_cal_file, wlscan_file,
+                      pixel_area=1e-10, pd_area=1e-4):
+        # Incident power per pixel (J/s)
         pd_sph = PhotodiodeResponse(sph_cal_file)
         ccd_frac = CcdIllumination(wlscan_file, ccd_cal_file, sph_cal_file)
+        power = []
+        for pd_current, wl_nm in zip(self.pd, self.wl):
+            power.append(pd_current/ph_sph(wl_nm)*ccd_frac(wl_nm)
+                         *pixel_area/pd_area)
+        self.power = np.array(power, dtype=np.float)
+    def incidentPower_BNL(self, pd_calibration_file,
+                          pixel_area=1e-10, pd_area=1e-4):
+        # Incident power per pixel (J/s)
+        data = np.recfromtxt(pd_calibration_file, skip_header=1,
+                             names='truewl, sens, eff, monowl, ccdfrac, foo')
+        # sens is in units of mA/W, so need to divide by 1e3 to get A/W
+        sensitivity = Interpolator(data['monowl'], data['sens']/1e3)
+        ccd_frac = Interpolator(data['monowl'], data['ccdfrac'])
+        power = []
+        for pd_current, wl_nm in zip(self.pd, self.wl):
+            power.append(pd_current/(ccd_frac(wl_nm)*sensitivity(wl_nm))
+                         *pixel_area/pd_area)
+        self.power = np.array(power, dtype=np.float)
+    def calculate_QE(self, gains):
         qe = OrderedDict()
         wlarrs = OrderedDict()
         for amp in imutils.allAmps:
@@ -108,8 +129,7 @@ class QE_Data(object):
                     #
                     # Incident illumination power per pixel (J/s)
                     #
-                    power = ((self.pd[i]/pd_sph(wl_nm))*ccd_frac(wl_nm)
-                             *(pixel_area/pd_area))
+                    power = self.power[i]
                     #
                     # Median number of photo-electrons per pixel
                     #
@@ -219,6 +239,7 @@ if __name__ == '__main__':
     qe_data = QE_Data()
 #    qe_data.calculate_medians(infiles, medians_file)
     qe_data.read_medians(medians_file)
-    qe_data.calculate_QE(ccd_cal_file, sph_cal_file, wlscan_file, gains)
+    qe_data.incidentPower(ccd_cal_file, sph_cal_file, wlscan_file)
+    qe_data.calculate_QE(gains)
     qe_data.write_fits_tables('qe_tables.fits')
     qe_data.plot_curves(interactive=True)

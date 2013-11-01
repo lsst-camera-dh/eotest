@@ -17,6 +17,10 @@ parser.add_argument('-i', '--int_sph_cal_file', type=str,
                     help='calibration file for photodiode at integrating sphere')
 parser.add_argument('-w', '--wavelength_scan_file', type=str,
                     help='uncorrected wavelength scan file')
+parser.add_argument('-p', '--pd_cal_file', type=str,
+                    help='BNL photodiode calibration file', default=None)
+parser.add_argument('-M', '--medians_file', type=str,
+                    help='file of median pixel values from wavelength scan dataset', default=None)
 args = parser.parse_args()
 
 task = sensorTest.QeTask()
@@ -26,4 +30,5 @@ task.config.verbose = args.verbose
 qe_files = args.files(args.qe_files, args.qe_file_list)
 
 task.run(args.sensor_id, qe_files, args.ccd_cal_file, args.int_sph_cal_file,
-         args.wavelength_scan_file, args.mask_files(), args.system_gains())
+         args.wavelength_scan_file, args.mask_files(), args.system_gains(),
+         pd_cal_file=args.pd_cal_file, medians_file=args.medians_file)

@@ -53,10 +53,10 @@ class TaskNamespace(object):
             my_mask_files = ('ccd250_defects.fits',)
             if not os.path.isfile(my_mask_files[0]):
                 ccd250_mask(my_mask_files[0])
+        elif self.args.mask_file == 'None':
+            my_mask_files = ()
         elif self.args.mask_file is not None:
             my_mask_files = (self.args.mask_file,)
-        else:
-            my_mask_files = ()
         return my_mask_files
     def __getattr__(self, attrname):
         return getattr(self.args, attrname)
