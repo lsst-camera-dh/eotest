@@ -104,7 +104,7 @@ class QE_Data(object):
                          *pixel_area/pd_area)
         self.power = np.array(power, dtype=np.float)
     def incidentPower_BNL(self, pd_calibration_file,
-                          pixel_area=1e-10, pd_area=1e-4):
+                          pixel_area=1e-10, pd_area=1.05e-4):
         # Incident power per pixel (J/s)
         data = np.recfromtxt(pd_calibration_file, skip_header=1,
                              names='truewl, sens, eff, monowl, ccdfrac, foo')

@@ -36,9 +36,13 @@ namespace eotest {
       // output array.
       for (int j(0); j < ny0; j++) {
          int jout(j/binsize);
-         for (int i(0); i < nx0; i++) {
-            int iout(i/binsize);
-            outarray[jout][iout] += inarray[j][i];
+         if (jout < ny) {
+            for (int i(0); i < nx0; i++) {
+               int iout(i/binsize);
+               if (iout < nx) {
+                  outarray[jout][iout] += inarray[j][i];
+               }
+            }
          }
       }
 
