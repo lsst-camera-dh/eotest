@@ -20,16 +20,24 @@ class QeTask(pipeBase.Task):
 
     @pipeBase.timeMethod
     def run(self, sensor_id, qe_files, ccd_cal_file, sph_cal_file,
-            wlscan_file, mask_files, gains):
+            wlscan_file, mask_files, gains, pd_cal_file=None,
+            medians_file=None):
         qe_data = QE.QE_Data(verbose=self.config.verbose, logger=self.log)
         
-        medians_file = os.path.join(self.config.output_dir,
-                                    '%s_QE.txt' % sensor_id)
-        qe_data.calculate_medians(qe_files, medians_file,
-                                  mask_files=mask_files, clobber=True)
+        if medians_file is None:
+            medians_file = os.path.join(self.config.output_dir,
+                                        '%s_QE.txt' % sensor_id)
+            qe_data.calculate_medians(qe_files, medians_file,
+                                      mask_files=mask_files, clobber=True)
+            
         qe_data.read_medians(medians_file)
         
-        qe_data.calculate_QE(ccd_cal_file, sph_cal_file, wlscan_file, gains)
+        if pd_cal_file is not None:
+            qe_data.incidentPower_BNL(pd_cal_file)
+        else:
+            qe_data.incidentPower(ccd_cal_file, sph_cal_file, wlscan_file)
+        
+        qe_data.calculate_QE(gains)
 
         fits_outfile = os.path.join(self.config.output_dir,
                                     '%s_QE.fits' % sensor_id)
