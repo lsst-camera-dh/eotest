@@ -12,7 +12,7 @@ export SHELL=/bin/bash
 export HOME=`pwd`
 
 # This is used by the scripts to find the path to the policy subdir.
-export TEST_SCRIPTS_DIR=${HOME}
+export EOTEST_DIR=${HOME}
 
 source /afs/slac/g/lsst/software/redhat5-x86_64-64bit-gcc44/DMstack/Winter2013-v6_2/loadLSST.sh
 

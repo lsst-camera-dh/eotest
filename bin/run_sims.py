@@ -14,7 +14,8 @@ from lsst.eotest.sensor.PhotodiodeResponse \
      import PhotodiodeResponse, CcdIllumination
 from lsst.eotest.sensor.QE import planck, clight
 from lsst.eotest.sensor.sim_tools import *
-from lsst.eotest.sensor.ctesim import ctesim
+#from lsst.eotest.sensor.ctesim import ctesim
+from lsst.eotest.sensor.ctesim import ctesim_cpp as ctesim
 
 class AmpIndexDecorator(object):
     def __init__(self, var):

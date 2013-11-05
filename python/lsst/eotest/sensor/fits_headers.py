@@ -8,10 +8,7 @@ import sys
 import numpy as np
 import pyfits
 
-#import simulation
-#
-#_module_path = os.path.dirname(simulation.__file__)
-_module_path = os.environ['TEST_SCRIPTS_DIR']
+_module_path = os.environ['EOTEST_DIR']
 template_file = os.path.join(_module_path, 'policy', 'fits_header_template.txt')
 template_used_file = os.path.join(_module_path, 'policy',
                                   'fits_header_template_used.txt')

@@ -9,6 +9,7 @@ import numpy.random as random
 import pyfits
 import lsst.afw.image as afwImage
 import lsst.eotest.image_utils as imutils
+import lsst.eotest.utilLib as testUtils
 from MaskedCCD import SegmentRegions
 import sim_tools
 
@@ -31,6 +32,21 @@ def fitsFile(segments, input):
         output.append(pyfits.ImageHDU(data=imarr))
         output[amp].header = input[amp].header
     return output
+
+def ctesim_cpp(infile, pcti=0, scti=0, verbose=False):
+    input = pyfits.open(infile)
+    amps = [i for i in range(1, len(input)) if input[i].is_image]
+    segments = {}
+    for amp in amps:
+        if verbose:
+            print "ctesim_cpp: working on amp", amp
+        decorated_image = afwImage.DecoratedImageF(infile, imutils.dm_hdu(amp))
+        image = decorated_image.getImage()
+        sr = SegmentRegions(decorated_image)
+        outimage = testUtils.ImageTools.applyCTI(image, sr.serial_overscan,
+                                                 pcti, scti, verbose)
+        segments[amp] = outimage
+    return fitsFile(segments, input)
 
 def ctesim(infile, pcti=0, scti=0, verbose=False):
     pcte = 1 - pcti
@@ -100,14 +116,18 @@ def make_fe55(outfile, nxrays, bias_level=2000, bias_sigma=4,
     sim_tools.writeFits(segments, outfile)
 
 if __name__ == '__main__':
-    test_file = 'fe55_test.fits'
-    nxrays = 1000
-    
-    make_fe55(test_file, nxrays, amps=(1,))
+#    test_file = 'fe55_test.fits'
+#    nxrays = 1000
+#    
+#    make_fe55(test_file, nxrays, amps=(1,))
+    test_file = '000-00_fe55_fe55_00_debug.fits'
 
     pcti = 1e-5
 #    scti = 2e-5
     scti = 0
 
-    foo = ctesim(test_file, pcti=pcti, scti=scti)
+    foo = ctesim(test_file, pcti=pcti, scti=scti, verbose=True)
     foo.writeto('fe55_test_cti.fits', clobber=True)
+
+    bar = ctesim_cpp(test_file, pcti=pcti, scti=scti, verbose=True)
+    bar.writeto('fe55_test_cti_cpp.fits', clobber=True)
