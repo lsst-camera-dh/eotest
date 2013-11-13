@@ -1,4 +1,5 @@
 #include "ndarray.h"
+#include "lsst/afw/geom/Box.h"
 #include "lsst/afw/image/Image.h"
 #include "lsst/afw/math/Statistics.h"
 #include "lsst/pex/logging/Trace.h"
@@ -68,7 +69,7 @@ namespace eotest {
       double pcte(1. - pcti);
       double scte(1. - scti);
 
-      // Prepare a working copy and remove temporarily remove bias.
+      // Prepare a working copy and temporarily remove bias.
       bool deep_copy;
       afwImage::Image<float> 
          work_image(afwImage::Image<float>(input, deep_copy=true));
@@ -155,4 +156,3 @@ namespace eotest {
 
 } // namespace eotest
 } // namespace lsst
-         

@@ -1,13 +1,14 @@
 #ifndef lsst_eotest_ImageTools_h
 #define lsst_eotest_ImageTools_h
 
-#include "lsst/afw/geom/Box.h"
-
 namespace lsst {
 
    namespace afw {
       namespace image {
          template<typename T> class Image;
+      }
+      namespace geom {
+         class Box2I;
       }
    }
 
@@ -28,7 +29,7 @@ namespace lsst {
          applyCTI(const lsst::afw::image::Image<float> & input,
                   const lsst::afw::geom::Box2I & serial_overscan,
                   double pcti=0, double scti=0, bool verbose=false);
-         
+
       private:
 
       };
