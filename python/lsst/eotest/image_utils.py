@@ -82,7 +82,7 @@ def bias_func(im, overscan=serial_overscan, fit_order=1):
     return np.poly1d(np.polyfit(rows, values, fit_order))
 
 def bias_image(im, overscan=serial_overscan, fit_order=1):
-    my_bias = bias_func(im, serial_overscan, fit_order)
+    my_bias = bias_func(im, overscan, fit_order)
     biasim = afwImage.ImageF(im.getDimensions())
     imarr = biasim.getArray()
     ny, nx = imarr.shape
