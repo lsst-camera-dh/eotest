@@ -47,7 +47,8 @@ class FlatPairConfig(pexConfig.Config):
     verbose = pexConfig.Field("Turn verbosity on", bool, default=True)
 
 class FlatPairTask(pipeBase.Task):
-    """Task to compute detector response vs incident flux for pairs of flats."""
+    """Task to compute detector response vs incident flux from 
+       flat pair dataset."""
     ConfigClass = FlatPairConfig
     _DefaultName = "FlatPairTask"
     

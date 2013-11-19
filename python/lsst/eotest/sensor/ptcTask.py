@@ -7,11 +7,13 @@ the full well.
 """
 import os
 import glob
+import lsst.eotest.image_utils as imutils
+from pair_stats import pair_stats
+
 import lsst.afw.image as afwImage
 import lsst.afw.math as afwMath
-import image_utils as imutils
-from pipeline.TaskParser import TaskParser
-from pair_stats_new import pair_stats
+import lsst.pex.config as pexConfig
+import lsst.pipe.base as pipeBase
 
 def find_flat2(flat1):
     pattern = flat1.split('flat1')[0] + 'flat2*.fits'
@@ -33,39 +35,31 @@ def find_flats(args):
                      if item.find('flat1') != -1])
     return [(f1, find_flat2(f1)) for f1 in file1s]
 
-def accumulate_stats(flats, outfile='ptc_results.txt', mask_files=(),
-                     verbose=True):
-    """
-    Run pair_stats.py to find mean and variance (in units of DN) as a
-    function of exposure time.
-    """
-    output = open(outfile, 'w')
-    for file1, file2 in flats:
-        if verbose:
-            print "processing", file1
-        exposure = exptime(file1)
-        output.write('%12.4e' % exposure)
-        for amp in imutils.allAmps:
-            results = pair_stats(file1, file2, amp, mask_files=mask_files)
-            output.write('  %12.4e  %12.4e' % (results.flat_mean,
-                                               results.flat_var))
-        output.write('\n')
-        output.flush()
-    output.close()
+class PtcConfig(pexConfig.Config):
+    """Configuration for ptc task"""
+    output_dir = pexConfig.Field("Output directory", str, default='.')
+    verbose = pexConfig.Field("Turn verbosity on", bool, default=True)
 
-if __name__ == '__main__':
-    parser = TaskParser('Compute photon transfer curve.')
-    parser.add_argument('-f', '--flats', type=str,
-                        help='flat pairs file pattern')
-    parser.add_argument('-F', '--flats_file_list', type=str,
-                        help='list of flat pairs')
-    args = parser.parse_args()
+class PtcTask(pipeBase.Task):
+    """Task to compute photon transfer curve from flat pair dataset"""
+    ConfigClass = PtcConfig
+    _DefaultName = "PtcTask"
 
-    sensor = args.sensor()
-    sensor_id = args.sensor_id
-    gains = args.system_gains()
-    mask_files = args.mask_files()
-
-    outfile = os.path.join(args.output_dir, '%s_ptc.txt' % sensor_id)
-    files = find_flats(args)
-    accumulate_stats(files, outfile=outfile)
+    @pipeBase.timeMethod
+    def run(self, sensor_id, infiles, mask_files, gains, binsize=1):
+        outfile = os.path.join(self.config.output_dir, '%s_ptc.txt' % sensor_id)
+        output = open(outfile, 'w')
+        file1s = sorted([item for item in infiles if item.find('flat1')  != -1])
+        for flat1 in file1s:
+            flat2 = flat1.replace('flat1', 'flat2')
+            if self.config.verbose:
+                self.log.info("processing %s" % flat1)
+            exposure = exptime(flat1)
+            output.write('%12.4e' % exposure)
+            for amp in imutils.allAmps:
+                results = pair_stats(flat1, flat2, amp, mask_files=mask_files)
+                output.write('  %12.4e  %12.4e' % (results.flat_mean,
+                                                   results.flat_var))
+            output.write('\n')
+            output.flush()
+        output.close()

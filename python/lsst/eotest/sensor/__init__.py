@@ -28,3 +28,4 @@ from prnuTask import PrnuTask
 from trapTask import TrapTask
 from qeTask import QeTask
 from flatPairTask import FlatPairTask
+from ptcTask import PtcTask

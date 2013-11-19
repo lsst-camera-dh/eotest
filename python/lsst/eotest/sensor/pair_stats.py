@@ -31,7 +31,7 @@ class PairStats(object):
                          self.flat_mean, self.flat_var,
                          self.gain, self.noise)
 
-def pair_stats(file1, file2, amp, mask_files=()):
+def pair_stats(file1, file2, amp, mask_files=(), binsize=1):
     ccd1 = MaskedCCD(file1, mask_files=mask_files)
     ccd2 = MaskedCCD(file2, mask_files=mask_files)
 
