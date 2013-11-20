@@ -10,6 +10,7 @@ import numpy as np
 import lsst.afw.image as afwImage
 import lsst.afw.math as afwMath
 from MaskedCCD import MaskedCCD
+import lsst.eotest.image_utils as imutils
 
 class PairStats(object):
     def __init__(self, bias_mean, bias_stddev, flat_mean, flat_var, 
@@ -84,7 +85,6 @@ def pair_stats(file1, file2, amp, mask_files=()):
     return PairStats(bmean, bias_rms, fmean, fvar, gain, noise)
 
 if __name__ == '__main__':
-    import lsst.eotest.image_utils as imutils
     from lsst.eotest.sensor.sim_tools import simulateFlat
 
     #file1 = 'test_flat1.fits'

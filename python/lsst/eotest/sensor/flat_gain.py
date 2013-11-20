@@ -75,6 +75,7 @@ def flat_gain(image1, image2, count=1000, dx=100, dy=100, binsize=1,
     return gain, im1, im2
 
 if __name__ == '__main__':
+    import os
     from sim_tools import simulateFlat
     
     file1 = 'test_flat1.fits'

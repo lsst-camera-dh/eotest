@@ -20,7 +20,7 @@ import lsst.afw.geom as afwGeom
 import lsst.afw.image as afwImage
 import lsst.afw.math as afwMath
 
-from image_utils import bias, overscan
+import lsst.eotest.image_utils as imutils
 
 from math import sqrt # from afw.Math ?
 import os,sys
@@ -86,8 +86,8 @@ def pair_covar(file1, file2, hdu=2, Nsigma=5,
                                 afwGeom.Extent2I(boxwid, boxhgt))
     # Use overscan region for bias regions.  Make a deep copy since these
     # will be used after im1 and im2 are manipulated.
-    b1 = copy.deepcopy(im1.Factory(im1, overscan).getArray())
-    b2 = copy.deepcopy(im2.Factory(im2, overscan).getArray())
+    b1 = copy.deepcopy(im1.Factory(im1, imutils.overscan).getArray())
+    b2 = copy.deepcopy(im2.Factory(im2, imutils.overscan).getArray())
     bmean1 = np.mean(b1)
     bmean2 = np.mean(b2)
     f1 = im1.Factory(im1, flat_region).getArray() - bmean1
@@ -144,7 +144,7 @@ if __name__ == '__main__':
         nHdus = 16
         print " Use files '%s' & '%s'"%(file1,file2)
     else:
-        from simulation.sim_tools import simulateFlat
+        from lsst.eotest.sensor.sim_tools import simulateFlat
 
         file1 = 'test_flat1.fits'
         file2 = 'test_flat2.fits'
