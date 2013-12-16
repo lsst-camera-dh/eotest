@@ -79,13 +79,15 @@ def system_crosstalk(ccd, aggressor_amp, dnthresh=None, nsig=5):
                    for amp in imutils.allAmps])
     return ratios
 
-def get_footprint(fp_set):
-    footprints = [fp for fp in fp_set.getFootprints()]
+def get_footprint(fp_set, min_fp_size):
+    footprints = [fp for fp in fp_set.getFootprints()
+                  if fp.getNpix() >= min_fp_size]
     if len(footprints) > 1:
         message = "More than one spot image found in aggressor amplifier:\n"
         for i, fp in enumerate(footprints):
-            message += '%3i  %6i\n' % (i, [x.getPeakValue() 
-                                           for x in fp.getPeaks()][0])
+            message += '%3i  %6i  %4i\n' % (i, [x.getPeakValue() 
+                                                for x in fp.getPeaks()][0],
+                                            fp.getNpix())
         raise RuntimeError(message)
     fp = footprints[0]
     peak_value = max([x.getPeakValue() for x in fp.getPeaks()])
@@ -125,7 +127,8 @@ def extract_mean_signal(ccd, amp, footprint):
     return np.array((signal/float(npix), stdev))
 
 def detector_crosstalk(ccd, aggressor_amp, dnthresh=None, nsig=5,
-                       signal_extractor=extract_mean_signal):
+                       signal_extractor=extract_mean_signal,
+                       min_fp_size=50):
     """
     Compute detector crosstalk from a spot image in the aggressor
     amplifier. dnthresh is the threshold in DN for detecting the
@@ -144,11 +147,14 @@ def detector_crosstalk(ccd, aggressor_amp, dnthresh=None, nsig=5,
                     + median)/4. + median
     threshold = afwDetect.Threshold(dnthresh)
     fp_set = afwDetect.FootprintSet(image, threshold)
-    footprint, peak_value = get_footprint(fp_set)
+    footprint, peak_value = get_footprint(fp_set, min_fp_size)
 
     agg_mean = signal_extractor(ccd, aggressor_amp, footprint)[0]
     ratios = dict([(amp, signal_extractor(ccd, amp, footprint)
                     /agg_mean) for amp in imutils.allAmps])
+#    for amp in ratios:
+#        if ratios[amp][0] > 0.1:
+#            ratios[amp] = (0, 0)
     return ratios
 
 class CrosstalkMatrix(object):
