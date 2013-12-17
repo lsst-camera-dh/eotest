@@ -13,26 +13,6 @@ import lsst.afw.math as afwMath
 
 import lsst.eotest.image_utils as imutils
 
-class Metadata(object):
-    """
-    Class to encapulate primary header keyword data.  Default is to
-    use afwImage.readMetadata; fall-back to using pyfits if the FITS
-    file has non-conforming keywords.
-    """
-    def __init__(self, imfile, hdu):
-        self.header = None
-        try:
-            self.md = afwImage.readMetadata(imfile, hdu)
-        except:
-            self.header = pyfits.open(imfile)[hdu-1].header
-    def get(self, key):
-        return self(key)
-    def __call__(self, key):
-        if self.header is None:
-            return self.md.get(key)
-        else:
-            return self.header[key]
-
 class SegmentRegions(object):
     """
     This class constructs the imaging, prescan, and overscan regions
@@ -65,7 +45,7 @@ class MaskedCCD(dict):
     def __init__(self, imfile, mask_files=()):
         dict.__init__(self)
         self.imfile = imfile
-        self.md = Metadata(imfile, 1)
+        self.md = afwImage.readMetadata(imfile, 1)
         self.seg_regions = {}
         for amp in imutils.allAmps:
             #

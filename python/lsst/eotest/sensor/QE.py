@@ -12,10 +12,11 @@ import numpy as np
 import pyfits
 import lsst.eotest.image_utils as imutils
 import pylab_plotter as plot
-from MaskedCCD import MaskedCCD, Metadata
+from MaskedCCD import MaskedCCD
 from PhotodiodeResponse import PhotodiodeResponse, CcdIllumination, \
      Interpolator
 
+import lsst.afw.image as afwImage
 import lsst.afw.math as afwMath
 
 planck = 6.626e-34      # Planck constant in SI
@@ -64,7 +65,7 @@ class QE_Data(object):
                 else:
                     print 'processing', item
             ccd = MaskedCCD(item, mask_files=mask_files)
-            md = Metadata(item, 1)
+            md = afwImage.readMetadata(item, 1)
             exptime = md.get('EXPTIME')
             if exptime == 0:
                 line = "Zero exposure time in %s. Skipping." % item
@@ -100,7 +101,7 @@ class QE_Data(object):
         ccd_frac = CcdIllumination(wlscan_file, ccd_cal_file, sph_cal_file)
         power = []
         for pd_current, wl_nm in zip(self.pd, self.wl):
-            power.append(pd_current/ph_sph(wl_nm)*ccd_frac(wl_nm)
+            power.append(pd_current/pd_sph(wl_nm)*ccd_frac(wl_nm)
                          *pixel_area/pd_area)
         self.power = np.array(power, dtype=np.float)
     def incidentPower_BNL(self, pd_calibration_file,

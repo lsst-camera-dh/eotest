@@ -38,11 +38,10 @@ def prnu(infile, mask_files, gains, correction_image=None):
     return pix_stdev, pix_median
 
 if __name__ == '__main__':
-    from MaskedCCD import Metadata
     infile = 'work/sensorData/000-00/lambda/debug/000-00_lambda_0450.0_debug.fits'
     mask_files = ('work/ccd250_defects.fits', )
 
-    md = Metadata('work/000-00_gains.fits', 1)
+    md = afwImage.readMetadata('work/000-00_gains.fits', 1)
     gains = dict([(amp, md.get('GAIN%s' % imutils.channelIds[amp]))
                   for amp in imutils.allAmps])
 

@@ -4,8 +4,8 @@
 @author J. Chiang <jchiang@slac.stanford.edu>
 """
 import os
-from MaskedCCD import Metadata
 from prnu import prnu
+import lsst.afw.image as afwImage
 import lsst.pex.config as pexConfig
 import lsst.pipe.base as pipeBase
 
@@ -29,7 +29,7 @@ class PrnuTask(pipeBase.Task):
         if self.config.verbose:
             self.log.info(line)
         for infile in prnu_files:
-            md = Metadata(infile, 1)
+            md = afwImage.readMetadata(infile, 1)
             wl = md.get('MONOWL')
             if int(wl) in (350, 450, 500, 620, 750, 870, 1000):
                 pix_stdev, pix_median = prnu(infile, mask_files, gains,
