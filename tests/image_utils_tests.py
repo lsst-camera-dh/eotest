@@ -6,8 +6,8 @@
 import os
 import unittest
 import numpy as np
-import lsst.afw.image as afwImage
 import lsst.eotest.image_utils as imutils
+
 try:
     from lsst.eotest.sensor import MaskedCCD
     import lsst.eotest.sensor.sim_tools as sim_tools
@@ -20,6 +20,8 @@ except ImportError:
                                     'python', 'lsst', 'eotest', 'sensor'))
     from MaskedCCD import MaskedCCD
     import sim_tools
+
+import lsst.afw.image as afwImage
 
 class BiasFunc(object):
     def __init__(self, slope, intercept):

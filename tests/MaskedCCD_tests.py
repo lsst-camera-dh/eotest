@@ -7,9 +7,8 @@ import os
 import unittest
 import numpy as np
 import pyfits
-import lsst.afw.image as afwImage
-import lsst.afw.math as afwMath
 import lsst.eotest.image_utils as imutils
+
 try:
     from lsst.eotest.sensor import MaskedCCD, add_mask_files, BrightPixels
     import lsst.eotest.sensor.sim_tools as sim_tools
@@ -23,6 +22,9 @@ except ImportError:
     from MaskedCCD import MaskedCCD, add_mask_files
     from BrightPixels import BrightPixels
     import sim_tools
+    
+import lsst.afw.image as afwImage
+import lsst.afw.math as afwMath
 
 class BiasFunc(object):
     def __init__(self, slope, intercept):
