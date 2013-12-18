@@ -28,6 +28,26 @@ def fe55_lines(x, *args):
 
 def fe55_gain_fitter(signals, ccdtemp=-95, make_plot=False, xrange=None,
                      bins=100, hist_nsig=10, title=''):
+    """
+    Function to fit the distribution of charge cluster DN values from
+    a Fe55 dataset.  A two Gaussian model of Mn K-alpha and K-beta
+    lines is assumed with the ratio between the K-alpha and K-beta
+    energies fixed at 5.889/6.49 and the the Gaussian width of the
+    lines set equal.
+
+    The gain (Ne/DN), location and sigma of the K-alpha peak (in units
+    of DN) are returned as a tuple.
+
+    If make_plot=True, then a matplotlib plot of the distribution and
+    fit is displayed.
+
+    If xrange is not None, then that 2-element tuple is used as the
+    histogram x-range.
+
+    If xrange is None, then the histogram x-range is set to 
+    +/- hist_nsig*clipped_stdev about the median of the signal
+    distribution.
+    """
     flags = afwMath.MEDIAN | afwMath.STDEVCLIP
     stats = afwMath.makeStatistics(signals, flags)
     median = stats.getValue(afwMath.MEDIAN)
@@ -37,6 +57,8 @@ def fe55_gain_fitter(signals, ccdtemp=-95, make_plot=False, xrange=None,
         xmin = median - hist_nsig*stdev
         xmax = median*1785./1620. + hist_nsig*stdev
         xrange = xmin, xmax
+    # Save pylab interactive state.
+    pylab_interactive_state = pylab.isinteractive()
     if make_plot:
         pylab.ion()
         fig = pylab.figure()
@@ -59,7 +81,7 @@ def fe55_gain_fitter(signals, ccdtemp=-95, make_plot=False, xrange=None,
     p0 = (ntot*0.88, median, stdev/2., ntot*0.12)
     pars, _ = scipy.optimize.curve_fit(fe55_lines, x, y, p0=p0)
         
-    kalpha_peak = pars[1]
+    kalpha_peak, kalpha_sigma = pars[1], pars[2]
     fe55_yield = Fe55Yield(ccdtemp)
     gain = fe55_yield.alpha()/kalpha_peak
 
@@ -74,7 +96,9 @@ def fe55_gain_fitter(signals, ccdtemp=-95, make_plot=False, xrange=None,
                        % (kalpha_peak, gain),
                        (0.5, 0.7), xycoords='axes fraction')
         axes.set_title(title)
-    return gain
+    # Restore pylab interactive state.
+    pylab.interactive(pylab_interactive_state)
+    return gain, kalpha_peak, kalpha_sigma
 
 if __name__ == '__main__':
     import os
@@ -108,7 +132,9 @@ if __name__ == '__main__':
 
     plot_title = '%s, amp %i' % (os.path.basename(args.psf_par_file),
                                  args.amplifier)
-    gain = fe55_gain_fitter(dn[indx], make_plot=args.plot, title=plot_title)
+    gain, kalpha_peak, kalpha_sigma = fe55_gain_fitter(dn[indx],
+                                                       make_plot=args.plot,
+                                                       title=plot_title)
     print "gain for amplifier %i: %s" % (args.amplifier, gain)
 
     if args.plot:

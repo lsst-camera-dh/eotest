@@ -59,7 +59,7 @@ class Fe55Task(pipeBase.Task):
         for amp in imutils.allAmps:
             data = fitter.results(min_prob=self.config.chiprob_min, amp=amp)
             dn = data[1]
-            gains[amp] = fe55_gain_fitter(dn, make_plot=False)
+            gains[amp], kalpha_peak, kalpha_sigma = fe55_gain_fitter(dn)
             output[0].header.update('GAIN%s' % imutils.channelIds[amp],
                                     gains[amp])
 

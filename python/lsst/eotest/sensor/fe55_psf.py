@@ -15,7 +15,7 @@ import lsst.afw.image as afwImage
 import lsst.afw.math as afwMath
 
 import lsst.eotest.image_utils as imutils
-from MaskedCCD import MaskedCCD
+from MaskedCCD import MaskedCCD, MaskedCCDBiasImageException
 
 _sqrt2 = np.sqrt(2)
 
@@ -77,7 +77,13 @@ class PsfGaussFit(object):
         charge cluster.  The dn0 and sigma0 parameters are the
         starting values used for each fit.
         """
-        image = ccd.bias_subtracted_image(amp)
+        try:
+            image = ccd.bias_subtracted_image(amp)
+        except MaskedCCDBiasImageException:
+            print "DM stack error encountered when generating bias image from inferred overscan region."
+            print "Skipping bias subtraction."
+            image = ccd[amp]
+
         image -= self._bg_image(ccd, amp, *bg_reg)
         imarr = image.getImage().getArray()
 

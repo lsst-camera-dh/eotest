@@ -10,6 +10,7 @@ import lsst.daf.base as dafBase
 import lsst.afw.geom as afwGeom
 import lsst.afw.image as afwImage
 import lsst.afw.math as afwMath
+import lsst.pex.exceptions as pexExcept
 
 import lsst.eotest.image_utils as imutils
 
@@ -33,6 +34,10 @@ class SegmentRegions(object):
         self.serial_overscan = Box2I(Point2I(maxX+1, 0), Point2I(nx-1, ny-1))
         self.parallel_overscan = Box2I(Point2I(minX, maxY+1),
                                        Point2I(maxX+1, ny-1))
+
+class MaskedCCDBiasImageException(RuntimeError):
+    def __init__(self, *args):
+        super(MaskedCCDBiasImageException, self).__init__(*args)
 
 class MaskedCCD(dict):
     """
@@ -102,8 +107,11 @@ class MaskedCCD(dict):
         # subclass of Image and could then be used in MaskedImage.
         if overscan is None:
             overscan = self.seg_regions[amp].serial_overscan
-        return imutils.bias_image(self[amp], overscan=overscan,
-                                  fit_order=fit_order)
+        try:
+            return imutils.bias_image(self[amp], overscan=overscan,
+                                      fit_order=fit_order)
+        except pexExcept.LsstCppException:
+            raise MaskedCCDBiasImageException("DM stack error generating bias image from overscan region.")
     def bias_subtracted_image(self, amp, overscan=None, fit_order=1):
         self[amp] -= self.bias_image(amp, overscan, fit_order)
         return self[amp]
