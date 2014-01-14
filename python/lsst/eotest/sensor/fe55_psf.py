@@ -48,7 +48,8 @@ def chisq(pos, dn, args, dn_errors):
     return sum((psf_func(pos, *tuple(args)) - np.array(dn))**2/dn_errors**2)
 
 class PsfGaussFit(object):
-    def __init__(self, nsig=3, min_npix=5, gain_est=2, outfile=None):
+    def __init__(self, nsig=3, min_npix=5, max_npix=20, gain_est=2,
+                 outfile=None):
         """
         nsig is the threshold in number of clipped stdev above median.
         min_npix is the minimum number of pixels to be used in the
@@ -56,6 +57,7 @@ class PsfGaussFit(object):
         """
         self.nsig = nsig
         self.min_npix = min_npix
+        self.max_npix = max_npix
         self.sigma, self.dn, self.dn_fp, self.chiprob = [], [], [], []
         self.amp = []
         self.outfile = outfile
@@ -100,7 +102,7 @@ class PsfGaussFit(object):
         chi2s, dofs = [], []
         maxDNs = []
         for fp in fpset.getFootprints():
-            if fp.getNpix() < self.min_npix:
+            if fp.getNpix() < self.min_npix or fp.getNpix() > self.max_npix:
                 continue
             spans = fp.getSpans()
             positions = []

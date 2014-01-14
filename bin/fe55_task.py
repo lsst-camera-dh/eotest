@@ -8,12 +8,19 @@ parser.add_argument('-F', '--Fe55_file_list', type=str,
                     help='file name of list of Fe55 files')
 parser.add_argument('-c', '--chiprob_min', type=float, default=0.1,
                     help='Mininum chi-square probability for cluster fit')
+parser.add_argument('-n', '--nsig', type=float, default=4,
+                    help='Footprint threshold in bias noise stdevs')
+parser.add_argument('-O', '--outfile', type=str, default=None,
+                    help='Output file name (basename only)')
+                    
 args = parser.parse_args()
 
 task = sensorTest.Fe55Task()
 
 task.config.chiprob_min = args.chiprob_min
 task.config.output_dir = args.output_dir
+task.config.output_file = args.outfile
+task.config.nsig = args.nsig
 task.config.verbose = args.verbose
 
 infiles = args.files(args.file_pattern, args.Fe55_file_list)

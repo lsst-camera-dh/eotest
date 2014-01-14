@@ -19,7 +19,9 @@ class Fe55Config(pexConfig.Config):
     """Configuration for Fe55 analysis task"""
     chiprob_min = pexConfig.Field("Minimum chi-square probability for cluster fit",
                                   float, default=0.1)
+    nsig = pexConfig.Field("Charge cluster footprint threshold in number of standard deviations of noise in bias section", float, default=4)
     output_dir = pexConfig.Field("Output directory", str, default='.')
+    output_file = pexConfig.Field("Output filename", str, default=None)
     verbose = pexConfig.Field("Turn verbosity on", bool, default=True)
     
 class Fe55Task(pipeBase.Task):
@@ -34,7 +36,7 @@ class Fe55Task(pipeBase.Task):
         # Detect and fit 2D Gaussian to Fe55 charge clusters,
         # accumulating the results by amplifier.
         #
-        fitter = PsfGaussFit()
+        fitter = PsfGaussFit(nsig=self.config.nsig)
         for infile in infiles:
             if self.config.verbose:
                 self.log.info("processing %s" % infile)
@@ -43,8 +45,11 @@ class Fe55Task(pipeBase.Task):
                 if self.config.verbose:
                     self.log.info("  amp %i" % amp)
                 fitter.process_image(ccd, amp)
-        psf_results = os.path.join(self.config.output_dir,
-                                   '%s_psf_results.fits' % sensor_id)
+        if self.config.output_file is None:
+            psf_results = os.path.join(self.config.output_dir,
+                                       '%s_psf_results.fits' % sensor_id)
+        else:
+            psf_results = self.config.output_file
         if self.config.verbose:
             self.log.info("Writing psf results file to %s" % psf_results)
         fitter.write_results(outfile=psf_results)
