@@ -11,7 +11,7 @@ parser.add_argument('-c', '--chiprob_min', type=float, default=0.1,
 parser.add_argument('-n', '--nsig', type=float, default=4,
                     help='Footprint threshold in bias noise stdevs')
 parser.add_argument('-O', '--outfile', type=str, default=None,
-                    help='Output file name (basename only)')
+                    help='Output file name (basename only). Computed value if left at default of None: <SENSOR_ID>_psf_results.fits')
                     
 args = parser.parse_args()
 

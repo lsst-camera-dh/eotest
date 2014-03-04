@@ -14,7 +14,7 @@ class ImageToolsTestCase(unittest.TestCase):
         imsize = lcm(*self.binsizes)
         self.input_image = afwImage.ImageF(imsize, imsize)
         self.input_image += 1
-    def tearDow(self):
+    def tearDown(self):
         pass
     def test_imageTools_rebin(self):
         for binsize in self.binsizes:

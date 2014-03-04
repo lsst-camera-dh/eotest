@@ -10,6 +10,7 @@ import pyfits
 import lsst.eotest.image_utils as imutils
 from fe55_psf import PsfGaussFit
 from MaskedCCD import MaskedCCD
+from EOTestResults import EOTestResults
 from fe55_gain_fitter import fe55_gain_fitter
 
 import lsst.pex.config as pexConfig
@@ -56,22 +57,19 @@ class Fe55Task(pipeBase.Task):
         #
         # Fit the DN distributions to obtain the system gain per amp.
         #
-        # @todo Find a better way of saving the gain estimates.
-        #
         gains = {}
-        output = pyfits.HDUList()
-        output.append(pyfits.PrimaryHDU())
         for amp in imutils.allAmps:
             data = fitter.results(min_prob=self.config.chiprob_min, amp=amp)
             dn = data[1]
             gains[amp], kalpha_peak, kalpha_sigma = fe55_gain_fitter(dn)
-            output[0].header.update('GAIN%s' % imutils.channelIds[amp],
-                                    gains[amp])
-
-        gain_file = os.path.join(self.config.output_dir,
-                                 '%s_gains.fits' % sensor_id)
+        results_file = os.path.join(self.config.output_dir, 
+                                    '%s_results.fits' % sensor_id)
         if self.config.verbose:
-            self.log.info("Writing gain file to %s" % gain_file)
-        output.writeto(gain_file, clobber=True, checksum=True)
+            self.log.info("Writing gain file to %s" % results_file)
+
+        results = EOTestResults(results_file)
+        for amp in gains:
+            results.add_seg_result(amp, 'GAIN', gains[amp])
+        results.write(clobber=True)
 
         return gains

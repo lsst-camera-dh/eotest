@@ -15,9 +15,9 @@ from MaskedCCD import MaskedCCD
 from BrightPixels import BrightPixels
 
 def get_stats(image, stat_ctrl):
-    flags = afwMath.MEDIAN | afwMath.STDEV
+    flags = afwMath.MEDIAN | afwMath.STDEVCLIP
     stats = afwMath.makeStatistics(image, flags, stat_ctrl)
-    return stats.getValue(afwMath.MEDIAN), stats.getValue(afwMath.STDEV)
+    return stats.getValue(afwMath.MEDIAN), stats.getValue(afwMath.STDEVCLIP)
 
 def aggressor(ccd):
     """Guess the aggressor amp based on the maximum pixel value."""
@@ -79,15 +79,18 @@ def system_crosstalk(ccd, aggressor_amp, dnthresh=None, nsig=5):
                    for amp in imutils.allAmps])
     return ratios
 
-def get_footprint(fp_set, min_fp_size):
+def get_footprint(fp_set, min_fp_size, threshold):
     footprints = [fp for fp in fp_set.getFootprints()
                   if fp.getNpix() >= min_fp_size]
     if len(footprints) > 1:
-        message = "More than one spot image found in aggressor amplifier:\n"
+        message = "More than one spot image found in aggressor amplifier.\n"
+        message += "      x     y     peak value  # pixels\n"
         for i, fp in enumerate(footprints):
-            message += '%3i  %6i  %4i\n' % (i, [x.getPeakValue() 
-                                                for x in fp.getPeaks()][0],
-                                            fp.getNpix())
+            peak = [x for x in fp.getPeaks()][0]
+            message += ('%2i  %4i  %4i     %6i       %4i\n' 
+                        % (i, peak.getIx(), peak.getIy(), peak.getPeakValue(),
+                           fp.getNpix()))
+        message += "Threshold: %i\n" % threshold
         raise RuntimeError(message)
     fp = footprints[0]
     peak_value = max([x.getPeakValue() for x in fp.getPeaks()])
@@ -142,12 +145,13 @@ def detector_crosstalk(ccd, aggressor_amp, dnthresh=None, nsig=5,
     #
     if dnthresh is None:
         median, stdev = get_stats(image, ccd.stat_ctrl)
-        #dnthresh = median + nsig*stdev
+#        dnthresh = median + nsig*stdev
         dnthresh = (np.max(ccd[aggressor_amp].getImage().getArray()) 
-                    + median)/4. + median
+                    + median)/2.
+    print "dnthresh =", dnthresh
     threshold = afwDetect.Threshold(dnthresh)
     fp_set = afwDetect.FootprintSet(image, threshold)
-    footprint, peak_value = get_footprint(fp_set, min_fp_size)
+    footprint, peak_value = get_footprint(fp_set, min_fp_size, dnthresh)
 
     agg_mean = signal_extractor(ccd, aggressor_amp, footprint)[0]
     ratios = dict([(amp, signal_extractor(ccd, amp, footprint)
@@ -248,8 +252,13 @@ def make_crosstalk_matrix(file_list, mask_files=(),
         for agg_amp in imutils.allAmps:
             if verbose:
                 print "processing aggressor amp", agg_amp
-            det_ratios = extractor(ccd, agg_amp)
-            det_xtalk.set_row(agg_amp, det_ratios)
+            try:
+                det_ratios = extractor(ccd, agg_amp)
+                det_xtalk.set_row(agg_amp, det_ratios)
+            except RuntimeError, message:
+                print "Error extracting victim/aggressor ratios."
+                print message
+                print "Skipping."
     except TypeError:
         # Presumably, we have a 16 amplifier dataset.
         for infile in file_list:

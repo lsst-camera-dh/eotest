@@ -57,8 +57,7 @@ class ReadNoiseTask(pipeBase.Task):
         Nread_dists = dict([(amp, []) for amp in imutils.allAmps])
         for i, bias, sysnoise in zip(range(len(bias_files)), bias_files,
                                      system_noise_files):
-            outfile = "%s_read_noise_%03i.fits" \
-                      % (sensor_id.replace('-', '_'), i)
+            outfile = "%s_read_noise_%03i.fits" % (sensor_id, i)
             outfile = os.path.join(self.config.output_dir, outfile)
             outfiles.append(outfile)
             

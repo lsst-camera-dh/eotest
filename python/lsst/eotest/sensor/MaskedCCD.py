@@ -19,7 +19,9 @@ class Metadata(object):
         self.header = None
         try:
             self.md = afwImage.readMetadata(infile, hdu)
-        except:
+        except pexExcept.LsstCppException:
+            # This exception occurs when DM stack encounters a "." in
+            # a FITS header keyword.
             self.header = pyfits.open(infile)[hdu-1].header
     def get(self, key):
         return self(key)

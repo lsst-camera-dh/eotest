@@ -9,6 +9,7 @@ import argparse
 import lsst.afw.image as afwImage
 import lsst.eotest.image_utils as imutils
 from ccd250_mask import ccd250_mask
+from EOTestResults import EOTestResults
 from lsst.eotest.database.SensorDb import SensorDb, NullDbObject
 from lsst.eotest.database.SensorGains import SensorGains
 
@@ -45,9 +46,9 @@ class TaskNamespace(object):
                                vendorId=self.args.sensor_id,
                                db_credentials=self.args.db_credentials)
         else:
-            md = afwImage.readMetadata(self.args.gains, 1)
-            return dict([(amp, md.get('GAIN%s' % imutils.channelIds[amp]))
-                         for amp in imutils.allAmps])
+            results = EOTestResults(self.args.gains)
+            gains = results['GAIN']
+            return dict([(amp, gains[amp-1]) for amp in imutils.allAmps])
     def mask_files(self):
         if self.args.mask_file == 'ccd250_defects':
             my_mask_files = ('ccd250_defects.fits',)
