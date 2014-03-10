@@ -12,6 +12,7 @@ import os
 import lsst.eotest.image_utils as imutils
 from MaskedCCD import MaskedCCD
 from BrightPixels import BrightPixels
+from EOTestResults import EOTestResults
 
 import lsst.afw.image as afwImage
 import lsst.pex.config as pexConfig
@@ -28,6 +29,8 @@ class BrightPixelsConfig(pexConfig.Config):
     temp_tol = pexConfig.Field("Temperature tolerance in degrees C for CCDTEMP among dark files",
                                float, default=1.5)
     output_dir = pexConfig.Field("Output directory", str, default=".")
+    eotest_results_file = pexConfig.Field("EO test results filename",
+                                          str, default=None)
     verbose = pexConfig.Field("Turn verbosity on", bool, default=True)
 
 class BrightPixelsTask(pipeBase.Task):
@@ -54,6 +57,15 @@ class BrightPixelsTask(pipeBase.Task):
         total_bright_pixels = 0
         if self.config.verbose:
             self.log.info("Segment     # bright pixels")
+        #
+        # Write bright pixel counts to results file.
+        #
+        if self.config.eotest_results_file is None:
+            results_file = '%s_eotest_results.fits' % sensor_id
+        else:
+            results_file = self.config.eotest_results_file
+        
+        results = EOTestResults(results_file)
         for amp in imutils.allAmps:
             bright_pixels = BrightPixels(ccd, amp, exptime, gains[amp])
             
@@ -61,6 +73,8 @@ class BrightPixelsTask(pipeBase.Task):
             bright_pixels.generate_mask(outfile)
             count = len(pixels)
             total_bright_pixels += count
+            results.add_seg_result(amp, 'NUM_BRIGHT_PIXELS', count)
             self.log.info("%s          %i" % (imutils.channelIds[amp], count))
         if self.config.verbose:
             self.log.info("Total bright pixels: %i" % total_bright_pixels)
+        results.write(clobber=True)

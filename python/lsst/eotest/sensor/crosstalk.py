@@ -148,7 +148,7 @@ def detector_crosstalk(ccd, aggressor_amp, dnthresh=None, nsig=5,
 #        dnthresh = median + nsig*stdev
         dnthresh = (np.max(ccd[aggressor_amp].getImage().getArray()) 
                     + median)/2.
-    print "dnthresh =", dnthresh
+#    print "dnthresh =", dnthresh
     threshold = afwDetect.Threshold(dnthresh)
     fp_set = afwDetect.FootprintSet(image, threshold)
     footprint, peak_value = get_footprint(fp_set, min_fp_size, dnthresh)

@@ -8,6 +8,7 @@ import pyfits
 
 import lsst.eotest.image_utils as imutils
 from MaskedCCD import SegmentRegions
+from EOTestResults import EOTestResults
 from eperTask import EPERTask
 
 import lsst.afw.image as afwImage
@@ -41,6 +42,8 @@ class CteConfig(pexConfig.Config):
     overscans = pexConfig.Field("Number of overscan rows/columns to use",
                                 int, default=3)
     output_dir = pexConfig.Field("Output directory", str, default=".")
+    eotest_results_file = pexConfig.Field('EO test results filename',
+                                          str, default=None)
     verbose = pexConfig.Field("Turn verbosity on", bool, default=True)
 
 class CteTask(pipeBase.Task):
@@ -51,7 +54,9 @@ class CteTask(pipeBase.Task):
     @pipeBase.timeMethod
     def run(self, sensor_id, superflat_files, mask_files):
         if self.config.verbose:
-            self.log.info("Processing superflat files: %s" % superflat_files)
+            self.log.info("Processing superflat files:")
+            for item in superflat_files:
+                self.log.info(item)
         #
         # Prepare the co-added superflat file.
         #
@@ -77,19 +82,20 @@ class CteTask(pipeBase.Task):
         #
         # Write results to the output file.
         #
-        outfile = os.path.join(self.config.output_dir,
-                               '%s_cti_values.txt' % sensor_id)
-        output = open(outfile, 'w')
-        output.write('amp  parallel_cti  serial_cti\n')
+        results_file = self.config.eotest_results_file
+        if results_file is None:
+            results_file = '%s_eotest_results.fits' % sensor_id
+        results = EOTestResults(results_file)
         if self.config.verbose:
             self.log.info('amp  parallel_cti  serial_cti')
         for amp in imutils.allAmps:
             line = '%s  %12.4e  %12.4e' % (imutils.channelIds[amp],
                                            pcti[amp], scti[amp])
-            output.write(line + '\n')
+            results.add_seg_result(amp, 'CTI_SERIAL', scti[amp])
+            results.add_seg_result(amp, 'CTI_PARALLEL', pcti[amp])
             if self.config.verbose:
                 self.log.info(line)
-        output.close()
+        results.write(clobber='yes')
         #
         # Clean up
         #

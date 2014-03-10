@@ -23,6 +23,8 @@ class Fe55Config(pexConfig.Config):
     nsig = pexConfig.Field("Charge cluster footprint threshold in number of standard deviations of noise in bias section", float, default=4)
     output_dir = pexConfig.Field("Output directory", str, default='.')
     output_file = pexConfig.Field("Output filename", str, default=None)
+    eotest_results_file = pexConfig.Field("EO test results filename", 
+                                          str, default=None)
     verbose = pexConfig.Field("Turn verbosity on", bool, default=True)
     
 class Fe55Task(pipeBase.Task):
@@ -62,10 +64,14 @@ class Fe55Task(pipeBase.Task):
             data = fitter.results(min_prob=self.config.chiprob_min, amp=amp)
             dn = data[1]
             gains[amp], kalpha_peak, kalpha_sigma = fe55_gain_fitter(dn)
-        results_file = os.path.join(self.config.output_dir, 
-                                    '%s_results.fits' % sensor_id)
+
+        if self.config.eotest_results_file is None:
+            results_file = os.path.join(self.config.output_dir, 
+                                        '%s_eotest_results.fits' % sensor_id)
+        else:
+            results_file = self.config.eotest_results_file
         if self.config.verbose:
-            self.log.info("Writing gain file to %s" % results_file)
+            self.log.info("Writing gain results to %s" % results_file)
 
         results = EOTestResults(results_file)
         for amp in gains:

@@ -9,6 +9,7 @@ import numpy as np
 import pyfits
 import lsst.eotest.image_utils as imutils
 from MaskedCCD import MaskedCCD
+from EOTestResults import EOTestResults
 import lsst.afw.image as afwImage
 import lsst.pex.config as pexConfig
 import lsst.pipe.base as pipeBase
@@ -17,6 +18,8 @@ class DarkCurrentConfig(pexConfig.Config):
     """Configuration for DarkCurrentTask"""
     temp_tol = pexConfig.Field("Temperature tolerance in degrees C for CCDTEMP among dark files", float, default=1.5)
     output_dir = pexConfig.Field("Output directory", str, default=".")
+    eotest_results_file = pexConfig.Field('EO test results filename',
+                                          str, default=None)
     verbose = pexConfig.Field("Turn verbosity on", bool, default=True)
 
 class DarkCurrentTask(pipeBase.Task):
@@ -65,12 +68,19 @@ class DarkCurrentTask(pipeBase.Task):
             self.log.info("CCD: mean 95 percentile value = %s" % dark95mean)
         #
         # Update header of dark current median image file with dark
-        # files used and dark95 values.
+        # files used and dark95 values, and write dark95 values to the
+        # eotest results file.
         #
+        results_file = self.config.eotest_results_file
+        if results_file is None:
+            results_file = '%s_eotest_results.fits' % sensor_id
+        results = EOTestResults(results_file)
         output = pyfits.open(medfile)
         for i, dark in enumerate(dark_files):
             output[0].header.update('DARK%02i' % i, os.path.basename(dark))
         for amp in imutils.allAmps:
             output[0].header.update('DARK95%s' % imutils.channelIds[amp],
                                     dark95s[amp])
+            results.add_seg_result(amp, 'DARK_CURRENT_95', dark95s[amp])
         output.writeto(medfile, clobber=True, checksum=True)
+        results.write(clobber=True)

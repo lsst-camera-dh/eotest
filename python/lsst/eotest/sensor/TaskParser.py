@@ -86,6 +86,8 @@ class TaskParser(argparse.ArgumentParser):
                           help='file of system gains')
         self.add_argument('-v', '--verbose', action='store_true',default=False,
                           help='turn verbosity on')
+        self.add_argument('-r', '--results_file', type=str, default=None,
+                          help='Results file for EO test parameters. Computed value if left at default of None: <SENSOR_ID>_eotest_results.fits')
     def parse_args(self):
         args = argparse.ArgumentParser.parse_args(self)
         if args.output_dir is not None:

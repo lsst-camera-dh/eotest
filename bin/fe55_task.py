@@ -22,6 +22,7 @@ task.config.output_dir = args.output_dir
 task.config.output_file = args.outfile
 task.config.nsig = args.nsig
 task.config.verbose = args.verbose
+task.config.eotest_results_file = args.results_file
 
 infiles = args.files(args.file_pattern, args.Fe55_file_list)
 

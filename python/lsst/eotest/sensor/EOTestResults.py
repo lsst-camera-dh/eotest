@@ -17,12 +17,12 @@ class EOTestResults(object):
         self.output.append(pyfits.PrimaryHDU())
         self.colnames = ["AMP", "GAIN", "READ_NOISE", "FULL_WELL",
                          "CTI_SERIAL", "CTI_PARALLEL", "DARK_CURRENT_95",
-                         "NUM_BRIGHT_PIXELS"]
-        formats = "IEEEEEEI"
+                         "NUM_BRIGHT_PIXELS", "NUM_TRAPS"]
+        formats = "IEEEEEEII"
         my_types = dict((("I", np.int), ("E", np.float)))
         columns = [np.zeros(_namps, dtype=my_types[fmt]) for fmt in formats]
         units = ["None", "Ne/DN", "rms e-/pixel", "e-/pixel",
-                 "None", "None", "e-/s/pixel", "None"]
+                 "None", "None", "e-/s/pixel", "None", "None"]
         fits_cols = [pyfits.Column(name=self.colnames[i], format=formats[i],
                                    unit=units[i], array=columns[i])
                      for i in range(len(self.colnames))]

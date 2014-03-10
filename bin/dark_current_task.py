@@ -24,6 +24,8 @@ task.config.verbose = args.verbose
 
 dark_files = args.files(args.dark_files, args.dark_file_list)
 if args.verbose:
-    print 'processing files:', dark_files
+    print 'processing files:'
+    for item in dark_files:
+        print '  ', item
 
 task.run(args.sensor_id, dark_files, args.mask_files(), args.system_gains())

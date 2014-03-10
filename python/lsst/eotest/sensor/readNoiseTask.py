@@ -10,6 +10,7 @@ import numpy as np
 import pyfits
 import lsst.eotest.image_utils as imutils
 from MaskedCCD import MaskedCCD
+from EOTestResults import EOTestResults
 from read_noise import noise_dists
 
 import lsst.pex.config as pexConfig
@@ -44,6 +45,8 @@ class ReadNoiseConfig(pexConfig.Config):
     nsamp = pexConfig.Field("Number of subregions to sample",
                             int, default=1000)
     output_dir = pexConfig.Field("Output directory", str, default=".")
+    eotest_results_file = pexConfig.Field("EO test results filename",
+                                          str, default=None)
     verbose = pexConfig.Field("Turn verbosity on", bool, default=True)
 
 class ReadNoiseTask(pipeBase.Task):
@@ -82,8 +85,11 @@ class ReadNoiseTask(pipeBase.Task):
 
             _write_read_noise_dists(outfile, Ntot, Nsys, gains, bias, sysnoise)
             
-        outfile = '%s_read_noise_results.txt' % sensor_id
-        output = open(os.path.join(self.config.output_dir, outfile), 'w')
+        results_file = self.config.eotest_results_file
+        if results_file is None:
+            results_file = '%s_eotest_results.fits' % sensor_id
+
+        results = EOTestResults(results_file)
         if self.config.verbose:
             self.log.info("Amp    read noise")
         for amp in imutils.allAmps:
@@ -93,7 +99,7 @@ class ReadNoiseTask(pipeBase.Task):
             else:
                 Nread = -1
             line = "%s        %.4f" % (amp, Nread)
-            output.write(line + '\n')
             if self.config.verbose:
                 self.log.info(line)
-        output.close()
+            results.add_seg_result(amp, 'READ_NOISE', Nread)
+        results.write(clobber=True)
