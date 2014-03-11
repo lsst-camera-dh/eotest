@@ -6,7 +6,7 @@
 import os
 import lsst.eotest.image_utils as imutils
 from MaskedCCD import MaskedCCD
-from traps import traps
+from Traps import Traps
 import lsst.pex.config as pexConfig
 import lsst.pipe.base as pipeBase
 
@@ -27,8 +27,9 @@ class TrapTask(pipeBase.Task):
             self.log.info("processing on %s" % pocket_pumped_file)
         ccd = MaskedCCD(pocket_pumped_file, mask_files=mask_files)
         outfile = os.path.join(self.config.output_dir,
-                               '%s_traps.txt' % sensor_id)
-        my_traps = traps(ccd, gains, outfile=outfile)
+                               '%s_traps.fits' % sensor_id)
+        my_traps = Traps(ccd, gains)
+        my_traps.write(outfile, clobber=True)
         results_file = self.config.eotest_results_file
         if results_file is None:
             resuts_file = '%s_eotest_results.fits' % sensor_id
