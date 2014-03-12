@@ -27,6 +27,17 @@ bias_sigma = 4
 read_noise = 5.
 dark_current = 2e-3
 full_well = 150000
+
+#
+# Geometry of amplifiers in a sensor.  These are nomimal values for
+# E2V devices.
+#
+prescan = 10
+detxsize = 4336
+detysize = 4044
+serial_overscan = 20
+parallel_overscan = 20
+
 #
 # If debug=true, then 'debug' will be used in place of the date and time
 # stamp strings in the directory and file names.

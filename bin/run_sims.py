@@ -7,6 +7,7 @@ sensors using a specified directory structure.
 @author J. Chiang <jchiang@slac.stanford.edu>
 """
 import os
+import copy
 import time
 import numpy as np
 import lsst.eotest.image_utils as imutils
@@ -16,6 +17,29 @@ from lsst.eotest.sensor.QE import planck, clight
 from lsst.eotest.sensor.sim_tools import *
 #from lsst.eotest.sensor.ctesim import ctesim
 from lsst.eotest.sensor.ctesim import ctesim_cpp as ctesim
+
+class CcdFactory(object):
+    """
+    Factory class for creating CCD objects with a common geometry.
+    This uses the Borg pattern so that the geometry may be set by
+    configuration outside of the calling functions.
+    """
+    _shared_state = {}
+    def __init__(self, geometry=None):
+        self.__dict__ = self._shared_state
+        if geometry is not None:
+            self.geometry = geometry
+    def create(self, *args, **kwds):
+        my_kwds = copy.deepcopy(kwds)
+        try:
+            my_kwds['geometry'] = self.geometry
+        except AttributeError:
+            pass
+        return CCD(*args, **my_kwds)
+
+def ccd(*args, **kwds):
+    user_factory = CcdFactory()
+    return user_factory.create(*args, **kwds)
 
 class AmpIndexDecorator(object):
     def __init__(self, var):
@@ -74,7 +98,7 @@ def simulate_frame(exptime, pars, ccdtemp=-100, set_full_well=True):
         full_well = pars.full_well
     else:
         full_well = None
-    sensor = CCD(exptime=exptime, gain=pars.system_gain, ccdtemp=ccdtemp,
+    sensor = ccd(exptime=exptime, gain=pars.system_gain, ccdtemp=ccdtemp,
                  full_well=full_well)
     #
     # Add test-independent effects.
@@ -97,7 +121,7 @@ def generate_flats(pars):
         print "  exptime %06.2fs" % exptime
         intensity = Ne/exptime
         for flat_id in ('flat1', 'flat2'):
-            sensor = CCD(exptime=exptime, gain=pars.system_gain,
+            sensor = ccd(exptime=exptime, gain=pars.system_gain,
                          ccdtemp=pars.flat_fields.ccdtemp,
                          full_well=pars.full_well)
             sensor.md['MONDIODE'] = intensity
@@ -129,12 +153,12 @@ def generate_traps(pars):
     #
     # First bias image
     #
-    frames.append(CCD(exptime=0, gain=pars.system_gain,
+    frames.append(ccd(exptime=0, gain=pars.system_gain,
                       ccdtemp=traps.ccdtemp))
     #
     # Pocket pumped image
     #
-    ppump = CCD(exptime=traps.exptime, gain=pars.system_gain,
+    ppump = ccd(exptime=traps.exptime, gain=pars.system_gain,
                 ccdtemp=traps.ccdtemp)
     ppump.expose_flat(intensity)
     ppump.add_traps(traps.ndefects, traps.cycles, traps.size)
@@ -142,12 +166,12 @@ def generate_traps(pars):
     #
     # Second bias image
     #
-    frames.append(CCD(exptime=0, gain=pars.system_gain,
+    frames.append(ccd(exptime=0, gain=pars.system_gain,
                       ccdtemp=traps.ccdtemp))
     #
     # Un-pumped image (i.e., a normal flat)
     #
-    flat = CCD(exptime=traps.exptime, gain=pars.system_gain,
+    flat = ccd(exptime=traps.exptime, gain=pars.system_gain,
                ccdtemp=traps.ccdtemp)
     flat.expose_flat(intensity)
     frames.append(flat)
@@ -259,7 +283,7 @@ def generate_qe_dataset(pars):
     incident_power = wlscan.incident_power  # J/s per pixel
     for wl_nm in wlscan.wavelengths:
         print "  wavelength %06.1f nm" % wl_nm
-        sensor = CCD(exptime=wlscan.exptime, gain=pars.system_gain, 
+        sensor = ccd(exptime=wlscan.exptime, gain=pars.system_gain, 
                      ccdtemp=wlscan.ccdtemp)
         hnu = planck*clight/wl_nm/1e-9    # photon energy (J)
         sensor.md['MONOWL'] = wl_nm
@@ -315,7 +339,7 @@ def generate_superflat(pars):
     # simulations, we set every pixel to unity, i.e., no correction.
     #
     print "  generating the non-uniform illumination correction file..."
-    sensor = CCD(exptime=0)
+    sensor = ccd(exptime=0)
     for amp in imutils.allAmps:
         sensor.segments[amp].image += 1
     filename = ("%s_illumation_correction_%s.fits"
@@ -324,7 +348,7 @@ def generate_superflat(pars):
                    bitpix=pars.bitpix)
 
 def dark_frame(exptime, ccdtemp, pars):
-    frame = CCD(exptime=exptime, gain=pars.system_gain, ccdtemp=ccdtemp)
+    frame = ccd(exptime=exptime, gain=pars.system_gain, ccdtemp=ccdtemp)
     frame.add_bias(level=pars.bias_level, sigma=pars.bias_sigma)
     frame.add_bias(level=0, sigma=pars.read_noise)
     frame.add_dark_current(pars.dark_current)
@@ -374,7 +398,7 @@ def generate_system_read_noise(pars):
     outputdir = system_dir(pars, sysnoise.test_type)
     for frame in range(sysnoise.nframes):
         print "  frame", frame
-        sensor = CCD(exptime=0, gain=pars.system_gain)
+        sensor = ccd(exptime=0, gain=pars.system_gain)
         sensor.add_bias(level=pars.bias_level, sigma=pars.bias_sigma)
         filename = ("%s_%02i_%s.fits"
                     % (sysnoise.test_type, frame,
@@ -388,7 +412,7 @@ def generate_system_crosstalk_dataset(pars):
     outputdir = system_dir(pars, sysxtalk.test_type)
     for aggressor in imutils.allAmps:
         print "  aggressor amp", aggressor
-        sensor = CCD(exptime=0, gain=pars.system_gain)
+        sensor = ccd(exptime=0, gain=pars.system_gain)
         sensor.segments[aggressor].add_sys_xtalk_col(sysxtalk.dn,
                                                      sysxtalk.column)
         sensor.add_bias(level=pars.bias_level, sigma=pars.bias_sigma)
@@ -411,6 +435,16 @@ if __name__ == '__main__':
         exec('import %s as pars' % os.path.basename(parfile).strip('.py'))
     else:
         import lsst.eotest.sensor.sim_params as pars
+    #
+    # Set up the master CcdFactory object with the desired amplifier
+    # geometry.
+    #
+    geometry = AmplifierGeometry(prescan=pars.prescan, 
+                                 serial_overscan=pars.serial_overscan,
+                                 parallel_overscan=pars.parallel_overscan,
+                                 detxsize=pars.detxsize, 
+                                 detysize=pars.detysize)
+    master_factory = CcdFactory(geometry=geometry)
     #
     # Generate the desired datasets
     #

@@ -16,7 +16,7 @@ from read_noise import noise_dists
 from eperTask import EPERTask
 from DetectorResponse import DetectorResponse
 from prnu import prnu
-from traps import traps
+from Traps import Traps
 #
 # Pipe tasks
 #

@@ -17,6 +17,7 @@ import lsst.afw.display.ds9 as ds9
 import lsst.eotest.image_utils as imutils
 from fe55_yield import Fe55Yield
 from fits_headers import fits_headers
+from AmplifierGeometry import AmplifierGeometry
 
 _sqrt2 = np.sqrt(2.)
 
@@ -38,14 +39,14 @@ def xtalk_pattern(aggressor, frac_scale=0.02):
 class CCD(object):
     dtypes = dict([(-32, np.float32), (16, np.int16)])
     def __init__(self, exptime=1, gain=5, ccdtemp=-100, full_well=None,
-                 bbox=imutils.full_segment, amps=imutils.allAmps):
+                 geometry=AmplifierGeometry(), amps=imutils.allAmps):
         self.segments = OrderedDict()
         for amp in amps:
             self.segments[amp] = SegmentExposure(exptime=exptime, 
                                                  gain=gain, 
                                                  ccdtemp=ccdtemp,
                                                  full_well=full_well, 
-                                                 bbox=bbox)
+                                                 geometry=geometry)
         self.md = dict()
     def add_bias(self, level=1e4, sigma=4):
         for amp in self.segments:
@@ -116,14 +117,15 @@ class CCD(object):
 
 class SegmentExposure(object):
     def __init__(self, exptime=1, gain=5, ccdtemp=-100, full_well=None,
-                 bbox=imutils.full_segment):
+                 geometry=AmplifierGeometry()):
         self.exptime = exptime
         self.gain = gain
         self.ccdtemp = ccdtemp
         self.full_well = full_well
+        self.geometry = geometry
         self.fe55_yield = Fe55Yield(ccdtemp)
-        self.image = afwImage.ImageF(bbox)
-        self.imarr = self.image.Factory(self.image, imutils.imaging).getArray()
+        self.image = afwImage.ImageF(geometry.full_segment)
+        self.imarr = self.image.Factory(self.image, geometry.imaging).getArray()
         self.ny, self.nx = self.imarr.shape
         self.npix = self.nx*self.ny
         self._sigma = -1
@@ -239,11 +241,11 @@ def fitsFile(ccd_segments):
         output.append(pyfits.ImageHDU(data=segment.image.getArray()))
         output[amp].header = headers[amp].copy()
         output[amp].header['BZERO'] = 0
-# Rely on FITS template for the following keywords.        
-#        output[amp].name = 'Segment%s' % imutils.channelIds[amp]
-#        output[amp].header.update('DETSIZE', imutils.detsize)
-#        output[amp].header.update('DETSEC', imutils.detsec(amp))
-#        output[amp].header.update('CHANNEL', amp)
+        output[amp].name = 'Segment%s' % imutils.channelIds[amp]
+        output[amp].header.update('DETSIZE', segment.geometry[amp]['DETSIZE'])
+        output[amp].header.update('DATASEC', segment.geometry[amp]['DATASEC'])
+        output[amp].header.update('DETSEC', segment.geometry[amp]['DETSEC'])
+        output[amp].header.update('CHANNEL', amp)
     return output
                 
 def writeFits(ccd_segments, outfile, clobber=True):

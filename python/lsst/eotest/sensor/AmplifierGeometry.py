@@ -1,24 +1,40 @@
+import lsst.afw.geom as afwGeom
+
 class AmplifierGeometry(dict):
     nsegx, nsegy = 8, 2
     def __init__(self, prescan=10, serial_overscan=20, parallel_overscan=20,
                  detxsize=4336, detysize=4044):
         super(AmplifierGeometry, self).__init__()
-        self.prescan = prescan
-        self.serial_overscan = serial_overscan
-        self.parallel_overscan = parallel_overscan
         self.naxis1 = detxsize/self.nsegx
         self.naxis2 = detysize/self.nsegy
-        self.nx = self.naxis1 - self.prescan - self.serial_overscan
-        self.ny = self.naxis2 - self.parallel_overscan
+        self.nx = self.naxis1 - prescan - serial_overscan
+        self.ny = self.naxis2 - parallel_overscan
+        self.full_segment = afwGeom.Box2I(afwGeom.Point2I(0, 0),
+                                          afwGeom.Point2I(self.naxis1 - 1, 
+                                                          self.naxis2 - 1))
+        self.prescan = afwGeom.Box2I(afwGeom.Point2I(0, 0),
+                                     afwGeom.Point2I(prescan-1, self.naxis2-1))
+        self.imaging = afwGeom.Box2I(afwGeom.Point2I(prescan, 0),
+                                     afwGeom.Point2I(self.nx + prescan - 1,
+                                                     self.ny - 1 ))
+        self.serial_overscan = \
+            afwGeom.Box2I(afwGeom.Point2I(self.nx + prescan, 0),
+                          afwGeom.Point2I(self.naxis1 - 1, self.naxis2 - 1))
+                                          
+        self.parallel_overscan = \
+            afwGeom.Box2I(afwGeom.Point2I(prescan, self.naxis2 - parallel_overscan),
+                          afwGeom.Point2I(self.naxis1 - serial_overscan,
+                                          self.naxis2 - 1))
         self.DETSIZE = '[1:%i,1:%i]' % (detxsize, detysize)
-        for amp in range(1, self.nsegx*self.nsegy+1):
+        for amp in range(1, self.nsegx*self.nsegy + 1):
             self[amp] = self._segment_geometry(amp)
     def _segment_geometry(self, amp):
         results = dict()
-        results['DETSIZE'] = '[1:%i,1:%i]' % (self.nx*self.nsegx, self.ny*self.nsegy)
-        results['DATASEC'] = '[%i:%i,%i:%i]' % (self.prescan + 1,
-                                                self.naxis1 - self.serial_overscan,
-                                                1, self.naxis2 - self.parallel_overscan)
+        results['DETSIZE'] = '[1:%i,1:%i]' % (self.nx*self.nsegx, 
+                                              self.ny*self.nsegy)
+        results['DATASEC'] = '[%i:%i,%i:%i]' % (self.prescan.getWidth() + 1,
+                                                self.naxis1 - self.serial_overscan.getWidth(),
+                                                1, self.ny)
         results['DETSEC'] = self._detsec(amp)
         return results
     def _detsec(self, amp):
@@ -36,6 +52,13 @@ class AmplifierGeometry(dict):
 if __name__ == '__main__':
     e2v = AmplifierGeometry()
     itl = AmplifierGeometry(prescan=3, detxsize=4400, detysize=4040)
+
+    print e2v.full_segment
+    print e2v.prescan
+    print e2v.imaging
+    print e2v.serial_overscan
+    print e2v.parallel_overscan
+
     for amp in range(1, 17):
         print amp, e2v[amp]['DETSEC'], itl[amp]['DETSEC']
         print amp, e2v[amp]['DATASEC'], itl[amp]['DATASEC']
