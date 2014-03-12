@@ -98,7 +98,7 @@ def unbias_and_trim(im, overscan=serial_overscan, imaging=imaging,
                     apply_trim=True, fit_order=1):
     """Subtract bias calculated from overscan region and optionally trim 
     prescan and overscan regions."""
-    im -= bias_image(im, serial_overscan, fit_order)
+    im -= bias_image(im, overscan, fit_order)
     if apply_trim:
         return trim(im, imaging)
     return im
