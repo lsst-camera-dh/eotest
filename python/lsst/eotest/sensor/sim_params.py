@@ -33,10 +33,10 @@ full_well = 150000
 # E2V devices.
 #
 prescan = 10
+nx = 512
+ny = 2002
 detxsize = 4336
 detysize = 4044
-serial_overscan = 20
-parallel_overscan = 20
 
 #
 # If debug=true, then 'debug' will be used in place of the date and time

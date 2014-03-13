@@ -175,6 +175,13 @@ class CrosstalkMatrix(object):
     def _set_matrix(self):
         self.matrix = np.zeros((self.namps, self.namps), dtype=np.float)
     def _read_matrix(self):
+        if self.filename[-5:] == '.fits':
+            self._read_fits_matrix()
+        else:
+            self._read_text_matrix()
+    def _read_fits_matrix(self):
+        self.matrix = pyfits.open(self.filename)[0].data
+    def _read_text_matrix(self):
         input = open(self.filename, 'r')
         amp = 0
         for line in input:
@@ -285,8 +292,9 @@ def make_crosstalk_matrix(file_list, mask_files=(),
     return det_xtalk
 
 if __name__ == '__main__':
-    sys_xtfile = lambda amp : '/nfs/farm/g/lsst/u1/testData/eotestData/System/xtalk/data/xtalk_seg%02i.fits' % amp
-    mask_files = ('CCD250_DEFECTS_mask.fits', )
+    sys_xtfile = lambda amp : '/u/gl/jchiang/ki18/LSST/SensorTests/eotest/0.0.0.6/work/system/xtalk/debug/xtalk_%02i_debug.fits' % amp
+#    mask_files = ('CCD250_DEFECTS_mask.fits', )
+    mask_files = ()
     #
     # System crosstalk calculation
     #
@@ -300,9 +308,10 @@ if __name__ == '__main__':
     sys_xtalk.write('sys_xtalk.txt')
     sys_xtalk.write_fits('sys_xtalk.fits')
     #
-    # Read it back in from the text file and plot.
+    # Read it back in from the fits file and plot.
     #
-    foo = CrosstalkMatrix('sys_xtalk.txt')
+#    foo = CrosstalkMatrix('sys_xtalk.txt')
+    foo = CrosstalkMatrix('sys_xtalk.fits')
     foo.plot_matrix('System crosstalk')
 
     #

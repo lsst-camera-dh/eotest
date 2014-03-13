@@ -440,8 +440,8 @@ if __name__ == '__main__':
     # geometry.
     #
     geometry = AmplifierGeometry(prescan=pars.prescan, 
-                                 serial_overscan=pars.serial_overscan,
-                                 parallel_overscan=pars.parallel_overscan,
+                                 nx = pars.nx,
+                                 ny = pars.ny,
                                  detxsize=pars.detxsize, 
                                  detysize=pars.detysize)
     master_factory = CcdFactory(geometry=geometry)

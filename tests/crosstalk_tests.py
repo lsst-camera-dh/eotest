@@ -44,7 +44,8 @@ class CrosstalkTestCase(unittest.TestCase):
 
 class CrosstalkMatrixTestCase(unittest.TestCase):
     def setUp(self):
-        self.matrix_output = 'xtalk_output.txt'
+        self.matrix_text_output = 'xtalk_output.txt'
+        self.matrix_fits_output = 'xtalk_output.fits'
         self.xtalk_files = []
         for agg in imutils.allAmps:
             self.xtalk_files.append('xtalk_test_%02i.fits' % agg)
@@ -55,16 +56,20 @@ class CrosstalkMatrixTestCase(unittest.TestCase):
     def tearDown(self):
         for item in self.xtalk_files:
             os.remove(item)
-        os.remove(self.matrix_output)
-        os.remove(self.matrix_output.replace('.txt', '.fits'))
+        os.remove(self.matrix_text_output)
+        os.remove(self.matrix_fits_output)
     def test_CrosstalkMatrix(self):
         det_xtalk = crosstalk.make_crosstalk_matrix(self.xtalk_files,
                                                     verbose=False)
-        det_xtalk.write(self.matrix_output)
-        det_xtalk.write_fits(self.matrix_output.replace('.txt', '.fits'))
+        det_xtalk.write(self.matrix_text_output)
+        det_xtalk.write_fits(self.matrix_fits_output)
 
-        det_xtalk2 = crosstalk.CrosstalkMatrix(self.matrix_output)
+        det_xtalk2 = crosstalk.CrosstalkMatrix(self.matrix_text_output)
         diff = det_xtalk - det_xtalk2
+        self.assertTrue(max([abs(x) for x in diff.matrix.flat]) < 1e-4)
+
+        det_xtalk3 = crosstalk.CrosstalkMatrix(self.matrix_fits_output)
+        diff = det_xtalk - det_xtalk3
         self.assertTrue(max([abs(x) for x in diff.matrix.flat]) < 1e-4)
 
 def generate_crosstalk_frame(aggressor, dn, x, y, radius,
