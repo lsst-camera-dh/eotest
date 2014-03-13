@@ -6,6 +6,7 @@
 import os
 import lsst.eotest.image_utils as imutils
 from MaskedCCD import MaskedCCD
+from EOTestResults import EOTestResults
 from Traps import Traps
 import lsst.pex.config as pexConfig
 import lsst.pipe.base as pipeBase
@@ -32,7 +33,7 @@ class TrapTask(pipeBase.Task):
         my_traps.write(outfile, clobber=True)
         results_file = self.config.eotest_results_file
         if results_file is None:
-            resuts_file = '%s_eotest_results.fits' % sensor_id
+            results_file = '%s_eotest_results.fits' % sensor_id
         results = EOTestResults(results_file)
         for amp in imutils.allAmps:
             results.add_seg_result(amp, 'NUM_TRAPS', len(my_traps[amp]))

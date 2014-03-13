@@ -56,7 +56,7 @@ class CrosstalkMatrixTestCase(unittest.TestCase):
         for item in self.xtalk_files:
             os.remove(item)
         os.remove(self.matrix_output)
-        os.remove(self.matrix_output.replace('.txt', '.fits')
+        os.remove(self.matrix_output.replace('.txt', '.fits'))
     def test_CrosstalkMatrix(self):
         det_xtalk = crosstalk.make_crosstalk_matrix(self.xtalk_files,
                                                     verbose=False)
