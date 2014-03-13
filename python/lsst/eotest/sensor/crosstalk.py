@@ -6,6 +6,7 @@
 import os
 import time
 import numpy as np
+import pyfits
 import pylab
 import lsst.afw.detection as afwDetect
 import lsst.afw.geom as afwGeom
@@ -182,6 +183,14 @@ class CrosstalkMatrix(object):
             self.matrix[amp] = np.array([float(x) for x 
                                          in line.strip().split()])
             amp += 1
+    def write_fits(self, outfile=None, clobber=True):
+        if outfile is None:
+            outfile = self.filename
+        else:
+            self.filename = outfile
+        output = pyfits.HDUList()
+        output.append(pyfits.PrimaryHDU(data=self.matrix))
+        output.writeto(outfile, clobber=clobber)
     def write(self, outfile=None):
         if outfile is None:
             outfile = self.filename
@@ -289,6 +298,7 @@ if __name__ == '__main__':
         sys_xtalk.set_row(agg_amp, ratios)
     print time.time() - tstart
     sys_xtalk.write('sys_xtalk.txt')
+    sys_xtalk.write_fits('sys_xtalk.fits')
     #
     # Read it back in from the text file and plot.
     #

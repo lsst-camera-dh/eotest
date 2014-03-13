@@ -10,7 +10,7 @@ import lsst.afw.geom as afwGeom
 import lsst.afw.image as afwImage
 import lsst.afw.math as afwMath
 
-allAmps = range(1,17)
+allAmps = range(1, 17)
 
 # Segment ID to HDU number in FITS dictionary
 hdu_dict = dict( [ (1,'Segment10'), (2,'Segment11'), (3,'Segment12'),

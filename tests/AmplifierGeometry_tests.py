@@ -87,8 +87,7 @@ parallel_overscan = afwGeom.Box2I(afwGeom.Point2I(10, 2002),
 
 class AmplifierGeometryTestCase(unittest.TestCase):
     def setUp(self):
-        self.e2v = AmplifierGeometry(prescan=10,
-                                     serial_overscan=20, parallel_overscan=20,
+        self.e2v = AmplifierGeometry(prescan=10, nx=512, ny=2002,
                                      detxsize=4336, detysize=4044)
     def tearDown(self):
         pass

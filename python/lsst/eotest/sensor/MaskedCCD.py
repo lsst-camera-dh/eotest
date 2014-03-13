@@ -160,8 +160,8 @@ def add_mask_files(mask_files, outfile, clobber=True):
     for amp in imutils.allAmps:
         md = dafBase.PropertySet()
         md.set('EXTNAME', 'SEGMENT%s' % imutils.channelIds[amp])
-        md.set('DETSIZE', imutils.detsize)
-        md.set('DETSEC', imutils.detsec(amp))
+#        md.set('DETSIZE', imutils.detsize)
+#        md.set('DETSEC', imutils.detsec(amp))
         masks[amp].writeFits(outfile, md, 'a')
     return masks
 
