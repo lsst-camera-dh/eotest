@@ -26,5 +26,5 @@ class CrosstalkTask(pipeBase.Task):
         if len(xtalk_files) == 1:
             xtalk_files = xtalk_files[0]
         xtalk = make_crosstalk_matrix(xtalk_files, mask_files=mask_files)
-        xtalk.write(os.path.join(self.config.output_dir,
-                                 '%s_xtalk_matrix.txt' % sensor_id))
+        xtalk.write_fits(os.path.join(self.config.output_dir,
+                                      '%s_xtalk_matrix.fits' % sensor_id))

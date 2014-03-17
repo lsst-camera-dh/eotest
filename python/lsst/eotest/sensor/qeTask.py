@@ -26,7 +26,7 @@ class QeTask(pipeBase.Task):
         
         if medians_file is None:
             medians_file = os.path.join(self.config.output_dir,
-                                        '%s_QE.txt' % sensor_id)
+                                        '%s_QE_medians.txt' % sensor_id)
             qe_data.calculate_medians(qe_files, medians_file,
                                       mask_files=mask_files, clobber=True)
             

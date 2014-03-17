@@ -6,8 +6,11 @@ These data are to be used for linearity and full-well measurments.
 """
 import os
 import glob
+import numpy as np
+import pyfits
 import lsst.eotest.image_utils as imutils
 from MaskedCCD import MaskedCCD
+from EOTestResults import EOTestResults
 from DetectorResponse import DetectorResponse
 
 import lsst.afw.math as afwMath
@@ -69,30 +72,44 @@ class FlatPairTask(pipeBase.Task):
         detresp = DetectorResponse(detrespfile)
 
         outfile = os.path.join(self.config.output_dir,
-                               '%s_flat_pair_results.txt' % self.sensor_id)
-        output = open(outfile, 'w')
+                               '%s_eotest_results.fits' % self.sensor_id)
+        output = EOTestResults(outfile)
         if self.config.verbose:
             self.log.info("Segment    full well (e-/pixel)   max. frac. dev.")
         for amp in imutils.allAmps:
             try:
                 full_well, fp = detresp.full_well(amp)
-            except RuntimeError:
+            except ValueError, RuntimeError:
                 full_well, fp = detresp.full_well(amp, frac_offset=0.05)
             maxdev, fit_pars = detresp.linearity(amp)
             if self.config.verbose:
                 self.log.info('%s            %.1f             %12.4e' 
                               % (imutils.channelIds[amp], full_well, maxdev))
-            output.write("%i  %12.4e  %12.4e  %12.4e  %12.4e\n" 
-                         % (amp, full_well, maxdev, fit_pars[0], fit_pars[1]))
+            output.add_seg_result(amp, 'FULL_WELL', full_well)
+            output.add_seg_result(amp, 'MAX_FRAC_DEV', float(maxdev))
+        output.write()
+    def _create_detresp_fits_output(self, nrows):
+        self.output = pyfits.HDUList()
+        self.output.append(pyfits.PrimaryHDU())
+        colnames = ['flux'] + ['AMP%02i_SIGNAL' % i for i in imutils.allAmps]
+        formats = 'E'*len(colnames)
+        units = ['None'] + ['e-']*len(imutils.allAmps)
+        columns = [np.zeros(nrows, dtype=np.float) for fmt in formats]
+        fits_cols = [pyfits.Column(name=colnames[i], format=formats[i],
+                                   unit=units[i], array=columns[i])
+                     for i in range(len(units))]
+        hdu = pyfits.new_table(fits_cols)
+        hdu.name = 'DETECTOR_RESPONSE'
+        self.output.append(hdu)
     def extract_det_response(self):
         outfile = os.path.join(self.config.output_dir, 
-                               '%s_det_response.txt' % self.sensor_id)
+                               '%s_det_response.fits' % self.sensor_id)
         file1s = sorted([item for item in self.infiles 
                          if item.find('flat1')  != -1])
         if self.config.verbose:
             self.log.info("writing to %s" % outfile)
-        output = open(outfile, 'w')
-        for file1 in file1s:
+        self._create_detresp_fits_output(len(file1s))
+        for row, file1 in enumerate(file1s):
             if self.config.verbose:
                 self.log.info("processing %s" % file1)
             file2 = find_flat2(file1)
@@ -107,16 +124,12 @@ class FlatPairTask(pipeBase.Task):
             flux = abs(flat1.md.get('EXPTIME')*flat1.md.get('MONDIODE') +
                        flat2.md.get('EXPTIME')*flat2.md.get('MONDIODE'))/2.
 
-            output.write('%12.4e' % flux)
-            #
-            # Convert to e- and write out for each segment.
-            #
+            self.output[-1].data.field('FLUX')[row] = flux
             for amp in imutils.allAmps:
-                output.write('  %12.4e' % (pair_mean(flat1, flat2, amp)
-                                           *self.gains[amp]))
-            output.write('\n')
-            output.flush()
-        output.close()
+                # Convert to e- and write out for each segment.
+                signal = pair_mean(flat1, flat2, amp)*self.gains[amp]
+                self.output[-1].data.field('AMP%02i_SIGNAL' % amp)[row] = signal
+        self.output.writeto(outfile, clobber=True)
         return outfile
 
 if __name__ == '__main__':

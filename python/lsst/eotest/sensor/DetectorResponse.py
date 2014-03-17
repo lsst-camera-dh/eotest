@@ -6,12 +6,25 @@ linearity) from flat pairs data.
 """
 import sys
 import numpy as np
+import pyfits
 import scipy.optimize
 import lsst.eotest.image_utils as imutils
 import pylab_plotter as plot
 
 class DetectorResponse(object):
     def __init__(self, infile, amps=imutils.allAmps):
+        if infile[-5:] == '.fits':
+            self._read_from_fits(infile)
+        else:
+            self._read_from_text(infile)
+    def _read_from_fits(self, infile):
+        foo = pyfits.open(infile)
+        hdu = foo['DETECTOR_RESPONSE']
+        self.flux = np.array(hdu.data.field('FLUX'), dtype=np.float)
+        self.Ne = dict([(amp, np.array(hdu.data.field('AMP%02i_SIGNAL' % amp),
+                                       dtype=np.float))
+                        for amp in imutils.allAmps])
+    def _read_from_text(self, infile):
         data = np.recfromtxt(infile)
         data = data.transpose()
         self.flux = data[0]
@@ -41,9 +54,9 @@ class DetectorResponse(object):
         # Solve for specified fractional difference between
         # linear and polynomial fits to determine full well.
         #
-#        indxp = np.where((dNe_frac > -(frac_offset+dfrac)) &
-#                         (Ne > poly_fit_min))
-        indxp = np.where((Ne > poly_fit_min))
+        indxp = np.where((dNe_frac > -(frac_offset+dfrac)) &
+                         (Ne > poly_fit_min))
+#        indxp = np.where((Ne > poly_fit_min))
         fp = np.poly1d(np.polyfit(flux[indxp], Ne[indxp], order))
         df = lambda xx : 1 - fp(xx)/f1(xx) - frac_offset
         x = flux[indxp]

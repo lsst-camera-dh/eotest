@@ -7,6 +7,8 @@ the full well.
 """
 import os
 import glob
+import numpy as np
+import pyfits
 import lsst.eotest.image_utils as imutils
 from pair_stats import pair_stats
 
@@ -47,19 +49,34 @@ class PtcTask(pipeBase.Task):
 
     @pipeBase.timeMethod
     def run(self, sensor_id, infiles, mask_files, gains, binsize=1):
-        outfile = os.path.join(self.config.output_dir, '%s_ptc.txt' % sensor_id)
-        output = open(outfile, 'w')
+        outfile = os.path.join(self.config.output_dir, 
+                               '%s_ptc.fits' % sensor_id)
+        ptc_stats = dict([(amp, ([], [])) for amp in imutils.allAmps])
+        exposure = []
         file1s = sorted([item for item in infiles if item.find('flat1')  != -1])
         for flat1 in file1s:
             flat2 = flat1.replace('flat1', 'flat2')
             if self.config.verbose:
                 self.log.info("processing %s" % flat1)
-            exposure = exptime(flat1)
-            output.write('%12.4e' % exposure)
+            exposure.append(exptime(flat1))
             for amp in imutils.allAmps:
                 results = pair_stats(flat1, flat2, amp, mask_files=mask_files)
-                output.write('  %12.4e  %12.4e' % (results.flat_mean,
-                                                   results.flat_var))
-            output.write('\n')
-            output.flush()
-        output.close()
+                ptc_stats[amp][0].append(results.flat_mean)
+                ptc_stats[amp][1].append(results.flat_var)
+        output = pyfits.HDUList()
+        output.append(pyfits.PrimaryHDU())
+        colnames = ['EXPOSURE']
+        units = ['seconds']
+        columns = [np.array(exposure, dtype=np.float)]
+        for amp in imutils.allAmps:
+            colnames.extend(['AMP%02i_MEAN' % amp, 'AMP%02i_VAR' % amp])
+            units.extend(['ADU', 'ADU**2'])
+            columns.extend([np.array(ptc_stats[amp][0], dtype=np.float),
+                            np.array(ptc_stats[amp][1], dtype=np.float)])
+        formats = 'E'*len(colnames)
+        fits_cols = [pyfits.Column(name=colnames[i], format=formats[i],
+                                   unit=units[i], array=columns[i])
+                     for i in range(len(columns))]
+        output.append(pyfits.new_table(fits_cols))
+        output[-1].name = 'PTC_STATS'
+        output.writeto(outfile, clobber=True)
