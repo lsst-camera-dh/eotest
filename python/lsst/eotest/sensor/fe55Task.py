@@ -25,6 +25,8 @@ class Fe55Config(pexConfig.Config):
     output_file = pexConfig.Field("Output filename", str, default=None)
     eotest_results_file = pexConfig.Field("EO test results filename", 
                                           str, default=None)
+    fit_xy = pexConfig.Field("Fit sigmas in x- and y-directions separately",
+                             bool, default=False)
     verbose = pexConfig.Field("Turn verbosity on", bool, default=True)
     
 class Fe55Task(pipeBase.Task):
@@ -39,7 +41,7 @@ class Fe55Task(pipeBase.Task):
         # Detect and fit 2D Gaussian to Fe55 charge clusters,
         # accumulating the results by amplifier.
         #
-        fitter = PsfGaussFit(nsig=self.config.nsig)
+        fitter = PsfGaussFit(nsig=self.config.nsig, fit_xy=self.config.fit_xy)
         for infile in infiles:
             if self.config.verbose:
                 self.log.info("processing %s" % infile)
@@ -62,7 +64,7 @@ class Fe55Task(pipeBase.Task):
         gains = {}
         for amp in imutils.allAmps:
             data = fitter.results(min_prob=self.config.chiprob_min, amp=amp)
-            dn = data[1]
+            dn = data['dn']
             gains[amp], kalpha_peak, kalpha_sigma = fe55_gain_fitter(dn)
 
         if self.config.eotest_results_file is None:

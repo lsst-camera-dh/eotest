@@ -12,6 +12,8 @@ parser.add_argument('-n', '--nsig', type=float, default=4,
                     help='Footprint threshold in bias noise stdevs')
 parser.add_argument('-O', '--outfile', type=str, default=None,
                     help='Output file name (basename only). Computed value if left at default of None: <SENSOR_ID>_psf_results.fits')
+parser.add_argument('-x', '--fit_xy', action='store_true', default=False,
+                    help='Flag if Gaussian width is to be fit separately in x- and y-directions')
                     
 args = parser.parse_args()
 
@@ -23,6 +25,7 @@ task.config.output_file = args.outfile
 task.config.nsig = args.nsig
 task.config.verbose = args.verbose
 task.config.eotest_results_file = args.results_file
+task.config.fit_xy = args.fit_xy
 
 infiles = args.files(args.file_pattern, args.Fe55_file_list)
 
