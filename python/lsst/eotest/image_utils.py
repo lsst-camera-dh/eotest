@@ -22,52 +22,20 @@ hdu_dict = dict( [ (1,'Segment10'), (2,'Segment11'), (3,'Segment12'),
 
 channelIds = dict([(i, hdu_dict[i][-2:]) for i in allAmps])
 
-full_segment = afwGeom.Box2I(afwGeom.Point2I(0, 0),
-                             afwGeom.Point2I(541, 2021))
-
-prescan = afwGeom.Box2I(afwGeom.Point2I(0, 0),
-                        afwGeom.Point2I(9, 2021))
-
-imaging = afwGeom.Box2I(afwGeom.Point2I(10, 0),
-                        afwGeom.Point2I(521, 2001))
-
-serial_overscan = afwGeom.Box2I(afwGeom.Point2I(522, 0), 
-                                afwGeom.Point2I(541, 2021))
-
-parallel_overscan = afwGeom.Box2I(afwGeom.Point2I(10, 2002),
-                                  afwGeom.Point2I(522, 2021))
-
-overscan = serial_overscan  # for backwards compatibility
-
 mean = lambda x : afwMath.makeStatistics(x, afwMath.MEAN).getValue()
 median = lambda x : afwMath.makeStatistics(x, afwMath.MEDIAN).getValue()
 stdev = lambda x : afwMath.makeStatistics(x, afwMath.STDEV).getValue()
-
-detsize = '[1:4336,1:4044]'
-
-def detsec(amp, dx=512, dy=2002):
-    """DETSEC header keyword value for iraf mosaicking"""
-    namps = len(allAmps)
-    if amp < allAmps[namps/2]:
-        x1 = dx*amp
-        x2 = x1 - dx + 1
-        y1, y2 = 1, dy
-    else:
-        x1 = dx*(namps - amp) + 1
-        x2 = x1 + dx - 1 
-        y1, y2 = 2*dy, dy + 1
-    return '[%i:%i,%i:%i]' % (x1, x2, y1, y2)
 
 def dm_hdu(hdu):
     """ Compute DM HDU from the actual FITS file HDU."""
     return hdu+1
 
-def bias(im, overscan=serial_overscan):
+def bias(im, overscan):
     """Compute the bias from the mean of the pixels in the serial
     overscan region."""
     return mean(im.Factory(im, overscan))
 
-def bias_func(im, overscan=serial_overscan, fit_order=1):
+def bias_func(im, overscan, fit_order=1):
     """Compute the bias by fitting a polynomial (linear, by default)
     to the mean of each row of the selected overscan region.  This
     returns a numpy.poly1d object that returns the fitted bias as
@@ -81,7 +49,7 @@ def bias_func(im, overscan=serial_overscan, fit_order=1):
     values = np.array([np.mean(imarr[j]) for j in rows])
     return np.poly1d(np.polyfit(rows, values, fit_order))
 
-def bias_image(im, overscan=serial_overscan, fit_order=1):
+def bias_image(im, overscan, fit_order=1):
     my_bias = bias_func(im, overscan, fit_order)
     biasim = afwImage.ImageF(im.getDimensions())
     imarr = biasim.getArray()
@@ -90,11 +58,11 @@ def bias_image(im, overscan=serial_overscan, fit_order=1):
         imarr[row] += my_bias(row)
     return biasim
 
-def trim(im, imaging=imaging):
+def trim(im, imaging):
     "Trim the prescan and overscan regions."
     return im.Factory(im, imaging)
 
-def unbias_and_trim(im, overscan=serial_overscan, imaging=imaging,
+def unbias_and_trim(im, overscan, imaging,
                     apply_trim=True, fit_order=1):
     """Subtract bias calculated from overscan region and optionally trim 
     prescan and overscan regions."""
@@ -140,7 +108,7 @@ def check_temperatures(files, tol):
                            "deg C relative to average.")
 
 class SubRegionSampler(object):
-    def __init__(self, dx, dy, nsamp, imaging=imaging):
+    def __init__(self, dx, dy, nsamp, imaging):
         self.dx = dx
         self.dy = dy
         #
@@ -161,5 +129,3 @@ if __name__ == '__main__':
 
     files = glob.glob('data/dark*.fits')
     im = fits_median(files)
-
-    bar = unbias_and_trim(im)

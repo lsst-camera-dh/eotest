@@ -9,7 +9,7 @@ import numpy as np
 import lsst.eotest.image_utils as imutils
 
 try:
-    from lsst.eotest.sensor import MaskedCCD
+    from lsst.eotest.sensor import MaskedCCD, AmplifierGeometry
     import lsst.eotest.sensor.sim_tools as sim_tools
 except ImportError:
     # This is to allow this unit test to run on the inadequately
@@ -19,6 +19,7 @@ except ImportError:
     sys.path.insert(0, os.path.join(os.environ['TEST_SCRIPTS_DIR'],
                                     'python', 'lsst', 'eotest', 'sensor'))
     from MaskedCCD import MaskedCCD
+    from AmplifierGeometry import AmplifierGeometry
     import sim_tools
 
 import lsst.afw.image as afwImage
@@ -37,14 +38,16 @@ class BiasHandlingTestCase(unittest.TestCase):
     image_file = 'test_image.fits'
     @classmethod
     def setUpClass(cls):
-        cls.bias_image = afwImage.ImageF(imutils.full_segment)
+        cls.amp_geom = AmplifierGeometry()
+        cls.bias_image = afwImage.ImageF(cls.amp_geom.full_segment)
         imarr = cls.bias_image.getArray()
         ny, nx = imarr.shape
         yvals = np.arange(0, ny, dtype=np.float)
         bias_func = BiasFunc(cls.bias_slope, cls.bias_intercept)
         for x in range(nx):
             imarr[:,x] += bias_func(yvals)
-        ccd = sim_tools.CCD(exptime=cls.exptime, gain=cls.gain)
+        ccd = sim_tools.CCD(exptime=cls.exptime, gain=cls.gain, 
+                            geometry=cls.amp_geom)
         for amp in imutils.allAmps:
             ccd.segments[amp].image += cls.bias_image
         ccd.writeto(cls.image_file)
@@ -55,22 +58,26 @@ class BiasHandlingTestCase(unittest.TestCase):
         bias_func = BiasFunc(self.bias_slope, self.bias_intercept)
         ccd = MaskedCCD(self.image_file)
         for amp in imutils.allAmps:
-            bf_i = imutils.bias_func(ccd[amp].getImage())
-            bf_m = imutils.bias_func(ccd[amp])
+            bf_i = imutils.bias_func(ccd[amp].getImage(),
+                                     self.amp_geom.serial_overscan)
+            bf_m = imutils.bias_func(ccd[amp], self.amp_geom.serial_overscan)
             for y in range(2022):
                 self.assertEqual(bf_i(y), bf_m(y))
                 self.assertAlmostEqual(bias_func(y), bf_m(y))
     def test_bias_image(self):
         ccd = MaskedCCD(self.image_file)
         for amp in imutils.allAmps:
-            my_bias_image = imutils.bias_image(ccd[amp])
-            fracdiff = ( (self.bias_image.getArray()-my_bias_image.getArray())
-                         /self.bias_image.getArray() )
+            my_bias_image = imutils.bias_image(ccd[amp],
+                                               self.amp_geom.serial_overscan)
+            fracdiff = ((self.bias_image.getArray() - my_bias_image.getArray())
+                        /self.bias_image.getArray())
             self.assertTrue(max(np.abs(fracdiff.flat)) < 1e-6)
     def test_unbias_and_trim(self):
         ccd = MaskedCCD(self.image_file)
         for amp in imutils.allAmps:
-            image = imutils.unbias_and_trim(ccd[amp])
+            image = imutils.unbias_and_trim(ccd[amp],
+                                            self.amp_geom.serial_overscan,
+                                            self.amp_geom.imaging)
             imarr = image.getImage().getArray()
             self.assertTrue(max(np.abs(imarr.flat)) < 1e-6)
             #

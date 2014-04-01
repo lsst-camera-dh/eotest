@@ -10,6 +10,7 @@ import pyfits
 import lsst.eotest.image_utils as imutils
 try:
     from lsst.eotest.sensor.ccd250_mask import ccd250_mask
+    from lsst.eotest.sensor import AmplifierGeometry
 except ImportError:
     # This is to allow this unit test to run on the inadequately
     # configured lsst-build01 on which Jenkins at SLAC runs.
@@ -18,6 +19,7 @@ except ImportError:
     sys.path.insert(0, os.path.join(os.environ['TEST_SCRIPTS_DIR'],
                                     'python', 'lsst', 'eotest', 'sensor'))
     from ccd250_mask import ccd250_mask
+    from AmplifierGeometry import AmplifierGeometry
 
 class _FitsFile(dict):
     def __init__(self, infile):
@@ -38,6 +40,7 @@ class ccd250_mask_TestCase(unittest.TestCase):
         os.remove(self.mask_file)
         os.remove(self.image_file)
     def test_ccd250_mask(self):
+        amp_geom = AmplifierGeometry() # This is an e2v geometry.
         ccd250_mask(self.mask_file, tmp_mask_image=self.image_file,
                     outer_edge_width=self.outer_edge_width,
                     bloom_stop_width=self.bloom_stop_width,
@@ -53,7 +56,7 @@ class ccd250_mask_TestCase(unittest.TestCase):
             # Verify expected sensor perimeter mask along vertical sides.
             #
             self.assertEqual(min(indx[0]),
-                             imutils.imaging.getMinY() + self.outer_edge_width)
+                             amp_geom.imaging.getMinY() + self.outer_edge_width)
             #
             # Verify that mask has zero bits set in unmasked region.
             #

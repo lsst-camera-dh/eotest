@@ -11,6 +11,7 @@ https://confluence.slac.stanford.edu/x/DQvNBw
 import os
 import pyfits
 import lsst.afw.detection as afwDetect
+import lsst.afw.geom as afwGeom
 import lsst.afw.image as afwImage
 import lsst.daf.base as dafBase
 import lsst.eotest.image_utils as imutils
@@ -18,8 +19,12 @@ from MaskedCCD import MaskedCCD
 from BrightPixels import BrightPixels
 from sim_tools import CCD
 
+_imaging = afwGeom.Box2I(afwGeom.Point2I(10, 0),
+                         afwGeom.Point2I(521, 2001))
+
 def ccd250_mask(outfile, mask_plane='CCD250_DEFECTS',
-                imaging_region=imutils.imaging,
+#                imaging_region=imutils.imaging,
+                imaging_region=_imaging,
                 tmp_mask_image='temp_mask_image.fits',
                 outer_edge_width=10, bloom_stop_width=5, signal=10,
                 cleanup=True):

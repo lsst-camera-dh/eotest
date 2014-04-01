@@ -60,8 +60,8 @@ class BrightPixels(object):
         md = dafBase.PropertySet()
         md.set('EXTNAME', 'SEGMENT%s' % imutils.channelIds[self.amp])
         md.set('DETSIZE', ihdr['DETSIZE'])
-        md.set('DETSEC', imutils.detsec(self.amp, dx=imaging.getWidth(),
-                                        dy=imaging.getHeight()))
+#        md.set('DETSEC', imutils.detsec(self.amp, dx=imaging.getWidth(),
+#                                        dy=imaging.getHeight()))
         md.set('DATASEC', ihdr['DATASEC'])
         md.set('NBRTPIX', len(self.bright_pixels))
         md.set('NBRTCOL', len(self.bright_columns))

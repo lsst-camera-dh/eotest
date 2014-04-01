@@ -10,7 +10,8 @@ import pyfits
 import lsst.eotest.image_utils as imutils
 
 try:
-    from lsst.eotest.sensor import MaskedCCD, add_mask_files, BrightPixels
+    from lsst.eotest.sensor import MaskedCCD, add_mask_files, BrightPixels, \
+        AmplifierGeometry
     import lsst.eotest.sensor.sim_tools as sim_tools
 except ImportError:
     # This is to allow this unit test to run on the inadequately
@@ -21,6 +22,7 @@ except ImportError:
                                     'python', 'lsst', 'eotest', 'sensor'))
     from MaskedCCD import MaskedCCD, add_mask_files
     from BrightPixels import BrightPixels
+    from AmplifierGeometry import AmplifierGeometry
     import sim_tools
     
 import lsst.afw.image as afwImage
@@ -99,7 +101,8 @@ class MaskedCCD_biasHandlingTestCase(unittest.TestCase):
     image_file = 'test_image.fits'
     @classmethod
     def setUpClass(cls):
-        cls.bias_image = afwImage.ImageF(imutils.full_segment)
+        amp_geom = AmplifierGeometry()
+        cls.bias_image = afwImage.ImageF(amp_geom.full_segment)
         imarr = cls.bias_image.getArray()
         ny, nx = imarr.shape
         yvals = np.arange(0, ny, dtype=np.float)
