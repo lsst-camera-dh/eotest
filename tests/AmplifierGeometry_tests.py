@@ -7,7 +7,9 @@ import os
 import unittest
 
 try:
-    from lsst.eotest.sensor import AmplifierGeometry
+    from lsst.eotest.sensor import AmplifierGeometry, makeAmplifierGeometry, \
+        amp_loc
+    import lsst.eotest.sensor.sim_tools as sim_tools
 except ImportError:
     # This is to allow this unit test to run on the inadequately
     # configured lsst-build01 on which Jenkins at SLAC runs.
@@ -15,7 +17,9 @@ except ImportError:
     import sys
     sys.path.insert(0, os.path.join(os.environ['TEST_SCRIPTS_DIR'],
                                     'python', 'lsst', 'eotest', 'sensor'))
-    from AmplifierGeometry import AmplifierGeometry
+    from AmplifierGeometry import AmplifierGeometry, makeAmplifierGeometry, \
+        amp_loc
+    import sim_tools
 
 import lsst.afw.geom as afwGeom
 
@@ -88,9 +92,20 @@ parallel_overscan = afwGeom.Box2I(afwGeom.Point2I(10, 2002),
 class AmplifierGeometryTestCase(unittest.TestCase):
     def setUp(self):
         self.e2v = AmplifierGeometry(prescan=10, nx=512, ny=2002,
-                                     detxsize=4336, detysize=4044)
+                                     detxsize=4336, detysize=4044,
+                                     amp_loc=amp_loc['E2V'])
+        self.e2v_test_file = 'test_e2v_image.fits'
+        ccd0 = sim_tools.CCD(geometry=self.e2v)
+        ccd0.writeto(self.e2v_test_file, bitpix=16)
+
+        self.itl = AmplifierGeometry(prescan=3, nx=509, ny=2000,
+                                     amp_loc=amp_loc['ITL'])
+        self.itl_test_file = 'test_itl_image.fits'
+        ccd1 = sim_tools.CCD(geometry=self.itl)
+        ccd1.writeto(self.itl_test_file, bitpix=16)
     def tearDown(self):
-        pass
+        os.remove(self.itl_test_file)
+        os.remove(self.e2v_test_file)
     def test_e2v_keywords(self):
         self.assertEquals(self.e2v.DETSIZE, '[1:4336,1:4044]')
         for amp in range(1, 17):
@@ -102,6 +117,15 @@ class AmplifierGeometryTestCase(unittest.TestCase):
         self.assertEquals(self.e2v.imaging, imaging)
         self.assertEquals(self.e2v.serial_overscan, serial_overscan)
         self.assertEquals(self.e2v.parallel_overscan, parallel_overscan)
+    def test_makeAmplifierGeometry_factory(self):
+        e2v_geom = makeAmplifierGeometry(self.e2v_test_file)
+        self.assertEquals(self.e2v, e2v_geom)
+
+        itl_geom = makeAmplifierGeometry(self.itl_test_file)
+        self.assertEquals(self.itl, itl_geom)
+
+        self.assertNotEqual(self.e2v, itl_geom)
+        self.assertNotEqual(self.itl, e2v_geom)
         
 if __name__ == '__main__':
     unittest.main()

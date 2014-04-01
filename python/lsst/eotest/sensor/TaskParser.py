@@ -49,11 +49,17 @@ class TaskNamespace(object):
             results = EOTestResults(self.args.gains)
             gains = results['GAIN']
             return dict([(amp, gains[amp-1]) for amp in imutils.allAmps])
-    def mask_files(self):
-        if self.args.mask_file == 'ccd250_defects':
-            my_mask_files = ('ccd250_defects.fits',)
-            if not os.path.isfile(my_mask_files[0]):
-                ccd250_mask(my_mask_files[0])
+    def mask_files(self, infile=None):
+        """
+        Tuple of mask files to be used.  If infile is given, then
+        generate a roll-off (and blooming stop) mask file using 
+        infile to set the detector and amplifier geometry.
+        """
+        my_mask_files = []
+        if infile is not None:
+            my_mask_files.append('edge_rollover_defect_mask.fits')
+            if not os.path.isfile(my_mask_files[-1]):
+                ccd250_mask(infile, my_mask_files[-1])
         elif self.args.mask_file == 'None':
             my_mask_files = ()
         elif self.args.mask_file is not None:
@@ -77,8 +83,7 @@ class TaskParser(argparse.ArgumentParser):
                           help="sensor ID")
         self.add_argument('-V', '--Vendor', type=str,
                           help='CCD vendor (e.g., e2v, ITL)')
-        self.add_argument('-m', '--mask_file', 
-                          default='ccd250_defects', type=str,
+        self.add_argument('-m', '--mask_file', default=None, type=str,
                           help='mask file to use')
         self.add_argument('-o', '--output_dir', type=str, default='.',
                           help="output directory")

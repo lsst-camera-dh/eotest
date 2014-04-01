@@ -29,4 +29,4 @@ task.config.fit_xy = args.fit_xy
 
 infiles = args.files(args.file_pattern, args.Fe55_file_list)
 
-task.run(args.sensor_id, infiles, args.mask_files())
+task.run(args.sensor_id, infiles, args.mask_files(infiles[0]))

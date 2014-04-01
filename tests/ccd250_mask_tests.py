@@ -10,7 +10,9 @@ import pyfits
 import lsst.eotest.image_utils as imutils
 try:
     from lsst.eotest.sensor.ccd250_mask import ccd250_mask
-    from lsst.eotest.sensor import AmplifierGeometry
+    from lsst.eotest.sensor import AmplifierGeometry, makeAmplifierGeometry, \
+        amp_loc
+    import lsst.eotest.sensor.sim_tools as sim_tools
 except ImportError:
     # This is to allow this unit test to run on the inadequately
     # configured lsst-build01 on which Jenkins at SLAC runs.
@@ -19,7 +21,9 @@ except ImportError:
     sys.path.insert(0, os.path.join(os.environ['TEST_SCRIPTS_DIR'],
                                     'python', 'lsst', 'eotest', 'sensor'))
     from ccd250_mask import ccd250_mask
-    from AmplifierGeometry import AmplifierGeometry
+    from AmplifierGeometry import AmplifierGeometry, makeAmplifierGeometry, \
+        amp_loc
+    import sim_tools
 
 class _FitsFile(dict):
     def __init__(self, infile):
@@ -31,17 +35,22 @@ class _FitsFile(dict):
 class ccd250_mask_TestCase(unittest.TestCase):
     """Test case for ccd250_mask function."""
     def setUp(self):
+        self.input_file = 'input_image.fits'
         self.mask_file = 'ccd250_defects_mask.fits'
         self.image_file = 'temp_mask_image.fits'
         self.outer_edge_width = 10
         self.bloom_stop_width = 5
         self.signal = 10
+        ccd = sim_tools.CCD(geometry=AmplifierGeometry(amp_loc=amp_loc['E2V']))
+        ccd.writeto(self.input_file, bitpix=16)
     def tearDown(self):
         os.remove(self.mask_file)
         os.remove(self.image_file)
+        os.remove(self.input_file)
     def test_ccd250_mask(self):
-        amp_geom = AmplifierGeometry() # This is an e2v geometry.
-        ccd250_mask(self.mask_file, tmp_mask_image=self.image_file,
+        amp_geom = makeAmplifierGeometry(self.input_file)
+        ccd250_mask(self.input_file, self.mask_file, 
+                    tmp_mask_image=self.image_file,
                     outer_edge_width=self.outer_edge_width,
                     bloom_stop_width=self.bloom_stop_width,
                     signal=self.signal, cleanup=False)

@@ -16,22 +16,24 @@ import lsst.afw.image as afwImage
 import lsst.daf.base as dafBase
 import lsst.eotest.image_utils as imutils
 from MaskedCCD import MaskedCCD
+from AmplifierGeometry import makeAmplifierGeometry, amp_loc
 from BrightPixels import BrightPixels
 from sim_tools import CCD
 
-_imaging = afwGeom.Box2I(afwGeom.Point2I(10, 0),
-                         afwGeom.Point2I(521, 2001))
-
-def ccd250_mask(outfile, mask_plane='CCD250_DEFECTS',
-#                imaging_region=imutils.imaging,
-                imaging_region=_imaging,
-                tmp_mask_image='temp_mask_image.fits',
-                outer_edge_width=10, bloom_stop_width=5, signal=10,
-                cleanup=True):
+def ccd250_mask(infile, outfile,
+#def rolloff_mask(infile, outfile,
+                 mask_plane='ROLLOFF_DEFECTS',
+                 tmp_mask_image='temp_mask_image.fits',
+                 outer_edge_width=10, 
+                 bloom_stop_width=5,
+                 signal=10,
+                 cleanup=True):
     """
     This function creates a file containing masks for each segment to
     mask pixels affected the edge roll-off and midline blooming stop
     distortions.
+
+    infile: Input file to mask.
 
     outfile: The name of the file to contain the masks.
     
@@ -41,7 +43,8 @@ def ccd250_mask(outfile, mask_plane='CCD250_DEFECTS',
 
     bloom_stop_width: The width in pixels of the masked region of the
     imaging region of each segment, on either side of the central
-    blooming stop implant.
+    blooming stop implant.  If the input data file corresponds to an
+    ITL device, no blooming stop implant mask will be included.
 
     signal: This is the artificial signal written to the mask image so
     that the afwDetect code can generate the footprints used define
@@ -54,9 +57,10 @@ def ccd250_mask(outfile, mask_plane='CCD250_DEFECTS',
     # system gain need to be set to unity so that the BrightPixels.py
     # code can interpret DN directly as e- per second.
     #
+    amp_geom = makeAmplifierGeometry(infile)
     gain = 1
     exptime = 1
-    ccd = CCD(exptime=exptime, gain=gain)
+    ccd = CCD(exptime=exptime, gain=gain, geometry=amp_geom)
     #
     # Write the output file with a primary HDU so that the DMstack code
     # can append only image extensions (and not write to the PHDU).
@@ -70,7 +74,7 @@ def ccd250_mask(outfile, mask_plane='CCD250_DEFECTS',
     #
     # Amps 8 & 16 have roll-off adjacent to the prescan:
     # 
-    xmin = imaging_region.getMinX()
+    xmin = amp_geom.imaging.getMinX()
     xmax = xmin + outer_edge_width
     for amp in (8, 16):
         imarr = ccd.segments[amp].image.getArray()
@@ -78,7 +82,7 @@ def ccd250_mask(outfile, mask_plane='CCD250_DEFECTS',
     #
     # Amps 1 & 9 have roll-off adjacent to the serial overscan:
     #
-    xmax = imaging_region.getMaxX() + 1
+    xmax = amp_geom.imaging.getMaxX() + 1
     xmin = xmax - outer_edge_width
     for amp in (1, 9):
         imarr = ccd.segments[amp].image.getArray()
@@ -87,7 +91,7 @@ def ccd250_mask(outfile, mask_plane='CCD250_DEFECTS',
     # Loop over all amps, set signal in perimeter and around blooming
     # stop.
     #
-    ymax = imaging_region.getMaxY() + 1
+    ymax = amp_geom.imaging.getMaxY() + 1
     ymin = ymax - bloom_stop_width
     for i, amp in enumerate(imutils.allAmps):
         image = ccd.segments[amp].image
@@ -96,10 +100,12 @@ def ccd250_mask(outfile, mask_plane='CCD250_DEFECTS',
         # Set signal in row direction along perimeter.
         #
         imarr[0:outer_edge_width, :] += signal
-        #
-        # Set signal around blooming stop
-        #
-        imarr[ymin:ymax, :] += signal
+
+        if amp_geom.amp_loc == amp_loc['E2V']:
+            #
+            # Set signal around blooming stop
+            #
+            imarr[ymin:ymax, :] += signal
     #
     # Write the images of the mask regions to the FITS file.
     #
