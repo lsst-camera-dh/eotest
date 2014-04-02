@@ -78,16 +78,20 @@ class AmplifierGeometry(dict):
         return results
     def _detsec(self, amp):
         namps = self.nsegx*self.nsegy
-        if self.amp_loc[amp] < 0:
-            x1 = self.nx*amp
-            x2 = x1 - self.nx + 1
-        else:
-            x1 = self.nx*(namps - amp) + 1
-            x2 = x1 + self.nx - 1 
-        if amp < self.nsegx + 1:
+        if amp <= self.nsegx:
+            x1 = (amp - 1)*self.nx + 1
+            x2 = amp*self.nx
             y1, y2 = 1, self.ny
-        else:
-            y1, y2 = 2*self.ny, self.ny + 1
+        else: 
+            # Amps in "top half" of CCD, where the ordering of amps 9
+            # to 16 is right-to-left.
+            x1 = (namps - amp)*self.nx + 1
+            x2 = (namps - amp + 1)*self.nx
+            # Flip in y for top half of sensor.
+            y1, y2 = 2*self.ny, self.ny + 1  
+        if self.amp_loc[amp] < 0:
+            # Flip since the output node is on the right side of segment.
+            x1, x2 = x2, x1
         return '[%i:%i,%i:%i]' % (x1, x2, y1, y2)
     def __eq__(self, other):
         for key in self.__dict__.keys():
