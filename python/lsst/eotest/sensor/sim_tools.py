@@ -108,7 +108,7 @@ class CCD(object):
             except KeyError:
                 pass
             my_round = lambda x : x
-        for hdu in output[1:]:
+        for hdu in output[1:-2]:
             hdu.data = np.array(my_round(hdu.data),
                                 dtype=self.dtypes[bitpix])
         output[0].header['DATE-OBS'] = utcnow()
@@ -234,18 +234,23 @@ def fitsFile(ccd_segments):
     headers = fits_headers()
     output = pyfits.HDUList()
     output.append(pyfits.PrimaryHDU())
-    output[0].header = headers[0].copy()
+    output[0].header = headers['PRIMARY'].copy()
     output[0].header["EXPTIME"] = ccd_segments[0].exptime
     output[0].header["CCDTEMP"] = ccd_segments[0].ccdtemp
     for amp, segment in zip(imutils.allAmps, ccd_segments):
         output.append(pyfits.ImageHDU(data=segment.image.getArray()))
-        output[amp].header = headers[amp].copy()
+        output[amp].header = headers[headers.keys()[amp]].copy()
         output[amp].header['BZERO'] = 0
         output[amp].name = 'Segment%s' % imutils.channelIds[amp]
         output[amp].header.update('DETSIZE', segment.geometry[amp]['DETSIZE'])
         output[amp].header.update('DATASEC', segment.geometry[amp]['DATASEC'])
         output[amp].header.update('DETSEC', segment.geometry[amp]['DETSEC'])
         output[amp].header.update('CHANNEL', amp)
+    # Add Test Condition and CCD Operating Condition headers
+    output.append(pyfits.new_table([pyfits.Column(format='I')]))
+    output[-1].header = headers['TEST_COND']
+    output.append(pyfits.new_table([pyfits.Column(format='I')]))
+    output[-1].header = headers['CCD_COND']
     return output
                 
 def writeFits(ccd_segments, outfile, clobber=True):

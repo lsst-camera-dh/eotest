@@ -7,6 +7,7 @@ import os
 import sys
 import numpy as np
 import pyfits
+from collections import OrderedDict
 
 _module_path = os.environ['EOTEST_DIR']
 template_file = os.path.join(_module_path, 'policy', 'fits_header_template.txt')
@@ -38,14 +39,19 @@ def fits_headers(template=template_file):
     template file, which is supposed to implement the FITS standard
     for sensors (LCA-10140).
     """
-    headers = []
+    headers = OrderedDict()
     hdr = pyfits.header.Header()
     for line in open(template):
         # Skip comments and whitespace lines.
         if line[0] == '#' or len(line.strip()) == 0:
             continue
         if line[:3] == 'END':
-            headers.append(hdr)
+            if len(headers) == 0:
+                # First hdu must be the Primary HDU.
+                headers['PRIMARY'] = hdr
+            else:
+                # Subsequent ones must be extensions with an EXTNAME
+                headers[hdr['EXTNAME']] = hdr
             hdr = pyfits.header.Header()
             continue
         data = line.split('=')
@@ -67,8 +73,14 @@ def check_keywords(infile, template=template_file, verbose=True):
     input = pyfits.open(infile)
     report = []
     missing_keys = {}
-    for i, prototype, input_hdu in zip(range(len(prototype_headers)),
-                                       prototype_headers, input):
+    missing_headers = []
+    for i, extname in enumerate(prototype_headers):
+        prototype = prototype_headers[extname]
+        try:
+            input_hdu = input[i]
+        except IndexError:
+            missing_headers.append(prototype['EXTNAME'])
+            continue
         missing_keys[i] = [keyword for keyword in prototype.keys()
                            if not input_hdu.header.has_key(keyword)]
         if missing_keys[i]:
@@ -76,6 +88,10 @@ def check_keywords(infile, template=template_file, verbose=True):
                           % (i, input_hdu.name))
             for key in missing_keys[i]:
                 report.append("  %s" % key)
+    if missing_headers:
+        report.append("Missing headers:")
+        for item in missing_headers:
+            report.append("  %s" % item)
     if verbose:
         if report:
             for line in report:
@@ -83,26 +99,3 @@ def check_keywords(infile, template=template_file, verbose=True):
         else:
             print "No missing keywords"
     return missing_keys
-
-if __name__ == '__main__':
-    import lsst.eotest.image_utils as imutils
-    
-    infile = 'fits_header_template.txt'
-    phdr, ihdr = fits_headers(infile)
-
-    output = pyfits.HDUList()
-    output.append(pyfits.PrimaryHDU())
-    output[0].header = phdr.copy()
-    for amp in imutils.allAmps:
-        output.append(pyfits.ImageHDU())
-        output[-1].header = ihdr.copy()
-        output[-1].header.update('DETSEC', imutils.detsec(amp))
-        output[-1].header.update('CHANNEL', amp)
-        output[-1].header.update('EXTNAME',
-                                 'SEGMENT%s' % imutils.channelIds[amp])
-        output[-1].data = np.ones((2022, 542), dtype=np.float32)*amp
-        del output[-1].header['BSCALE']
-        del output[-1].header['BZERO']
-        
-    output.writeto('test_output.fits', clobber=True, output_verify='fix',
-                   checksum=True)

@@ -12,6 +12,7 @@ import lsst.daf.base as dafBase
 
 import lsst.eotest.image_utils as imutils
 from MaskedCCD import MaskedCCD
+from AmplifierGeometry import makeAmplifierGeometry
 from fits_headers import fits_headers
 import sim_tools
 
@@ -47,6 +48,7 @@ class BrightPixels(object):
         self.fp_set.setMask(self.mask, self.mask_plane)
         self._write_fits(outfile)
     def _write_fits(self, outfile):
+        amp_geom = makeAmplifierGeometry(self.ccd.imfile)
         hdrs = fits_headers()
         if not os.path.isfile(outfile):
             output = pyfits.HDUList()
@@ -56,13 +58,12 @@ class BrightPixels(object):
             output[0].header['CTHRESH'] = self.colthresh
             output.writeto(outfile, clobber=True)
         imaging = self.ccd.seg_regions[self.amp].imaging
-        ihdr = hdrs[self.amp]
+        ihdr = hdrs[hdrs.keys()[self.amp]]
         md = dafBase.PropertySet()
         md.set('EXTNAME', 'SEGMENT%s' % imutils.channelIds[self.amp])
-        md.set('DETSIZE', ihdr['DETSIZE'])
-#        md.set('DETSEC', imutils.detsec(self.amp, dx=imaging.getWidth(),
-#                                        dy=imaging.getHeight()))
-        md.set('DATASEC', ihdr['DATASEC'])
+        md.set('DETSIZE', amp_geom[self.amp]['DETSIZE'])
+        md.set('DETSEC', amp_geom[self.amp]['DETSEC'])
+        md.set('DATASEC', amp_geom[self.amp]['DATASEC'])
         md.set('NBRTPIX', len(self.bright_pixels))
         md.set('NBRTCOL', len(self.bright_columns))
         self.mask.writeFits(outfile, md, 'a')
