@@ -7,6 +7,7 @@ structured configuration file in the future.
 import os
 import numpy as np
 from PhotodiodeResponse import Interpolator
+from multiaggressor_tools import multiaggressor_amplifier_coords
 from sim_tools import xtalk_pattern
 
 class Params(object):
@@ -126,14 +127,20 @@ superflat = Params(test_type='superflat_500',
                    scti=1e-3,
                    verbose=True)
 
+xpos, ypos = multiaggressor_amplifier_coords(nx, ny)
+
 spot = Params(test_type='spot',
               exptime=1,
               ccdtemp=-95,
               xtalk_pattern=xtalk_pattern,
               frac_scale=0.02,
               dn=200,
-              x=250, y=250, radius=20,
-              multiaggressor=False)
+              radius=20,
+#              x=250, y=250, 
+#              multiaggressor=False,
+              x=xpos, y=ypos, 
+              multiaggressor=True,
+              )
 
 sysnoise = Params(test_type='noise',
                   nframes=10)
