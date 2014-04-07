@@ -57,7 +57,7 @@ class BrightPixels(object):
             output[0].header['ETHRESH'] = self.ethresh
             output[0].header['CTHRESH'] = self.colthresh
             output.writeto(outfile, clobber=True)
-        imaging = self.ccd.seg_regions[self.amp].imaging
+        imaging = self.ccd.amp_geom.imaging
         ihdr = hdrs[hdrs.keys()[self.amp]]
         md = dafBase.PropertySet()
         md.set('EXTNAME', 'SEGMENT%s' % imutils.channelIds[self.amp])

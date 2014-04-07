@@ -13,29 +13,28 @@ import lsst.afw.image as afwImage
 import lsst.afw.math as afwMath
 
 import lsst.eotest.image_utils as imutils
-from MaskedCCD import SegmentRegions
+from AmplifierGeometry import makeAmplifierGeometry
 
 median = lambda x : afwMath.makeStatistics(x, afwMath.MEDIAN).getValue()
 
 class SubImage(object):
     """Functor to produce sub-images depending on scan direction."""
     def __init__(self, imfile, amp, overscans, task):
-        sr = SegmentRegions(afwImage.DecoratedImageF(imfile,
-                                                     imutils.dm_hdu(amp)))
-        self.imaging = sr.imaging
+        geom = makeAmplifierGeometry(imfile)
+        self.imaging = geom.imaging
         self.exp = afwImage.ExposureF(imfile, int(amp) + 1)
         if task.config.direction == 'p':
             self._bbox = self._parallel_box
-            llc = afwGeom.Point2I(sr.parallel_overscan.getMinX(),
-                                  sr.parallel_overscan.getMinY() + overscans)
-            urc = sr.parallel_overscan.getCorners()[2]
+            llc = afwGeom.Point2I(geom.parallel_overscan.getMinX(),
+                                  geom.parallel_overscan.getMinY() + overscans)
+            urc = geom.parallel_overscan.getCorners()[2]
             self._bias_reg = afwGeom.Box2I(llc, urc)
             self.lastpix = self.imaging.getMaxY()
         elif task.config.direction == 's':
             self._bbox = self._serial_box
-            llc = afwGeom.Point2I(sr.serial_overscan.getMinX() + overscans,
-                                  sr.serial_overscan.getMinY())
-            urc = sr.serial_overscan.getCorners()[2]
+            llc = afwGeom.Point2I(geom.serial_overscan.getMinX() + overscans,
+                                  geom.serial_overscan.getMinY())
+            urc = geom.serial_overscan.getCorners()[2]
             self._bias_reg = afwGeom.Box2I(llc, urc)
             self.lastpix = self.imaging.getMaxX()
         else:

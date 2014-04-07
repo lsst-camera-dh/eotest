@@ -50,13 +50,13 @@ def pair_stats(file1, file2, amp, mask_files=(), binsize=1):
     #
     # Extract imaging region for segments of both CCDs.
     #
-    image1 = ccd1[amp].Factory(ccd1[amp], ccd1.seg_regions[amp].imaging)
-    image2 = ccd2[amp].Factory(ccd2[amp], ccd2.seg_regions[amp].imaging)
+    image1 = ccd1[amp].Factory(ccd1[amp], ccd1.amp_geom.imaging)
+    image2 = ccd2[amp].Factory(ccd2[amp], ccd2.amp_geom.imaging)
     #
     # Use serial overscan for bias region.
     #
-    b1 = ccd1[amp].Factory(ccd1[amp], ccd1.seg_regions[amp].serial_overscan)
-    b2 = ccd2[amp].Factory(ccd2[amp], ccd2.seg_regions[amp].serial_overscan)
+    b1 = ccd1[amp].Factory(ccd1[amp], ccd1.amp_geom.serial_overscan)
+    b2 = ccd2[amp].Factory(ccd2[amp], ccd2.amp_geom.serial_overscan)
     bmean = (mean(b1) + mean(b2))/2.
 
     image1 = ccd1.unbiased_and_trimmed_image(amp)

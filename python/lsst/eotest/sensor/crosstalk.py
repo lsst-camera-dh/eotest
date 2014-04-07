@@ -33,7 +33,7 @@ def aggressor(ccd):
     return candidate, max_pix_val
 
 def column_mean(ccd, amp, col):
-    imaging = ccd.seg_regions[amp].imaging
+    imaging = ccd.amp_geom.imaging
     reg = afwGeom.Box2I(afwGeom.Point2I(col, imaging.getMinY()),
                         afwGeom.Extent2I(1, imaging.getHeight()))
     image = ccd.unbiased_and_trimmed_image(amp)

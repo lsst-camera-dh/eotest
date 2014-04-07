@@ -33,7 +33,7 @@ class Traps(dict):
             threshold = afwDetect.Threshold(median + nsig*stdev)
             fpset = afwDetect.FootprintSet(image, threshold)
 
-            imaging = ccd.seg_regions[amp].imaging
+            imaging = ccd.amp_geom.imaging
             for fp in fpset.getFootprints():
                 peak = [pk for pk in fp.getPeaks()][0]
                 x, y = (peak.getIx() - imaging.getMinX(),

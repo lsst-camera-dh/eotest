@@ -45,8 +45,7 @@ class Xrays(object):
             self.imarr = raw_image.getArray()
         except AttributeError:
             self.imarr = raw_image.getImage().getArray()
-        self.image = imutils.trim(raw_image,
-                                  imaging=ccd.seg_regions[amp].imaging)
+        self.image = imutils.trim(raw_image, imaging=ccd.amp_geom.imaging)
         self.image -= self._bg_image(*bg_reg)
         flags = afwMath.MEANCLIP | afwMath.STDEVCLIP
         stats = afwMath.makeStatistics(self.image, flags, self.ccd.stat_ctrl)
@@ -57,7 +56,7 @@ class Xrays(object):
     def _bg_image(self, nx, ny):
         bg_ctrl = afwMath.BackgroundControl(nx, ny, self.ccd.stat_ctrl)
         bg = afwMath.makeBackground(self.ccd[self.amp], bg_ctrl)
-        image_region = self.ccd.seg_regions[amp].imaging
+        image_region = self.ccd.amp_geom.imaging
         return imutils.trim(bg.getImageF(), imaging=image_region)
     def _footprint_signal_spans(self, footprint, buff=None):
         spans = footprint.getSpans()
@@ -66,7 +65,7 @@ class Xrays(object):
             total += sum(self.imarr[span.getY()][span.getX0():span.getX1()+1])
         return total - footprint.getNpix()*self.mean
     def _footprint_signal_bbox(self, footprint, buff=1):
-        imaging = self.ccd.seg_regions[self.amp].imaging
+        imaging = self.ccd.amp_geom.imaging
         bbox = footprint.getBBox()
         xmin = max(imaging.getMinX(), bbox.getMinX() - buff)
         xmax = min(imaging.getMaxX(), bbox.getMaxX() + buff)

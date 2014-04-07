@@ -4,7 +4,7 @@ Modules to perform sensor characterization from laboratory data.
 #
 # Low-level classes and functions
 #
-from MaskedCCD import MaskedCCD, SegmentRegions, add_mask_files
+from MaskedCCD import MaskedCCD, add_mask_files
 from TaskParser import TaskParser
 from EOTestResults import EOTestResults
 from AmplifierGeometry import AmplifierGeometry, makeAmplifierGeometry, amp_loc

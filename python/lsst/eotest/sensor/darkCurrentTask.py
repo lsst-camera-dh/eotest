@@ -46,8 +46,8 @@ class DarkCurrentTask(pipeBase.Task):
         if self.config.verbose:
             self.log.info("Segment    95 percentile    median")
         for amp in imutils.allAmps:
-            imaging_region = ccd.seg_regions[amp].imaging
-            overscan = ccd.seg_regions[amp].serial_overscan
+            imaging_region = ccd.amp_geom.imaging
+            overscan = ccd.amp_geom.serial_overscan
             image = imutils.unbias_and_trim(ccd[amp].getImage(),
                                             overscan, imaging_region)
             mask = imutils.trim(ccd[amp].getMask(), imaging_region)

@@ -70,7 +70,7 @@ class ReadNoiseTask(pipeBase.Task):
 
             # Determine the nominal imaging region from the bias file.
             ccd = MaskedCCD(bias)
-            imaging = ccd.seg_regions[imutils.allAmps[0]].imaging
+            imaging = ccd.amp_geom.imaging
             #
             # Create a single sub-region sampler so that the same
             # sub-regions will be used for both the bias and system

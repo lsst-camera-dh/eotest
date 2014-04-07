@@ -7,7 +7,7 @@ import os
 import pyfits
 
 import lsst.eotest.image_utils as imutils
-from MaskedCCD import SegmentRegions
+from AmplifierGeometry import makeAmplifierGeometry
 from EOTestResults import EOTestResults
 from eperTask import EPERTask
 
@@ -26,11 +26,9 @@ def superflat(files, outfile='superflat.fits'):
     for amp in imutils.allAmps:
         images = afwImage.vectorImageF()
         for infile in files:
-            decorated_image = afwImage.DecoratedImageF(infile,
-                                                       imutils.dm_hdu(amp))
-            sr = SegmentRegions(decorated_image)
-            image = decorated_image.getImage()
-            image -= imutils.bias_image(image, overscan=sr.serial_overscan)
+            image = afwImage.ImageF(infile, imutils.dm_hdu(amp))
+            geom = makeAmplifierGeometry(infile)
+            image -= imutils.bias_image(image, overscan=geom.serial_overscan)
             images.push_back(image)
         median_image = afwMath.statisticsStack(images, afwMath.MEDIAN)
         output[amp].data = median_image.getArray()

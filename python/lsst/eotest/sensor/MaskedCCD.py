@@ -6,6 +6,7 @@ afwMath.makeStatistics object.
 @author J. Chiang <jchiang@slac.stanford.edu>
 """
 import pyfits
+from AmplifierGeometry import makeAmplifierGeometry
 import lsst.daf.base as dafBase
 import lsst.afw.geom as afwGeom
 import lsst.afw.image as afwImage
@@ -31,27 +32,6 @@ class Metadata(object):
         else:
             return self.header[key]
 
-class SegmentRegions(object):
-    """
-    This class constructs the imaging, prescan, and overscan regions
-    of a CCD segment based on the NAXIS[12] and DATASEC keyword values
-    in the FITS header for the corresponding image extension.
-    """
-    def __init__(self, decorated_image):
-        Box2I, Point2I, Extent2I = (afwGeom.Box2I, afwGeom.Point2I, 
-                                    afwGeom.Extent2I)
-        md = decorated_image.getMetadata()
-        nx, ny = decorated_image.getWidth(), decorated_image.getHeight()
-        self.full_segment = Box2I(Point2I(0, 0), Extent2I(nx, ny))
-        datasec = md.get('DATASEC')[1:-1]
-        minX, maxX = [int(x) - 1 for x in datasec.split(',')[0].split(':')]
-        minY, maxY = [int(x) - 1 for x in datasec.split(',')[1].split(':')]
-        self.imaging = Box2I(Point2I(minX, minY), Point2I(maxX, maxY))
-        self.prescan = Box2I(Point2I(0, 0), Point2I(minX-1, ny-1))
-        self.serial_overscan = Box2I(Point2I(maxX+1, 0), Point2I(nx-1, ny-1))
-        self.parallel_overscan = Box2I(Point2I(minX, maxY+1),
-                                       Point2I(maxX+1, ny-1))
-
 class MaskedCCDBiasImageException(RuntimeError):
     def __init__(self, *args):
         super(MaskedCCDBiasImageException, self).__init__(*args)
@@ -69,15 +49,10 @@ class MaskedCCD(dict):
         self.imfile = imfile
         #self.md = afwImage.readMetadata(imfile, 1)
         self.md = Metadata(imfile, 1)
-        self.seg_regions = {}
+        self.amp_geom = makeAmplifierGeometry(imfile)
         for amp in imutils.allAmps:
-            #
-            # It sure would be nice if afwImage.DecoratedImageF was a
-            # subclass of ImageF.
-            # 
             decorated_image = afwImage.DecoratedImageF(imfile,
                                                        imutils.dm_hdu(amp))
-            self.seg_regions[amp] = SegmentRegions(decorated_image)
             image = decorated_image.getImage()
             mask = afwImage.MaskU(image.getDimensions())
             self[amp] = afwImage.MaskedImageF(image, mask)
@@ -121,15 +96,14 @@ class MaskedCCD(dict):
         Use separately stored metadata to determine file-specified
         overscan region.
         """
-        # This method would not be needed if DecoratedImage was a
-        # subclass of Image and could then be used in MaskedImage.
         if overscan is None:
-            overscan = self.seg_regions[amp].serial_overscan
+            overscan = self.amp_geom.serial_overscan
         try:
             return imutils.bias_image(self[amp], overscan=overscan,
                                       fit_order=fit_order)
         except pexExcept.LsstCppException:
-            raise MaskedCCDBiasImageException("DM stack error generating bias image from overscan region.")
+            raise MaskedCCDBiasImageException("DM stack error generating bias "
+                                              + "image from overscan region.")
     def bias_subtracted_image(self, amp, overscan=None, fit_order=1):
         self[amp] -= self.bias_image(amp, overscan, fit_order)
         return self[amp]
@@ -139,12 +113,10 @@ class MaskedCCD(dict):
         Use separately stored metadata to determine file-specified
         overscan and imaging regions.
         """
-        # This method would not be needed if DecoratedImage was a
-        # subclass of Image and could then be used in MaskedImage.
         if overscan is None:
-            overscan = self.seg_regions[amp].serial_overscan
+            overscan = self.amp_geom.serial_overscan
         if imaging is None:
-            imaging = self.seg_regions[amp].imaging
+            imaging = self.amp_geom.imaging
         return imutils.unbias_and_trim(self[amp], overscan=overscan,
                                        imaging=imaging, fit_order=fit_order)
 

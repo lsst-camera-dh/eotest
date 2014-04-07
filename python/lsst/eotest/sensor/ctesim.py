@@ -10,7 +10,7 @@ import pyfits
 import lsst.afw.image as afwImage
 import lsst.eotest.image_utils as imutils
 import lsst.eotest.utilLib as testUtils
-from MaskedCCD import SegmentRegions
+from AmplifierGeometry import makeAmplifierGeometry
 import sim_tools
 
 _dtypes = dict([(-32, np.float32), (16, np.int16)])
@@ -40,10 +40,9 @@ def ctesim_cpp(infile, pcti=0, scti=0, verbose=False):
     for amp in amps:
         if verbose:
             print "ctesim_cpp: working on amp", amp
-        decorated_image = afwImage.DecoratedImageF(infile, imutils.dm_hdu(amp))
-        image = decorated_image.getImage()
-        sr = SegmentRegions(decorated_image)
-        outimage = testUtils.ImageTools.applyCTI(image, sr.serial_overscan,
+        image = afwImage.ImageF(infile, imutils.dm_hdu(amp))
+        geom = makeAmplifierGeometry(infile)
+        outimage = testUtils.ImageTools.applyCTI(image, geom.serial_overscan,
                                                  pcti, scti, verbose)
         segments[amp] = outimage
     return fitsFile(segments, input)
@@ -58,13 +57,13 @@ def ctesim(infile, pcti=0, scti=0, verbose=False):
     for amp in amps:
         if verbose:
             print "ctesim: working on amp", amp
-        decorated_image = afwImage.DecoratedImageF(infile, imutils.dm_hdu(amp))
-        image = decorated_image.getImage()
-        sr = SegmentRegions(decorated_image)
+        image = afwImage.ImageF(infile, imutils.dm_hdu(amp))
+        geom = makeAmplifierGeometry(infile)
         #
         # Temporarily remove readout bias median.
         #
-        bias_med = imutils.median(image.Factory(image, sr.serial_overscan))
+        bias_med = imutils.median(image.Factory(image, geom.serial_overscan))
+                                                
         image -= bias_med
 
         imarr = image.getArray()
