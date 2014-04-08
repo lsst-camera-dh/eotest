@@ -18,11 +18,34 @@ import lsst.eotest.image_utils as imutils
 from fe55_yield import Fe55Yield
 from fits_headers import fits_headers
 from AmplifierGeometry import AmplifierGeometry
+from crosstalk import CrosstalkMatrix
 
 _sqrt2 = np.sqrt(2.)
 
 def utcnow():
     return datetime.now().isoformat()[:19]
+
+class CrosstalkPattern(object):
+    def __init__(self, infile=None):
+        if infile is not None:
+            print "Using %s for the crosstalk pattern" % infile
+            xtalk_matrix = CrosstalkMatrix(infile)
+            self.matrix = xtalk_matrix.matrix
+        else:
+            # Use default matrix.
+            pattern = (0.01, 0.02, 1, 0.02, 0.01)
+            offsets = (-2, -1, 0, 1, 2)
+            namps = len(imutils.allAmps)
+            self.matrix = np.zeros((namps, namps), dtype=np.float)
+            for agg in imutils.allAmps:
+                for offset, value in zip(offsets, pattern):
+                    vic = agg + offset
+                    if (vic in range(1, 9) and agg in range(1, 9) or
+                        vic in range(9, 17) and agg in range(9, 17)):
+                        self.matrix[agg-1][vic-1] = value
+    def __call__(self, aggressor, frac_scale=None):
+        return dict([(amp, victim) for amp, victim 
+                     in zip(imutils.allAmps, self.matrix[aggressor-1])])
 
 def xtalk_pattern(aggressor, frac_scale=0.02):
     xtalk_frac = {}

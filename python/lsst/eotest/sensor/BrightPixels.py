@@ -14,7 +14,6 @@ import lsst.eotest.image_utils as imutils
 from MaskedCCD import MaskedCCD
 from AmplifierGeometry import makeAmplifierGeometry
 from fits_headers import fits_headers
-import sim_tools
 
 class BrightPixels(object):
     """
@@ -111,33 +110,32 @@ class BrightPixels(object):
         self.bright_pixels = bright_pixs
         self.bright_columns = bright_cols
         return bright_pixs, bright_cols
-
-def write_test_image(outfile, emin=10, dark_curr=2e-3, exptime=10,
-                     gain=5, ccdtemp=-100, bias_level=1e2,
-                     bias_sigma=4, ncols=2, npix=100):
-    ccd = sim_tools.CCD(exptime=exptime, gain=gain, ccdtemp=ccdtemp)
-    ccd.add_bias(bias_level, bias_sigma)
-    ccd.add_dark_current(level=dark_curr)
-    #
-    # Simulation code sets bright pixel values by nsig*seg.sigma(),
-    # but we want to set using e- per sec, so need to compute
-    # equivalent nsig.
-    #
-    nsig = (emin*exptime/gain)/ccd.segments[imutils.allAmps[0]].sigma()
-    #
-    columns = ccd.generate_bright_cols(ncols)
-    ccd.add_bright_cols(columns, nsig=nsig)
-    pixels = ccd.generate_bright_pix(npix)
-    ccd.add_bright_pix(pixels, nsig=nsig)
-    ccd.writeto(outfile)
-
-def remove_file(filename):
-    try:
-        os.remove(filename)
-    except OSError:
-        pass
-
 if __name__ == '__main__':
+    import sim_tools
+    def write_test_image(outfile, emin=10, dark_curr=2e-3, exptime=10,
+                         gain=5, ccdtemp=-100, bias_level=1e2,
+                         bias_sigma=4, ncols=2, npix=100):
+        ccd = sim_tools.CCD(exptime=exptime, gain=gain, ccdtemp=ccdtemp)
+        ccd.add_bias(bias_level, bias_sigma)
+        ccd.add_dark_current(level=dark_curr)
+        #
+        # Simulation code sets bright pixel values by nsig*seg.sigma(),
+        # but we want to set using e- per sec, so need to compute
+        # equivalent nsig.
+        #
+        nsig = (emin*exptime/gain)/ccd.segments[imutils.allAmps[0]].sigma()
+        #
+        columns = ccd.generate_bright_cols(ncols)
+        ccd.add_bright_cols(columns, nsig=nsig)
+        pixels = ccd.generate_bright_pix(npix)
+        ccd.add_bright_pix(pixels, nsig=nsig)
+        ccd.writeto(outfile)
+
+    def remove_file(filename):
+        try:
+            os.remove(filename)
+        except OSError:
+            pass
 
     dark_file = 'bright_pix_test.fits'
     mask_file = 'bright_pix_mask.fits'

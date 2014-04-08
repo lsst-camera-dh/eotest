@@ -8,7 +8,7 @@ import os
 import numpy as np
 from PhotodiodeResponse import Interpolator
 from multiaggressor_tools import multiaggressor_amplifier_coords
-from sim_tools import xtalk_pattern
+from sim_tools import CrosstalkPattern
 
 class Params(object):
     def __init__(self, **kwargs):
@@ -132,7 +132,7 @@ xpos, ypos = multiaggressor_amplifier_coords(nx, ny)
 spot = Params(test_type='spot',
               exptime=1,
               ccdtemp=-95,
-              xtalk_pattern=xtalk_pattern,
+              xtalk_pattern=CrosstalkPattern(),
               frac_scale=0.02,
               dn=200,
               radius=20,
