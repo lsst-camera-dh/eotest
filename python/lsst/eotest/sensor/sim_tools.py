@@ -269,11 +269,15 @@ def fitsFile(ccd_segments):
         output[amp].header.update('DATASEC', segment.geometry[amp]['DATASEC'])
         output[amp].header.update('DETSEC', segment.geometry[amp]['DETSEC'])
         output[amp].header.update('CHANNEL', amp)
-    # Add Test Condition and CCD Operating Condition headers
-    output.append(pyfits.new_table([pyfits.Column(format='I')]))
-    output[-1].header = headers['TEST_COND']
-    output.append(pyfits.new_table([pyfits.Column(format='I')]))
-    output[-1].header = headers['CCD_COND']
+    # Add Test Condition and CCD Operating Condition headers with dummy info.
+    output.append(pyfits.new_table([pyfits.Column(format='I', name='DUMMY')]))
+    for keyword in headers['TEST_COND']:
+        if keyword not in output[-1].header.keys():
+            output[-1].header.set(keyword, headers['TEST_COND'][keyword])
+    output.append(pyfits.new_table([pyfits.Column(format='I', name='DUMMY')]))
+    for keyword in headers['CCD_COND']:
+        if keyword not in output[-1].header.keys():
+            output[-1].header.set(keyword, headers['CCD_COND'][keyword])
     return output
                 
 def writeFits(ccd_segments, outfile, clobber=True):

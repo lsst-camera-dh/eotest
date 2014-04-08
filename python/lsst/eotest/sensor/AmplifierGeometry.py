@@ -1,3 +1,8 @@
+"""
+Code to encapsulate amplifier geometry as expressed in NOAO image
+section keywords DETSEC, DATASEC, DETSIZE.
+"""
+
 import pyfits
 import lsst.afw.geom as afwGeom
 
@@ -7,7 +12,7 @@ amp_loc['E2V'] = dict([(amp, -1) for amp in range(1, 9)] +
 amp_loc['ITL'] = dict([(amp, -1) for amp in range(1, 9)] +
                       [(amp, -1) for amp in range(9, 17)])
 
-def _parse_geom_kwd(value):
+def parse_geom_kwd(value):
     geom = {}
     data = value[1:-1].split(',')
     xmin, xmax = (int(x) for x in data[0].split(':'))
@@ -23,13 +28,13 @@ def makeAmplifierGeometry(infile):
     Make an AmplifierGeometry object from an input FITS file.
     """
     foo = pyfits.open(infile)
-    detsize = _parse_geom_kwd(foo[0].header['DETSIZE'])
-    datasec = _parse_geom_kwd(foo[1].header['DATASEC'])
+    detsize = parse_geom_kwd(foo[0].header['DETSIZE'])
+    datasec = parse_geom_kwd(foo[1].header['DATASEC'])
     prescan = datasec['xmin'] - 1
     nx = datasec['xmax'] - prescan
     ny = datasec['ymax'] - datasec['ymin'] + 1
     # kludge to infer amplifier node locations for two vendors
-    detsec = _parse_geom_kwd(foo[9].header['DETSEC'])
+    detsec = parse_geom_kwd(foo[9].header['DETSEC'])
     if detsec['xmin'] < detsec['xmax']:
         vendor = 'E2V'
     else:
