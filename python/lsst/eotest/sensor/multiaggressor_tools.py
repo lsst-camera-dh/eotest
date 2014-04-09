@@ -9,6 +9,18 @@ _xpos = [3856, 3364, 2872, 2380, 1888, 1396,  904,  412,
 _ypos = [1980, 1215,  450, 1880, 1115,  350, 1780, 1015,
          3754, 2324, 3089, 3854, 2424, 3189, 3954, 2524]
 
+def write_aggressor_locations(outfile='multi_aggressors.reg'):
+    output = open(outfile, 'w')
+    output.write("""
+# Region file format: DS9 version 4.1
+global color=green dashlist=8 3 width=1 font="helvetica 10 normal roman" select=1 highlite=1 dash=0 fixed=0 edit=1 move=1 delete=1 include=1 source=1
+physical
+# tile 4
+""")
+    for x, y in zip(_xpos, _ypos):
+        output.write("point(%i,%i) # point=circle\n" % (x, y))
+    output.close()
+
 class AmpCoords(object):
     """
     Convert pixel coordinates in detector (CCD) geometry to amplifier

@@ -9,7 +9,7 @@ import numpy as np
 import pyfits
 from collections import OrderedDict
 import lsst.eotest.image_utils as imutils
-from lsst.eotest.sensor.AmplifierGeometry import parse_geom_kwd
+from AmplifierGeometry import parse_geom_kwd
 
 _module_path = os.environ['EOTEST_DIR']
 template_file = os.path.join(_module_path, 'policy', 'fits_header_template.txt')
