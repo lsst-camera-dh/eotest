@@ -64,12 +64,10 @@ class RTS2_FITS_translator(object):
             self.output[extname]
         except KeyError:
             # No header by that name, so add it along with required keys.
-            self.output.append(pyfits.new_table([pyfits.Column(format='I',
-                                                               name='DUMMY')]))
+            self.output.append(pyfits.ImageHDU())
             self.output[-1].name = extname
             for keyword in prototype:
                 self.output[-1].header.set(keyword, prototype[keyword])
-            self.output[-1].header['NAXIS1'] = 2  # kludge for fverify
 
         # Set the values from the primary hdu.
         self._update_keywords(extname)

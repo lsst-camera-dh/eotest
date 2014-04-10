@@ -270,11 +270,11 @@ def fitsFile(ccd_segments):
         output[amp].header.update('DETSEC', segment.geometry[amp]['DETSEC'])
         output[amp].header.update('CHANNEL', amp)
     # Add Test Condition and CCD Operating Condition headers with dummy info.
-    output.append(pyfits.new_table([pyfits.Column(format='I', name='DUMMY')]))
+    output.append(pyfits.ImageHDU())
     for keyword in headers['TEST_COND']:
         if keyword not in output[-1].header.keys():
             output[-1].header.set(keyword, headers['TEST_COND'][keyword])
-    output.append(pyfits.new_table([pyfits.Column(format='I', name='DUMMY')]))
+    output.append(pyfits.ImageHDU())
     for keyword in headers['CCD_COND']:
         if keyword not in output[-1].header.keys():
             output[-1].header.set(keyword, headers['CCD_COND'][keyword])

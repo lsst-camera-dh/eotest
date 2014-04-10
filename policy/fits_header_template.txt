@@ -679,14 +679,11 @@ DATASUM = '2189405276' /
 END
 
 # Test Condition Extension
-XTENSION = 'BINTABLE'        / N.B. Does not contain any data
+XTENSION = 'IMAGE'           / N.B. Does not contain any data
 BITPIX = 8                   /
-NAXIS = 2                    /
-NAXIS1 = 0                   / Width of table in bytes
-NAXIS2 = 0                   / Number of rows in table
+NAXIS = 0                    /
 PCOUNT = 0                   / Size of special data area
 GCOUNT = 1                   / One data group
-TFIELDS = 0                  / Number of table fields
 EXTNAME = 'TEST_COND'        / Name of the extension
 TEMP_SET = -95.00            / Temperature set point (Celsius)
 CCDTEMP = -95.12             / Measured temperature (Celsius)
@@ -710,14 +707,11 @@ DATASUM = ''                 /
 END
 
 # CCD Operating Conditions
-XTENSION = 'BINTABLE'        /
+XTENSION = 'IMAGE'           /
 BITPIX = 8                   /
-NAXIS = 2                    /
-NAXIS1 = 0                   / Width of table in bytes
-NAXIS2 = 0                   / Number of rows in table
+NAXIS = 0                    /
 PCOUNT = 0                   / Size of special data area
 GCOUNT = 1                   / One data group
-TFIELDS = 0                  / Number of table fields
 EXTNAME = 'CCD_COND'         / Name of the extension
 V_OD1 = 30.00                / Volts
 V_OD2 = 30.00                / Volts
