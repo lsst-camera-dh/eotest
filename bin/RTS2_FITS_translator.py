@@ -158,10 +158,10 @@ if __name__ == '__main__':
         sys.path.insert(0, os.path.split(args.policy)[0])
         exec("from %s import *" % os.path.basename(args.policy).strip('.py'))
 
-    e2v_translator = RTS2_FITS_translator(RTS2_FITS_LUTs[args.lab],
-                                          RTS2_geom[args.vendor],
-                                          verbose=args.verbose)
+    rts2_translator = RTS2_FITS_translator(RTS2_FITS_LUTs[args.lab],
+                                           RTS2_geom[args.vendor],
+                                           verbose=args.verbose)
     infiles = glob.glob(args.inputs)
     for infile in infiles:
         outfile = os.path.join(args.output_dir, os.path.basename(infile))
-        e2v_translator(infile, outfile)
+        rts2_translator(infile, outfile)
