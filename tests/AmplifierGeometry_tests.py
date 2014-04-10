@@ -6,21 +6,8 @@
 import os
 import unittest
 
-try:
-    from lsst.eotest.sensor import AmplifierGeometry, makeAmplifierGeometry, \
-        amp_loc
-    import lsst.eotest.sensor.sim_tools as sim_tools
-except ImportError:
-    # This is to allow this unit test to run on the inadequately
-    # configured lsst-build01 on which Jenkins at SLAC runs.
-    print "Error importing lsst.eotest.sensor"
-    import sys
-    sys.path.insert(0, os.path.join(os.environ['TEST_SCRIPTS_DIR'],
-                                    'python', 'lsst', 'eotest', 'sensor'))
-    from AmplifierGeometry import AmplifierGeometry, makeAmplifierGeometry, \
-        amp_loc
-    import sim_tools
-
+from lsst.eotest.sensor import AmplifierGeometry, makeAmplifierGeometry, amp_loc
+import lsst.eotest.sensor.sim_tools as sim_tools
 import lsst.afw.geom as afwGeom
 
 e2v_amp_geom = dict(

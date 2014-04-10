@@ -8,23 +8,9 @@ import unittest
 import numpy as np
 import pyfits
 import lsst.eotest.image_utils as imutils
-
-try:
-    from lsst.eotest.sensor import MaskedCCD, add_mask_files, BrightPixels, \
-        AmplifierGeometry
-    import lsst.eotest.sensor.sim_tools as sim_tools
-except ImportError:
-    # This is to allow this unit test to run on the inadequately
-    # configured lsst-build01 on which Jenkins at SLAC runs.
-    print "Error importing lsst.eotest.sensor"
-    import sys
-    sys.path.insert(0, os.path.join(os.environ['TEST_SCRIPTS_DIR'],
-                                    'python', 'lsst', 'eotest', 'sensor'))
-    from MaskedCCD import MaskedCCD, add_mask_files
-    from BrightPixels import BrightPixels
-    from AmplifierGeometry import AmplifierGeometry
-    import sim_tools
-    
+from lsst.eotest.sensor import MaskedCCD, add_mask_files, BrightPixels, \
+    AmplifierGeometry
+import lsst.eotest.sensor.sim_tools as sim_tools
 import lsst.afw.image as afwImage
 import lsst.afw.math as afwMath
 

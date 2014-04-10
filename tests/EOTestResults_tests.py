@@ -6,18 +6,7 @@
 import os
 import unittest
 import numpy.random as ra
-
 from lsst.eotest.sensor import EOTestResults
-#try:
-#    from lsst.eotest.sensor import EOTestResults
-#except ImportError:
-#    # This is to allow this unit test to run on the inadequately
-#    # configured lsst-build01 on which Jenkins at SLAC runs.
-#    print "Error importing lsst.eotest.sensor"
-#    import sys
-#    sys.path.insert(0, os.path.join(os.environ['TEST_SCRIPTS_DIR'],
-#                                    'python', 'lsst', 'eotest', 'sensor'))
-#    from EOTestResults import EOTestResults
 
 class EOTestResultsTestCase(unittest.TestCase):
     def setUp(self):
