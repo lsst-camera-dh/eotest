@@ -43,7 +43,8 @@ class RTS2_FITS_translator(object):
         except KeyError:
             self._set_bnl_mondiode_keyword_value()
 
-        self.output.writeto(outfile, clobber=clobber, checksum=True)
+        self.output.writeto(outfile, clobber=clobber, checksum=True,
+                            output_verify='fix')
     def _update_keywords(self, ext):
         unresolved_keywords = []
         for key, source in self.luts[ext].items():
@@ -68,6 +69,7 @@ class RTS2_FITS_translator(object):
             self.output[-1].name = extname
             for keyword in prototype:
                 self.output[-1].header.set(keyword, prototype[keyword])
+            self.output[-1].header['NAXIS1'] = 2  # kludge for fverify
 
         # Set the values from the primary hdu.
         self._update_keywords(extname)
@@ -133,9 +135,6 @@ if __name__ == '__main__':
     import glob
     import argparse
 
-    sys.path.append(os.path.join(os.environ['EOTEST_DIR'], 'policy'))
-    from RTS2_FITS_LUTs import *
-
     parser = argparse.ArgumentParser(description='RTS2 FITS file translator')
     parser.add_argument('inputs', help="File pattern for input files")
     parser.add_argument('-o', '--output_dir', type=str, default='.',
@@ -145,17 +144,21 @@ if __name__ == '__main__':
                         help='Vendor (E2V or ITL)')
     parser.add_argument('-l', '--lab', type=str, default='BNL',
                         help='lab (BNL or Harvard)')
+    parser.add_argument('-p', '--policy', type=str, default=None,
+                        help='policy file for mapping lab-specific RTS2 keywords to eotest keywords')
     parser.add_argument('-v', '--verbose', action='store_true',
                         default=False, help='verbosity flag')
     
     args = parser.parse_args()
 
-    if args.lab == 'BNL':
-        lookup_tables = BNL_FITS_LUTs
+    if args.policy is None:
+        sys.path.append(os.path.join(os.environ['EOTEST_DIR'], 'policy'))
+        from RTS2_FITS_LUTs import *
     else:
-        raise RuntimeError("Only BNL supported so far")
+        sys.path.insert(0, os.path.split(args.policy)[0])
+        exec("from %s import *" % os.path.basename(args.policy).strip('.py'))
 
-    e2v_translator = RTS2_FITS_translator(lookup_tables,
+    e2v_translator = RTS2_FITS_translator(RTS2_FITS_LUTs[args.lab],
                                           RTS2_geom[args.vendor],
                                           verbose=args.verbose)
     infiles = glob.glob(args.inputs)

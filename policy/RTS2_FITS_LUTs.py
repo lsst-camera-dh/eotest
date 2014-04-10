@@ -1,4 +1,6 @@
-BNL_FITS_LUTs = {
+RTS2_FITS_LUTs = {}
+
+RTS2_FITS_LUTs['BNL'] = {
     0 : {
 #        'MJD'       : 'JD',
 #        'MONDIODE'  : 'AMP0.CURRENT.MIN',
