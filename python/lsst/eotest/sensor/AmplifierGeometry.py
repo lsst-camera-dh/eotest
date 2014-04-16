@@ -2,9 +2,7 @@
 Code to encapsulate amplifier geometry as expressed in NOAO image
 section keywords DETSEC, DATASEC, DETSIZE.
 """
-
 import pyfits
-import lsst.afw.geom as afwGeom
 
 amp_loc = {}
 amp_loc['E2V'] = dict([(amp, -1) for amp in range(1, 9)] +
@@ -53,31 +51,42 @@ class AmplifierGeometry(dict):
         self.naxis1 = detxsize/self.nsegx
         self.naxis2 = detysize/self.nsegy
         self.amp_loc = amp_loc
+        self.DETSIZE = '[1:%i,1:%i]' % (detxsize, detysize)
+        self.prescan_width = prescan
+        self.serial_overscan_width = self.naxis1 - self.nx - prescan
+        try:
+            self._make_bboxes()
+        except ImportError:
+            pass
+        for amp in range(1, self.nsegx*self.nsegy + 1):
+            self[amp] = self._segment_geometry(amp)
+    def _make_bboxes(self):
+        import lsst.afw.geom as afwGeom
         self.full_segment = \
             afwGeom.Box2I(afwGeom.Point2I(0, 0),
                           afwGeom.Point2I(self.naxis1 - 1, self.naxis2 - 1))
         self.prescan = \
             afwGeom.Box2I(afwGeom.Point2I(0, 0),
-                          afwGeom.Point2I(prescan - 1, self.naxis2 - 1))
+                          afwGeom.Point2I(self.prescan_width - 1,
+                                          self.naxis2 - 1))
         self.imaging = \
-            afwGeom.Box2I(afwGeom.Point2I(prescan, 0),
-                          afwGeom.Point2I(self.nx + prescan - 1, self.ny - 1 ))
+            afwGeom.Box2I(afwGeom.Point2I(self.prescan_width, 0),
+                          afwGeom.Point2I(self.nx + self.prescan_width - 1,
+                                          self.ny - 1 ))
         self.serial_overscan = \
-            afwGeom.Box2I(afwGeom.Point2I(self.nx + prescan, 0),
+            afwGeom.Box2I(afwGeom.Point2I(self.nx + self.prescan_width, 0),
                           afwGeom.Point2I(self.naxis1 - 1, self.naxis2 - 1))
         self.parallel_overscan = \
-            afwGeom.Box2I(afwGeom.Point2I(prescan, ny),
-                          afwGeom.Point2I(prescan + nx, self.naxis2 - 1))
-        self.DETSIZE = '[1:%i,1:%i]' % (detxsize, detysize)
-        for amp in range(1, self.nsegx*self.nsegy + 1):
-            self[amp] = self._segment_geometry(amp)
+            afwGeom.Box2I(afwGeom.Point2I(self.prescan_width, self.ny),
+                          afwGeom.Point2I(self.prescan_width + self.nx,
+                                          self.naxis2 - 1))
     def _segment_geometry(self, amp):
         results = dict()
         results['DETSIZE'] = '[1:%i,1:%i]' % (self.nx*self.nsegx, 
                                               self.ny*self.nsegy)
         results['DATASEC'] = \
-            '[%i:%i,%i:%i]' % (self.prescan.getWidth() + 1,
-                               self.naxis1 - self.serial_overscan.getWidth(),
+            '[%i:%i,%i:%i]' % (self.prescan_width + 1,
+                               self.naxis1 - self.serial_overscan_width,
                                1, self.ny)
         results['DETSEC'] = self._detsec(amp)
         return results
