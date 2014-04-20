@@ -139,7 +139,7 @@ RTS2_FITS_LUTs['BNL'] = {
 RTS2_FITS_LUTs['HARVARD'] = {
     0 : {
 #        'MJD'       : 'JD',
-#        'MONDIODE'  : 'AMP0.CURRENT.MIN',
+        'MONDIODE'  : 'K_PHOT.CURRENT',
         'MONOWL'    : 'MONO.WAVELENG',
         'FILTER'    : 'MONO.FILT',
         'CONTROLL'  : 'INSTRUME',
@@ -272,14 +272,12 @@ RTS2_FITS_LUTs['HARVARD'] = {
         }
     }
 
-RTS2_geom = {'ITL' : {'detsize' : (4336, 4044),
-                      'nx' : 509,
-                      'ny' : 2000,
-                      'prescan' : 3,
-                      'vendor' : 'ITL'},
-             'E2V' :  {'detsize' : (4336, 4044),
-                       'nx' : 512,
-                       'ny' : 2002,
-                       'prescan' : 10,
-                       'vendor' : 'E2V'}
-             }
+sensor_geom = {'ITL' : {'nx' : 509,
+                        'ny' : 2000,
+                        'prescan' : 3,
+                        'vendor' : 'ITL'},
+               'E2V' :  {'nx' : 512,
+                         'ny' : 2002,
+                         'prescan' : 10,
+                         'vendor' : 'E2V'}
+           }

@@ -16,12 +16,15 @@ class RTS2_FITS_translator(object):
         amp_loc = sensorTest.amp_loc[geom['vendor']]
         self.geom = sensorTest.AmplifierGeometry(prescan=geom['prescan'],
                                                  nx=geom['nx'], ny=geom['ny'],
-                                                 detxsize=geom['detsize'][0],
-                                                 detysize=geom['detsize'][1],
                                                  amp_loc=amp_loc)
     def __call__(self, infile, outfile, clobber=True):
         if self.verbose:
             print "processing", infile
+
+        # Recompute the amplifier geometry using NAXIS[12] from
+        # first image extension of input file.
+        self.geom.compute_geometry(fitsfile=infile)
+        
         self.input = pyfits.open(infile)
         self.output = pyfits.open(infile)
         prototypes = sensorTest.fits_headers.fits_headers()
@@ -157,7 +160,7 @@ if __name__ == '__main__':
         exec("from %s import *" % os.path.basename(args.policy).strip('.py'))
 
     rts2_translator = RTS2_FITS_translator(RTS2_FITS_LUTs[args.lab],
-                                           RTS2_geom[args.vendor],
+                                           sensor_geom[args.vendor],
                                            verbose=args.verbose)
     infiles = glob.glob(args.inputs)
     for infile in infiles:

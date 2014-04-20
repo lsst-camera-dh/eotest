@@ -46,14 +46,28 @@ class AmplifierGeometry(dict):
     def __init__(self, prescan=10, nx=512, ny=2002,
                  detxsize=4336, detysize=4044, amp_loc=amp_loc['E2V']):
         super(AmplifierGeometry, self).__init__()
+        self.prescan_width = prescan
         self.nx = nx
         self.ny = ny
-        self.naxis1 = detxsize/self.nsegx
-        self.naxis2 = detysize/self.nsegy
         self.amp_loc = amp_loc
+        self.compute_geometry(detxsize=detxsize, detysize=detysize)
+    def compute_geometry(self, **kwds):
+        if kwds.has_key('fitsfile'):
+            # Compute geometry by inferring DETSIZE from NAXIS[12] in
+            # first image extension of specified FITS file.
+            foo = pyfits.open(kwds['fitsfile'])
+            self.naxis1 = foo[1].header['NAXIS1']
+            self.naxis2 = foo[1].header['NAXIS2']
+            detxsize = self.naxis1*self.nsegx
+            detysize = self.naxis2*self.nsegy
+        else:
+            # Compute geometry using supplied detxsize, detysize
+            detxsize = kwds['detxsize']
+            detysize = kwds['detysize']
+            self.naxis1 = detxsize/self.nsegx
+            self.naxis2 = detysize/self.nsegy
         self.DETSIZE = '[1:%i,1:%i]' % (detxsize, detysize)
-        self.prescan_width = prescan
-        self.serial_overscan_width = self.naxis1 - self.nx - prescan
+        self.serial_overscan_width = self.naxis1 - self.nx - self.prescan_width
         try:
             self._make_bboxes()
         except ImportError:
