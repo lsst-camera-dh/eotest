@@ -10,6 +10,7 @@ import glob
 import numpy as np
 import pyfits
 import lsst.eotest.image_utils as imutils
+from MaskedCCD import Metadata
 from pair_stats import pair_stats
 
 import lsst.afw.image as afwImage
@@ -22,7 +23,8 @@ def find_flat2(flat1):
     flat2 = glob.glob(pattern)[0]
     return flat2
 
-exptime = lambda x : afwImage.readMetadata(x, 1).get('EXPTIME')
+#exptime = lambda x : afwImage.readMetadata(x, 1).get('EXPTIME')
+exptime = lambda x : Metadata(x, 1).get('EXPTIME')
 
 def glob_flats(full_path, outfile='ptc_flats.txt'):
     flats = glob.glob(os.path.join(full_path, '*_flat?.fits'))
@@ -55,7 +57,7 @@ class PtcTask(pipeBase.Task):
         exposure = []
         file1s = sorted([item for item in infiles if item.find('flat1')  != -1])
         for flat1 in file1s:
-            flat2 = flat1.replace('flat1', 'flat2')
+            flat2 = find_flat2(flat1)
             if self.config.verbose:
                 self.log.info("processing %s" % flat1)
             exposure.append(exptime(flat1))
