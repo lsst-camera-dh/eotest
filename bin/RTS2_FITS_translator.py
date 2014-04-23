@@ -26,7 +26,7 @@ class RTS2_FITS_translator(object):
         self.geom.compute_geometry(fitsfile=infile)
         
         self.input = pyfits.open(infile)
-        self.output = pyfits.open(infile)
+        self.output = pyfits.open(infile, do_not_scale_image_data=True)
         prototypes = sensorTest.fits_headers.fits_headers()
 
         # Primary HDU

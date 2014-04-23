@@ -22,7 +22,7 @@ class SubImage(object):
     def __init__(self, imfile, amp, overscans, task):
         geom = makeAmplifierGeometry(imfile)
         self.imaging = geom.imaging
-        self.exp = afwImage.ExposureF(imfile, int(amp) + 1)
+        self.image = afwImage.ImageF(imfile, imutils.dm_hdu(amp))
         if task.config.direction == 'p':
             self._bbox = self._parallel_box
             llc = afwGeom.Point2I(geom.parallel_overscan.getMinX(),
@@ -41,14 +41,13 @@ class SubImage(object):
             task.log.error("Unknown scan direction: " + str(direction))
             sys.exit(1)
     def bias_med(self):
-        subim = self.exp.Factory(self.exp, self._bias_reg)
-        bias = subim.getMaskedImage().getImage()
-        return median(bias)
+        subim = self.image.Factory(self.image, self._bias_reg)
+        return median(subim)
     def __call__(self, start, end=None):
         if end is None:
             end = start + 1
-        my_exp = self.exp.Factory(self.exp, self._bbox(start, end))
-        return my_exp.getMaskedImage().getImage()
+        my_exp = self.image.Factory(self.image, self._bbox(start, end))
+        return my_exp
     def _parallel_box(self, start, end):
         llc = afwGeom.PointI(self.imaging.getMinX(), start)
         urc = afwGeom.PointI(self.imaging.getMaxX(), end)
