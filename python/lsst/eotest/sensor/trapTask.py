@@ -33,7 +33,8 @@ class TrapTask(pipeBase.Task):
         my_traps.write(outfile, clobber=True)
         results_file = self.config.eotest_results_file
         if results_file is None:
-            results_file = '%s_eotest_results.fits' % sensor_id
+            results_file = os.path.join(self.config.output_dir,
+                                        '%s_eotest_results.fits' % sensor_id)
         results = EOTestResults(results_file)
         for amp in imutils.allAmps:
             results.add_seg_result(amp, 'NUM_TRAPS', len(my_traps[amp]))

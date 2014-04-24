@@ -31,7 +31,7 @@ class DarkCurrentTask(pipeBase.Task):
     def run(self, sensor_id, dark_files, mask_files, gains):
         imutils.check_temperatures(dark_files, self.config.temp_tol)
         median_images = {}
-        md = afwImage.readMetadata(dark_files[0], 1)
+        md = imutils.Metadata(dark_files[0], 1)
         for amp in imutils.allAmps:
             median_images[amp] = imutils.fits_median(dark_files,
                                                      imutils.dm_hdu(amp))
@@ -74,7 +74,8 @@ class DarkCurrentTask(pipeBase.Task):
         #
         results_file = self.config.eotest_results_file
         if results_file is None:
-            results_file = '%s_eotest_results.fits' % sensor_id
+            results_file = os.path.join(self.config.output_dir,
+                                        '%s_eotest_results.fits' % sensor_id)
         results = EOTestResults(results_file)
         output = pyfits.open(medfile)
         for i, dark in enumerate(dark_files):

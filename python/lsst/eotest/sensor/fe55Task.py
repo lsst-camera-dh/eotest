@@ -67,11 +67,11 @@ class Fe55Task(pipeBase.Task):
             dn = data['dn']
             gains[amp], kalpha_peak, kalpha_sigma = fe55_gain_fitter(dn)
 
-        if self.config.eotest_results_file is None:
+        results_file = self.config.eotest_results_file
+        if results_file is None:
             results_file = os.path.join(self.config.output_dir, 
                                         '%s_eotest_results.fits' % sensor_id)
-        else:
-            results_file = self.config.eotest_results_file
+            
         if self.config.verbose:
             self.log.info("Writing gain results to %s" % results_file)
 

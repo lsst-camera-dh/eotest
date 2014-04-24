@@ -65,7 +65,7 @@ class QE_Data(object):
                 else:
                     print 'processing', item
             ccd = MaskedCCD(item, mask_files=mask_files)
-            md = afwImage.readMetadata(item, 1)
+            md = imutils.Metadata(item, 1)
             exptime = md.get('EXPTIME')
             if exptime == 0:
                 line = "Zero exposure time in %s. Skipping." % item

@@ -7,6 +7,7 @@ import os
 from collections import OrderedDict
 import numpy as np
 import pyfits
+import lsst.eotest.image_utils as imutils
 from prnu import prnu
 import lsst.afw.image as afwImage
 import lsst.pex.config as pexConfig
@@ -29,7 +30,7 @@ class PrnuTask(pipeBase.Task):
         if self.config.verbose:
             self.log.info(line)
         for infile in prnu_files:
-            md = afwImage.readMetadata(infile, 1)
+            md = imutils.Metadata(infile, 1)
             wl = md.get('MONOWL')
             if int(wl) in (350, 450, 500, 620, 750, 870, 1000):
                 pix_stdev, pix_median = prnu(infile, mask_files, gains,

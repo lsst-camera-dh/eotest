@@ -50,7 +50,7 @@ class BrightPixelsTask(pipeBase.Task):
         imutils.writeFits(median_images, medfile, dark_files[0])
 
         ccd = MaskedCCD(medfile, mask_files=mask_files)
-        md = afwImage.readMetadata(dark_files[0], 1)
+        md = imutils.Metadata(dark_files[0], 1)
         exptime = ccd.md.get('EXPTIME')
         outfile = os.path.join(self.config.output_dir,
                                '%s_bright_pixel_map.fits' % sensor_id)
@@ -60,10 +60,10 @@ class BrightPixelsTask(pipeBase.Task):
         #
         # Write bright pixel counts to results file.
         #
-        if self.config.eotest_results_file is None:
-            results_file = '%s_eotest_results.fits' % sensor_id
-        else:
-            results_file = self.config.eotest_results_file
+        results_file = self.config.eotest_results_file
+        if results_file is None:
+            results_file = os.path.join(self.config.output_dir,
+                                        '%s_eotest_results.fits' % sensor_id)
         
         results = EOTestResults(results_file)
         for amp in imutils.allAmps:

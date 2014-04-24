@@ -87,7 +87,8 @@ class ReadNoiseTask(pipeBase.Task):
             
         results_file = self.config.eotest_results_file
         if results_file is None:
-            results_file = '%s_eotest_results.fits' % sensor_id
+            results_file = os.path.join(self.config.output_dir,
+                                        '%s_eotest_results.fits' % sensor_id)
 
         results = EOTestResults(results_file)
         if self.config.verbose:

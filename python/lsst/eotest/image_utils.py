@@ -9,6 +9,24 @@ import pyfits
 import lsst.afw.geom as afwGeom
 import lsst.afw.image as afwImage
 import lsst.afw.math as afwMath
+import lsst.pex.exceptions as pexExcept
+
+class Metadata(object):
+    def __init__(self, infile, hdu):
+        self.header = None
+        try:
+            self.md = afwImage.readMetadata(infile, hdu)
+        except pexExcept.LsstCppException:
+            # This exception occurs when DM stack encounters a "." in
+            # a FITS header keyword.
+            self.header = pyfits.open(infile)[hdu-1].header
+    def get(self, key):
+        return self(key)
+    def __call__(self, key):
+        if self.header is None:
+            return self.md.get(key)
+        else:
+            return self.header[key]
 
 allAmps = range(1, 17)
 
@@ -74,7 +92,7 @@ def unbias_and_trim(im, overscan, imaging,
 def fits_median(files, hdu=2, fix=True):
     """Compute the median image from a set of image FITS files."""
     ims = [afwImage.ImageF(f, hdu) for f in files]
-    exptimes = [afwImage.readMetadata(f, 1).get('EXPTIME') for f in files]
+    exptimes = [Metadata(f, 1).get('EXPTIME') for f in files]
 
     if min(exptimes) != max(exptimes):
         raise RuntimeError("Error: unequal exposure times")
@@ -101,7 +119,7 @@ def writeFits(images, outfile, template_file):
     output.writeto(outfile, clobber=True, checksum=True)
 
 def check_temperatures(files, tol):
-    ccd_temps = [afwImage.readMetadata(x, 1).get('CCDTEMP') for x in files]
+    ccd_temps = [Metadata(x, 1).get('CCDTEMP') for x in files]
     temp_avg = mean(ccd_temps)
     if max(ccd_temps) - temp_avg > tol or temp_avg - min(ccd_temps) > tol:
         raise RuntimeError("Temperature deviations > %s " % tol +

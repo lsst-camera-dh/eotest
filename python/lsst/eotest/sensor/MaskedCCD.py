@@ -15,23 +15,6 @@ import lsst.pex.exceptions as pexExcept
 
 import lsst.eotest.image_utils as imutils
 
-class Metadata(object):
-    def __init__(self, infile, hdu):
-        self.header = None
-        try:
-            self.md = afwImage.readMetadata(infile, hdu)
-        except pexExcept.LsstCppException:
-            # This exception occurs when DM stack encounters a "." in
-            # a FITS header keyword.
-            self.header = pyfits.open(infile)[hdu-1].header
-    def get(self, key):
-        return self(key)
-    def __call__(self, key):
-        if self.header is None:
-            return self.md.get(key)
-        else:
-            return self.header[key]
-
 class MaskedCCDBiasImageException(RuntimeError):
     def __init__(self, *args):
         super(MaskedCCDBiasImageException, self).__init__(*args)
@@ -47,8 +30,7 @@ class MaskedCCD(dict):
     def __init__(self, imfile, mask_files=()):
         dict.__init__(self)
         self.imfile = imfile
-        #self.md = afwImage.readMetadata(imfile, 1)
-        self.md = Metadata(imfile, 1)
+        self.md = imutils.Metadata(imfile, 1)
         self.amp_geom = makeAmplifierGeometry(imfile)
         for amp in imutils.allAmps:
             decorated_image = afwImage.DecoratedImageF(imfile,
