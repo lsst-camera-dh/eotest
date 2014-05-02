@@ -27,7 +27,7 @@ def fe55_lines(x, *args):
     return value
 
 def fe55_gain_fitter(signals, ccdtemp=-95, make_plot=False, xrange=None,
-                     bins=100, hist_nsig=10, title=''):
+                     bins=100, hist_nsig=10, title='', plot_filename=None):
     """
     Function to fit the distribution of charge cluster DN values from
     a Fe55 dataset.  A two Gaussian model of Mn K-alpha and K-beta
@@ -49,13 +49,17 @@ def fe55_gain_fitter(signals, ccdtemp=-95, make_plot=False, xrange=None,
     distribution.
     """
     flags = afwMath.MEDIAN | afwMath.STDEVCLIP
-    stats = afwMath.makeStatistics(signals, flags)
+    try:
+        stats = afwMath.makeStatistics(signals.tolist(), flags)
+    except:
+        print signals
+        raise
     median = stats.getValue(afwMath.MEDIAN)
     stdev = stats.getValue(afwMath.STDEVCLIP)
     if xrange is None:
         # Set range of histogram to include both Kalpha and Kbeta peaks.
-        xmin = median - hist_nsig*stdev
-        xmax = median*1785./1620. + hist_nsig*stdev
+        xmin = max(median - hist_nsig*stdev, 0)
+        xmax = min(median*1785./1620. + hist_nsig*stdev, 2000)
         xrange = xmin, xmax
     # Save pylab interactive state.
     pylab_interactive_state = pylab.isinteractive()
@@ -96,6 +100,8 @@ def fe55_gain_fitter(signals, ccdtemp=-95, make_plot=False, xrange=None,
                        % (kalpha_peak, gain),
                        (0.5, 0.7), xycoords='axes fraction')
         axes.set_title(title)
+        if plot_filename is not None:
+            pylab.savefig(plot_filename)
     # Restore pylab interactive state.
     pylab.interactive(pylab_interactive_state)
     return gain, kalpha_peak, kalpha_sigma

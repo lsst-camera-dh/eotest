@@ -37,6 +37,10 @@ class Fe55Task(pipeBase.Task):
 
     @pipeBase.timeMethod
     def run(self, sensor_id, infiles, mask_files):
+        if self.config.verbose:
+            self.log.info("Input files:")
+            for item in infiles:
+                self.log.info("  %s" % item) 
         #
         # Detect and fit 2D Gaussian to Fe55 charge clusters,
         # accumulating the results by amplifier.
@@ -65,7 +69,11 @@ class Fe55Task(pipeBase.Task):
         for amp in imutils.allAmps:
             data = fitter.results(min_prob=self.config.chiprob_min, amp=amp)
             dn = data['dn']
-            gains[amp], kalpha_peak, kalpha_sigma = fe55_gain_fitter(dn)
+            if len(dn) > 2:
+                gains[amp], kalpha_peak, kalpha_sigma = fe55_gain_fitter(dn)
+            else:
+                if self.config.verbose:
+                    self.log.info("Too few charge clusters (%i) found for amp %s" % (len(dn), amp))
 
         results_file = self.config.eotest_results_file
         if results_file is None:
