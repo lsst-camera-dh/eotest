@@ -3,7 +3,9 @@ import sys
 import numpy as np
 import pyfits
 import pylab_plotter as plot
-import lsst.eotest.sensor as sensorTest
+from EOTestResults import EOTestResults
+from fe55_gain_fitter import fe55_gain_fitter
+from DetectorResponse import DetectorResponse
 import lsst.eotest.image_utils as imutils
 
 plot.pylab.ion()
@@ -11,16 +13,15 @@ plot.pylab.ion()
 class EOTestPlots(object):
     def __init__(self, sensor_id):
         self.sensor_id = sensor_id
-        self.results = sensorTest.EOTestResults('%s_eotest_results.fits' 
-                                                % sensor_id)
+        self.results = EOTestResults('%s_eotest_results.fits' % sensor_id)
     def fe55_dists(self, chiprob_min=0.1):
         fe55_catalog = pyfits.open('%s_psf_results.fits' % self.sensor_id)
         for amp in imutils.allAmps:
             chiprob = fe55_catalog[amp].data.field('CHIPROB')
             index = np.where(chiprob > chiprob_min)
             dn = fe55_catalog[amp].data.field('DN')[index]
-            gain, peak, sig = sensorTest.fe55_gain_fitter(dn, make_plot=True,
-                                                          title='Amp %i' % amp)
+            gain, peak, sigma = fe55_gain_fitter(dn, make_plot=True,
+                                                 title='Amp %i' % amp)
         plot.pylab.savefig('Fe55_dist_%s_amp%02i.png' % (self.sensor_id, amp))
     def ptcs(self, xrange=(0.1, 1e4), yrange=(0.1, 1e4)):
         ptc = pyfits.open('%s_ptc.fits' % self.sensor_id)
@@ -41,9 +42,8 @@ class EOTestPlots(object):
         plot.pylab.savefig('Gain_vs_amp_%s.png' % self.sensor_id)
     def linearity(self, gain_range=(1, 6), max_dev=0.02):
         ptc = pyfits.open('%s_ptc.fits' % self.sensor_id)
-        detresp = sensorTest.DetectorResponse('%s_det_response.fits' 
-                                              % self.sensor_id,
-                                              ptc=ptc, gain_range=gain_range)
+        detresp = DetectorResponse('%s_det_response.fits' % self.sensor_id,
+                                   ptc=ptc, gain_range=gain_range)
         for amp in imutils.allAmps:
             try:
                 maxdev, fit_pars = detresp.linearity(amp, make_plot=True,
