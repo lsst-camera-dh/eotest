@@ -11,8 +11,6 @@ parser.add_argument('fe55_catalog', type=str,
                     help='catalog of Fe55 charge clusters')
 parser.add_argument('-c', '--chiprob_min', type=float, default=0.1,
                     help='Mininum chi-square probability for cluster fit')
-parser.add_argument('-O', '--outfile', type=str, default=None,
-                    help='Output file name. Computed value if left at default of None: <SENSOR_ID>_psf_results.fits')
 parser.add_argument('-p', '--plot', action='store_true', default=False,
                     help='Plot distribution and fit')
                     
@@ -30,10 +28,14 @@ for amp in imutils.allAmps:
     
     if len(dn) > 2:
         plot_filename = "Fe55_dist_%s_amp%02i.png" % (args.sensor_id, amp)
-        gains[amp], peak, sigma = \
-            sensorTest.fe55_gain_fitter(dn, make_plot=args.plot,
-                                        plot_filename=plot_filename,
-                                        amp=amp)
+        try:
+            gains[amp], peak, sigma = \
+               sensorTest.fe55_gain_fitter(dn, make_plot=args.plot,
+                                           plot_filename=plot_filename)
+        except RuntimeError, e:
+            print e
+            continue
+            
     if args.verbose:
         try:
             print "gain = %.2f" % (gains[amp],)
