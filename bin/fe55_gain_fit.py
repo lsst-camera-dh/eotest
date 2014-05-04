@@ -32,7 +32,8 @@ for amp in imutils.allAmps:
         plot_filename = "Fe55_dist_%s_amp%02i.png" % (args.sensor_id, amp)
         gains[amp], peak, sigma = \
             sensorTest.fe55_gain_fitter(dn, make_plot=args.plot,
-                                        plot_filename=plot_filename)
+                                        plot_filename=plot_filename,
+                                        amp=amp)
     if args.verbose:
         try:
             print "gain = %.2f" % (gains[amp],)

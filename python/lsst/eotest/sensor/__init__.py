@@ -7,6 +7,7 @@ Modules to perform sensor characterization from laboratory data.
 from MaskedCCD import MaskedCCD, add_mask_files
 from TaskParser import TaskParser
 from EOTestResults import EOTestResults
+from EOTestPlots import EOTestPlots
 from AmplifierGeometry import AmplifierGeometry, makeAmplifierGeometry, amp_loc
 from fe55_psf import PsfGaussFit
 from fe55_gain_fitter import fe55_gain_fitter

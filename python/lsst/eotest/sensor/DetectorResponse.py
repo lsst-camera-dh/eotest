@@ -12,11 +12,26 @@ import lsst.eotest.image_utils as imutils
 import pylab_plotter as plot
 
 class DetectorResponse(object):
-    def __init__(self, infile, amps=imutils.allAmps):
+    def __init__(self, infile, amps=imutils.allAmps, ptc=None,
+                 gain_range=None):
         if infile[-5:] == '.fits':
             self._read_from_fits(infile)
         else:
             self._read_from_text(infile)
+        self._compute_gain_selection(ptc, gain_range)
+    def _compute_gain_selection(self, ptc, gain_range):
+        self._index = {}
+        if ptc is None or gain_range is None:
+            return
+        if len(ptc[1].data.field('AMP01_MEAN')) != len(self.flux):
+            raise RuntimeError('Number of measurements in PTC file ' +
+                               'differs from detector response file.')
+        for amp in imutils.allAmps:
+            mean = ptc[1].data.field('AMP%02i_MEAN' % amp)
+            var = ptc[1].data.field('AMP%02i_VAR' % amp)
+            gain = mean/var
+            self._index[amp] = np.where((gain >= gain_range[0]) & 
+                                        (gain <= gain_range[1]))
     def _read_from_fits(self, infile):
         foo = pyfits.open(infile)
         hdu = foo['DETECTOR_RESPONSE']
@@ -35,6 +50,9 @@ class DetectorResponse(object):
                   make_plot=False):
         flux = self.flux
         Ne = self.Ne[amp]
+        if self._index:
+            flux = flux[self._index[amp]]
+            Ne = Ne[self._index[amp]]
         #
         # Fit linear part of response curve.
         #
@@ -80,19 +98,28 @@ class DetectorResponse(object):
                                 % (imutils.channelIds[amp], int(full_well)),
                                 (0.1, 0.8), xycoords='axes fraction')
         return full_well, fp
-    def linearity(self, amp, fit_range=(1e4, 9e4), max_dev=0.02,
-                  make_plot=False):
+    def linearity(self, amp, fit_range=(1e2, 9e4), max_dev=0.02,
+                  make_plot=False, title=None):
         flux, Ne = self.flux, self.Ne[amp]
+        if self._index:
+            flux = flux[self._index[amp]]
+            Ne = Ne[self._index[amp]]
         indx = np.where((Ne > fit_range[0]) & (Ne < fit_range[1]))
         f1_pars = np.polyfit(flux[indx], Ne[indx], 1)
         f1 = np.poly1d(f1_pars)
         dNfrac = 1 - Ne/f1(flux)
         if make_plot:
             plot.pylab.ion()
-            plot.xyplot(Ne, dNfrac, xname='e-/pixel',
-                        yname='frac. deviation of e-/pixel from linear fit',
-                        xrange=(1e2, 2e5),
-                        yrange=(-1.5*max_dev, 1.5*max_dev))
+            win = plot.xyplot(Ne, dNfrac, xname='e-/pixel', xlog=1,
+                              yname='frac. deviation of e-/pixel from linear fit',
+                              xrange=(1e2, 2e5),
+                              yrange=(-1.5*max_dev, 1.5*max_dev))
+            plot.curve(Ne, dNfrac, oplot=1, color='r')
+            plot.pylab.annotate("slope = %.2e\n\nintercept = %.2e" 
+                                % tuple(f1_pars),
+                                (0.1, 0.8), xycoords='axes fraction')
+            if title is not None:
+                win.set_title(title)
             plot.hline(0, lineStyle='--')
             plot.hline(max_dev)
             plot.hline(-max_dev)

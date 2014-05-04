@@ -58,7 +58,7 @@ def fe55_gain_fitter(signals, ccdtemp=-95, make_plot=False, xrange=None,
     stdev = stats.getValue(afwMath.STDEVCLIP)
     if xrange is None:
         # Set range of histogram to include both Kalpha and Kbeta peaks.
-        xmin = max(median - hist_nsig*stdev, 0)
+        xmin = max(median - hist_nsig*stdev, 200)
         xmax = min(median*1785./1620. + hist_nsig*stdev, 2000)
         xrange = xmin, xmax
     # Save pylab interactive state.
