@@ -14,9 +14,9 @@ parser.add_argument('-b', '--bias', type=str,
 parser.add_argument('-B', '--bias_file_list', type=str,
                     help='list of bias files')
 parser.add_argument('-n', '--noise', type=str, 
-                    help='system noise file pattern')
+                    help='system noise file pattern', default=None)
 parser.add_argument('-N', '--noise_file_list', type=str,
-                    help='list of system noise files')
+                    help='list of system noise files', default=None)
 parser.add_argument('-x', '--dx', default=100, type=int,
                     help='subregion size in pixels along x-direction')
 parser.add_argument('-y', '--dy', default=100, type=int,
@@ -29,9 +29,14 @@ task = sensorTest.ReadNoiseTask()
 task.config.dx = args.dx
 task.config.dy = args.dy
 task.config.nsamp = args.nsamp
+task.config.output_dir = args.output_dir
+task.config.eotest_results_file = args.results_file
 
 bias_files = args.files(args.bias, args.bias_file_list)
-system_noise_files = args.files(args.noise, args.noise_file_list)
+if args.noise is None and args.noise_file_list is None:
+    system_noise_files = None
+else:
+    system_noise_files = args.files(args.noise, args.noise_file_list)
 
-task.run(args.sensor_id, bias_files, system_noise_files, args.mask_files(),
-         args.system_gains())
+task.run(args.sensor_id, bias_files, args.system_gains(), 
+         system_noise_files, args.mask_files())

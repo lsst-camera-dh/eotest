@@ -121,8 +121,11 @@ class FlatPairTask(pipeBase.Task):
                 raise RuntimeError("Exposure times do not match for:\n%s\n%s\n"
                                    % (file1, file2))
     
-            flux = abs(flat1.md.get('EXPTIME')*flat1.md.get('MONDIODE') +
-                       flat2.md.get('EXPTIME')*flat2.md.get('MONDIODE'))/2.
+            try:
+                flux = abs(flat1.md.get('EXPTIME')*flat1.md.get('MONDIODE') +
+                           flat2.md.get('EXPTIME')*flat2.md.get('MONDIODE'))/2.
+            except TypeError:
+                continue
 
             self.output[-1].data.field('FLUX')[row] = flux
             for amp in imutils.allAmps:

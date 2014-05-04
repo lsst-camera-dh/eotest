@@ -23,6 +23,9 @@ def noise_samples(raw_image, gain, region_sampler,
     return np.array(samples)
 
 def noise_dists(imfile, gains, sampler, mask_files=()):
+    if imfile is None:
+        return dict([(amp, np.zeros(len(sampler.xarr), dtype=np.float))
+                     for amp in imutils.allAmps])
     ccd = MaskedCCD(imfile, mask_files=mask_files)
     my_noise_dists = {}
     for amp in imutils.allAmps:

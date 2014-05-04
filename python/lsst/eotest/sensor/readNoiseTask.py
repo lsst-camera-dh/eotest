@@ -20,7 +20,7 @@ def _write_read_noise_dists(outfile, Ntot, Nsys, gains, bias, sysnoise):
     output = pyfits.HDUList()
     output.append(pyfits.PrimaryHDU())
     output[0].header.update('BIASFILE', bias)
-    output[0].header.update('SYSNFILE', sysnoise)
+    output[0].header.update('SYSNFILE', str(sysnoise))
     for amp in imutils.allAmps:
         sigtot, sigsys = Ntot[amp], Nsys[amp]
         nread_col = pyfits.Column(name="TOTAL_NOISE", format="E",
@@ -55,9 +55,12 @@ class ReadNoiseTask(pipeBase.Task):
     _DefaultName = "ReadNoiseTask"
 
     @pipeBase.timeMethod
-    def run(self, sensor_id, bias_files, system_noise_files, mask_files, gains):
+    def run(self, sensor_id, bias_files, gains, system_noise_files=None,
+            mask_files=()):
         outfiles = []
         Nread_dists = dict([(amp, []) for amp in imutils.allAmps])
+        if system_noise_files is None:
+            system_noise_files = [None]*len(bias_files)
         for i, bias, sysnoise in zip(range(len(bias_files)), bias_files,
                                      system_noise_files):
             outfile = "%s_read_noise_%03i.fits" % (sensor_id, i)

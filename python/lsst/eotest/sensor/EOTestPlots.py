@@ -62,9 +62,9 @@ class EOTestPlots(object):
         for name in self.results.colnames:
             output.write('|| %s' % name)
         output.write('||\n')
-        for i, amp in enumerate(results['AMP']):
+        for i, amp in enumerate(self.results['AMP']):
             output.write('| %i | %.2f | %.2f | %i | %.1e | %.1e | %.1e | %i | %i |\n'
-                         % tuple([results[x][i] for x in results.colnames]))
+                         % tuple([self.results[x][i] for x in self.results.colnames]))
         output.write('\n')
         if outfile:
             output.close()
