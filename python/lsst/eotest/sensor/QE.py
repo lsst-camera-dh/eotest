@@ -78,7 +78,12 @@ class QE_Data(object):
             self.exptime.append(exptime)
             if self.exptime[-1] == 0:
                 raise RuntimeError("Zero exposure time in ", item)
-            self.pd.append(np.abs(md.get('MONDIODE')*self.pd_scaling))
+            try:
+                self.pd.append(np.abs(md.get('MONDIODE')*self.pd_scaling))
+            except TypeError, e:
+                if self.logger is not None:
+                    self.logger.info('%s\n' % e)
+                continue
             output.write('%.3f' % self.wl[-1])
             output.write('  %.3e' % self.exptime[-1])
             output.write('  %.3e' % self.pd[-1])

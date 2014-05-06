@@ -81,6 +81,8 @@ class DetectorResponse(object):
         flux0 = scipy.optimize.brentq(df, x[len(x)/2], x[-1])
         full_well = int(fp(flux0))
         
+        # Save pylab interactive state.
+        pylab_interactive_state = pylab.isinteractive()
         if make_plot:
             plot.pylab.ion()
             yrange = (0, max(max(Ne), full_well)*1.1)
@@ -97,9 +99,11 @@ class DetectorResponse(object):
             plot.pylab.annotate('Segment %s\nfull well = %i'
                                 % (imutils.channelIds[amp], int(full_well)),
                                 (0.1, 0.8), xycoords='axes fraction')
+        # Restore pylab interactive state.
+        pylab.interactive(pylab_interactive_state)
         return full_well, fp
     def linearity(self, amp, fit_range=(1e2, 9e4), max_dev=0.02,
-                  make_plot=False, title=None):
+                  make_plot=False, title=None, interactive=True):
         flux, Ne = self.flux, self.Ne[amp]
         if self._index:
             flux = flux[self._index[amp]]
@@ -109,7 +113,10 @@ class DetectorResponse(object):
         f1 = np.poly1d(f1_pars)
         dNfrac = 1 - Ne/f1(flux)
         if make_plot:
-            plot.pylab.ion()
+            if interactive:
+                plot.pylab.ion()
+            else:
+                plot.pylab.ioff()
             win = plot.xyplot(Ne, dNfrac, xname='e-/pixel', xlog=1,
                               yname='frac. deviation of e-/pixel from linear fit',
                               xrange=(1e2, 2e5),

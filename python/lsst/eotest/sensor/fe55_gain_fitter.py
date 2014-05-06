@@ -27,7 +27,8 @@ def fe55_lines(x, *args):
     return value
 
 def fe55_gain_fitter(signals, ccdtemp=-95, make_plot=False, xrange=None,
-                     bins=100, hist_nsig=10, title='', plot_filename=None):
+                     bins=100, hist_nsig=10, title='', plot_filename=None,
+                     interactive=True):
     """
     Function to fit the distribution of charge cluster DN values from
     a Fe55 dataset.  A two Gaussian model of Mn K-alpha and K-beta
@@ -69,7 +70,10 @@ def fe55_gain_fitter(signals, ccdtemp=-95, make_plot=False, xrange=None,
     xpeak = hist[1][np.where(hist[0] == max(hist[0]))][0]
     xrange = max(0, xpeak-200), xpeak*1785./1620. + 200
     if make_plot:
-        pylab.ion()
+        if interactive:
+            pylab.ion()
+        else:
+            pylab.ioff()
         fig = pylab.figure()
         axes = fig.add_subplot(111)
         hist = pylab.hist(signals, bins=bins, range=xrange,
