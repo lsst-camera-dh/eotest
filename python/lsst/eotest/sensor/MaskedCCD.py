@@ -27,7 +27,7 @@ class MaskedCCD(dict):
     amplifier number.  Masks can be added and manipulated separately
     by various methods.
     """
-    def __init__(self, imfile, mask_files=()):
+    def __init__(self, imfile, mask_files=(), bias_frame=None):
         dict.__init__(self)
         self.imfile = imfile
         self.md = imutils.Metadata(imfile, 1)
@@ -43,6 +43,10 @@ class MaskedCCD(dict):
         self.stat_ctrl = afwMath.StatisticsControl()
         if mask_files:
             self.setAllMasks()
+        if bias_frame is not None:
+            self.bias_frame = MaskedCCD(bias_frame)
+        else:
+            self.bias_frame = None
     def mask_plane_dict(self):
         amp = self.keys()[0]
         return dict(self[amp].getMask().getMaskPlaneDict().items())
@@ -78,6 +82,11 @@ class MaskedCCD(dict):
         Use separately stored metadata to determine file-specified
         overscan region.
         """
+        if self.bias_frame is not None:
+            #
+            # Use bias frame, if available, instead of overscan region
+            #
+            return self.bias_frame[amp].getImage()
         if overscan is None:
             overscan = self.amp_geom.serial_overscan
         try:
@@ -91,16 +100,10 @@ class MaskedCCD(dict):
         return self[amp]
     def unbiased_and_trimmed_image(self, amp, overscan=None,
                                    imaging=None, fit_order=1):
-        """
-        Use separately stored metadata to determine file-specified
-        overscan and imaging regions.
-        """
-        if overscan is None:
-            overscan = self.amp_geom.serial_overscan
+        unbiased_image = self.bias_subtracted_image(amp, overscan, fit_order)
         if imaging is None:
             imaging = self.amp_geom.imaging
-        return imutils.unbias_and_trim(self[amp], overscan=overscan,
-                                       imaging=imaging, fit_order=fit_order)
+        return imutils.trim(unbiased_image, imaging)
 
 def add_mask_files(mask_files, outfile, clobber=True):
     masks = dict([(amp, afwImage.MaskU(mask_files[0], imutils.dm_hdu(amp)))
@@ -114,8 +117,6 @@ def add_mask_files(mask_files, outfile, clobber=True):
     for amp in imutils.allAmps:
         md = dafBase.PropertySet()
         md.set('EXTNAME', 'SEGMENT%s' % imutils.channelIds[amp])
-#        md.set('DETSIZE', imutils.detsize)
-#        md.set('DETSEC', imutils.detsec(amp))
         masks[amp].writeFits(outfile, md, 'a')
     return masks
 

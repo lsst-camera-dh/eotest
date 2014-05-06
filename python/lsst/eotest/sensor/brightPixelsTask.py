@@ -39,7 +39,7 @@ class BrightPixelsTask(pipeBase.Task):
     _DefaultName = "BrightPixelsTask"
 
     @pipeBase.timeMethod
-    def run(self, sensor_id, dark_files, mask_files, gains):
+    def run(self, sensor_id, dark_files, mask_files, gains, bias_frame=None):
         imutils.check_temperatures(dark_files, self.config.temp_tol)
         median_images = {}
         for amp in imutils.allAmps:
@@ -49,7 +49,7 @@ class BrightPixelsTask(pipeBase.Task):
                                    '%s_median_dark_bp.fits' % sensor_id)
         imutils.writeFits(median_images, medfile, dark_files[0])
 
-        ccd = MaskedCCD(medfile, mask_files=mask_files)
+        ccd = MaskedCCD(medfile, mask_files=mask_files, bias_frame=bias_frame)
         md = imutils.Metadata(dark_files[0], 1)
         exptime = ccd.md.get('EXPTIME')
         outfile = os.path.join(self.config.output_dir,

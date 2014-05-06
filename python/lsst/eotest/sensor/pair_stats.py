@@ -32,9 +32,9 @@ class PairStats(object):
                          self.flat_mean, self.flat_var,
                          self.gain, self.noise)
 
-def pair_stats(file1, file2, amp, mask_files=(), binsize=1):
-    ccd1 = MaskedCCD(file1, mask_files=mask_files)
-    ccd2 = MaskedCCD(file2, mask_files=mask_files)
+def pair_stats(file1, file2, amp, mask_files=(), binsize=1, bias_frame=None):
+    ccd1 = MaskedCCD(file1, mask_files=mask_files, bias_frame=bias_frame)
+    ccd2 = MaskedCCD(file2, mask_files=mask_files, bias_frame=bias_frame)
 
     if ccd1.md.get('EXPTIME') != ccd2.md.get('EXPTIME'):
         raise RuntimeError("Exposure times for files %s, %s do not match"

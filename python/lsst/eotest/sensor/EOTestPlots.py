@@ -11,11 +11,16 @@ import lsst.eotest.image_utils as imutils
 plot.pylab.ion()
 
 class EOTestPlots(object):
-    def __init__(self, sensor_id):
+    def __init__(self, sensor_id, rootdir='.'):
         self.sensor_id = sensor_id
-        self.results = EOTestResults('%s_eotest_results.fits' % sensor_id)
+        self.rootdir = rootdir
+        results_file = self._fullpath('%s_eotest_results.fits' % sensor_id)
+        self.results = EOTestResults(results_file)
+    def _fullpath(self, basename):
+        return os.path.join(self.rootdir, basename)
     def fe55_dists(self, chiprob_min=0.1):
-        fe55_catalog = pyfits.open('%s_psf_results.fits' % self.sensor_id)
+        fe55_catalog = pyfits.open(self._fullpath('%s_psf_results.fits' 
+                                                  % self.sensor_id))
         for amp in imutils.allAmps:
             chiprob = fe55_catalog[amp].data.field('CHIPROB')
             index = np.where(chiprob > chiprob_min)
@@ -24,7 +29,7 @@ class EOTestPlots(object):
                                                  title='Amp %i' % amp)
         plot.pylab.savefig('Fe55_dist_%s_amp%02i.png' % (self.sensor_id, amp))
     def ptcs(self, xrange=(0.1, 1e4), yrange=(0.1, 1e4)):
-        ptc = pyfits.open('%s_ptc.fits' % self.sensor_id)
+        ptc = pyfits.open(self._fullpath('%s_ptc.fits' % self.sensor_id))
         for amp in imutils.allAmps:
             mean = ptc[1].data.field('AMP%02i_MEAN' % amp)
             var = ptc[1].data.field('AMP%02i_VAR' % amp)
@@ -41,8 +46,9 @@ class EOTestPlots(object):
                     yname='gain (e-/ADU)', yrange=(0, max(results['GAIN'])*1.2))
         plot.pylab.savefig('Gain_vs_amp_%s.png' % self.sensor_id)
     def linearity(self, gain_range=(1, 6), max_dev=0.02):
-        ptc = pyfits.open('%s_ptc.fits' % self.sensor_id)
-        detresp = DetectorResponse('%s_det_response.fits' % self.sensor_id,
+        ptc = pyfits.open(self._fullpath('%s_ptc.fits' % self.sensor_id))
+        detresp = DetectorResponse(self._fullpath('%s_det_response.fits' 
+                                                  % self.sensor_id),
                                    ptc=ptc, gain_range=gain_range)
         for amp in imutils.allAmps:
             try:
@@ -56,7 +62,7 @@ class EOTestPlots(object):
                 continue
     def confluence_table(self, outfile=False):
         if outfile:
-            output = open('%s_results.txt' % self.sensor_id, 'w')
+            output = open(self._fullpath('%s_results.txt' % self.sensor_id),'w')
         else:
             output = sys.stdout
         for name in self.results.colnames:

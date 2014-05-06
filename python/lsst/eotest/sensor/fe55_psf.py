@@ -95,7 +95,7 @@ class PsfGaussFit(object):
         bg = afwMath.makeBackground(ccd[amp], bg_ctrl)
         return bg.getImageF()
     def process_image(self, ccd, amp, sigma0=0.36, dn0=1590./5.,
-                      bg_reg=(10, 10)):
+                      bg_reg=(10, 10), logger=None):
         """
         Process a segment and accumulate the fit results for each
         charge cluster.  The dn0 and sigma0 parameters are the
@@ -117,15 +117,21 @@ class PsfGaussFit(object):
         stdev = statistics.getValue(afwMath.STDEVCLIP)
 
         threshold = afwDetect.Threshold(median + self.nsig*stdev)
+        if logger is not None:
+            logger.info("PsfGaussFit.process_image: threshold= %s" 
+                        % threshold.getValue())
         fpset = afwDetect.FootprintSet(image, threshold)
 
         x0, y0 = [], []
         sigmax, sigmay, dn, dn_fp, chiprob = [], [], [], [], []
         chi2s, dofs = [], []
         maxDNs = []
+        failed_curve_fits = 0
+        num_fp = 0
         for fp in fpset.getFootprints():
             if fp.getNpix() < self.min_npix or fp.getNpix() > self.max_npix:
                 continue
+            num_fp += 1
             spans = fp.getSpans()
             positions = []
             zvals = []
@@ -153,7 +159,6 @@ class PsfGaussFit(object):
                     pars, _ = scipy.optimize.curve_fit(psf_func_single_sigma,
                                                        positions, zvals, p0=p0,
                                                        sigma=dn_errors)
-                    
                     sigmax.append(pars[2])
                     sigmay.append(pars[2])
                     dn.append(pars[3])
@@ -168,7 +173,12 @@ class PsfGaussFit(object):
                 dofs.append(dof)
                 maxDNs.append(max(zvals))
             except RuntimeError:
+                failed_curve_fits += 1
                 pass
+        if logger is not None:
+            logger.info("Number of footprints fitted: %i" % num_fp)
+            if failed_curve_fits > 0:
+                logger.info("Failed scipy.curve_fit calls: %s" % failed_curve_fits)
         self._save_ext_data(amp, x0, y0, sigmax, sigmay, dn, dn_fp, chiprob,
                             chi2s, dofs, maxDNs)
         self.sigmax.extend(sigmax)

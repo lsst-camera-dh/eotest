@@ -48,7 +48,8 @@ class PtcTask(pipeBase.Task):
     _DefaultName = "PtcTask"
 
     @pipeBase.timeMethod
-    def run(self, sensor_id, infiles, mask_files, gains, binsize=1):
+    def run(self, sensor_id, infiles, mask_files, gains, binsize=1, 
+            bias_frame=None):
         outfile = os.path.join(self.config.output_dir, 
                                '%s_ptc.fits' % sensor_id)
         ptc_stats = dict([(amp, ([], [])) for amp in imutils.allAmps])
@@ -60,7 +61,8 @@ class PtcTask(pipeBase.Task):
                 self.log.info("processing %s" % flat1)
             exposure.append(exptime(flat1))
             for amp in imutils.allAmps:
-                results = pair_stats(flat1, flat2, amp, mask_files=mask_files)
+                results = pair_stats(flat1, flat2, amp, mask_files=mask_files,
+                                     bias_frame=bias_frame)
                 ptc_stats[amp][0].append(results.flat_mean)
                 ptc_stats[amp][1].append(results.flat_var)
         output = pyfits.HDUList()

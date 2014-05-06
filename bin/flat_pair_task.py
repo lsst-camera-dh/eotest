@@ -23,5 +23,6 @@ task.config.verbose = args.verbose
 
 flat_files = args.files(args.flats, args.flats_file_list)
 
+bias_frame = args.bias_frame('%s_flat_bias_frame.fits' % args.sensor_id)
 task.run(args.sensor_id, flat_files, args.mask_files(), args.system_gains(),
-         args.detector_response_file)
+         detrespfile=args.detector_response_file, bias_frame=bias_frame)

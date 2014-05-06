@@ -9,10 +9,6 @@ noise contribution from the electronics, must be provided.
 import lsst.eotest.sensor as sensorTest
 
 parser = sensorTest.TaskParser('Compute Read Noise')
-parser.add_argument('-b', '--bias', type=str,
-                    help='bias file pattern')
-parser.add_argument('-B', '--bias_file_list', type=str,
-                    help='list of bias files')
 parser.add_argument('-n', '--noise', type=str, 
                     help='system noise file pattern', default=None)
 parser.add_argument('-N', '--noise_file_list', type=str,
@@ -32,7 +28,7 @@ task.config.nsamp = args.nsamp
 task.config.output_dir = args.output_dir
 task.config.eotest_results_file = args.results_file
 
-bias_files = args.files(args.bias, args.bias_file_list)
+bias_files = args.files(args.bias_frame_pattern, args.bias_frame_list)
 if args.noise is None and args.noise_file_list is None:
     system_noise_files = None
 else:

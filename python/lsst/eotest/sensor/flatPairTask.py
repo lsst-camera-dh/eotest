@@ -56,11 +56,13 @@ class FlatPairTask(pipeBase.Task):
     _DefaultName = "FlatPairTask"
     
     @pipeBase.timeMethod
-    def run(self, sensor_id, infiles, mask_files, gains, detrespfile=None):
+    def run(self, sensor_id, infiles, mask_files, gains, detrespfile=None,
+            bias_frame=None):
         self.sensor_id = sensor_id
         self.infiles = infiles
         self.mask_files = mask_files
         self.gains = gains
+        self.bias_frame = bias_frame
         if detrespfile is None:
             #
             # Compute detector response from flat pair files.
@@ -114,8 +116,10 @@ class FlatPairTask(pipeBase.Task):
                 self.log.info("processing %s" % file1)
             file2 = find_flat2(file1)
     
-            flat1 = MaskedCCD(file1, mask_files=self.mask_files)
-            flat2 = MaskedCCD(file2, mask_files=self.mask_files)
+            flat1 = MaskedCCD(file1, mask_files=self.mask_files,
+                              bias_frame=self.bias_frame)
+            flat2 = MaskedCCD(file2, mask_files=self.mask_files,
+                              bias_frame=self.bias_frame)
 
             if flat1.md.get('EXPTIME') != flat2.md.get('EXPTIME'):
                 raise RuntimeError("Exposure times do not match for:\n%s\n%s\n"

@@ -33,6 +33,17 @@ class TaskNamespace(object):
         else:
             raise RuntimeError('You must specify a file pattern or file list.')
         return my_files
+    def bias_frame(self, outfile, clobber=True):
+        if (self.args.bias_frame_pattern is None and 
+            self.args.bias_frame_list is None):
+            return None
+        else:
+            bias_files = self.files(self.args.bias_frame_pattern,
+                                    self.args.bias_frame_list)
+            if not bias_files:  # empty glob or file list
+                return None
+            imutils.fits_median_file(bias_files, outfile, clobber=True)
+            return outfile
     def sensor(self):
         if self.args.db_credentials is not None:
             sensorDb = SensorDb(self.args.db_credentials)
@@ -81,6 +92,10 @@ class TaskParser(argparse.ArgumentParser):
                           help='file containing database credentials')
         self.add_argument('-s', '--sensor_id', type=str,
                           help="sensor ID")
+        self.add_argument('-b', '--bias_frame_pattern', type=str, default=None,
+                          help='file pattern for bias frames')
+        self.add_argument('-B', '--bias_frame_list', type=str, default=None,
+                          help='file name of list of bias frames')
         self.add_argument('-V', '--Vendor', type=str,
                           help='CCD vendor (e.g., e2v, ITL)')
         self.add_argument('-m', '--mask_file', default=None, type=str,

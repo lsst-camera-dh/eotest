@@ -36,7 +36,7 @@ class Fe55Task(pipeBase.Task):
     _DefaultName = "Fe55Task"
 
     @pipeBase.timeMethod
-    def run(self, sensor_id, infiles, mask_files):
+    def run(self, sensor_id, infiles, mask_files, bias_frame=None):
         if self.config.verbose:
             self.log.info("Input files:")
             for item in infiles:
@@ -49,14 +49,15 @@ class Fe55Task(pipeBase.Task):
         for infile in infiles:
             if self.config.verbose:
                 self.log.info("processing %s" % infile)
-            ccd = MaskedCCD(infile, mask_files=mask_files)
+            ccd = MaskedCCD(infile, mask_files=mask_files,
+                            bias_frame=bias_frame)
             for amp in ccd:
                 if self.config.verbose:
                     self.log.info("  amp %i" % amp)
-                fitter.process_image(ccd, amp)
+                fitter.process_image(ccd, amp, logger=self.log)
         if self.config.output_file is None:
             psf_results = os.path.join(self.config.output_dir,
-                                       '%s_psf_results.fits' % sensor_id)
+                                       '%s_psf_results_nsig%i.fits' % (sensor_id, self.config.nsig))
         else:
             psf_results = self.config.output_file
         if self.config.verbose:
@@ -70,7 +71,11 @@ class Fe55Task(pipeBase.Task):
             data = fitter.results(min_prob=self.config.chiprob_min, amp=amp)
             dn = data['dn']
             if len(dn) > 2:
-                gains[amp], kalpha_peak, kalpha_sigma = fe55_gain_fitter(dn)
+                try:
+                    gains[amp], kalpha_peak, kalpha_sigma = fe55_gain_fitter(dn)
+                except RuntimeError, e:
+                    print e
+                    continue
             else:
                 if self.config.verbose:
                     self.log.info("Too few charge clusters (%i) found for amp %s" % (len(dn), amp))

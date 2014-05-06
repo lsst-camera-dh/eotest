@@ -89,6 +89,31 @@ def unbias_and_trim(im, overscan, imaging,
         return trim(im, imaging)
     return im
 
+def fits_median_file(files, outfile, clobber=True):
+    output = pyfits.open(files[0])
+    for amp in allAmps:
+        output[amp].data = fits_median(files, hdu=dm_hdu(amp)).getArray()
+        output[amp].header.remove('BZERO')
+        output[amp].header.remove('BSCALE')
+    output.writeto(outfile, clobber=clobber)
+
+def fits_mean_file(files, outfile, clobber=True):
+    output = pyfits.open(files[0])
+    for amp in allAmps:
+        output[amp].data = np.zeros(output[amp].data.shape)
+        try:
+            output[amp].header.remove('BZERO')
+            output[amp].header.remove('BSCALE')
+        except ValueError:
+            pass
+    for infile in files:
+        input = pyfits.open(infile)
+        for amp in allAmps:
+            output[amp].data += input[amp].data
+    for amp in allAmps:
+        output[amp].data /= len(files)
+    output.writeto(outfile, clobber=clobber)
+
 def fits_median(files, hdu=2, fix=True):
     """Compute the median image from a set of image FITS files."""
     ims = [afwImage.ImageF(f, hdu) for f in files]

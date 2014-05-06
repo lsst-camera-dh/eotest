@@ -31,6 +31,7 @@ for amp in imutils.allAmps:
         try:
             gains[amp], peak, sigma = \
                sensorTest.fe55_gain_fitter(dn, make_plot=args.plot,
+                                           title='Amp %i' % amp,
                                            plot_filename=plot_filename)
         except RuntimeError, e:
             print e

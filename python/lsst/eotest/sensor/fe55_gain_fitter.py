@@ -59,10 +59,15 @@ def fe55_gain_fitter(signals, ccdtemp=-95, make_plot=False, xrange=None,
     if xrange is None:
         # Set range of histogram to include both Kalpha and Kbeta peaks.
         xmin = max(median - hist_nsig*stdev, 200)
-        xmax = min(median*1785./1620. + hist_nsig*stdev, 2000)
+        xmax = min(median*1785./1620. + hist_nsig*stdev, 1000)
         xrange = xmin, xmax
     # Save pylab interactive state.
     pylab_interactive_state = pylab.isinteractive()
+    # Determine distribution mode and take that as the location of the
+    # Kalpha peak
+    hist = np.histogram(signals, bins=bins, range=xrange)
+    xpeak = hist[1][np.where(hist[0] == max(hist[0]))][0]
+    xrange = max(0, xpeak-200), xpeak*1785./1620. + 200
     if make_plot:
         pylab.ion()
         fig = pylab.figure()
@@ -72,7 +77,6 @@ def fe55_gain_fitter(signals, ccdtemp=-95, make_plot=False, xrange=None,
     else:
         pylab.ioff()
         hist = np.histogram(signals, bins=bins, range=xrange)
-            
     x = (hist[1][1:] + hist[1][:-1])/2.
     y = hist[0]
     ntot = sum(y)
