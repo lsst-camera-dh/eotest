@@ -10,9 +10,10 @@ import lsst.eotest.image_utils as imutils
 import lsst.eotest.sensor as sensorTest
 
 class RTS2_FITS_translator(object):
-    def __init__(self, luts, geom, verbose=True):
+    def __init__(self, luts, geom, verbose=True, args=None):
         self.luts = luts
         self.verbose = verbose
+        self.args = args
         amp_loc = sensorTest.amp_loc[geom['vendor']]
         self.geom = sensorTest.AmplifierGeometry(prescan=geom['prescan'],
                                                  nx=geom['nx'], ny=geom['ny'],
@@ -31,6 +32,12 @@ class RTS2_FITS_translator(object):
 
         # Primary HDU
         self.output[0].header.set('MJD', self.output[0].header['JD']-2400000.5)
+        self.output[0].header.set('FILENAME', os.path.basename(infile))
+        self.output[0].header.set('SEQNUM', self._seqnum(infile))
+        self.output[0].header.set('HEADVER', self._headver())
+        if self.args is not None:
+            self.output[0].header.set('LSST_NUM', self.args.sensor_id)
+            self.output[0].header.set('CCD_MANU', self.args.vendor)
         self._update_keywords(0)
 
         # TEST_COND and CCD_COND extensions
@@ -48,6 +55,19 @@ class RTS2_FITS_translator(object):
 
         self.output.writeto(outfile, clobber=clobber, checksum=True,
                             output_verify='fix')
+    def _seqnum(self, infile):
+        """This assumes the sequence number is the penultimate token
+        in the base filename when split by the '_' delimiter."""
+        tokens = os.path.basename(infile).split('_')
+        return tokens[-2]
+    def _headver(self):
+        """Increment the header version by 1. If it is missing, assume
+        there has only been one version."""
+        try:
+            headver = int(self.output[0].header['HEADVER']) + 1
+        except KeyError:
+            headver = 2
+        return headver
     def _update_keywords(self, ext):
         unresolved_keywords = []
         for key, source in self.luts[ext].items():
@@ -161,7 +181,8 @@ if __name__ == '__main__':
 
     rts2_translator = RTS2_FITS_translator(RTS2_FITS_LUTs[args.lab],
                                            sensor_geom[args.vendor],
-                                           verbose=args.verbose)
+                                           verbose=args.verbose,
+                                           args=args)
     infiles = glob.glob(args.inputs)
     for infile in infiles:
         outfile = os.path.join(args.output_dir, os.path.basename(infile))
