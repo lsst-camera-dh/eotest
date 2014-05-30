@@ -108,7 +108,15 @@ class RTS2_FITS_translator(object):
             # set to empty string.
             self.output[0].header.set('MONDIODE', '')
             return
-        mean, stdev = self._bnl_monodiode_current()
+        try:
+            mean, stdev = self._bnl_monodiode_current()
+        except RuntimeError:
+            # Transitions in monodiode current data were not detected,
+            # so a reliable current value cannot be computed using the
+            # present algorithm.  Set the keyword value to an empty
+            # string so that downstream tasks will fail if they try to
+            # use this value in a calculation.
+            mean = ''
         self.output[0].header.set('MONDIODE', mean)
     def _bnl_monodiode_current(self):
         data = self.input['AMP0.MEAS_TIMES'].data
