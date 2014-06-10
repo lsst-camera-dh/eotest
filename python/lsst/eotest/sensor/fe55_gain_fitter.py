@@ -10,6 +10,7 @@ import scipy.stats
 import scipy.optimize
 import pyfits
 import pylab
+import pylab_plotter as plot
 import lsst.afw.math as afwMath
 from fe55_yield import Fe55Yield
 
@@ -28,7 +29,7 @@ def fe55_lines(x, *args):
 
 def fe55_gain_fitter(signals, ccdtemp=-95, make_plot=False, xrange=None,
                      bins=100, hist_nsig=10, title='', plot_filename=None,
-                     interactive=True):
+                     interactive=True, ylog=True):
     """
     Function to fit the distribution of charge cluster DN values from
     a Fe55 dataset.  A two Gaussian model of Mn K-alpha and K-beta
@@ -69,18 +70,23 @@ def fe55_gain_fitter(signals, ccdtemp=-95, make_plot=False, xrange=None,
     hist = np.histogram(signals, bins=bins, range=xrange)
     xpeak = hist[1][np.where(hist[0] == max(hist[0]))][0]
     xrange = max(0, xpeak-200), xpeak*1785./1620. + 200
+    hist = np.histogram(signals, bins=bins, range=xrange)
+    yrange = 1, max(hist[0])*1.5
     if make_plot:
         if interactive:
             pylab.ion()
         else:
             pylab.ioff()
-        fig = pylab.figure()
-        axes = fig.add_subplot(111)
+#        fig = pylab.figure()
+#        axes = fig.add_subplot(111)
+        win = plot.Window()
         hist = pylab.hist(signals, bins=bins, range=xrange,
-                          histtype='bar', color='b')
+                          histtype='bar', color='b', log=ylog)
+        if ylog:
+            plot.setAxis(xrange, yrange)
     else:
         pylab.ioff()
-        hist = np.histogram(signals, bins=bins, range=xrange)
+#        hist = np.histogram(signals, bins=bins, range=xrange)
     x = (hist[1][1:] + hist[1][:-1])/2.
     y = hist[0]
     ntot = sum(y)
@@ -107,7 +113,7 @@ def fe55_gain_fitter(signals, ccdtemp=-95, make_plot=False, xrange=None,
                         "Gain = %.2f e-/DN\n\n")
                        % (kalpha_peak, gain),
                        (0.5, 0.7), xycoords='axes fraction')
-        axes.set_title(title)
+        win.set_title(title)
         if plot_filename is not None:
             pylab.savefig(plot_filename)
     # Restore pylab interactive state.

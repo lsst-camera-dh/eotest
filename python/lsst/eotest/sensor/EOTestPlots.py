@@ -1,5 +1,6 @@
 import os
 import sys
+import glob
 from collections import OrderedDict
 import numpy as np
 import pyfits
@@ -10,6 +11,7 @@ from DetectorResponse import DetectorResponse
 import lsst.eotest.image_utils as imutils
 
 class EOTestPlots(object):
+    plotter = plot
     def __init__(self, sensor_id, rootdir='.', output_dir='.', ps=False,
                  interactive=False):
         self.sensor_id = sensor_id
@@ -24,9 +26,16 @@ class EOTestPlots(object):
         else:
             plot.pylab.ioff()
         results_file = self._fullpath('%s_eotest_results.fits' % sensor_id)
+        if not os.path.exists(results_file):
+            raise RuntimeError("EOTestPlots: %s not found" % results_file)
         self.results = EOTestResults(results_file)
-        self.qe_data = pyfits.open(self._fullpath('%s_QE.fits' 
-                                                  % self.sensor_id))
+        self._qe_data = None
+    @property
+    def qe_data(self):
+        if self._qe_data is None:
+            self._qe_data = pyfits.open(self._fullpath('%s_QE.fits' 
+                                                       % self.sensor_id))
+        return self._qe_data
     def _save_fig(self, outfile_root):
         plot.pylab.savefig(self._outputpath('%s.png' % outfile_root))
         if self.ps:
@@ -36,8 +45,9 @@ class EOTestPlots(object):
     def _outputpath(self, basename):
         return os.path.join(self.output_dir, basename)
     def fe55_dists(self, chiprob_min=0.1):
-        fe55_catalog = pyfits.open(self._fullpath('%s_psf_results.fits' 
-                                                  % self.sensor_id))
+        fe55_file = glob.glob(self._fullpath('%s_psf_results*.fits' 
+                                                  % self.sensor_id))[0]
+        fe55_catalog = pyfits.open(fe55_file)
         for amp in imutils.allAmps:
             print "Amp", amp
             chiprob = fe55_catalog[amp].data.field('CHIPROB')
@@ -102,6 +112,8 @@ class EOTestPlots(object):
                     ref_fluxes.append(ref.qe_data[1].data.field(column)[i])
             fluxes = np.array(fluxes)
             ref_fluxes = np.array(ref_fluxes)
+            if self.interactive:
+                plot.pylab.ion()
             win = plot.xyplot(wls, fluxes/ref_fluxes, xname='wavelength (nm)',
                               yname='QE(%s) / QE(%s)' % (self.sensor_id,
                                                          ref.sensor_id))
