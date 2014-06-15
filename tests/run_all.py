@@ -11,7 +11,10 @@ import unittest
 
 try:
     import xmlrunner
-    runner = xmlrunner.XMLTestRunner(output='test-reports', verbose=True)
+    try:
+        runner = xmlrunner.XMLTestRunner(output='test-reports', verbose=True)
+    except TypeError:
+        runner = xmlrunner.XMLTestRunner(output='test-reports', verbosity=1)
 except ImportError:
     runner = unittest.TextTestRunner()
 
