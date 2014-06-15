@@ -81,14 +81,19 @@ class FlatPairTask(pipeBase.Task):
         for amp in imutils.allAmps:
             try:
                 full_well, fp = detresp.full_well(amp)
-            except ValueError, RuntimeError:
-                full_well, fp = detresp.full_well(amp, frac_offset=0.05)
-            maxdev, fit_pars = detresp.linearity(amp)
+            except (ValueError, RuntimeError, TypeError):
+                full_well = None
+            try:
+                maxdev, fit_pars = detresp.linearity(amp)
+            except:
+                maxdev = None
             if self.config.verbose:
-                self.log.info('%s            %.1f             %12.4e' 
+                self.log.info('%s            %s             %s' 
                               % (imutils.channelIds[amp], full_well, maxdev))
-            output.add_seg_result(amp, 'FULL_WELL', full_well)
-            output.add_seg_result(amp, 'MAX_FRAC_DEV', float(maxdev))
+            if full_well is not None:
+                output.add_seg_result(amp, 'FULL_WELL', full_well)
+            if maxdev is not None:
+                output.add_seg_result(amp, 'MAX_FRAC_DEV', float(maxdev))
         output.write()
     def _create_detresp_fits_output(self, nrows):
         self.output = pyfits.HDUList()

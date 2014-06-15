@@ -71,8 +71,8 @@ class DetectorResponse(object):
         dNe_frac = (Ne - Ne_vals)/Ne_vals
         if dNe_frac[-1] > -frac_offset:
             message = """Detector response data do not extend past the
-              specified fractional offset of %i%% for the full
-              well definition.""" % (int(frac_offset*100),)
+              specified fractional offset of %.1f%% for the full
+              well definition.""" % (frac_offset*100,)
             raise RuntimeError(message)
         #
         # Solve for specified fractional difference between
@@ -86,7 +86,9 @@ class DetectorResponse(object):
         fp = np.poly1d(np.polyfit(flux[indxp], Ne[indxp], order))
         df = lambda xx : 1 - fp(xx)/f1(xx) - frac_offset
         x = flux[indxp]
-        flux0 = scipy.optimize.brentq(df, x[len(x)/2], x[-1])
+        imin = np.where(x > 1e4)[0][0]
+#        flux0 = scipy.optimize.brentq(df, x[len(x)/2], x[-1])
+        flux0 = scipy.optimize.brentq(df, x[imin], x[-1])
         full_well = int(fp(flux0))
         
         # Save pylab interactive state.
@@ -110,6 +112,12 @@ class DetectorResponse(object):
         # Restore pylab interactive state.
         plot.pylab.interactive(pylab_interactive_state)
         return full_well, fp
+    def plot_diagnostics(self, flux, Ne, indxp, f1, fp):
+        plot.pylab.ion()
+        plot.xyplot(flux, Ne)
+        plot.xyplot(flux[indxp], Ne[indxp], oplot=1, color='r')
+        plot.curve(flux, f1(flux), oplot=1)
+        plot.curve(flux, fp(flux), oplot=1, color='b')
     def linearity(self, amp, fit_range=(1e2, 9e4), max_dev=0.02,
                   make_plot=False, title=None, interactive=True):
         flux, Ne = self.flux, self.Ne[amp]
