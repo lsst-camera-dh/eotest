@@ -18,6 +18,7 @@ class DetectorResponse(object):
             self._read_from_fits(infile)
         else:
             self._read_from_text(infile)
+        self._sort_by_flux()
         self._compute_gain_selection(ptc, gain_range)
     def _compute_gain_selection(self, ptc, gain_range):
         self._index = {}
@@ -32,6 +33,11 @@ class DetectorResponse(object):
             gain = mean/var
             self._index[amp] = np.where((gain >= gain_range[0]) & 
                                         (gain <= gain_range[1]))
+    def _sort_by_flux(self):
+        index = np.argsort(self.flux)
+        self.flux = self.flux[index]
+        for amp in imutils.allAmps:
+            self.Ne[amp] = self.Ne[amp][index]
     def _read_from_fits(self, infile):
         foo = pyfits.open(infile)
         hdu = foo['DETECTOR_RESPONSE']
@@ -46,7 +52,7 @@ class DetectorResponse(object):
         self.Ne = dict([(amp, ne) for amp, ne in
                         zip(imutils.allAmps, data[1:])])
     def full_well(self, amp, order=15, fit_range=(1e2, 5e4),
-                  poly_fit_min=1e3, frac_offset=0.1, dfrac=0.02,
+                  poly_fit_min=1e3, frac_offset=0.1, dfrac=None,
                   make_plot=False):
         flux = self.flux
         Ne = self.Ne[amp]
@@ -72,9 +78,11 @@ class DetectorResponse(object):
         # Solve for specified fractional difference between
         # linear and polynomial fits to determine full well.
         #
-        indxp = np.where((dNe_frac > -(frac_offset+dfrac)) &
-                         (Ne > poly_fit_min))
-#        indxp = np.where((Ne > poly_fit_min))
+        if dfrac is not None:
+            indxp = np.where((dNe_frac > -(frac_offset+dfrac)) &
+                             (Ne > poly_fit_min))
+        else:
+            indxp = np.where((Ne > poly_fit_min))
         fp = np.poly1d(np.polyfit(flux[indxp], Ne[indxp], order))
         df = lambda xx : 1 - fp(xx)/f1(xx) - frac_offset
         x = flux[indxp]
@@ -82,7 +90,7 @@ class DetectorResponse(object):
         full_well = int(fp(flux0))
         
         # Save pylab interactive state.
-        pylab_interactive_state = pylab.isinteractive()
+        pylab_interactive_state = plot.pylab.isinteractive()
         if make_plot:
             plot.pylab.ion()
             yrange = (0, max(max(Ne), full_well)*1.1)
@@ -100,7 +108,7 @@ class DetectorResponse(object):
                                 % (imutils.channelIds[amp], int(full_well)),
                                 (0.1, 0.8), xycoords='axes fraction')
         # Restore pylab interactive state.
-        pylab.interactive(pylab_interactive_state)
+        plot.pylab.interactive(pylab_interactive_state)
         return full_well, fp
     def linearity(self, amp, fit_range=(1e2, 9e4), max_dev=0.02,
                   make_plot=False, title=None, interactive=True):
