@@ -7,10 +7,10 @@ R. A. Sareen, 2007, NIMA, 576, 367 (L&S).
 def pair_energy(ccdtemp):
     """Electron-hole pair creation energy in silicon."""
     T = 273.2 + ccdtemp  # Convert to Kelvin.
-    slope = -0.000131    # From L&S
+    slope = -0.000131    # From L&S given in %/K
     Tref = 270           # L&S figure 4.
-    Eref = 3.68
-    Epair = slope*(T - Tref) + Eref  # e-h pair creation energy (eV)
+    Eref = 3.654
+    Epair = (1 + slope*(T - Tref))*Eref  # e-h pair creation energy (eV)
     return Epair
 
 class Fe55Yield(object):
