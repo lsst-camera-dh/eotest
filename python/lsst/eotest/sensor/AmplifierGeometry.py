@@ -37,9 +37,12 @@ def makeAmplifierGeometry(infile):
         vendor = 'E2V'
     else:
         vendor = 'ITL'
-    return AmplifierGeometry(prescan=prescan, nx=nx, ny=ny,
-                             detxsize=detsize['xmax'], detysize=detsize['ymax'],
-                             amp_loc=amp_loc[vendor])
+    myAmpGeom = AmplifierGeometry(prescan=prescan, nx=nx, ny=ny,
+                                  detxsize=detsize['xmax'],
+                                  detysize=detsize['ymax'],
+                                  amp_loc=amp_loc[vendor])
+    myAmpGeom.compute_geometry(fitsfile=infile)
+    return myAmpGeom
     
 class AmplifierGeometry(dict):
     nsegx, nsegy = 8, 2
