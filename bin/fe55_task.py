@@ -36,4 +36,5 @@ bias_frame = args.bias_frame('%s_fe55_bias_frame.fits' % args.sensor_id)
 task.run(args.sensor_id, infiles, args.mask_files(infiles[0]),
          bias_frame=bias_frame)
 
-os.remove(bias_frame)
+if bias_frame is not None:
+    os.remove(bias_frame)
