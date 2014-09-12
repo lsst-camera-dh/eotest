@@ -14,7 +14,7 @@ export HOME=`pwd`
 # This is used by the scripts to find the path to the policy subdir.
 export EOTEST_DIR=${HOME}
 
-source /afs/slac/g/lsst/software/redhat5-x86_64-64bit-gcc44/DMstack/Winter2013-v6_2/loadLSST.sh
+source /afs/slac/g/lsst/software/redhat6-x86_64-64bit-gcc44/DMstack/Winter2013-v6_2/loadLSST.sh
 
 # The Jenkins build of test_scripts can't/shouldn't be setup by eups, so
 # setup everything by hand.
