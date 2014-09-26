@@ -6,6 +6,7 @@
 import os
 import numpy as np
 import pyfits
+from lsst.eotest.pyfitsTools import pyfitsTableFactory, pyfitsWriteto
 import lsst.afw.detection as afwDetect
 import lsst.afw.geom as afwGeom
 import lsst.afw.image as afwImage
@@ -55,10 +56,10 @@ class Traps(dict):
         formats = 'IIII'
         units = ['None', 'pixel', 'pixel', 'electrons']
         columns = [np.zeros(nrows, dtype=int)]*4
-        hdu = pyfits.new_table([pyfits.Column(name=colname, format=format,
-                                              unit=unit, array=column) 
-                                for colname, format, unit, column in
-                                zip(colnames, formats, units, columns)])
+        hdu = pyfitsTableFactory([pyfits.Column(name=colname, format=format,
+                                                unit=unit, array=column) 
+                                  for colname, format, unit, column in
+                                  zip(colnames, formats, units, columns)])
         hdu.name = 'TRAPS'
         output.append(hdu)
         row = 0
@@ -69,7 +70,7 @@ class Traps(dict):
                 output['TRAPS'].data[row]['YPOS'] = ypos
                 output['TRAPS'].data[row]['TRAP_SIZE'] = trap_size
             row += 1
-        output.writeto(outfile, clobber=True)
+        pyfitsWriteto(output, outfile, clobber=True)
 
 if __name__ == '__main__':
     gains = dict([(amp, 5) for amp in imutils.allAmps])

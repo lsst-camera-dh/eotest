@@ -5,7 +5,7 @@
 """
 import os
 import pyfits
-
+from lsst.eotest.pyfitsTools import pyfitsWriteto
 import lsst.eotest.image_utils as imutils
 from AmplifierGeometry import makeAmplifierGeometry
 from EOTestResults import EOTestResults
@@ -32,7 +32,7 @@ def superflat(files, outfile='superflat.fits'):
             images.push_back(image)
         median_image = afwMath.statisticsStack(images, afwMath.MEDIAN)
         output[amp].data = median_image.getArray()
-    output.writeto(outfile, clobber=True)
+    pyfitsWriteto(output, outfile, clobber=True)
     return outfile
 
 class CteConfig(pexConfig.Config):

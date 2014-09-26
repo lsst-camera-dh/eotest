@@ -8,6 +8,7 @@ import os
 import glob
 import numpy as np
 import pyfits
+from lsst.eotest.pyfitsTools import pyfitsTableFactory, pyfitsWriteto
 import lsst.eotest.image_utils as imutils
 from MaskedCCD import MaskedCCD
 from EOTestResults import EOTestResults
@@ -105,7 +106,7 @@ class FlatPairTask(pipeBase.Task):
         fits_cols = [pyfits.Column(name=colnames[i], format=formats[i],
                                    unit=units[i], array=columns[i])
                      for i in range(len(units))]
-        hdu = pyfits.new_table(fits_cols)
+        hdu = pyfitsTableFactory(fits_cols)
         hdu.name = 'DETECTOR_RESPONSE'
         self.output.append(hdu)
     def extract_det_response(self):
@@ -141,7 +142,7 @@ class FlatPairTask(pipeBase.Task):
                 # Convert to e- and write out for each segment.
                 signal = pair_mean(flat1, flat2, amp)*self.gains[amp]
                 self.output[-1].data.field('AMP%02i_SIGNAL' % amp)[row] = signal
-        self.output.writeto(outfile, clobber=True)
+        pyfitsWriteto(self.output, outfile, clobber=True)
         return outfile
 
 if __name__ == '__main__':

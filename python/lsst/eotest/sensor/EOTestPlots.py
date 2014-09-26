@@ -148,7 +148,7 @@ class EOTestPlots(object):
         for name in self.results.colnames:
             output.write('|| %s' % name)
         output.write('||\n')
-        format = '| %i | %.2f | %.2f | %i | %.1e | %.1e | %.1e | %i | %i |\n'
+        format = '| %i | %.2f | %.2f | %i | %.1e | %.1e | %.1e | %i | %i | %.1e |\n'
         for i, amp in enumerate(self.results['AMP']):
             output.write(format % tuple([self.results[x][i] 
                                          for x in self.results.colnames]))

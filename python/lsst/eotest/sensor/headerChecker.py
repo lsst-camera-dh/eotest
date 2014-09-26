@@ -40,7 +40,7 @@ def update_version(hdr):
             hdr['HDRVER'] = headerVersion
             # If the header version keyword does not yet exist, add it
     else:
-        hdr.update('HDRVER', headerVersion, 'Header Version Number')
+        hdr['HDRVER'] = (headerVersion, 'Header Version Number')
 
 
 def extract_path(filename):
@@ -150,7 +150,7 @@ def extendHeader(files):
         if 'CCD_MANU' not in hdr.keys():
             try:
                 vendor = os.environ['CCD_MANU']
-                hdr.update('CCD_MANU', vendor)
+                hdr['CCD_MANU'] = vendor
             except: 
                 print 'Failed to update CCD_MANU for file: ', filename
 
@@ -158,19 +158,19 @@ def extendHeader(files):
             sensor_id, imgType, testType, seqNum = get_id_and_type(filename)
 
             if 'LSST_NUM' not in hdr.keys():
-                hdr.update('LSST_NUM', sensor_id)
+                hdr['LSST_NUM'] = sensor_id
                 print "setting LSST_NUM ", sensor_id
 
             if 'IMGTYPE' not in hdr.keys():
-                hdr.update('IMGTYPE', imgType)
+                hdr['IMGTYPE'] = imgType
                 print "setting IMGTYPE: ", imgType
 
             if 'TESTTYPE' not in hdr.keys():
-                hdr.update('TESTTYPE', testType)
+                hdr['TESTTYPE'] = testType
                 print "setting TESTTYPE: ", testType
 
             if 'SEQNUM' not in hdr.keys():
-                hdr.update('SEQNUM', seqNum)
+                hdr['SEQNUM'] = seqNum
                 print "setting SEQNUM: ", seqNum
         except:
             traceback.print_exc(file=sys.stdout)

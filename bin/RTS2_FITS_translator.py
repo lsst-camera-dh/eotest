@@ -6,6 +6,7 @@ conforming FITS files for analysis by the eotest package.
 import os
 import numpy as np
 import pyfits
+from lsst.eotest.pyfitsTools import pyfitsWriteto
 import lsst.eotest.image_utils as imutils
 import lsst.eotest.sensor as sensorTest
 
@@ -53,8 +54,8 @@ class RTS2_FITS_translator(object):
         except KeyError:
             self._set_bnl_mondiode_keyword_value()
 
-        self.output.writeto(outfile, clobber=clobber, checksum=True,
-                            output_verify='fix')
+        pyfitsWriteto(self.output, outfile, clobber=clobber, checksum=True,
+                      output_verify='fix')
     def _seqnum(self, infile):
         """This assumes the sequence number is the penultimate token
         in the base filename when split by the '_' delimiter."""

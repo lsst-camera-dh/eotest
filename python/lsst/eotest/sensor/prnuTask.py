@@ -7,6 +7,7 @@ import os
 from collections import OrderedDict
 import numpy as np
 import pyfits
+from lsst.eotest.pyfitsTools import pyfitsTableFactory, pyfitsWriteto
 import lsst.eotest.image_utils as imutils
 from prnu import prnu
 import lsst.afw.image as afwImage
@@ -51,11 +52,11 @@ class PrnuTask(pipeBase.Task):
         columns = [np.zeros(len(results), dtype=my_types[fmt])
                             for fmt in formats]
         units = ['nm', 'rms e-', 'e-']
-        hdu = pyfits.new_table([pyfits.Column(name=colnames[i],
-                                              format=formats[i],
-                                              unit=units[i],
-                                              array=columns[i])
-                                for i in range(len(colnames))])
+        hdu = pyfitsTableFactory([pyfits.Column(name=colnames[i],
+                                                format=formats[i],
+                                                unit=units[i],
+                                                array=columns[i])
+                                  for i in range(len(colnames))])
         hdu.name = 'PRNU_RESULTS'
         for i, wl in enumerate(results.keys()):
             hdu.data.field('WAVELENGTH')[i] = wl
@@ -64,4 +65,4 @@ class PrnuTask(pipeBase.Task):
         output = pyfits.HDUList()
         output.append(pyfits.PrimaryHDU())
         output.append(hdu)
-        output.writeto(outfile, clobber=clobber)
+        pyfitsWriteto(output, outfile, clobber=clobber)

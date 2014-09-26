@@ -7,6 +7,7 @@ ctesim.pro.
 import numpy as np
 import numpy.random as random
 import pyfits
+from lsst.eotest.pyfitsTools import pyfitsWriteto
 import lsst.afw.image as afwImage
 import lsst.eotest.image_utils as imutils
 import lsst.eotest.utilLib as testUtils
@@ -126,7 +127,7 @@ if __name__ == '__main__':
     scti = 0
 
     foo = ctesim(test_file, pcti=pcti, scti=scti, verbose=True)
-    foo.writeto('fe55_test_cti.fits', clobber=True)
+    pyfitsWriteto(foo, 'fe55_test_cti.fits', clobber=True)
 
     bar = ctesim_cpp(test_file, pcti=pcti, scti=scti, verbose=True)
-    bar.writeto('fe55_test_cti_cpp.fits', clobber=True)
+    pyfitsWriteto(bar, 'fe55_test_cti_cpp.fits', clobber=True)

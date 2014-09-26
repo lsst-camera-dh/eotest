@@ -7,6 +7,7 @@ units of e-/sec/pixel.
 import os
 import numpy as np
 import pyfits
+from lsst.eotest.pyfitsTools import pyfitsWriteto
 import lsst.eotest.image_utils as imutils
 from MaskedCCD import MaskedCCD
 from EOTestResults import EOTestResults
@@ -79,10 +80,9 @@ class DarkCurrentTask(pipeBase.Task):
         results = EOTestResults(results_file)
         output = pyfits.open(medfile)
         for i, dark in enumerate(dark_files):
-            output[0].header.update('DARK%02i' % i, os.path.basename(dark))
+            output[0].header['DARK%02i' % i] = os.path.basename(dark)
         for amp in imutils.allAmps:
-            output[0].header.update('DARK95%s' % imutils.channelIds[amp],
-                                    dark95s[amp])
+            output[0].header['DARK95%s'%imutils.channelIds[amp]] = dark95s[amp]
             results.add_seg_result(amp, 'DARK_CURRENT_95', dark95s[amp])
-        output.writeto(medfile, clobber=True, checksum=True)
+        pyfitsWriteto(output, medfile, clobber=True, checksum=True)
         results.write(clobber=True)

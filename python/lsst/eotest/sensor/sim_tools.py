@@ -9,6 +9,7 @@ from datetime import datetime
 import numpy as np
 import numpy.random as random
 import pyfits
+from lsst.eotest.pyfitsTools import pyfitsWriteto
 
 import lsst.afw.geom as afwGeom
 import lsst.afw.image as afwImage
@@ -136,7 +137,7 @@ class CCD(object):
                                 dtype=self.dtypes[bitpix])
         output[0].header['DATE-OBS'] = utcnow()
         output[0].header['DATE'] = utcnow()
-        output.writeto(outfile, clobber=True, checksum=True)
+        pyfitsWriteto(output, outfile, clobber=True, checksum=True)
 
 class SegmentExposure(object):
     def __init__(self, exptime=1, gain=5, ccdtemp=-100, full_well=None,
@@ -265,10 +266,10 @@ def fitsFile(ccd_segments):
         output[amp].header = headers[headers.keys()[amp]].copy()
         output[amp].header['BZERO'] = 0
         output[amp].name = 'Segment%s' % imutils.channelIds[amp]
-        output[amp].header.update('DETSIZE', segment.geometry[amp]['DETSIZE'])
-        output[amp].header.update('DATASEC', segment.geometry[amp]['DATASEC'])
-        output[amp].header.update('DETSEC', segment.geometry[amp]['DETSEC'])
-        output[amp].header.update('CHANNEL', amp)
+        output[amp].header['DETSIZE'] = segment.geometry[amp]['DETSIZE']
+        output[amp].header['DATASEC'] = segment.geometry[amp]['DATASEC']
+        output[amp].header['DETSEC'] = segment.geometry[amp]['DETSEC']
+        output[amp].header['CHANNEL'] = amp
     # Add Test Condition and CCD Operating Condition headers with dummy info.
     output.append(pyfits.ImageHDU())
     for keyword in headers['TEST_COND']:
@@ -287,7 +288,7 @@ def writeFits(ccd_segments, outfile, clobber=True):
             os.remove(outfile)
         except OSError:
             pass
-    output.writeto(outfile, clobber=clobber, checksum=True)
+    pyfitsWriteto(output, outfile, clobber=clobber, checksum=True)
     return outfile
     
 def simulateDark(outfile, dark_curr, exptime=1, hdus=16, verbose=True):

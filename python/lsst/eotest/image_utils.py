@@ -6,6 +6,7 @@ trimming, etc..
 import numpy as np
 import numpy.random as random
 import pyfits
+from pyfitsTools import pyfitsWriteto
 import lsst.afw.geom as afwGeom
 import lsst.afw.image as afwImage
 import lsst.afw.math as afwMath
@@ -95,7 +96,7 @@ def fits_median_file(files, outfile, clobber=True):
         output[amp].data = fits_median(files, hdu=dm_hdu(amp)).getArray()
         output[amp].header.remove('BZERO')
         output[amp].header.remove('BSCALE')
-    output.writeto(outfile, clobber=clobber)
+    pyfitsWriteto(output, outfile, clobber=clobber)
 
 def fits_mean_file(files, outfile, clobber=True):
     output = pyfits.open(files[0])
@@ -112,7 +113,7 @@ def fits_mean_file(files, outfile, clobber=True):
             output[amp].data += input[amp].data
     for amp in allAmps:
         output[amp].data /= len(files)
-    output.writeto(outfile, clobber=clobber)
+    pyfitsWriteto(output, outfile, clobber=clobber)
 
 def fits_median(files, hdu=2, fix=True):
     """Compute the median image from a set of image FITS files."""
@@ -138,10 +139,10 @@ def fits_median(files, hdu=2, fix=True):
 
 def writeFits(images, outfile, template_file):
     output = pyfits.open(template_file)
-    output[0].header.update('FILENAME', outfile)
+    output[0].header['FILENAME'] = outfile
     for amp in images:
         output[amp].data = images[amp].getArray()
-    output.writeto(outfile, clobber=True, checksum=True)
+    pyfitsWriteto(output, outfile, clobber=True, checksum=True)
 
 def check_temperatures(files, tol):
     ccd_temps = [Metadata(x, 1).get('CCDTEMP') for x in files]

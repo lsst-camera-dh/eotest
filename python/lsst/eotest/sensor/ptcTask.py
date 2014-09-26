@@ -9,6 +9,7 @@ import os
 import glob
 import numpy as np
 import pyfits
+from lsst.eotest.pyfitsTools import pyfitsTableFactory, pyfitsWriteto
 import lsst.eotest.image_utils as imutils
 from pair_stats import pair_stats
 
@@ -79,6 +80,6 @@ class PtcTask(pipeBase.Task):
         fits_cols = [pyfits.Column(name=colnames[i], format=formats[i],
                                    unit=units[i], array=columns[i])
                      for i in range(len(columns))]
-        output.append(pyfits.new_table(fits_cols))
+        output.append(pyfitsTableFactory(fits_cols))
         output[-1].name = 'PTC_STATS'
-        output.writeto(outfile, clobber=True)
+        pyfitsWriteto(output, outfile, clobber=True)

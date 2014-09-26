@@ -8,6 +8,7 @@ compute the probability of the chi-square fit.
 import numpy as np
 import warnings
 import pyfits
+from lsst.eotest.pyfitsTools import pyfitsTableFactory, pyfitsWriteto
 import scipy.optimize
 from scipy.special import erf, gammaincc
 
@@ -201,9 +202,7 @@ class PsfGaussFit(object):
             table_hdu = self.output[extname]
             row0 = table_hdu.header['NAXIS2']
             nrows = row0 + len(x0)
-            table_hdu = pyfits.new_table(table_hdu.data, nrows=nrows)
-#            table_hdu = pyfits.BinTableHDU.from_columns(table_hdu.data, 
-#                                                        nrows=nrows)
+            table_hdu = pyfitsTableFactory(table_hdu.data, nrows=nrows)
             for i in range(len(x0)):
                 row = i + row0
                 table_hdu.data[row]['AMPLIFIER'] = amp
@@ -239,14 +238,10 @@ class PsfGaussFit(object):
                                                         array=column)
                                           for colname, format, unit, column
                                           in coldata]
-            self.output.append(pyfits.new_table(fits_cols(zip(colnames,
-                                                              formats,
-                                                              units,
-                                                              columns))))
-#            self.output.append(pyfits.BinTableHDU.from_columns(fits_cols(zip(colnames,
-#                                                                             formats,
-#                                                                             units,
-#                                                                             columns))))
+            self.output.append(pyfitsTableFactory(fits_cols(zip(colnames,
+                                                                formats,
+                                                                units,
+                                                                columns))))
             self.output[-1].name = extname
     def results(self, min_prob=0.1, amp=None):
         """
@@ -268,11 +263,7 @@ class PsfGaussFit(object):
         my_results['amps'] = amps[indx]
         return my_results
     def write_results(self, outfile='fe55_psf_params.fits'):
-        warnings.resetwarnings()
-        warnings.filterwarnings('ignore', category=UserWarning, append=True)
-        self.output.writeto(outfile, clobber=True, checksum=True)
-        warnings.resetwarnings()
-        warnings.filterwarnings('always', category=UserWarning, append=True)
+        pyfitsWriteto(self.output, outfile, clobber=True, checksum=True)
 
 if __name__ == '__main__':
     import os

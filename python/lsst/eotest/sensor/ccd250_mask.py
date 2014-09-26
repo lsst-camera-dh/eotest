@@ -10,6 +10,7 @@ https://confluence.slac.stanford.edu/x/DQvNBw
 """
 import os
 import pyfits
+from lsst.eotest.pyfitsTools import pyfitsWriteto
 import lsst.afw.detection as afwDetect
 import lsst.afw.geom as afwGeom
 import lsst.afw.image as afwImage
@@ -67,7 +68,7 @@ def ccd250_mask(infile, outfile,
     #
     hdulist = pyfits.HDUList()
     hdulist.append(pyfits.PrimaryHDU())
-    hdulist.writeto(outfile, clobber=True)
+    pyfitsWriteto(hdulist, outfile, clobber=True)
     #
     # Amplifiers 1 (AMP10), 8 (AMP17), 9 (AMP07) and 16 (AMP00) are
     # along the perimeter.
@@ -109,7 +110,7 @@ def ccd250_mask(infile, outfile,
     #
     # Write the images of the mask regions to the FITS file.
     #
-    ccd.writeto(tmp_mask_image)
+    pyfitsWriteto(ccd, tmp_mask_image)
     #
     # Use BrightPixels code to detect the mask regions and write the mask file.
     #

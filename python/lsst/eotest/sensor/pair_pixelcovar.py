@@ -15,6 +15,7 @@ import copy
 import numpy as np
 import numpy.random as random
 import pyfits
+from lsst.eotest.pyfitsTools import pyfitsWriteto
 
 import lsst.afw.geom as afwGeom
 import lsst.afw.image as afwImage
@@ -131,7 +132,7 @@ def pair_covar(file1, file2, hdu=2, Nsigma=5,
         outfile = "mask_%dsig_hdu%d.fits"%(Nsigma, hdu-1)
         output = pyfits.HDUList()
         output.append(pyfits.PrimaryHDU(mask))
-        output.writeto(outfile, clobber=True)
+        pyfitsWriteto(output, outfile, clobber=True)
 
     return PairCovar(bmean1, bias_rms, fmean, diffvar/2., pixwid, covMat)
 

@@ -7,6 +7,7 @@ as a binary table.
 import os
 import numpy as np
 import pyfits
+from lsst.eotest.pyfitsTools import pyfitsTableFactory, pyfitsWriteto
 
 _namps = 16
 
@@ -37,7 +38,7 @@ class EOTestResults(object):
         fits_cols = [pyfits.Column(name=self.colnames[i], format=formats[i],
                                    unit=units[i], array=columns[i])
                      for i in range(len(self.colnames))]
-        self.output.append(pyfits.new_table(fits_cols))
+        self.output.append(pyfitsTableFactory(fits_cols))
         self.output[-1].name = self.extname
         for amp in range(1, _namps+1):
             self.add_seg_result(amp, 'AMP', amp)
@@ -55,8 +56,8 @@ class EOTestResults(object):
         new_cols = pyfits.ColDefs([pyfits.Column(name=colname,
                                                  format=_types[dtype],
                                                  unit=unit, array=column)])
-        new_hdu = pyfits.new_table(self.output[self.extname].data.columns 
-                                   + new_cols)
+        new_hdu = pyfitsTableFactory(self.output[self.extname].data.columns 
+                                     + new_cols)
         new_hdu.name = self.extname
         self.output[self.extname] = new_hdu
         self.colnames.append(colname)
@@ -73,7 +74,7 @@ class EOTestResults(object):
         """
         if outfile is None:
             outfile = self.outfile
-        self.output.writeto(outfile, clobber=clobber)
+        pyfitsWriteto(self.output, outfile, clobber=clobber)
 
 if __name__ == '__main__':
     outfile = 'foo.fits'
@@ -89,5 +90,3 @@ if __name__ == '__main__':
     print bar['GAIN']
     print bar['NEW_INT_COLUMN']
     print bar['NEW_FLOAT_COLUMN']
-
-

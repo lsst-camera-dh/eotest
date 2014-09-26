@@ -7,6 +7,7 @@ import os
 import time
 import numpy as np
 import pyfits
+from lsst.eotest.pyfitsTools import pyfitsWriteto
 import pylab
 import lsst.afw.detection as afwDetect
 import lsst.afw.geom as afwGeom
@@ -197,7 +198,7 @@ class CrosstalkMatrix(object):
             self.filename = outfile
         output = pyfits.HDUList()
         output.append(pyfits.PrimaryHDU(data=self.matrix))
-        output.writeto(outfile, clobber=clobber)
+        pyfitsWriteto(output, outfile, clobber=clobber)
     def write(self, outfile=None):
         if outfile is None:
             outfile = self.filename

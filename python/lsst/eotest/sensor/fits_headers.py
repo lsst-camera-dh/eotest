@@ -60,7 +60,7 @@ def fits_headers(template=template_file):
         key, value = data[0].strip(), '='.join(data[1:]).strip()
         data = value.split('/')
         value, comment = data[0].strip(), '/'.join(data[1:]).strip()
-        hdr.update(key, _cast(value), comment=comment)
+        hdr[key] = (_cast(value), comment)
     return headers
 
 def check_keywords(infile, template=template_file, verbose=True):

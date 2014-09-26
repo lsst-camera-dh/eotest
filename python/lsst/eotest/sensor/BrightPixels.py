@@ -5,6 +5,7 @@ in units of e- per second per pixel.
 import os
 import numpy as np
 import pyfits
+from lsst.eotest.pyfitsTools import pyfitsWriteto
 
 import lsst.afw.detection as afwDetect
 import lsst.afw.image as afwImage
@@ -55,7 +56,7 @@ class BrightPixels(object):
             output[0].header['MASKTYPE'] = 'BRIGHT_PIXELS'
             output[0].header['ETHRESH'] = self.ethresh
             output[0].header['CTHRESH'] = self.colthresh
-            output.writeto(outfile, clobber=True)
+            pyfitsWriteto(output, outfile, clobber=True)
         imaging = self.ccd.amp_geom.imaging
         ihdr = hdrs[hdrs.keys()[self.amp]]
         md = dafBase.PropertySet()
@@ -129,7 +130,7 @@ if __name__ == '__main__':
         ccd.add_bright_cols(columns, nsig=nsig)
         pixels = ccd.generate_bright_pix(npix)
         ccd.add_bright_pix(pixels, nsig=nsig)
-        ccd.writeto(outfile)
+        pyfitsWriteto(ccd, outfile)
 
     def remove_file(filename):
         try:

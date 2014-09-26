@@ -10,6 +10,7 @@ import glob
 from collections import OrderedDict
 import numpy as np
 import pyfits
+from lsst.eotest.pyfitsTools import pyfitsTableFactory, pyfitsWriteto
 import lsst.eotest.image_utils as imutils
 import pylab_plotter as plot
 from MaskedCCD import MaskedCCD
@@ -197,8 +198,8 @@ class QE_Data(object):
 
         HDUList = pyfits.HDUList()
         HDUList.append(pyfits.PrimaryHDU())
-        HDUList.append(pyfits.new_table(fits_cols(zip(colnames, formats,
-                                                      units, columns))))
+        HDUList.append(pyfitsTableFactory(fits_cols(zip(colnames, formats,
+                                                        units, columns))))
         HDUList[-1].name = 'QE_CURVES'
 
         columns = [self.ccd_qe_band.keys()]
@@ -209,10 +210,10 @@ class QE_Data(object):
         formats[0] = '2A'
         units[0] = None
 
-        HDUList.append(pyfits.new_table(fits_cols(zip(colnames, formats,
-                                                      units, columns))))
+        HDUList.append(pyfits.TableFactory(fits_cols(zip(colnames, formats,
+                                                         units, columns))))
         HDUList[-1].name = 'QE_BANDS'
-        HDUList.writeto(outfile, clobber=clobber)
+        pyfitsWriteto(HDUList, outfile, clobber=clobber)
     def plot_curves(self, outfile=None, interactive=False):
         if interactive:
             plot.pylab.ion()
