@@ -215,7 +215,8 @@ class CrosstalkMatrix(object):
             output.write('\n')
         output.close()
     def plot_matrix(self, title=None, cmap_range=(0.6, 0.4), precision=3, 
-                    scale_factor=1e2, fontsize=10, figsize=(12, 6)):
+                    scale_factor=1e2, fontsize=10, figsize=(12, 6),
+                    cmap=None):
         pylab.ion()
         cmin, cmax = cmap_range
         my_matrix = np.copy(self.matrix)*scale_factor
@@ -223,15 +224,16 @@ class CrosstalkMatrix(object):
             my_matrix[i][i] = 0
         thresh = 10**(-precision)
         pylab.ion()
-        cdict = dict(red=((0, cmin, cmin), (1, cmax, cmax)),
-                     green=((0, cmin, cmin), (1, cmax, cmax)),
-                     blue=((0, cmin, cmin), (1, cmax, cmax)))
-        unsat_grey = pylab.matplotlib.colors.LinearSegmentedColormap('my_grey', 
-                                                                     cdict, 256)
+        if cmap is None:
+            cdict = dict(red=((0, cmin, cmin), (1, cmax, cmax)),
+                         green=((0, cmin, cmin), (1, cmax, cmax)),
+                         blue=((0, cmin, cmin), (1, cmax, cmax)))
+            cmap = pylab.matplotlib.colors.LinearSegmentedColormap('my_grey', 
+                                                                   cdict, 256)
         fig = pylab.figure(figsize=figsize)
         axes = fig.add_subplot(111)
         image = pylab.imshow(np.abs(my_matrix), interpolation='nearest',
-                             aspect='auto', cmap=unsat_grey)
+                             aspect='auto', cmap=cmap)
         pylab.xlabel('victim')
         pylab.ylabel('aggressor')
         axes.set_xticks(range(self.namps))
@@ -250,6 +252,20 @@ class CrosstalkMatrix(object):
                 pylab.text(x, y, label, horizontalalignment='center', 
                            fontsize=fontsize)
         pylab.colorbar(image)
+    def plot(self, cmap=pylab.cm.hot, title=''):
+        my_matrix = np.copy(self.matrix)
+        for i in range(self.namps):
+            my_matrix[i][i] = 0
+        fig, axes = pylab.subplots()
+        foo = axes.imshow(my_matrix, interpolation='nearest', cmap=cmap)
+        pylab.xlabel('victim')
+        pylab.ylabel('aggressor')
+        axes.set_xticks(range(self.namps))
+        axes.set_yticks(range(self.namps))
+        axes.set_xticklabels(['%i' % i for i in range(1, self.namps+1)])
+        axes.set_yticklabels(['%i' % i for i in range(1, self.namps+1)])
+        cbar = fig.colorbar(foo)
+        axes.set_title(title)
     def __sub__(self, other):
         result = CrosstalkMatrix()
         result.matrix = self.matrix - other.matrix

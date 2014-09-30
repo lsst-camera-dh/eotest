@@ -9,6 +9,7 @@ import numpy as np
 import pyfits
 import scipy.optimize
 import lsst.eotest.image_utils as imutils
+import pylab
 import pylab_plotter as plot
 
 class DetectorResponse(object):
@@ -118,8 +119,7 @@ class DetectorResponse(object):
         plot.xyplot(flux[indxp], Ne[indxp], oplot=1, color='r')
         plot.curve(flux, f1(flux), oplot=1)
         plot.curve(flux, fp(flux), oplot=1, color='b')
-    def linearity(self, amp, fit_range=(1e2, 9e4), max_dev=0.02,
-                  make_plot=False, title=None, interactive=True):
+    def linearity(self, amp, fit_range=(1e2, 9e4)):
         flux, Ne = self.flux, self.Ne[amp]
         if self._index:
             flux = flux[self._index[amp]]
@@ -128,27 +128,27 @@ class DetectorResponse(object):
         f1_pars = np.polyfit(flux[indx], Ne[indx], 1)
         f1 = np.poly1d(f1_pars)
         dNfrac = 1 - Ne/f1(flux)
-        if make_plot:
-            if interactive:
-                plot.pylab.ion()
-            else:
-                plot.pylab.ioff()
-            win = plot.xyplot(Ne, dNfrac, xname='e-/pixel', xlog=1,
-                              yname='frac. deviation of e-/pixel from linear fit',
-                              xrange=(1e2, 2e5),
-                              yrange=(-1.5*max_dev, 1.5*max_dev))
-            plot.curve(Ne, dNfrac, oplot=1, color='r')
-            plot.pylab.annotate("slope = %.2e\n\nintercept = %.2e" 
-                                % tuple(f1_pars),
-                                (0.1, 0.8), xycoords='axes fraction')
-            if title is not None:
-                win.set_title(title)
-            plot.hline(0, lineStyle='--')
-            plot.hline(max_dev)
-            plot.hline(-max_dev)
-            plot.vline(Ne[indx][0])
-            plot.vline(Ne[indx][-1])
-        return max(abs(dNfrac[indx])), f1_pars
+        return max(abs(dNfrac[indx])), f1_pars, Ne, flux
+    def plot_linearity(self, maxdev, f1_pars, Ne, flux, max_dev=0.02):
+        top_rect = [0.1, 0.3, 0.8, 0.6]
+        bottom_rect = [0.1, 0.1, 0.8, 0.2]
+        fig = pylab.figure()
+        top_ax = fig.add_axes(top_rect)
+        bot_ax = fig.add_axes(bottom_rect, sharex=top_ax)
+
+        # Plot flux vs e-/pixel.
+        top_ax.loglog(Ne, flux, 'ko')
+        top_ax.loglog(Ne, f1(Ne), 'r-')
+        top_ax.set_ylabel('flux')
+        for label in top_ax.get_xticklabels():
+            label.set_visible(False)
+
+        # Plot fractional residuals vs e-/pixel.
+        bot_ax.semilogx(Ne, dNfrac, 'ko')
+        bot_ax.semilogx(Ne, np.zeros(len(Ne)), 'r-')
+        plot.setAxis(yrange=(-1.5*max_dev, 1.5*max_dev))
+        bot_ax.set_ylabel('fractional residual flux')
+        bot_ax.set_xlabel('e-/pixel')
 
 if __name__ == '__main__':
     infile = '000-00_det_response.txt'

@@ -1,13 +1,16 @@
 import os
 import sys
 import glob
+import copy
 from collections import OrderedDict
 import numpy as np
 import pyfits
+import pylab
 import pylab_plotter as plot
 from EOTestResults import EOTestResults
-from fe55_gain_fitter import fe55_gain_fitter
+from Fe55GainFitter import Fe55GainFitter
 from DetectorResponse import DetectorResponse
+from crosstalk import CrosstalkMatrix
 import lsst.eotest.image_utils as imutils
 
 class EOTestPlots(object):
@@ -44,54 +47,134 @@ class EOTestPlots(object):
         return os.path.join(self.rootdir, basename)
     def _outputpath(self, basename):
         return os.path.join(self.output_dir, basename)
+    def crosstalk_matrix(self, cmap=pylab.cm.hot):
+        infile = os.path.join(self.rootdir, 
+                              '%s_xtalk_matrix.fits' % self.sensor_id)
+        foo = CrosstalkMatrix(infile)
+#        foo.plot_matrix(cmap=cmap)
+        win = foo.plot(title="Crosstalk, %s" % self.sensor_id)
+        return foo
     def fe55_dists(self, chiprob_min=0.1):
         fe55_file = glob.glob(self._fullpath('%s_psf_results*.fits' 
                                                   % self.sensor_id))[0]
         fe55_catalog = pyfits.open(fe55_file)
+        win = None
+        figsize = (11, 8.5)
         for amp in imutils.allAmps:
-            print "Amp", amp
+            #print "Amp", amp
             chiprob = fe55_catalog[amp].data.field('CHIPROB')
             index = np.where(chiprob > chiprob_min)
             dn = fe55_catalog[amp].data.field('DN')[index]
-            gain, peak, sigma = fe55_gain_fitter(dn, make_plot=True,
-                                                 title='Amp %i' % amp,
-                                                 interactive=self.interactive)
-            self._save_fig('Fe55_dist_%s_amp%02i' % (self.sensor_id, amp))
-    def ptcs(self, xrange=(0.1, 1e4), yrange=(0.1, 1e4)):
+            foo = Fe55GainFitter(dn)
+            foo.fit()
+            if amp == 1:
+                win = foo.plot(interactive=True, subplot=(4, 4, amp),
+                               figsize=figsize, frameLabels=True, amp=amp)
+                win.frameAxes.text(0.5, 1.08, 'Fe55, %s' % self.sensor_id,
+                                   horizontalalignment='center',
+                                   verticalalignment='top',
+                                   transform=win.frameAxes.transAxes,
+                                   size='large')
+            else:
+                foo.plot(interactive=True, subplot=(4, 4, amp), win=win,
+                         frameLabels=True, amp=amp)
+            pylab.locator_params(axis='x', nbins=4, tight=True)
+    def ptcs(self, xrange=(0.1, 1e4), yrange=(0.1, 1e4), figsize=(11, 8.5)):
         ptc = pyfits.open(self._fullpath('%s_ptc.fits' % self.sensor_id))
         for amp in imutils.allAmps:
-            print "Amp", amp
+            #print "Amp", amp
+            subplot = (4, 4, amp)
+            if amp == 1:
+                win = plot.Window(subplot=subplot, figsize=figsize,
+                                  xlabel=r'mean (ADU)',
+                                  ylabel=r'variance (ADU$^2$)', size='large')
+                win.frameAxes.text(0.5, 1.08,
+                                   'Photon Transfer Curves, %s' \
+                                       % self.sensor_id,
+                                   horizontalalignment='center',
+                                   verticalalignment='top',
+                                   transform=win.frameAxes.transAxes,
+                                   size='large')
+            else:
+                win.select_subplot(*subplot)
+            self._offset_subplot(win)
             mean = ptc[1].data.field('AMP%02i_MEAN' % amp)
             var = ptc[1].data.field('AMP%02i_VAR' % amp)
-            win = plot.xyplot(mean, var, xname='mean (ADU)',
-                              yname='variance (ADU^2)',
+            win = plot.xyplot(mean, var, xname='', yname='',
                               xrange=xrange, yrange=yrange,
-                              xlog=1, ylog=1)
+                              xlog=1, ylog=1, new_win=False,)
             xx = np.logspace(np.log10(xrange[0]), np.log10(xrange[1]), 20)
             plot.curve(xx, xx/self.results['GAIN'][amp-1], oplot=1, color='r')
-            win.set_title('Amp %i' % amp)
-            self._save_fig('PTC_%s_amp%02i' % (self.sensor_id, amp))
-    def gains(self):
+            pylab.annotate('Amp %i' % amp, (0.475, 0.8),
+                           xycoords='axes fraction', size='x-small')
+    def _offset_subplot(self, win, xoffset=0.025, yoffset=0.025):
+        bbox = win.axes[-1].get_position()
+        points = bbox.get_points()
+        points[0] += xoffset
+        points[1] += yoffset
+        bbox.set_points(points)
+        win.axes[-1].set_position(bbox)
+    def gains(self, oplot=0, xoffset=0.25, width=0.5, color='b'):
         results = self.results
-        plot.xyplot(results['AMP'], results['GAIN'], xname='Amp',
-                    yname='gain (e-/ADU)', yrange=(0, max(results['GAIN'])*1.2))
-        self._save_fig('Gain_vs_amp_%s' % self.sensor_id)
-    def linearity(self, gain_range=(1, 6), max_dev=0.02):
+        win = plot.bar(results['AMP'] - xoffset, results['GAIN'],
+                       xname='Amp', yname='gain (e-/DN)',
+                       yrange=(0, max(results['GAIN']*1.2)),
+                       xrange=(0, 17), color=color, width=width)
+        win.set_title(self.sensor_id)
+    def noise(self, oplot=0, xoffset=0.25, width=0.5, color='b'):
+        results = self.results
+        win = plot.bar(results['AMP'] - xoffset, results['READ_NOISE'],
+                       xname='Amp', yname='read noise (rms e-)',
+                       yrange=(0, max(results['GAIN']*1.2)),
+                       xrange=(0, 17), color=color, width=width)
+        win.set_title(self.sensor_id)
+    def linearity(self, gain_range=(1, 6), max_dev=0.02, figsize=(11, 8.5)):
         ptc = pyfits.open(self._fullpath('%s_ptc.fits' % self.sensor_id))
         detresp = DetectorResponse(self._fullpath('%s_det_response.fits' 
                                                   % self.sensor_id),
                                    ptc=ptc, gain_range=gain_range)
         for amp in imutils.allAmps:
-            print "Amp", amp
-            try:
-                maxdev, fit_pars = detresp.linearity(amp, make_plot=True,
-                                                     title='Amp %i' % amp,
-                                                     max_dev=max_dev,
-                                                     interactive=self.interactive)
-                self._save_fig('Linearity_%s_amp%02i' % (self.sensor_id, amp))
-            except Exception, e:
-                print e
-                continue
+            #print "Amp", amp
+            maxdev, fit_pars, Ne, flux = detresp.linearity(amp)
+            f1 = np.poly1d(fit_pars)
+            dNfrac = 1 - Ne/f1(flux)
+
+            subplot = (4, 4, amp)
+            if amp == 1:
+                win = plot.Window(subplot=subplot, figsize=figsize,
+                                  xlabel='e-/pixel', ylabel='', size='large')
+                win.frameAxes.text(0.5, 1.08, 'Linearity, %s' % self.sensor_id,
+                                   horizontalalignment='center',
+                                   verticalalignment='top',
+                                   transform=win.frameAxes.transAxes,
+                                   size='large')
+            else:
+                win.select_subplot(*subplot)
+            self._offset_subplot(win)
+            # Resize subplot for plotting flux vs exposure.
+            bbox = win.axes[-1].get_position()
+            top_pts = bbox.get_points()
+            bot_pts = copy.deepcopy(top_pts)
+            dx, dy = top_pts[1] - top_pts[0]
+            top_pts[0][1] += dy/4
+            bbox.set_points(top_pts)
+            win.axes[-1].set_position(bbox)
+            win.axes[-1].loglog(Ne, flux, 'ko')
+            win.axes[-1].loglog(f1(flux), flux, 'r-')
+            pylab.annotate('Amp %i' % amp, (0.2, 0.8),
+                           xycoords='axes fraction', size='x-small')
+            if amp in (1, 5, 9, 13):
+                win.axes[-1].set_ylabel('flux')
+            for label in win.axes[-1].get_xticklabels():
+                label.set_visible(False)
+
+            # Add fractional residuals sub-subplot.
+            bot_rect = [bot_pts[0][0], bot_pts[0][1], dx, dy/4.]
+            bot_ax = win.fig.add_axes(bot_rect, sharex=win.axes[-1])
+            bot_ax.semilogx(Ne, dNfrac, 'ko')
+            bot_ax.semilogx(Ne, np.zeros(len(Ne)), 'r-')
+            pylab.locator_params(axis='y', nbins=5, tight=True)
+            plot.setAxis(yrange=(-1.5*max_dev, 1.5*max_dev))
     def qe_ratio(self, ref, amp=None):
         if amp is None:
             amps = imutils.allAmps
@@ -119,9 +202,10 @@ class EOTestPlots(object):
                                                          ref.sensor_id))
             win.set_title('Amp %i' % amp)
             plot.hline(1)
-            self._save_fig('QE_ratio_%s_amp%02i' % (self.sensor_id, amp))
     def qe(self):
         qe_data = self.qe_data
+        bands = qe_data[2].data.field('BAND')
+
         band_pass = OrderedDict()
         band_pass['u'] = (321, 391)
         band_pass['g'] = (402, 552)
@@ -129,17 +213,22 @@ class EOTestPlots(object):
         band_pass['i'] = (691, 818)
         band_pass['z'] = (818, 922)
         band_pass['y'] = (930, 1070)
-        band_wls = np.array([sum(band_pass[b])/2. for b in band_pass.keys()])
-
+        band_wls = np.array([sum(band_pass[b])/2. for b in band_pass.keys()
+                             if b in bands])
+        band_wls_errs =  np.array([(band_pass[b][1] - band_pass[b][0])/2. 
+                                   for b in band_pass.keys() if b in bands])
         wl = qe_data[1].data.field('WAVELENGTH')
         qe = {}
         for amp in imutils.allAmps:
             qe[amp] = qe_data[1].data.field('AMP%02i' % amp)
             win = plot.curve(wl, qe[amp], xname='wavelength (nm)',
-                             yname='QE (e-/photon)', oplot=amp-1)
+                             yname='QE (e-/photon)', oplot=amp-1,
+                             xrange=(300, 1100))
+            if amp == 1:
+                win.set_title(self.sensor_id)
             qe_band = qe_data[2].data.field('AMP%02i' % amp)
-            plot.xyplot(band_wls, qe_band, oplot=1)
-        self._save_fig('QE_%s' % self.sensor_id)
+            plot.xyplot(band_wls, qe_band, xerr=band_wls_errs, 
+                        oplot=1, color='g')
     def confluence_table(self, outfile=False):
         if outfile:
             output = open(self._outputpath('%s_results.txt' % self.sensor_id), 'w')
@@ -158,8 +247,9 @@ class EOTestPlots(object):
 
 if __name__ == '__main__':
     plots = EOTestPlots('114-03')
-#    plots.fe55_dists(chiprob_min=0.1)
-#    plots.ptcs()
-#    plots.gains()
-#    plots.linearity()
+    plots.fe55_dists()
+    plots.ptcs()
+    plots.linearity()
+    plots.gains()
+    plot.noise()
     plots.confluence_table()

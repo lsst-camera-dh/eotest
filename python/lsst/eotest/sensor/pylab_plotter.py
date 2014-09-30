@@ -11,13 +11,22 @@ _windows = {}
 _win_id = -1
 
 class Window(object):
-    def __init__(self, id=None, subplot=111):
+    def __init__(self, id=None, subplot=(1, 1, 1), figsize=None,
+                 xlabel=None, ylabel=None, size='medium', title=None):
         global _win_id, _windows
         if id is None:
             _win_id += 1
             id = _win_id
-        self.fig = pylab.figure(id)
-        self.axes = [self.fig.add_subplot(subplot)]
+        self.fig = pylab.figure(num=id, figsize=figsize)
+        if xlabel is not None or ylabel is not None:
+            self.frameAxes = self.fig.add_subplot(111, frameon=False)
+            if title is not None:
+                self.frameAxes.set_title(title)
+            pylab.xticks([])
+            pylab.yticks([])
+            pylab.xlabel(xlabel, size=size)
+            pylab.ylabel(ylabel, size=size)
+        self.axes = [self.fig.add_subplot(*subplot)]
         self.id = id
         self.handles = []
         _windows[id] = self
@@ -135,6 +144,22 @@ def xyplot(x, y, xerr=None, yerr=None, xlog=0, ylog=0,
         xerrors(x, y, xerr, color=color)
     if yerr is not None:
         yerrors(x, y, yerr, color=color)
+    if not oplot:
+        pylab.xlabel(xname)
+        pylab.ylabel(yname)
+        setAxis(xrange, yrange)
+    win.handles.append(handle)
+    return win
+
+def bar(x, y, xname='x', yname='y', oplot=0, color='k',
+        xrange=None, yrange=None, new_win=True, ylog=0,
+        width=0.8):
+    global _win_id, _windows
+    if oplot == 0 and new_win:
+        win = Window()
+    else:
+        win = _windows[_win_id]
+    handle = pylab.bar(x, y, color=color, log=ylog, width=width)
     if not oplot:
         pylab.xlabel(xname)
         pylab.ylabel(yname)
