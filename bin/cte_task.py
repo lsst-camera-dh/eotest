@@ -24,4 +24,4 @@ task.config.verbose = args.verbose
 
 superflat_files = args.files(args.superflat_pattern, args.superflat_file_list)
 
-task.run(args.sensor_id, superflat_files, args.mask_files())
+task.run(args.sensor_id, superflat_files, args.mask_files(superflat_files[0]))

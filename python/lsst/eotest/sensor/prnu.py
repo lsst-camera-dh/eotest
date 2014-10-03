@@ -39,7 +39,7 @@ def prnu(infile, mask_files, gains, correction_image=None):
 
 if __name__ == '__main__':
     infile = 'work/sensorData/000-00/lambda/debug/000-00_lambda_0450.0_debug.fits'
-    mask_files = ('work/ccd250_defects.fits', )
+    mask_files = ()
 
     md = imutils.Metadata('work/000-00_gains.fits', 1)
     gains = dict([(amp, md.get('GAIN%s' % imutils.channelIds[amp]))

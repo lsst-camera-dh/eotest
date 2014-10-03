@@ -16,7 +16,7 @@ import lsst.eotest.image_utils as imutils
 class EOTestPlots(object):
     plotter = plot
     def __init__(self, sensor_id, rootdir='.', output_dir='.', ps=False,
-                 interactive=False):
+                 interactive=False, results_file=None):
         self.sensor_id = sensor_id
         self.rootdir = rootdir
         self.output_dir = output_dir
@@ -28,16 +28,17 @@ class EOTestPlots(object):
             plot.pylab.ion()
         else:
             plot.pylab.ioff()
-        results_file = self._fullpath('%s_eotest_results.fits' % sensor_id)
+        if results_file is None:
+            results_file = self._fullpath('%s_eotest_results.fits' % sensor_id)
         if not os.path.exists(results_file):
             raise RuntimeError("EOTestPlots: %s not found" % results_file)
         self.results = EOTestResults(results_file)
         self._qe_data = None
+        self._qe_file = self._fullpath('%s_QE.fits' % self.sensor_id)
     @property
     def qe_data(self):
         if self._qe_data is None:
-            self._qe_data = pyfits.open(self._fullpath('%s_QE.fits' 
-                                                       % self.sensor_id))
+            self._qe_data = pyfits.open(self._qe_file)
         return self._qe_data
     def _save_fig(self, outfile_root):
         plot.pylab.savefig(self._outputpath('%s.png' % outfile_root))
@@ -47,16 +48,18 @@ class EOTestPlots(object):
         return os.path.join(self.rootdir, basename)
     def _outputpath(self, basename):
         return os.path.join(self.output_dir, basename)
-    def crosstalk_matrix(self, cmap=pylab.cm.hot):
-        infile = os.path.join(self.rootdir, 
-                              '%s_xtalk_matrix.fits' % self.sensor_id)
-        foo = CrosstalkMatrix(infile)
+    def crosstalk_matrix(self, cmap=pylab.cm.hot, xtalk_file=None):
+        if xtalk_file is None:
+            xtalk_file = os.path.join(self.rootdir, 
+                                      '%s_xtalk_matrix.fits' % self.sensor_id)
+        foo = CrosstalkMatrix(xtalk_file)
 #        foo.plot_matrix(cmap=cmap)
         win = foo.plot(title="Crosstalk, %s" % self.sensor_id)
         return foo
-    def fe55_dists(self, chiprob_min=0.1):
-        fe55_file = glob.glob(self._fullpath('%s_psf_results*.fits' 
-                                                  % self.sensor_id))[0]
+    def fe55_dists(self, chiprob_min=0.1, fe55_file=None):
+        if fe55_file is None:
+            fe55_file = glob.glob(self._fullpath('%s_psf_results*.fits' 
+                                                 % self.sensor_id))[0]
         fe55_catalog = pyfits.open(fe55_file)
         win = None
         figsize = (11, 8.5)
@@ -79,8 +82,12 @@ class EOTestPlots(object):
                 foo.plot(interactive=True, subplot=(4, 4, amp), win=win,
                          frameLabels=True, amp=amp)
             pylab.locator_params(axis='x', nbins=4, tight=True)
-    def ptcs(self, xrange=(0.1, 1e4), yrange=(0.1, 1e4), figsize=(11, 8.5)):
-        ptc = pyfits.open(self._fullpath('%s_ptc.fits' % self.sensor_id))
+    def ptcs(self, xrange=(0.1, 1e4), yrange=(0.1, 1e4), figsize=(11, 8.5),
+             ptc_file=None):
+        if ptc_file is not None:
+            ptc = pyfits.open(ptc_file)
+        else:
+            ptc = pyfits.open(self._fullpath('%s_ptc.fits' % self.sensor_id))
         for amp in imutils.allAmps:
             #print "Amp", amp
             subplot = (4, 4, amp)
@@ -128,11 +135,19 @@ class EOTestPlots(object):
                        yrange=(0, max(results['GAIN']*1.2)),
                        xrange=(0, 17), color=color, width=width)
         win.set_title(self.sensor_id)
-    def linearity(self, gain_range=(1, 6), max_dev=0.02, figsize=(11, 8.5)):
-        ptc = pyfits.open(self._fullpath('%s_ptc.fits' % self.sensor_id))
-        detresp = DetectorResponse(self._fullpath('%s_det_response.fits' 
-                                                  % self.sensor_id),
-                                   ptc=ptc, gain_range=gain_range)
+    def linearity(self, gain_range=(1, 6), max_dev=0.02, figsize=(11, 8.5),
+                  ptc_file=None, detresp_file=None):
+        if ptc_file is not None:
+            ptc = pyfits.open(ptc_file)
+        else:
+            ptc = pyfits.open(self._fullpath('%s_ptc.fits' % self.sensor_id))
+        if detresp_file is not None:
+            detresp = DetectorResponse(detresp_file, ptc=ptc,
+                                       gain_range=gain_range)
+        else:
+            detresp = DetectorResponse(self._fullpath('%s_det_response.fits' 
+                                                      % self.sensor_id),
+                                       ptc=ptc, gain_range=gain_range)
         for amp in imutils.allAmps:
             #print "Amp", amp
             maxdev, fit_pars, Ne, flux = detresp.linearity(amp)
@@ -175,7 +190,9 @@ class EOTestPlots(object):
             bot_ax.semilogx(Ne, np.zeros(len(Ne)), 'r-')
             pylab.locator_params(axis='y', nbins=5, tight=True)
             plot.setAxis(yrange=(-1.5*max_dev, 1.5*max_dev))
-    def qe_ratio(self, ref, amp=None):
+    def qe_ratio(self, ref, amp=None, qe_file=None):
+        if qe_file is not None:
+            self._qe_file = qe_file
         if amp is None:
             amps = imutils.allAmps
         else:
@@ -202,7 +219,9 @@ class EOTestPlots(object):
                                                          ref.sensor_id))
             win.set_title('Amp %i' % amp)
             plot.hline(1)
-    def qe(self):
+    def qe(self, qe_file=None):
+        if qe_file is not None:
+            self._qe_file = qe_file
         qe_data = self.qe_data
         bands = qe_data[2].data.field('BAND')
 
@@ -231,7 +250,8 @@ class EOTestPlots(object):
                         oplot=1, color='g')
     def confluence_table(self, outfile=False):
         if outfile:
-            output = open(self._outputpath('%s_results.txt' % self.sensor_id), 'w')
+            output = open(self._outputpath('%s_results.txt' 
+                                           % self.sensor_id), 'w')
         else:
             output = sys.stdout
         for name in self.results.colnames:
@@ -244,6 +264,8 @@ class EOTestPlots(object):
         output.write('\n')
         if outfile:
             output.close()
+    def latex_table(self, outfile):
+        pass
 
 if __name__ == '__main__':
     plots = EOTestPlots('114-03')
@@ -251,5 +273,8 @@ if __name__ == '__main__':
     plots.ptcs()
     plots.linearity()
     plots.gains()
-    plot.noise()
+    plots.noise()
+    plots.qe()
+    plots.crosstalk_matrix()
     plots.confluence_table()
+    plots.latex_table()

@@ -22,5 +22,5 @@ task.config.output_dir = args.output_dir
 task.config.verbose = args.verbose
 
 infiles = args.files(args.file_pattern, args.prnu_file_list)
-task.run(args.sensor_id, infiles, args.mask_files(), args.system_gains(),
-         args.correction_image)
+task.run(args.sensor_id, infiles, args.mask_files(infiles[0]),
+         args.system_gains(), args.correction_image)

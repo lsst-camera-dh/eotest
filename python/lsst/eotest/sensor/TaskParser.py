@@ -8,7 +8,7 @@ import glob
 import argparse
 import lsst.afw.image as afwImage
 import lsst.eotest.image_utils as imutils
-from ccd250_mask import ccd250_mask
+from rolloff_mask import rolloff_mask
 from EOTestResults import EOTestResults
 from lsst.eotest.database.SensorDb import SensorDb, NullDbObject
 from lsst.eotest.database.SensorGains import SensorGains
@@ -70,7 +70,7 @@ class TaskNamespace(object):
         if infile is not None:
             my_mask_files.append('edge_rollover_defect_mask.fits')
             if not os.path.isfile(my_mask_files[-1]):
-                ccd250_mask(infile, my_mask_files[-1])
+                rolloff_mask(infile, my_mask_files[-1])
         elif self.args.mask_file == 'None':
             my_mask_files = ()
         elif self.args.mask_file is not None:

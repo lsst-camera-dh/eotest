@@ -53,7 +53,7 @@ class BrightPixelsTask(pipeBase.Task):
         md = imutils.Metadata(dark_files[0], 1)
         exptime = ccd.md.get('EXPTIME')
         outfile = os.path.join(self.config.output_dir,
-                               '%s_bright_pixel_map.fits' % sensor_id)
+                               '%s_bright_pixel_mask.fits' % sensor_id)
         total_bright_pixels = 0
         if self.config.verbose:
             self.log.info("Segment     # bright pixels")

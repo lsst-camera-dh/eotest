@@ -17,5 +17,6 @@ task = sensorTest.TrapTask()
 task.config.output_dir = args.output_dir
 task.config.verbose = args.verbose
 
-task.run(args.sensor_id, args.pocket_pumped_file, args.mask_files(),
+task.run(args.sensor_id, args.pocket_pumped_file,
+         args.mask_files(args.pocket_pumped_file),
          args.system_gains())

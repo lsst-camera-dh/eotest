@@ -48,6 +48,8 @@ def find_flat2(flat1):
 class FlatPairConfig(pexConfig.Config):
     """Configuration for flat pair task"""
     output_dir = pexConfig.Field("Output directory", str, default='.')
+    eotest_results_file = pexConfig.Field("EO test results filename",
+                                          str, default=None)
     verbose = pexConfig.Field("Turn verbosity on", bool, default=True)
 
 class FlatPairTask(pipeBase.Task):
@@ -74,8 +76,10 @@ class FlatPairTask(pipeBase.Task):
         #
         detresp = DetectorResponse(detrespfile)
 
-        outfile = os.path.join(self.config.output_dir,
-                               '%s_eotest_results.fits' % self.sensor_id)
+        outfile = self.config.eotest_results_file
+        if outfile is None:
+            outfile = os.path.join(self.config.output_dir,
+                                   '%s_eotest_results.fits' % self.sensor_id)
         output = EOTestResults(outfile)
         if self.config.verbose:
             self.log.info("Segment    full well (e-/pixel)   max. frac. dev.")
@@ -85,7 +89,7 @@ class FlatPairTask(pipeBase.Task):
             except (ValueError, RuntimeError, TypeError):
                 full_well = None
             try:
-                maxdev, fit_pars = detresp.linearity(amp)
+                maxdev, fit_pars, Ne, flux = detresp.linearity(amp)
             except:
                 maxdev = None
             if self.config.verbose:

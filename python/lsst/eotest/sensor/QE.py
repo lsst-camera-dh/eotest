@@ -210,8 +210,8 @@ class QE_Data(object):
         formats[0] = '2A'
         units[0] = None
 
-        HDUList.append(pyfits.TableFactory(fits_cols(zip(colnames, formats,
-                                                         units, columns))))
+        HDUList.append(pyfitsTableFactory(fits_cols(zip(colnames, formats,
+                                                        units, columns))))
         HDUList[-1].name = 'QE_BANDS'
         pyfitsWriteto(HDUList, outfile, clobber=clobber)
     def plot_curves(self, outfile=None, interactive=False):

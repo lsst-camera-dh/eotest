@@ -11,7 +11,7 @@ import lsst.eotest.image_utils as imutils
 from fe55_psf import PsfGaussFit
 from MaskedCCD import MaskedCCD
 from EOTestResults import EOTestResults
-from fe55_gain_fitter import fe55_gain_fitter
+from Fe55GainFitter import Fe55GainFitter
 
 import lsst.pex.config as pexConfig
 import lsst.pipe.base as pipeBase
@@ -72,7 +72,9 @@ class Fe55Task(pipeBase.Task):
             dn = data['dn']
             if len(dn) > 2:
                 try:
-                    gains[amp], kalpha_peak, kalpha_sigma = fe55_gain_fitter(dn)
+                    foo = Fe55GainFitter(dn)
+                    kalpha_peak, kalpha_sigma = foo.fit()
+                    gains[amp] = foo.gain
                 except RuntimeError, e:
                     print e
                     continue

@@ -35,4 +35,4 @@ else:
     system_noise_files = args.files(args.noise, args.noise_file_list)
 
 task.run(args.sensor_id, bias_files, args.system_gains(), 
-         system_noise_files, args.mask_files())
+         system_noise_files, args.mask_files(bias_files[0]))

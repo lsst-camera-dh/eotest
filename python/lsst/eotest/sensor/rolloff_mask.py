@@ -1,7 +1,7 @@
 """
-@brief Script to create a mask for the CCD250 defects, specifically
-the edge roll-off effects around the perimeter of the sensors and the
-effects of the midline blooming stop implant.  These are documented by
+@brief Script to create a mask for the the edge roll-off effects
+around the perimeter of the sensors and, in e2v devices, the effects
+of the midline blooming stop implant.  These are documented by
 Peter Doherty's "Status of sensor characterization" reports linked in
 to the Feb 8, 2013 agenda for the Sensor Testing Meetings,
 https://confluence.slac.stanford.edu/x/DQvNBw
@@ -21,8 +21,7 @@ from AmplifierGeometry import makeAmplifierGeometry, amp_loc
 from BrightPixels import BrightPixels
 from sim_tools import CCD
 
-def ccd250_mask(infile, outfile,
-#def rolloff_mask(infile, outfile,
+def rolloff_mask(infile, outfile,
                  mask_plane='ROLLOFF_DEFECTS',
                  tmp_mask_image='temp_mask_image.fits',
                  outer_edge_width=10, 
@@ -123,7 +122,3 @@ def ccd250_mask(infile, outfile,
         bright_pixels.generate_mask(outfile)
     if cleanup:
         os.remove(tmp_mask_image)
-        
-if __name__ == '__main__':
-    mask_file = 'CCD250_DEFECTS_mask.fits'
-    ccd250_mask(mask_file, cleanup=False)

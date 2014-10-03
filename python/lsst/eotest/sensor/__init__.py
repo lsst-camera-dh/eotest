@@ -18,6 +18,7 @@ from eperTask import EPERTask
 from DetectorResponse import DetectorResponse
 from prnu import prnu
 from Traps import Traps
+from rolloff_mask import rolloff_mask
 #
 # Pipe tasks
 #

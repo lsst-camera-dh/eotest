@@ -30,5 +30,6 @@ task.config.verbose = args.verbose
 qe_files = args.files(args.qe_files, args.qe_file_list)
 
 task.run(args.sensor_id, qe_files, args.ccd_cal_file, args.int_sph_cal_file,
-         args.wavelength_scan_file, args.mask_files(), args.system_gains(),
-         pd_cal_file=args.pd_cal_file, medians_file=args.medians_file)
+         args.wavelength_scan_file, args.mask_files(qe_files[0]),
+         args.system_gains(), pd_cal_file=args.pd_cal_file,
+         medians_file=args.medians_file)

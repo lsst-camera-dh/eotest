@@ -22,4 +22,4 @@ task.config.verbose = args.verbose
 
 xtalk_files = args.files(args.xtalk_files, args.xtalk_file_list)
 
-task.run(args.sensor_id, xtalk_files, args.mask_files())
+task.run(args.sensor_id, xtalk_files, args.mask_files(xtalk_files[0]))
