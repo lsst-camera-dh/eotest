@@ -127,14 +127,16 @@ class EOTestPlots(object):
                        xname='Amp', yname='gain (e-/DN)',
                        yrange=(0, max(results['GAIN']*1.2)),
                        xrange=(0, 17), color=color, width=width)
-        win.set_title(self.sensor_id)
+        win.set_title("System Gain, %s" % self.sensor_id)
     def noise(self, oplot=0, xoffset=0.25, width=0.5, color='b'):
         results = self.results
+        ymax = max(1.2*max(results['READ_NOISE']), 10)
         win = plot.bar(results['AMP'] - xoffset, results['READ_NOISE'],
                        xname='Amp', yname='read noise (rms e-)',
-                       yrange=(0, max(results['GAIN']*1.2)),
-                       xrange=(0, 17), color=color, width=width)
-        win.set_title(self.sensor_id)
+                       xrange=(0, 17), color=color, width=width,
+                       yrange=(0, ymax))
+        plot.hline(8)
+        win.set_title("Read Noise, %s" % self.sensor_id)
     def linearity(self, gain_range=(1, 6), max_dev=0.02, figsize=(11, 8.5),
                   ptc_file=None, detresp_file=None):
         if ptc_file is not None:
@@ -244,7 +246,7 @@ class EOTestPlots(object):
                              yname='QE (e-/photon)', oplot=amp-1,
                              xrange=(300, 1100))
             if amp == 1:
-                win.set_title(self.sensor_id)
+                win.set_title('QE, %s' % self.sensor_id)
             qe_band = qe_data[2].data.field('AMP%02i' % amp)
             plot.xyplot(band_wls, qe_band, xerr=band_wls_errs, 
                         oplot=1, color='g')
