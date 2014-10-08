@@ -9,6 +9,7 @@ import numpy as np
 import pyfits
 from lsst.eotest.pyfitsTools import pyfitsWriteto
 import pylab
+import pylab_plotter as plot
 import lsst.afw.detection as afwDetect
 import lsst.afw.geom as afwGeom
 import lsst.afw.math as afwMath
@@ -168,7 +169,7 @@ class CrosstalkMatrix(object):
         self.filename = filename
         self.namps = namps
         self._set_matrix()
-        if self.filename is not None and os.path.isfile(self.filename):
+        if self.filename is not None:
             self._read_matrix()
     def set_row(self, agg, ratios):
         self.matrix[agg-1] = np.array([ratios[amp][0] for amp 
@@ -256,7 +257,8 @@ class CrosstalkMatrix(object):
         my_matrix = np.copy(self.matrix)
         for i in range(self.namps):
             my_matrix[i][i] = 0
-        fig, axes = pylab.subplots()
+        win = plot.Window()
+        fig, axes = win.fig, win.axes[-1]
         foo = axes.imshow(my_matrix, interpolation='nearest', cmap=cmap)
         pylab.xlabel('victim')
         pylab.ylabel('aggressor')

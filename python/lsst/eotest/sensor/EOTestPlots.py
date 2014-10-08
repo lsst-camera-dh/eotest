@@ -2,19 +2,65 @@ import os
 import sys
 import glob
 import copy
-from collections import OrderedDict
 import numpy as np
 import pyfits
 import pylab
+import matplotlib as mpl
 import pylab_plotter as plot
 from EOTestResults import EOTestResults
 from Fe55GainFitter import Fe55GainFitter
 from DetectorResponse import DetectorResponse
 from crosstalk import CrosstalkMatrix
+from QE import QE_Data
+from AmplifierGeometry import parse_geom_kwd
 import lsst.eotest.image_utils as imutils
+import lsst.afw.math as afwMath
+
+def plot_flat(infile, nsig=3, cmap=pylab.cm.hot):
+    foo = pyfits.open(infile)
+    detsize = parse_geom_kwd(foo[1].header['DETSIZE'])
+    nx = detsize['xmax']
+    ny = detsize['ymax']
+    mosaic = np.zeros((ny, nx), dtype=np.float)
+    for ypos in range(2):
+        for xpos in range(8):
+            amp = ypos*8 + xpos + 1
+            segment = foo[amp].data
+            datasec = parse_geom_kwd(foo[amp].header['DATASEC'])
+            detsec = parse_geom_kwd(foo[amp].header['DETSEC'])
+            dx = np.abs(datasec['xmax'] - datasec['xmin']) + 1
+            dy = np.abs(datasec['ymax'] - datasec['ymin']) + 1
+            if ypos == 0:
+                xmin = nx - (xpos + 1)*dx
+                ymin = dy
+            else:
+                xmin = xpos*dx
+                ymin = 0
+            xmax = xmin + dx
+            ymax = ymin + dy
+            subarr = segment[datasec['ymin']-1:datasec['ymax'],
+                             datasec['xmin']-1:datasec['xmax']]
+            if detsec['xmax'] > detsec['xmin']:  # flip in x-direction
+                subarr = subarr[:,::-1]
+            if detsec['ymax'] > detsec['ymin']:  # flip in y-direction
+                subarr = subarr[::-1,:]
+            mosaic[ymin:ymax, xmin:xmax] = subarr
+    pixel_data = mosaic.flatten()
+    stats = afwMath.makeStatistics(pixel_data,
+                                   afwMath.STDEVCLIP | afwMath.MEDIAN)
+    median = stats.getValue(afwMath.MEDIAN)
+    stdev = stats.getValue(afwMath.STDEVCLIP)
+    vmin = max(min(pixel_data), median - nsig*stdev)
+    vmax = min(max(pixel_data), median + nsig*stdev)
+    win = plot.Window()
+    image = win.axes[-1].imshow(mosaic, interpolation='nearest', cmap=cmap)
+    norm = mpl.colors.Normalize(vmin=vmin, vmax=vmax)
+    image.set_norm(norm)
+    win.fig.colorbar(image)
+    return win
 
 class EOTestPlots(object):
-    plotter = plot
+    band_pass = QE_Data.band_pass
     def __init__(self, sensor_id, rootdir='.', output_dir='.', ps=False,
                  interactive=False, results_file=None):
         self.sensor_id = sensor_id
@@ -226,18 +272,10 @@ class EOTestPlots(object):
             self._qe_file = qe_file
         qe_data = self.qe_data
         bands = qe_data[2].data.field('BAND')
-
-        band_pass = OrderedDict()
-        band_pass['u'] = (321, 391)
-        band_pass['g'] = (402, 552)
-        band_pass['r'] = (552, 691)
-        band_pass['i'] = (691, 818)
-        band_pass['z'] = (818, 922)
-        band_pass['y'] = (930, 1070)
-        band_wls = np.array([sum(band_pass[b])/2. for b in band_pass.keys()
-                             if b in bands])
-        band_wls_errs =  np.array([(band_pass[b][1] - band_pass[b][0])/2. 
-                                   for b in band_pass.keys() if b in bands])
+        band_wls = np.array([sum(self.band_pass[b])/2. for b in 
+                             self.band_pass.keys() if b in bands])
+        band_wls_errs = np.array([(self.band_pass[b][1]-self.band_pass[b][0])/2.
+                                  for b in self.band_pass.keys() if b in bands])
         wl = qe_data[1].data.field('WAVELENGTH')
         qe = {}
         for amp in imutils.allAmps:
@@ -250,6 +288,25 @@ class EOTestPlots(object):
             qe_band = qe_data[2].data.field('AMP%02i' % amp)
             plot.xyplot(band_wls, qe_band, xerr=band_wls_errs, 
                         oplot=1, color='g')
+    def flat_fields(self, lambda_dir, nsig=3, cmap=pylab.cm.hot,
+                    savefigs=False):
+        glob_string = os.path.join(lambda_dir, '*_lambda_????.?_*.fits')
+        print glob_string
+        flats = sorted(glob.glob(glob_string))
+        wls = []
+        for flat in flats:
+            wls.append(int(float(os.path.basename(flat).split('_')[2])))
+        wls = np.array(wls)
+        print wls
+        for band in self.band_pass:
+            mid_wl = sum(self.band_pass[band])/2.
+            dwl = np.abs(wls - mid_wl)
+            target = np.where(dwl == min(dwl))[0][0]
+            win = plot_flat(flats[target])
+            win.set_title(os.path.basename(flats[target]))
+            if savefigs:
+                pylab.savefig('%s_flat_%04i.png' 
+                              % (self.sensor_id, wls[target]))
     def confluence_table(self, outfile=False):
         if outfile:
             output = open(self._outputpath('%s_results.txt' 
