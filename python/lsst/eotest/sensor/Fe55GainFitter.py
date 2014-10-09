@@ -97,10 +97,13 @@ class Fe55GainFitter(object):
             win.axes[-1].set_position(bbox)
         if xrange is not None:
             self.xrange = xrange
-        hist = pylab.hist(self.signals, bins=bins, range=self.xrange,
-                          histtype='bar', color='b', log=True)
-        yrange = 1, max(hist[0])*1.5
-        plot.setAxis(self.xrange, yrange)
+        try:
+            hist = pylab.hist(self.signals, bins=bins, range=self.xrange,
+                              histtype='bar', color='b', log=True)
+            yrange = 1, max(hist[0])*1.5
+            plot.setAxis(self.xrange, yrange)
+        except:
+            return win
         if add_labels:
             pylab.xlabel('Bias Corrected Event Signal (DN)')
             pylab.ylabel('Entries / bin')

@@ -16,7 +16,8 @@ from AmplifierGeometry import parse_geom_kwd
 import lsst.eotest.image_utils as imutils
 import lsst.afw.math as afwMath
 
-def plot_flat(infile, nsig=3, cmap=pylab.cm.hot):
+def plot_flat(infile, nsig=3, cmap=pylab.cm.hot, win=None, subplot=(1, 1, 1),
+              figsize=None, wl=None):
     foo = pyfits.open(infile)
     detsize = parse_geom_kwd(foo[1].header['DETSIZE'])
     nx = detsize['xmax']
@@ -52,11 +53,19 @@ def plot_flat(infile, nsig=3, cmap=pylab.cm.hot):
     stdev = stats.getValue(afwMath.STDEVCLIP)
     vmin = max(min(pixel_data), median - nsig*stdev)
     vmax = min(max(pixel_data), median + nsig*stdev)
-    win = plot.Window()
+    if win is None:
+        win = plot.Window(subplot=subplot, figsize=figsize,
+                          xlabel='', ylabel='')
+    else:
+        win.select_subplot(*subplot)
     image = win.axes[-1].imshow(mosaic, interpolation='nearest', cmap=cmap)
     norm = mpl.colors.Normalize(vmin=vmin, vmax=vmax)
     image.set_norm(norm)
+    win.axes[-1].set_title('%i nm' % wl)
     win.fig.colorbar(image)
+    # Turn off tick labels for x- and y-axes
+    pylab.setp(win.axes[-1].get_xticklabels(), visible=False)
+    pylab.setp(win.axes[-1].get_yticklabels(), visible=False)
     return win
 
 class EOTestPlots(object):
@@ -70,10 +79,7 @@ class EOTestPlots(object):
             os.makedirs(output_dir)
         self.ps = ps
         self.interactive = interactive
-        if interactive:
-            plot.pylab.ion()
-        else:
-            plot.pylab.ioff()
+        plot.pylab.interactive(interactive)
         if results_file is None:
             results_file = self._fullpath('%s_eotest_results.fits' % sensor_id)
         if not os.path.exists(results_file):
@@ -102,22 +108,25 @@ class EOTestPlots(object):
 #        foo.plot_matrix(cmap=cmap)
         win = foo.plot(title="Crosstalk, %s" % self.sensor_id)
         return foo
-    def fe55_dists(self, chiprob_min=0.1, fe55_file=None):
+    def fe55_dists(self, chiprob_min=0.1, fe55_file=None, figsize = (11, 8.5)):
         if fe55_file is None:
             fe55_file = glob.glob(self._fullpath('%s_psf_results*.fits' 
                                                  % self.sensor_id))[0]
         fe55_catalog = pyfits.open(fe55_file)
         win = None
-        figsize = (11, 8.5)
         for amp in imutils.allAmps:
             #print "Amp", amp
             chiprob = fe55_catalog[amp].data.field('CHIPROB')
             index = np.where(chiprob > chiprob_min)
             dn = fe55_catalog[amp].data.field('DN')[index]
             foo = Fe55GainFitter(dn)
-            foo.fit()
+            try:
+                foo.fit()
+            except:
+                continue
             if amp == 1:
-                win = foo.plot(interactive=True, subplot=(4, 4, amp),
+                win = foo.plot(interactive=self.interactive, 
+                               subplot=(4, 4, amp),
                                figsize=figsize, frameLabels=True, amp=amp)
                 win.frameAxes.text(0.5, 1.08, 'Fe55, %s' % self.sensor_id,
                                    horizontalalignment='center',
@@ -125,7 +134,8 @@ class EOTestPlots(object):
                                    transform=win.frameAxes.transAxes,
                                    size='large')
             else:
-                foo.plot(interactive=True, subplot=(4, 4, amp), win=win,
+                foo.plot(interactive=self.interactive, 
+                         subplot=(4, 4, amp), win=win,
                          frameLabels=True, amp=amp)
             pylab.locator_params(axis='x', nbins=4, tight=True)
     def ptcs(self, xrange=(0.1, 1e4), yrange=(0.1, 1e4), figsize=(11, 8.5),
@@ -260,8 +270,6 @@ class EOTestPlots(object):
                     ref_fluxes.append(ref.qe_data[1].data.field(column)[i])
             fluxes = np.array(fluxes)
             ref_fluxes = np.array(ref_fluxes)
-            if self.interactive:
-                plot.pylab.ion()
             win = plot.xyplot(wls, fluxes/ref_fluxes, xname='wavelength (nm)',
                               yname='QE(%s) / QE(%s)' % (self.sensor_id,
                                                          ref.sensor_id))
@@ -289,24 +297,31 @@ class EOTestPlots(object):
             plot.xyplot(band_wls, qe_band, xerr=band_wls_errs, 
                         oplot=1, color='g')
     def flat_fields(self, lambda_dir, nsig=3, cmap=pylab.cm.hot,
-                    savefigs=False):
-        glob_string = os.path.join(lambda_dir, '*_lambda_????.?_*.fits')
+                    figsize=(11, 8.5)):
+        glob_string = os.path.join(lambda_dir, '*_lambda_*.fits')
         print glob_string
         flats = sorted(glob.glob(glob_string))
+        flats = [x for x in flats if x.find('bias') == -1]
         wls = []
         for flat in flats:
             wls.append(int(float(os.path.basename(flat).split('_')[2])))
         wls = np.array(wls)
-        print wls
-        for band in self.band_pass:
+        #print wls
+        for i, band in enumerate(self.band_pass):
             mid_wl = sum(self.band_pass[band])/2.
             dwl = np.abs(wls - mid_wl)
+            # Find the observed wavelength closest to the center of
+            # the bandpass.
             target = np.where(dwl == min(dwl))[0][0]
-            win = plot_flat(flats[target])
-            win.set_title(os.path.basename(flats[target]))
-            if savefigs:
-                pylab.savefig('%s_flat_%04i.png' 
-                              % (self.sensor_id, wls[target]))
+            subplot = (2, 3, i+1)
+            if i == 0:
+                win = plot_flat(flats[target], subplot=subplot, nsig=nsig,
+                                cmap=cmap, wl=wls[target], figsize=figsize)
+            else:
+                plot_flat(flats[target], subplot=subplot, win=win,
+                          nsig=nsig, cmap=cmap, wl=wls[target])
+        win.frameAxes.set_title('Flat Fields, %s' % self.sensor_id)
+        return win
     def confluence_table(self, outfile=False):
         if outfile:
             output = open(self._outputpath('%s_results.txt' 
