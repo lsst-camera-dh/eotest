@@ -61,6 +61,9 @@ def plot_flat(infile, nsig=3, cmap=pylab.cm.hot, win=None, subplot=(1, 1, 1),
     image = win.axes[-1].imshow(mosaic, interpolation='nearest', cmap=cmap)
     norm = mpl.colors.Normalize(vmin=vmin, vmax=vmax)
     image.set_norm(norm)
+    if wl is None:
+        # Extract wavelength from file
+        wl = foo[0].header['MONOWL']
     win.axes[-1].set_title('%i nm' % wl)
     win.fig.colorbar(image)
     # Turn off tick labels for x- and y-axes
@@ -207,8 +210,11 @@ class EOTestPlots(object):
                                                       % self.sensor_id),
                                        ptc=ptc, gain_range=gain_range)
         for amp in imutils.allAmps:
-            #print "Amp", amp
-            maxdev, fit_pars, Ne, flux = detresp.linearity(amp)
+            try:
+                maxdev, fit_pars, Ne, flux = detresp.linearity(amp)
+            except Exception, eObj:
+                print "EOTestPlots.linearity: amp %i" % amp
+                print "  ", eObj
             f1 = np.poly1d(fit_pars)
             dNfrac = 1 - Ne/f1(flux)
 
@@ -232,8 +238,17 @@ class EOTestPlots(object):
             top_pts[0][1] += dy/4
             bbox.set_points(top_pts)
             win.axes[-1].set_position(bbox)
-            win.axes[-1].loglog(Ne, flux, 'ko')
-            win.axes[-1].loglog(f1(flux), flux, 'r-')
+            try:
+                win.axes[-1].loglog(Ne, flux, 'ko')
+            except Exception, eObj:
+                print "EOTestPlots.linearity: amp %i" % amp
+                print "  ", eObj
+            try:
+                win.axes[-1].loglog(f1(flux), flux, 'r-')
+            except Exception, eObj:
+                print "EOTestPlots.linearity: amp %i" % amp
+                print "  ", eObj
+            sys.stdout.flush()
             pylab.annotate('Amp %i' % amp, (0.2, 0.8),
                            xycoords='axes fraction', size='x-small')
             if amp in (1, 5, 9, 13):
@@ -289,13 +304,14 @@ class EOTestPlots(object):
         for amp in imutils.allAmps:
             qe[amp] = qe_data[1].data.field('AMP%02i' % amp)
             win = plot.curve(wl, qe[amp], xname='wavelength (nm)',
-                             yname='QE (e-/photon)', oplot=amp-1,
+                             yname='QE (% e-/photon)', oplot=amp-1,
                              xrange=(300, 1100))
             if amp == 1:
                 win.set_title('QE, %s' % self.sensor_id)
             qe_band = qe_data[2].data.field('AMP%02i' % amp)
             plot.xyplot(band_wls, qe_band, xerr=band_wls_errs, 
                         oplot=1, color='g')
+        plot.hline(100)
     def flat_fields(self, lambda_dir, nsig=3, cmap=pylab.cm.hot,
                     figsize=(11, 8.5)):
         glob_string = os.path.join(lambda_dir, '*_lambda_*.fits')
