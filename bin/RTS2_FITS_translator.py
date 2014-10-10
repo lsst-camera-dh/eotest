@@ -105,23 +105,31 @@ class RTS2_FITS_translator(object):
         try:
             self.input['AMP0.MEAS_TIMES']
         except KeyError:
-            # Extension does not exist so assume this is not a flat and
-            # set to empty string.
-            self.output[0].header.set('MONDIODE', '')
-            return
+            try:
+                self.input['AMP1.MEAS_TIMES']
+            except KeyError:
+                # Extension does not exist so assume this is not a flat and
+                # set to empty string.
+                self.output[0].header.set('MONDIODE', '')
+                return
         try:
-            mean, stdev = self._bnl_monodiode_current()
-        except RuntimeError:
-            # Transitions in monodiode current data were not detected,
+            mean, stdev = self._bnl_mondiode_current()
+        except (RuntimeError, ValueError):
+            # Transitions in mondiode current data were not detected,
             # so a reliable current value cannot be computed using the
             # present algorithm.  Set the keyword value to an empty
             # string so that downstream tasks will fail if they try to
             # use this value in a calculation.
             mean = ''
+        if self.verbose:
+            print "Setting MONDIODE to", mean
         self.output[0].header.set('MONDIODE', mean)
-    def _bnl_monodiode_current(self):
-        data = self.input['AMP0.MEAS_TIMES'].data
-        y_pA, x_t = data.field(1), data.field(0)
+    def _bnl_mondiode_current(self):
+        try:
+            data = self.input['AMP0.MEAS_TIMES'].data
+        except KeyError:
+            data = self.input['AMP1.MEAS_TIMES'].data
+        y_pA, x_t = data.field('AMP0_A_CURRENT'), data.field('AMP0_MEAS_TIMES')
         # The following code has been lifted directly from JohnK's
         # xlatfits.py script at http://git.kuzew.net/lsst/xlatfits.git/
         i = 0;
@@ -155,9 +163,9 @@ class RTS2_FITS_translator(object):
             else:
                 x2 = cpnts[len(cpnts)-1];
 
-            return (np.mean(y_pA[x1:x2]), np.std(y_pA[x1:x2]))
-#        else:
-#            return -1, -1
+            # Convert from pA to nA
+            return np.mean(y_pA[x1:x2])/1e3, np.std(y_pA[x1:x2])/1e3
+
         raise RuntimeError("Could not compute monitoring photodiode current")
 
 if __name__ == '__main__':
