@@ -4,6 +4,7 @@
 conforming FITS files for analysis by the eotest package.
 """
 import os
+import sys
 import numpy as np
 import pyfits
 from lsst.eotest.pyfitsTools import pyfitsWriteto
@@ -19,6 +20,7 @@ class RTS2_FITS_translator(object):
         self.geom = sensorTest.AmplifierGeometry(prescan=geom['prescan'],
                                                  nx=geom['nx'], ny=geom['ny'],
                                                  amp_loc=amp_loc)
+        self._sequence_number = -1
     def __call__(self, infile, outfile, clobber=True):
         if self.verbose:
             print "processing", infile
@@ -59,8 +61,12 @@ class RTS2_FITS_translator(object):
     def _seqnum(self, infile):
         """This assumes the sequence number is the penultimate token
         in the base filename when split by the '_' delimiter."""
-        tokens = os.path.basename(infile).split('_')
-        return tokens[-2]
+        try:
+            tokens = os.path.basename(infile).split('_')
+            return tokens[-2]
+        except IndexError:
+            self._sequence_number += 1
+            return "%04i" % self._sequence_number
     def _headver(self):
         """Increment the header version by 1. If it is missing, assume
         there has only been one version."""
