@@ -7,6 +7,7 @@ import pyfits
 import pylab
 import matplotlib as mpl
 import pylab_plotter as plot
+from MaskedCCD import MaskedCCD
 from EOTestResults import EOTestResults
 from Fe55GainFitter import Fe55GainFitter
 from DetectorResponse import DetectorResponse
@@ -17,7 +18,8 @@ import lsst.eotest.image_utils as imutils
 import lsst.afw.math as afwMath
 
 def plot_flat(infile, nsig=3, cmap=pylab.cm.hot, win=None, subplot=(1, 1, 1),
-              figsize=None, wl=None):
+              figsize=None, wl=None, gains=None):
+    ccd = MaskedCCD(infile)
     foo = pyfits.open(infile)
     detsize = parse_geom_kwd(foo[1].header['DETSIZE'])
     nx = detsize['xmax']
@@ -26,9 +28,10 @@ def plot_flat(infile, nsig=3, cmap=pylab.cm.hot, win=None, subplot=(1, 1, 1),
     for ypos in range(2):
         for xpos in range(8):
             amp = ypos*8 + xpos + 1
-            segment = foo[amp].data
+            #
+            # Compute subarray boundaries for this segment in the mosaicked
+            # image array.
             datasec = parse_geom_kwd(foo[amp].header['DATASEC'])
-            detsec = parse_geom_kwd(foo[amp].header['DETSEC'])
             dx = np.abs(datasec['xmax'] - datasec['xmin']) + 1
             dy = np.abs(datasec['ymax'] - datasec['ymin']) + 1
             if ypos == 0:
@@ -39,13 +42,28 @@ def plot_flat(infile, nsig=3, cmap=pylab.cm.hot, win=None, subplot=(1, 1, 1),
                 ymin = 0
             xmax = xmin + dx
             ymax = ymin + dy
-            subarr = segment[datasec['ymin']-1:datasec['ymax'],
-                             datasec['xmin']-1:datasec['xmax']]
+            #
+            # Extract the bias-subtracted image for this segment
+            segment_image = ccd.unbiased_and_trimmed_image(amp)
+            subarr = segment_image.getImage().getArray()
+            #
+            # Determine flips in x- and y-directions in order to
+            # get the (1, 1) pixel in the lower right corner.
+            detsec = parse_geom_kwd(foo[amp].header['DETSEC'])
             if detsec['xmax'] > detsec['xmin']:  # flip in x-direction
                 subarr = subarr[:,::-1]
             if detsec['ymax'] > detsec['ymin']:  # flip in y-direction
                 subarr = subarr[::-1,:]
+            #
+            # Convert from ADU to e-
+            if gains is not None:
+                subarr *= gains[amp-1]
+            #
+            # Set the subarray in the mosaicked image.
             mosaic[ymin:ymax, xmin:xmax] = subarr
+    #
+    # Set the color map to extend over the range median +/- stdev(clipped)
+    # of the pixel values.
     pixel_data = mosaic.flatten()
     stats = afwMath.makeStatistics(pixel_data,
                                    afwMath.STDEVCLIP | afwMath.MEDIAN)
