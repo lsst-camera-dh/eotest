@@ -17,7 +17,7 @@ class EOTestResults(object):
     binary table.  The data to be collected are specified in LCA-10301-A.
     """
     def __init__(self, infile):
-        self.outfile = infile
+        self.infile = infile
         self.extname = 'AMPLIFIER_RESULTS'
         if not os.path.isfile(infile):
             self._createFitsObject()
@@ -73,7 +73,7 @@ class EOTestResults(object):
         Write or update the output file.
         """
         if outfile is None:
-            outfile = self.outfile
+            outfile = self.infile
         pyfitsWriteto(self.output, outfile, clobber=clobber)
 
 if __name__ == '__main__':

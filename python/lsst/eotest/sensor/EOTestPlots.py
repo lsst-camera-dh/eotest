@@ -350,18 +350,21 @@ class EOTestPlots(object):
             subplot = (2, 3, i+1)
             if i == 0:
                 win = plot_flat(flats[target], subplot=subplot, nsig=nsig,
-                                cmap=cmap, wl=wls[target], figsize=figsize)
+                                cmap=cmap, wl=wls[target], figsize=figsize,
+                                gains=self.results['GAIN'])
             else:
                 plot_flat(flats[target], subplot=subplot, win=win,
-                          nsig=nsig, cmap=cmap, wl=wls[target])
+                          nsig=nsig, cmap=cmap, wl=wls[target],
+                          gains=self.results['GAIN'])
         win.frameAxes.set_title('Flat Fields, %s' % self.sensor_id)
         return win
-    def confluence_table(self, outfile=False):
+    def confluence_tables(self, outfile=False, prnu_file=None):
         if outfile:
             output = open(self._outputpath('%s_results.txt' 
                                            % self.sensor_id), 'w')
         else:
             output = sys.stdout
+        # Write the per amp results.
         for name in self.results.colnames:
             output.write('|| %s' % name)
         output.write('||\n')
@@ -370,9 +373,22 @@ class EOTestPlots(object):
             output.write(format % tuple([self.results[x][i] 
                                          for x in self.results.colnames]))
         output.write('\n')
+        # Write the CCD-wide results.
+        # PRNU:
+        if prnu_file is None:
+            prnu_file = self.results.infile
+        prnu_results = pyfits.open(prnu_file)['PRNU_RESULTS'].data
+        output.write("|| wavelength || stdev of pixel values || mean || stdev/mean ||\n")
+        for wl, stdev, mean in zip(prnu_results['WAVELENGTH'],
+                                   prnu_results['STDEV'], prnu_results['MEDIAN']):
+            if stdev > 0:
+                output.write("| %i | %12.4e | %12.4e | %12.4e |\n" 
+                             % (wl, stdev, mean, stdev/mean))
+            else:
+                output.write("| %i | ... | ... | ... |\n" % wl)
         if outfile:
             output.close()
-    def latex_table(self, outfile):
+    def latex_tables(self, outfile):
         pass
 
 if __name__ == '__main__':
