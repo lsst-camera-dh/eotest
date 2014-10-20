@@ -34,7 +34,12 @@ class RTS2_FITS_translator(object):
         prototypes = sensorTest.fits_headers.fits_headers()
 
         # Primary HDU
-        self.output[0].header.set('MJD', self.output[0].header['JD']-2400000.5)
+        try:
+            self.output[0].header.set('MJD', self.output[0].header['JD']-2400000.5)
+        except KeyError:
+            from astropy.time import Time
+            t=Time(self.output[0].header['DATE-OBS'])
+            self.output[0].header.set('MJD', t.jd-2400000.5)
         self.output[0].header.set('FILENAME', os.path.basename(infile))
         self.output[0].header.set('SEQNUM', self._seqnum(infile))
         self.output[0].header.set('HEADVER', self._headver())
