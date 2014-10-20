@@ -1,7 +1,7 @@
 """
 @brief Pixel response non-uniformity calculation.  This is applied to
 the unmasked pixels for an entire CCD.  The computed quantities are
-the pixel mean, pixel median, and pixel standard deviation.
+the pixel mean, pixel mean, and pixel standard deviation.
 
 @author J. Chiang <jchiang@slac.stanford.edu>
 """
@@ -31,11 +31,11 @@ def prnu(infile, mask_files, gains, correction_image=None):
             image /= correction
         active_pixels.extend(extract_unmasked_pixels(ccd, amp, gains[amp]))
     active_pixels = np.array(active_pixels, dtype=np.float)
-    flags = afwMath.MEDIAN | afwMath.STDEV
+    flags = afwMath.MEAN | afwMath.STDEV
     stats = afwMath.makeStatistics(active_pixels, flags)
-    pix_median = stats.getValue(afwMath.MEDIAN)
+    pix_mean = stats.getValue(afwMath.MEAN)
     pix_stdev = stats.getValue(afwMath.STDEV)
-    return pix_stdev, pix_median
+    return pix_stdev, pix_mean
 
 if __name__ == '__main__':
     infile = 'work/sensorData/000-00/lambda/debug/000-00_lambda_0450.0_debug.fits'
@@ -45,10 +45,10 @@ if __name__ == '__main__':
     gains = dict([(amp, md.get('GAIN%s' % imutils.channelIds[amp]))
                   for amp in imutils.allAmps])
 
-    pix_stdev, pix_median = prnu(infile, mask_files, gains)
+    pix_stdev, pix_mean = prnu(infile, mask_files, gains)
 
-    excess_variance = pix_stdev**2 - pix_median
-    print "Excess pixel variance/pixel mean:", excess_variance/pix_median
+    excess_variance = pix_stdev**2 - pix_mean
+    print "Excess pixel variance/pixel mean:", excess_variance/pix_mean
     if excess_variance > 0:
         print "Fractional excess noise: %.2f" \
-            % (np.sqrt(excess_variance)/pix_median*100, )
+            % (np.sqrt(excess_variance)/pix_mean*100, )

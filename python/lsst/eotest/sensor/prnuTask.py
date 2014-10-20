@@ -17,6 +17,7 @@ import lsst.pipe.base as pipeBase
 class PrnuConfig(pexConfig.Config):
     """Configuration for pixel response non-uniformity task"""
     output_dir = pexConfig.Field("Output directory", str, default=".")
+    output_file = pexConfig.Field("Output filename", str, default=None)
     verbose = pexConfig.Field("Turn verbosity on", bool, default=True)
 
 class PrnuTask(pipeBase.Task):
@@ -27,26 +28,41 @@ class PrnuTask(pipeBase.Task):
     @pipeBase.timeMethod
     def run(self, sensor_id, prnu_files, mask_files, gains, correction_image):
         results = OrderedDict()
-        line = "wavelength (nm)   pixel_stdev   pixel_median"
+        line = "wavelength (nm)   pixel_stdev   pixel_mean"
         if self.config.verbose:
             self.log.info(line)
+        wl_index = {}
         for infile in prnu_files:
             md = imutils.Metadata(infile, 1)
-            wl = md.get('MONOWL')
-            if int(wl) in (350, 450, 500, 620, 750, 870, 1000):
-                pix_stdev, pix_median = prnu(infile, mask_files, gains,
-                                             correction_image=correction_image)
-                results[wl] = pix_stdev, pix_median
-                line = "%6.1f  %12.4e  %12.4e" % (wl, pix_stdev, pix_median)
-                if self.config.verbose:
-                    self.log.info(line)
-        outfile = os.path.join(self.config.output_dir,
-                               '%s_prnu_values.fits' % sensor_id)
+            wl = int(np.round(md.get('MONOWL')))
+            wl_index[wl] = infile
+        for wl in (350, 450, 500, 620, 750, 870, 1000):
+            if wl_index.has_key(wl):
+                pix_stdev, pix_mean = prnu(wl_index[wl], mask_files, gains,
+                                           correction_image=correction_image)
+                results[wl] = pix_stdev, pix_mean
+                line = "%6.1f  %12.4e  %12.4e" % (wl, pix_stdev, pix_mean)
+            else:
+                # Enter sentinel values for pixel stats for
+                # wavelengths that do not have the corresponding
+                # exposure
+                line = "%6.1f  %12s  %12s" % (wl, '    ...     ', 
+                                              '    ...     ')
+                results[wl] = -1, -1
+            if self.config.verbose:
+                self.log.info(line)
+        outfile = self.config.output_file
+        if self.config.output_file is None:
+            outfile = os.path.join(self.config.output_dir,
+                                   '%s_prnu_values.fits' % sensor_id)
+        else:
+            if outfile == os.path.basename(outfile):
+                outfile = os.path.join(self.config.output_dir, outfile)
         self.write(results, outfile)
         return results
     @pipeBase.timeMethod
     def write(self, results, outfile, clobber=True):
-        colnames = ['WAVELENGTH', 'STDEV', 'MEDIAN']
+        colnames = ['WAVELENGTH', 'STDEV', 'MEAN']
         formats = 'IEE'
         my_types = dict((("I", np.int), ("E", np.float)))
         columns = [np.zeros(len(results), dtype=my_types[fmt])
@@ -61,8 +77,13 @@ class PrnuTask(pipeBase.Task):
         for i, wl in enumerate(results.keys()):
             hdu.data.field('WAVELENGTH')[i] = wl
             hdu.data.field('STDEV')[i] = results[wl][0]
-            hdu.data.field('MEDIAN')[i] =results[wl][1]
-        output = pyfits.HDUList()
-        output.append(pyfits.PrimaryHDU())
-        output.append(hdu)
+            hdu.data.field('MEAN')[i] =results[wl][1]
+        if os.path.isfile(outfile):
+            output = pyfits.open(outfile)
+        else:
+            output = pyfits.HDUList()
+            output.append(pyfits.PrimaryHDU())
+        # Note that this will not replace an existing HDU with the
+        # same name.
+        output.append(hdu)  
         pyfitsWriteto(output, outfile, clobber=clobber)
