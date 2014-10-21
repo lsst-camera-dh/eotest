@@ -87,7 +87,7 @@ class DetectorResponse(object):
         fp = np.poly1d(np.polyfit(flux[indxp], Ne[indxp], order))
         df = lambda xx : 1 - fp(xx)/f1(xx) - frac_offset
         x = flux[indxp]
-        imin = np.where(x > 1e4)[0][0]
+        imin = np.where(x > 1e1)[0][0]
 #        flux0 = scipy.optimize.brentq(df, x[len(x)/2], x[-1])
         flux0 = scipy.optimize.brentq(df, x[imin], x[-1])
         full_well = int(fp(flux0))
@@ -119,7 +119,7 @@ class DetectorResponse(object):
         plot.xyplot(flux[indxp], Ne[indxp], oplot=1, color='r')
         plot.curve(flux, f1(flux), oplot=1)
         plot.curve(flux, fp(flux), oplot=1, color='b')
-    def linearity(self, amp, fit_range=(1e2, 9e4)):
+    def linearity(self, amp, fit_range=(1e3, 9e4)):
         flux, Ne = self.flux, self.Ne[amp]
         if self._index:
             flux = flux[self._index[amp]]

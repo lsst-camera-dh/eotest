@@ -21,6 +21,16 @@ from MaskedCCD import MaskedCCD, MaskedCCDBiasImageException
 
 _sqrt2 = np.sqrt(2)
 
+def psf_sigma_statistics(sigma, bins=50, range=(2, 6), frac=0.5):
+    hist = np.histogram(sigma, bins=bins, range=range)
+    y = hist[0]
+    x = (hist[1][1:] + hist[1][:-1])/2.
+    mode = x[np.where(y == max(y))[0][0]]
+    my_sigma = sorted(sigma)
+    median = my_sigma[int(frac*len(my_sigma))]
+    mean = np.mean(sigma)
+    return mode, median, mean
+
 def pixel_integral(x, y, x0, y0, sigmax, sigmay):
     """
     Integrate 2D Gaussian centered at (x0, y0) with widths sigmax and
@@ -243,6 +253,20 @@ class PsfGaussFit(object):
                                                                 units,
                                                                 columns))))
             self.output[-1].name = extname
+    def read_fe55_catalog(self, psf_catalog, chiprob_min=0.1):
+        catalog = pyfits.open(psf_catalog)
+        for attr in 'sigmax sigmay dn dn_fp_sum chiprob amp'.split():
+            exec('self.%s = np.array((), dtype=float)' % attr)
+        for amp in imutils.allAmps:
+            extname = 'Segment%s' % imutils.channelIds[amp]
+            chiprob = catalog[extname].data.field('CHIPROB')
+            index = np.where(chiprob > chiprob_min)
+            self.chiprob = np.concatenate((self.chiprob, chiprob[index]))
+            self.amp = np.concatenate((self.amp, np.ones(len(index[0]))*amp))
+            for attr in 'sigmax sigmay dn dn_fp_sum'.split():
+                command = 'self.%(attr)s = np.concatenate((self.%(attr)s, catalog["%(extname)s"].data.field("%(attr)s")[index]))' % locals()
+                exec(command)
+            self.dn_fp = self.dn_fp_sum
     def results(self, min_prob=0.1, amp=None):
         """
         Return sigmax, sigmay, dn, chiprob for chiprob > min_prob for

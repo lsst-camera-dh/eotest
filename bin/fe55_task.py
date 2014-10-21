@@ -8,6 +8,8 @@ parser.add_argument('-f', '--file_pattern', type=str,
                     help='file pattern for Fe55 input files')
 parser.add_argument('-F', '--Fe55_file_list', type=str,
                     help='file name of list of Fe55 files')
+parser.add_argument('-C', '--fe55_catalog', type=str, default=None,
+                    help='Catalog of Fe55 charge cluster fits (supersedes input Fe55 frames')
 parser.add_argument('-c', '--chiprob_min', type=float, default=0.1,
                     help='Mininum chi-square probability for cluster fit')
 parser.add_argument('-n', '--nsig', type=float, default=4,
@@ -34,7 +36,7 @@ infiles = args.files(args.file_pattern, args.Fe55_file_list)
 bias_frame = args.bias_frame('%s_fe55_bias_frame.fits' % args.sensor_id)
 
 task.run(args.sensor_id, infiles, args.mask_files(infiles[0]),
-         bias_frame=bias_frame)
+         bias_frame=bias_frame, fe55_catalog=args.fe55_catalog)
 
 if bias_frame is not None:
     os.remove(bias_frame)

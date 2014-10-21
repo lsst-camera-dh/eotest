@@ -8,7 +8,7 @@ import os
 import numpy as np
 import pyfits
 import lsst.eotest.image_utils as imutils
-from fe55_psf import PsfGaussFit
+from fe55_psf import PsfGaussFit, psf_sigma_statistics
 from MaskedCCD import MaskedCCD
 from EOTestResults import EOTestResults
 from Fe55GainFitter import Fe55GainFitter
@@ -36,8 +36,9 @@ class Fe55Task(pipeBase.Task):
     _DefaultName = "Fe55Task"
 
     @pipeBase.timeMethod
-    def run(self, sensor_id, infiles, mask_files, bias_frame=None):
-        if self.config.verbose:
+    def run(self, sensor_id, infiles, mask_files, bias_frame=None,
+            fe55_catalog=None):
+        if self.config.verbose and fe55_catalog is None:
             self.log.info("Input files:")
             for item in infiles:
                 self.log.info("  %s" % item) 
@@ -46,27 +47,32 @@ class Fe55Task(pipeBase.Task):
         # accumulating the results by amplifier.
         #
         fitter = PsfGaussFit(nsig=self.config.nsig, fit_xy=self.config.fit_xy)
-        for infile in infiles:
-            if self.config.verbose:
-                self.log.info("processing %s" % infile)
-            ccd = MaskedCCD(infile, mask_files=mask_files,
-                            bias_frame=bias_frame)
-            for amp in ccd:
+        if fe55_catalog is None:
+            for infile in infiles:
                 if self.config.verbose:
-                    self.log.info("  amp %i" % amp)
-                fitter.process_image(ccd, amp, logger=self.log)
-        if self.config.output_file is None:
-            psf_results = os.path.join(self.config.output_dir,
-                                       '%s_psf_results_nsig%i.fits' % (sensor_id, self.config.nsig))
+                    self.log.info("processing %s" % infile)
+                ccd = MaskedCCD(infile, mask_files=mask_files,
+                                bias_frame=bias_frame)
+                for amp in ccd:
+                    if self.config.verbose:
+                        self.log.info("  amp %i" % amp)
+                    fitter.process_image(ccd, amp, logger=self.log)
+            if self.config.output_file is None:
+                psf_results = os.path.join(self.config.output_dir,
+                                           '%s_psf_results_nsig%i.fits' 
+                                           % (sensor_id, self.config.nsig))
+            else:
+                psf_results = self.config.output_file
+            if self.config.verbose:
+                self.log.info("Writing psf results file to %s" % psf_results)
+            fitter.write_results(outfile=psf_results)
         else:
-            psf_results = self.config.output_file
-        if self.config.verbose:
-            self.log.info("Writing psf results file to %s" % psf_results)
-        fitter.write_results(outfile=psf_results)
+            fitter.read_fe55_catalog(fe55_catalog)
         #
         # Fit the DN distributions to obtain the system gain per amp.
         #
         gains = {}
+        sigma_modes = {}
         for amp in imutils.allAmps:
             data = fitter.results(min_prob=self.config.chiprob_min, amp=amp)
             dn = data['dn']
@@ -75,6 +81,14 @@ class Fe55Task(pipeBase.Task):
                     foo = Fe55GainFitter(dn)
                     kalpha_peak, kalpha_sigma = foo.fit()
                     gains[amp] = foo.gain
+                except RuntimeError, e:
+                    print e
+                    continue
+                try:
+                    sigma = np.concatenate((data['sigmax'], data['sigmay']))*10
+                    mode, median, mean = psf_sigma_statistics(sigma, bins=50,
+                                                              range=(2,6))
+                    sigma_modes[amp] = float(mode)
                 except RuntimeError, e:
                     print e
                     continue
@@ -88,11 +102,13 @@ class Fe55Task(pipeBase.Task):
                                         '%s_eotest_results.fits' % sensor_id)
             
         if self.config.verbose:
-            self.log.info("Writing gain results to %s" % results_file)
+            self.log.info("Writing gain and psf sigma results to %s" 
+                          % results_file)
 
         results = EOTestResults(results_file)
         for amp in gains:
             results.add_seg_result(amp, 'GAIN', gains[amp])
+            results.add_seg_result(amp, 'PSF_SIGMA', sigma_modes[amp])
         results.write(clobber=True)
 
         return gains

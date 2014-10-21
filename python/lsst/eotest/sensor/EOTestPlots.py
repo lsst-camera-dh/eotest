@@ -10,6 +10,7 @@ import pylab_plotter as plot
 from MaskedCCD import MaskedCCD
 from EOTestResults import EOTestResults
 from Fe55GainFitter import Fe55GainFitter
+from fe55_psf import psf_sigma_statistics
 from DetectorResponse import DetectorResponse
 from crosstalk import CrosstalkMatrix
 from QE import QE_Data
@@ -129,7 +130,46 @@ class EOTestPlots(object):
 #        foo.plot_matrix(cmap=cmap)
         win = foo.plot(title="Crosstalk, %s" % self.sensor_id)
         return foo
-    def fe55_dists(self, chiprob_min=0.1, fe55_file=None, figsize = (11, 8.5)):
+    def psf_dists(self, chiprob_min=0.1, fe55_file=None, figsize=(11, 8.5),
+                  xrange=(2, 6), bins=50):
+        if fe55_file is None:
+            fe55_file = glob.glob(self._fullpath('%s_psf_results*.fits' 
+                                                 % self.sensor_id))[0]
+        fe55_catalog = pyfits.open(fe55_file)
+        win = None
+        for amp in imutils.allAmps:
+            #print "Amp", amp
+            subplot = (4, 4, amp)
+            chiprob = fe55_catalog[amp].data.field('CHIPROB')
+            index = np.where(chiprob > chiprob_min)
+            # Read sigma values and convert from pixels to microns
+            sigmax = fe55_catalog[amp].data.field('SIGMAX')[index]*10.
+            sigmay = fe55_catalog[amp].data.field('SIGMAY')[index]*10.
+            sigma = sorted(np.concatenate((sigmax, sigmay)))
+            if amp == 1:
+                win = plot.Window(subplot=subplot, figsize=figsize,
+                                  xlabel=r'PSF sigma ($\mu$)',
+                                  ylabel=r'entries / bin', size='large')
+                win.frameAxes.text(0.5, 1.08, 
+                                   'PSF from Fe55 data, %s' % self.sensor_id,
+                                   horizontalalignment='center',
+                                   verticalalignment='top',
+                                   transform=win.frameAxes.transAxes,
+                                   size='large')
+            else:
+                win.select_subplot(*subplot)
+            self._offset_subplot(win)
+            plot.histogram(sigma, xrange=xrange, bins=bins, new_win=False,
+                           xname='', yname='')
+            pylab.xticks(range(xrange[0], xrange[1]+1))
+            # Find mode from histogram data
+            mode, median, mean = psf_sigma_statistics(sigma, bins=bins, 
+                                                      range=xrange)
+            plot.vline(5)
+            plot.vline(mode, color='r')
+            pylab.annotate('Amp %i\nmode=%.2f' % (amp, mode), (0.05, 0.8),
+                           xycoords='axes fraction', size='x-small')
+    def fe55_dists(self, chiprob_min=0.1, fe55_file=None, figsize=(11, 8.5)):
         if fe55_file is None:
             fe55_file = glob.glob(self._fullpath('%s_psf_results*.fits' 
                                                  % self.sensor_id))[0]
@@ -333,7 +373,7 @@ class EOTestPlots(object):
     def flat_fields(self, lambda_dir, nsig=3, cmap=pylab.cm.hot,
                     figsize=(11, 8.5)):
         glob_string = os.path.join(lambda_dir, '*_lambda_*.fits')
-        print glob_string
+        #print glob_string
         flats = sorted(glob.glob(glob_string))
         flats = [x for x in flats if x.find('bias') == -1]
         wls = []
@@ -368,7 +408,7 @@ class EOTestPlots(object):
         for name in self.results.colnames:
             output.write('|| %s' % name)
         output.write('||\n')
-        format = '| %i | %.2f | %.2f | %i | %.1e | %.1e | %.1e | %i | %i | %.1e |\n'
+        format = '| %i | %.2f | %.2f | %i | %.1e | %.1e | %.1e | %i | %i | %.1e | %.2f |\n'
         for i, amp in enumerate(self.results['AMP']):
             output.write(format % tuple([self.results[x][i] 
                                          for x in self.results.colnames]))
@@ -380,7 +420,7 @@ class EOTestPlots(object):
         prnu_results = pyfits.open(prnu_file)['PRNU_RESULTS'].data
         output.write("|| wavelength || stdev of pixel values || mean || stdev/mean ||\n")
         for wl, stdev, mean in zip(prnu_results['WAVELENGTH'],
-                                   prnu_results['STDEV'], prnu_results['MEDIAN']):
+                                   prnu_results['STDEV'], prnu_results['MEAN']):
             if stdev > 0:
                 output.write("| %i | %12.4e | %12.4e | %12.4e |\n" 
                              % (wl, stdev, mean, stdev/mean))
