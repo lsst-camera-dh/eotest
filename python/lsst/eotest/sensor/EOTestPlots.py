@@ -16,10 +16,12 @@ from crosstalk import CrosstalkMatrix
 from QE import QE_Data
 from AmplifierGeometry import parse_geom_kwd
 import lsst.eotest.image_utils as imutils
+import lsst.afw.image as afwImage
 import lsst.afw.math as afwMath
+import lsst.afw.display.ds9 as ds9
 
 def plot_flat(infile, nsig=3, cmap=pylab.cm.hot, win=None, subplot=(1, 1, 1),
-              figsize=None, wl=None, gains=None):
+              figsize=None, wl=None, gains=None, use_ds9=False):
     ccd = MaskedCCD(infile)
     foo = pyfits.open(infile)
     detsize = parse_geom_kwd(foo[1].header['DETSIZE'])
@@ -44,7 +46,7 @@ def plot_flat(infile, nsig=3, cmap=pylab.cm.hot, win=None, subplot=(1, 1, 1),
             xmax = xmin + dx
             ymax = ymin + dy
             #
-            # Extract the bias-subtracted image for this segment
+            # Extract the bias-subtracted masked image for this segment.
             segment_image = ccd.unbiased_and_trimmed_image(amp)
             subarr = segment_image.getImage().getArray()
             #
@@ -62,6 +64,17 @@ def plot_flat(infile, nsig=3, cmap=pylab.cm.hot, win=None, subplot=(1, 1, 1),
             #
             # Set the subarray in the mosaicked image.
             mosaic[ymin:ymax, xmin:xmax] = subarr
+    #
+    # Display the mosiacked image in ds9 using afwImage.
+    if use_ds9:
+        image = afwImage.ImageF(nx, ny)
+        imarr = image.getArray()
+        # This needs a flip in y to display properly in ds9 so that
+        # amp 1 is in the lower right corner.
+        imarr[:] = mosaic[::-1,:]
+        ds9.mtv(image)
+        ds9.ds9Cmd('zoom to fit')
+        return
     #
     # Set the color map to extend over the range median +/- stdev(clipped)
     # of the pixel values.
