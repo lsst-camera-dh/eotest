@@ -91,6 +91,9 @@ class CCD(object):
         for amp in self.segments:
             bright_cols[amp] = self.segments[amp].generate_bright_cols(ncols)
         return bright_cols
+    def set_dark_cols(self, dark_cols, frac):
+        for amp in self.segments:
+            self.segments[amp].set_dark_cols(dark_cols[amp], frac)
     def add_bright_cols(self, bright_cols, nsig=5):
         for amp in self.segments:
             self.segments[amp].add_bright_cols(bright_cols[amp], nsig=nsig)
@@ -99,6 +102,9 @@ class CCD(object):
         for amp in self.segments:
             bright_pix[amp] = self.segments[amp].generate_bright_pix(npix)
         return bright_pix
+    def set_dark_pix(self, dark_pix, frac):
+        for amp in self.segments:
+            self.segments[amp].set_dark_pix(dark_pix[amp], frac)
     def add_bright_pix(self, bright_pix, nsig=5):
         for amp in self.segments:
             self.segments[amp].add_bright_pix(bright_pix[amp], nsig=nsig)
@@ -185,6 +191,9 @@ class SegmentExposure(object):
         bright_cols = np.arange(self.nx)
         random.shuffle(bright_cols)
         return bright_cols[:ncols]
+    def set_dark_cols(self, columns, frac):
+        for i in columns:
+            self.imarr[:, i] *= frac
     def add_bright_cols(self, columns, nsig=5):
         for i in columns:
             self.imarr[:, i] += nsig*self.sigma()
@@ -193,6 +202,8 @@ class SegmentExposure(object):
         random.shuffle(bright_pix)
         bright_pix = bright_pix.reshape(self.ny, self.nx)
         return bright_pix
+    def set_dark_pix(self, dark_pix, frac):
+        self.imarr -= self.imarr*dark_pix*(1. - frac)
     def add_bright_pix(self, bright_pix, nsig=5):
         self.imarr += bright_pix*nsig*self.sigma()
     def add_traps(self, ndefects, cycles, trap_size):

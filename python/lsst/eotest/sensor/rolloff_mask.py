@@ -43,8 +43,7 @@ def rolloff_mask(infile, outfile,
 
     bloom_stop_width: The width in pixels of the masked region of the
     imaging region of each segment, on either side of the central
-    blooming stop implant.  If the input data file corresponds to an
-    ITL device, no blooming stop implant mask will be included.
+    blooming stop implant.
 
     signal: This is the artificial signal written to the mask image so
     that the afwDetect code can generate the footprints used define
@@ -67,6 +66,9 @@ def rolloff_mask(infile, outfile,
     #
     hdulist = pyfits.HDUList()
     hdulist.append(pyfits.PrimaryHDU())
+    # Use the mask_plane value ('ROLLOFF_DEFECTS') to distinguish
+    # this file from other mask files.
+    hdulist[0].header['MASKTYPE'] = mask_plane
     pyfitsWriteto(hdulist, outfile, clobber=True)
     #
     # Amplifiers 1 (AMP10), 8 (AMP17), 9 (AMP07) and 16 (AMP00) are
@@ -101,7 +103,8 @@ def rolloff_mask(infile, outfile,
         #
         imarr[0:outer_edge_width, :] += signal
 
-        if amp_geom.amp_loc == amp_loc['E2V']:
+#        if amp_geom.amp_loc == amp_loc['E2V']:
+        if True:   # Always set blooming stop mask bits.
             #
             # Set signal around blooming stop
             #

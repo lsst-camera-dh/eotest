@@ -13,6 +13,7 @@ from fe55_psf import PsfGaussFit
 from fe55_gain_fitter import fe55_gain_fitter
 from fe55_yield import Fe55Yield
 from BrightPixels import BrightPixels
+from DarkPixels import DarkPixels
 from read_noise import noise_dists
 from eperTask import EPERTask
 from DetectorResponse import DetectorResponse
@@ -24,6 +25,7 @@ from rolloff_mask import rolloff_mask
 #
 from fe55Task import Fe55Task
 from brightPixelsTask import BrightPixelsTask
+from darkPixelsTask import DarkPixelsTask
 from readNoiseTask import ReadNoiseTask
 from darkCurrentTask import DarkCurrentTask
 from crosstalkTask import CrosstalkTask

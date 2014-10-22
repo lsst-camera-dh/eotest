@@ -125,6 +125,9 @@ superflat = Params(test_type='superflat_500',
                    exptime=100,
                    pcti=1e-3,
                    scti=1e-3,
+                   dark_npix=100,
+                   dark_ncols=1,
+                   dark_frac=0.5,
                    verbose=True)
 
 xpos, ypos = multiaggressor_amplifier_coords(nx, ny)

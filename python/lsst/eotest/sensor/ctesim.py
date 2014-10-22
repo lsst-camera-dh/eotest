@@ -38,7 +38,7 @@ def ctesim_cpp(infile, pcti=0, scti=0, verbose=False):
     input = pyfits.open(infile)
     amps = [i for i in range(1, len(input)) if input[i].is_image]
     segments = {}
-    for amp in amps:
+    for amp in amps[:16]:  # Consider a maximum of 16 amps.
         if verbose:
             print "ctesim_cpp: working on amp", amp
         image = afwImage.ImageF(infile, imutils.dm_hdu(amp))

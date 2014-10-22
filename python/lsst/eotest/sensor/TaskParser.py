@@ -62,19 +62,27 @@ class TaskNamespace(object):
             return dict([(amp, gains[amp-1]) for amp in imutils.allAmps])
     def mask_files(self, infile=None):
         """
-        Tuple of mask files to be used.  If infile is given, then
-        generate a roll-off (and blooming stop) mask file using 
-        infile to set the detector and amplifier geometry.
+        Tuple of mask files to be used.  If infile is given and a
+        rolloff defects mask is not found, then generate a roll-off
+        mask file using infile to set the detector and amplifier
+        geometry.
         """
-        my_mask_files = []
-        if infile is not None:
+        if self.args.mask_file_pattern is not None:
+            my_mask_files = glob.glob(self.args.mask_file_pattern)
+        else:
+            my_mask_files = []
+        # Loop through files and determine if edge rolloff mask is
+        # included.
+        have_rolloff_mask = False
+        for mask_file in my_mask_files:
+            hdr = pyfits.open(mask_file)[0].header
+            if ('MASKTYPE' in hdr.keys() and 
+                hdr['MASKTYPE'] == 'ROLLOFF_DEFECTS'):
+                have_rolloff_mask = True
+        if infile is not None and not have_rolloff_mask:
             my_mask_files.append('edge_rollover_defect_mask.fits')
             if not os.path.isfile(my_mask_files[-1]):
                 rolloff_mask(infile, my_mask_files[-1])
-        elif self.args.mask_file == 'None':
-            my_mask_files = ()
-        elif self.args.mask_file is not None:
-            my_mask_files = (self.args.mask_file,)
         return my_mask_files
     def __getattr__(self, attrname):
         return getattr(self.args, attrname)
@@ -98,8 +106,8 @@ class TaskParser(argparse.ArgumentParser):
                           help='file name of list of bias frames')
         self.add_argument('-V', '--Vendor', type=str,
                           help='CCD vendor (e.g., e2v, ITL)')
-        self.add_argument('-m', '--mask_file', default=None, type=str,
-                          help='mask file to use')
+        self.add_argument('-m', '--mask_file_pattern', default=None, type=str,
+                          help='file pattern for mask files')
         self.add_argument('-o', '--output_dir', type=str, default='.',
                           help="output directory")
         self.add_argument('-g', '--gains', type=str, 

@@ -223,6 +223,8 @@ def generate_darks(pars):
         #
         sigma = sensor.segments[1].sigma()
         nsig = darks.bright_Ne_per_sec*darks.exptime/pars.system_gain/sigma
+        # Generate bright column and bright pixel locations only once and 
+        # apply the same sets of locations to each frame.
         if bright_cols is None:
             bright_cols = sensor.generate_bright_cols(darks.bright_ncols)
         if bright_pix is None:
@@ -314,6 +316,8 @@ def generate_superflat(pars):
     superflat = pars.superflat
     outputdir, sensor_id = setup(pars, superflat.test_type)
     tempfile = os.path.join(outputdir, 'superflat_temp.fits')
+    dark_cols = None
+    dark_pix = None
     #
     # Set incident flux (ph/s/pixel) so that full well is attained in
     # a single exposure (but also disable full well below).
@@ -323,6 +327,14 @@ def generate_superflat(pars):
         print "  frame", frame
         sensor = simulate_frame(superflat.exptime, pars, set_full_well=False)
         sensor.expose_flat(intensity)
+        # Generate dark column and dark pixel locations only once and 
+        # apply the same sets of locations to each frame.
+        if dark_cols is None:
+            dark_cols = sensor.generate_bright_cols(superflat.dark_ncols)
+        if dark_pix is None:
+            dark_pix = sensor.generate_bright_pix(superflat.dark_npix)
+        sensor.set_dark_cols(dark_cols, superflat.dark_frac)
+        sensor.set_dark_pix(dark_pix, superflat.dark_frac)
         sensor.md['MONOWL'] = superflat.wavelength
         sensor.md['TESTTYPE'] = 'SFLAT'
         sensor.md['IMGTYPE'] = 'FLAT'
@@ -440,8 +452,8 @@ if __name__ == '__main__':
     # geometry.
     #
     geometry = AmplifierGeometry(prescan=pars.prescan, 
-                                 nx = pars.nx,
-                                 ny = pars.ny,
+                                 nx=pars.nx,
+                                 ny=pars.ny,
                                  detxsize=pars.detxsize, 
                                  detysize=pars.detysize)
     master_factory = CcdFactory(geometry=geometry)
