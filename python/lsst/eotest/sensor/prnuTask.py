@@ -17,7 +17,8 @@ import lsst.pipe.base as pipeBase
 class PrnuConfig(pexConfig.Config):
     """Configuration for pixel response non-uniformity task"""
     output_dir = pexConfig.Field("Output directory", str, default=".")
-    output_file = pexConfig.Field("Output filename", str, default=None)
+    eotest_results_file = pexConfig.Field("EO test results filename", 
+                                          str, default=None)
     verbose = pexConfig.Field("Turn verbosity on", bool, default=True)
 
 class PrnuTask(pipeBase.Task):
@@ -51,13 +52,10 @@ class PrnuTask(pipeBase.Task):
                 results[wl] = -1, -1
             if self.config.verbose:
                 self.log.info(line)
-        outfile = self.config.output_file
-        if self.config.output_file is None:
+        results_file = self.config.eotest_results_file
+        if results_file is None:
             outfile = os.path.join(self.config.output_dir,
-                                   '%s_prnu_values.fits' % sensor_id)
-        else:
-            if outfile == os.path.basename(outfile):
-                outfile = os.path.join(self.config.output_dir, outfile)
+                                   '%s_eotest_results.fits' % sensor_id)
         self.write(results, outfile)
         return results
     @pipeBase.timeMethod
@@ -83,7 +81,8 @@ class PrnuTask(pipeBase.Task):
         else:
             output = pyfits.HDUList()
             output.append(pyfits.PrimaryHDU())
-        # Note that this will not replace an existing HDU with the
-        # same name.
-        output.append(hdu)  
+        try:
+            output[hdu.name] = hdu
+        except KeyError:
+            output.append(hdu)
         pyfitsWriteto(output, outfile, clobber=clobber)
