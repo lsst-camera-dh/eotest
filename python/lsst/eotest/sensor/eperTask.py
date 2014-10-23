@@ -8,6 +8,7 @@ import lsst.pipe.base as pipeBase
 import sys
 import numpy as np
 import argparse
+from MaskedCCD import MaskedCCD
 import lsst.afw.geom as afwGeom
 import lsst.afw.image as afwImage
 import lsst.afw.math as afwMath
@@ -15,14 +16,16 @@ import lsst.afw.math as afwMath
 import lsst.eotest.image_utils as imutils
 from AmplifierGeometry import makeAmplifierGeometry
 
-median = lambda x : afwMath.makeStatistics(x, afwMath.MEDIAN).getValue()
+median = lambda x, stat_ctrl : afwMath.makeStatistics(x, afwMath.MEDIAN,
+                                                      stat_ctrl).getValue()
 
 class SubImage(object):
     """Functor to produce sub-images depending on scan direction."""
-    def __init__(self, imfile, amp, overscans, task):
-        geom = makeAmplifierGeometry(imfile)
+    def __init__(self, ccd, amp, overscans, task):
+        geom = ccd.amp_geom
+        self.ccd = ccd
         self.imaging = geom.imaging
-        self.image = afwImage.ImageF(imfile, imutils.dm_hdu(amp))
+        self.image = ccd[amp]   # This is the masked image for the desired amp.
         if task.config.direction == 'p':
             self._bbox = self._parallel_box
             llc = afwGeom.Point2I(geom.parallel_overscan.getMinX(),
@@ -42,7 +45,7 @@ class SubImage(object):
             sys.exit(1)
     def bias_med(self):
         subim = self.image.Factory(self.image, self._bias_reg)
-        return median(subim)
+        return median(subim, self.ccd.stat_ctrl)
     def __call__(self, start, end=None):
         if end is None:
             end = start + 1
@@ -71,26 +74,27 @@ class EPERTask(pipeBase.Task):
     _DefaultName = "eper"
 	 
     @pipeBase.timeMethod
-    def run(self, infilename, amps, overscans):
+    def run(self, infilename, amps, overscans, mask_files):
         if not infilename:
             self.log.error("Please specify an input file path.")
             sys.exit(1)
 
+        ccd = MaskedCCD(infilename, mask_files=mask_files)
         # iterate through amps
         cte = {}
         for amp in amps:
-            subimage = SubImage(infilename, amp, overscans, self)
+            subimage = SubImage(ccd, amp, overscans, self)
             lastpix = subimage.lastpix
 
             # find signal in last image row/column
-            lastmed = median(subimage(lastpix))
+            lastmed = median(subimage(lastpix), ccd.stat_ctrl)
             if self.config.verbose:
                 print "lastmed = " + str(lastmed)
 		
             # find median signal in each overscan row
             overscanmeds = np.zeros(overscans)
             for i in range(1, overscans+1):
-                overscanmeds[i-1] = median(subimage(lastpix + i))
+                overscanmeds[i-1] = median(subimage(lastpix + i), ccd.stat_ctrl)
             if self.config.verbose:
                 print "Overscan medians = " + str(overscanmeds)
 		

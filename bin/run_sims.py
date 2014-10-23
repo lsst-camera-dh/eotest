@@ -339,6 +339,8 @@ def generate_superflat(pars):
         sensor.md['TESTTYPE'] = 'SFLAT'
         sensor.md['IMGTYPE'] = 'FLAT'
         sensor.md['LSST_NUM'] = sensor_id
+        sensor.md['PCTI'] = superflat.pcti
+        sensor.md['SCTI'] = superflat.scti
         sensor.writeto(tempfile)
         foo = ctesim(tempfile, pcti=superflat.pcti, scti=superflat.scti,
                      verbose=superflat.verbose)

@@ -6,6 +6,7 @@
 import os
 import glob
 import argparse
+import pyfits
 import lsst.afw.image as afwImage
 import lsst.eotest.image_utils as imutils
 from rolloff_mask import rolloff_mask
@@ -67,6 +68,8 @@ class TaskNamespace(object):
         mask file using infile to set the detector and amplifier
         geometry.
         """
+        if self.args.verbose:
+            print "mask file pattern:", self.args.mask_file_pattern
         if self.args.mask_file_pattern is not None:
             my_mask_files = glob.glob(self.args.mask_file_pattern)
         else:
@@ -83,6 +86,10 @@ class TaskNamespace(object):
             my_mask_files.append('edge_rollover_defect_mask.fits')
             if not os.path.isfile(my_mask_files[-1]):
                 rolloff_mask(infile, my_mask_files[-1])
+        if self.args.verbose:
+            print "Using mask files:"
+            for item in my_mask_files:
+                print "  ", item
         return my_mask_files
     def __getattr__(self, attrname):
         return getattr(self.args, attrname)

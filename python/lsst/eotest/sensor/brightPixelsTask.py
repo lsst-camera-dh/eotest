@@ -54,11 +54,14 @@ class BrightPixelsTask(pipeBase.Task):
         exptime = ccd.md.get('EXPTIME')
         outfile = os.path.join(self.config.output_dir,
                                '%s_bright_pixel_mask.fits' % sensor_id)
+        if os.path.isfile(outfile):
+            os.remove(outfile)
         total_bright_pixels = 0
+        total_bright_columns = 0
         if self.config.verbose:
-            self.log.info("Segment     # bright pixels")
+            self.log.info("Segment     # bright pixels     # bright columns")
         #
-        # Write bright pixel counts to results file.
+        # Write bright pixel and column counts to results file.
         #
         results_file = self.config.eotest_results_file
         if results_file is None:
@@ -71,10 +74,15 @@ class BrightPixelsTask(pipeBase.Task):
             
             pixels, columns = bright_pixels.find()
             bright_pixels.generate_mask(outfile)
-            count = len(pixels)
-            total_bright_pixels += count
-            results.add_seg_result(amp, 'NUM_BRIGHT_PIXELS', count)
-            self.log.info("%s          %i" % (imutils.channelIds[amp], count))
+            pix_count = len(pixels)
+            col_count = len(columns)
+            total_bright_pixels += pix_count
+            total_bright_columns += col_count
+            results.add_seg_result(amp, 'NUM_BRIGHT_PIXELS', pix_count)
+            results.add_seg_result(amp, 'NUM_BRIGHT_COLUMNS', col_count)
+            self.log.info("%s          %i          %i" % 
+                          (imutils.channelIds[amp], pix_count, col_count))
         if self.config.verbose:
             self.log.info("Total bright pixels: %i" % total_bright_pixels)
+            self.log.info("Total bright columns: %i" % total_bright_columns)
         results.write(clobber=True)

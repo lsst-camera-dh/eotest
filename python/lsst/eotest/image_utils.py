@@ -90,29 +90,39 @@ def unbias_and_trim(im, overscan, imaging,
         return trim(im, imaging)
     return im
 
-def fits_median_file(files, outfile, clobber=True):
+def set_bitpix(hdu, bitpix):
+    dtypes = {16 : np.int16, -32 : np.float32}
+    if bitpix > 0:
+        my_round = np.round
+    else:
+        try:
+            del hdu.header['BSCALE']
+            del hdu.header['BZERO']
+        except KeyError:
+            pass
+        my_round = lambda x : x
+    hdu.data = np.array(my_round(hdu.data), dtype=dtypes[bitpix])
+    
+def fits_median_file(files, outfile, bitpix=None, clobber=True):
     output = pyfits.open(files[0])
     for amp in allAmps:
         output[amp].data = fits_median(files, hdu=dm_hdu(amp)).getArray()
-        output[amp].header.remove('BZERO')
-        output[amp].header.remove('BSCALE')
+        if bitpix is not None:
+            set_bitpix(output[amp], bitpix)
     pyfitsWriteto(output, outfile, clobber=clobber)
 
-def fits_mean_file(files, outfile, clobber=True):
+def fits_mean_file(files, outfile, bitpix=None, clobber=True):
     output = pyfits.open(files[0])
     for amp in allAmps:
         output[amp].data = np.zeros(output[amp].data.shape)
-        try:
-            output[amp].header.remove('BZERO')
-            output[amp].header.remove('BSCALE')
-        except ValueError:
-            pass
     for infile in files:
         input = pyfits.open(infile)
         for amp in allAmps:
             output[amp].data += input[amp].data
     for amp in allAmps:
         output[amp].data /= len(files)
+        if bitpix is not None:
+            set_bitpix(output[amp], bitpix)
     pyfitsWriteto(output, outfile, clobber=clobber)
 
 def fits_median(files, hdu=2, fix=True):
@@ -137,11 +147,12 @@ def fits_median(files, hdu=2, fix=True):
 
     return median_image
 
-def writeFits(images, outfile, template_file):
+def writeFits(images, outfile, template_file, bitpix=-32):
     output = pyfits.open(template_file)
     output[0].header['FILENAME'] = outfile
     for amp in images:
         output[amp].data = images[amp].getArray()
+        set_bitpix(output[amp], bitpix)
     pyfitsWriteto(output, outfile, clobber=True, checksum=True)
 
 def check_temperatures(files, tol):

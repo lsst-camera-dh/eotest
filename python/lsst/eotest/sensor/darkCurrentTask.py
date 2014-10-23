@@ -37,7 +37,7 @@ class DarkCurrentTask(pipeBase.Task):
             median_images[amp] = imutils.fits_median(dark_files,
                                                      imutils.dm_hdu(amp))
         medfile = os.path.join(self.config.output_dir,
-                               '%s_dark_current_map.fits' % sensor_id)
+                               '%s_median_dark_current.fits' % sensor_id)
         imutils.writeFits(median_images, medfile, dark_files[0])
 
         ccd = MaskedCCD(medfile, mask_files=mask_files, bias_frame=bias_frame)

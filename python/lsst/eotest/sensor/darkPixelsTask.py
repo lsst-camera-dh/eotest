@@ -13,6 +13,7 @@ import lsst.eotest.image_utils as imutils
 from MaskedCCD import MaskedCCD
 from DarkPixels import DarkPixels
 from EOTestResults import EOTestResults
+from cteTask import superflat
 
 import lsst.afw.image as afwImage
 import lsst.pex.config as pexConfig
@@ -41,24 +42,22 @@ class DarkPixelsTask(pipeBase.Task):
     @pipeBase.timeMethod
     def run(self, sensor_id, sflat_files, mask_files, bias_frame=None):
         imutils.check_temperatures(sflat_files, self.config.temp_tol)
-        median_images = {}
-        for amp in imutils.allAmps:
-            median_images[amp] = imutils.fits_median(sflat_files,
-                                                     imutils.dm_hdu(amp))
-            medfile = os.path.join(self.config.output_dir,
-                                   '%s_median_sflat.fits' % sensor_id)
-        imutils.writeFits(median_images, medfile, sflat_files[0])
+        medfile = os.path.join(self.config.output_dir,
+                               '%s_median_sflat.fits' % sensor_id)
+        superflat(sflat_files, outfile=medfile)
 
         ccd = MaskedCCD(medfile, mask_files=mask_files, bias_frame=bias_frame)
         md = imutils.Metadata(sflat_files[0], 1)
         outfile = os.path.join(self.config.output_dir,
                                '%s_dark_pixel_mask.fits' % sensor_id)
+        if os.path.isfile(outfile):
+            os.remove(outfile)
         total_dark_pixels = 0
         total_dark_columns = 0
         if self.config.verbose:
             self.log.info("Segment     # dark pixels     # dark columns")
         #
-        # Write dark pixel counts to results file.
+        # Write dark pixel and column counts to results file.
         #
         results_file = self.config.eotest_results_file
         if results_file is None:

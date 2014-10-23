@@ -16,7 +16,7 @@ import lsst.afw.math as afwMath
 import lsst.pex.config as pexConfig
 import lsst.pipe.base as pipeBase
 
-def superflat(files, outfile='superflat.fits'):
+def superflat(files, outfile='superflat.fits', bitpix=None):
     """
     The superflat is created by bias-offset correcting the input files
     and median-ing them together.
@@ -32,6 +32,8 @@ def superflat(files, outfile='superflat.fits'):
             images.push_back(image)
         median_image = afwMath.statisticsStack(images, afwMath.MEDIAN)
         output[amp].data = median_image.getArray()
+        if bitpix is not None:
+            imutils.set_bitpix(output[amp], bitpix)
     pyfitsWriteto(output, outfile, clobber=True)
     return outfile
 
@@ -67,7 +69,7 @@ class CteTask(pipeBase.Task):
         s_task.config.verbose = False
         s_task.config.cti = True
         scti = s_task.run(superflat_file, imutils.allAmps,
-                          self.config.overscans)
+                          self.config.overscans, mask_files)
         #
         # Compute parallel CTE.
         #
@@ -76,7 +78,7 @@ class CteTask(pipeBase.Task):
         p_task.config.verbose = False
         p_task.config.cti = True
         pcti = p_task.run(superflat_file, imutils.allAmps,
-                          self.config.overscans)
+                          self.config.overscans, mask_files)
         #
         # Write results to the output file.
         #

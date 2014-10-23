@@ -50,6 +50,8 @@ class DarkPixels(object):
         amp_geom = makeAmplifierGeometry(self.ccd.imfile)
         hdrs = fits_headers()
         if not os.path.isfile(outfile):
+            # We are writing the first extension, most likely, so create
+            # the output file.
             output = pyfits.HDUList()
             output.append(pyfits.PrimaryHDU())
             output[0].header['MASKTYPE'] = 'DARK_PIXELS'
