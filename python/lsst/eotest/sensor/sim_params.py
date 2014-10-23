@@ -13,6 +13,14 @@ from sim_tools import CrosstalkPattern
 class Params(object):
     def __init__(self, **kwargs):
         self.__dict__.update(kwargs)
+    def __setattr__(self, key, value):
+        """
+        Perform validation by checking that a parameter name already
+        exists before trying to set it.
+        """
+        if not hasattr(self, key):
+            raise AttributeError("Cannot add a new attribute to 'Params' object.")
+        self.__dict__[key] = value
 
 pd_area = 1e-4          # Sensitive area of photodiode
 pixel_area = 1e-10      # Nominal pixel area (10 micron x 10 micron)
