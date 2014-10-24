@@ -155,12 +155,20 @@ def writeFits(images, outfile, template_file, bitpix=-32):
         set_bitpix(output[amp], bitpix)
     pyfitsWriteto(output, outfile, clobber=True, checksum=True)
 
-def check_temperatures(files, tol):
-    ccd_temps = [Metadata(x, 1).get('CCDTEMP') for x in files]
-    temp_avg = mean(ccd_temps)
-    if max(ccd_temps) - temp_avg > tol or temp_avg - min(ccd_temps) > tol:
-        raise RuntimeError("Temperature deviations > %s " % tol +
-                           "deg C relative to average.")
+def check_temperatures(files, tol, setpoint=None, warn_only=False):
+    for infile in files:
+        md = Metadata(infile, 1)  # Read PHDU keywords
+        if setpoint is not None:
+            ref_temp = setpoint
+        else:
+            ref_temp = md.get('TEMP_SET')
+        ccd_temp = md.get('CCDTEMP')
+        if np.abs(ccd_temp - ref_temp) > tol:
+            what = "Measured operating temperature %(ccd_temp)s departs from expected temperature %(ref_temp)s by more than the %(tol)s tolerance for file %(infile)s" % locals()
+            if warn_only:
+                print what
+            else:
+                raise RuntimeError(what)
 
 class SubRegionSampler(object):
     def __init__(self, dx, dy, nsamp, imaging):
