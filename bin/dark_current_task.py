@@ -13,12 +13,9 @@ parser.add_argument('-f', '--dark_files', type=str,
                     help='file pattern for darks')
 parser.add_argument('-F', '--dark_file_list', type=str,
                     help='file contain list of dark files')
-parser.add_argument('-t', '--temp_tol', default=1.5, type=float,
-                    help='temperature tolerance for CCDTEMP among dark files')
 args = parser.parse_args()
 
 task = sensorTest.DarkCurrentTask()
-task.config.temp_tol = args.temp_tol
 task.config.output_dir = args.output_dir
 task.config.verbose = args.verbose
 
