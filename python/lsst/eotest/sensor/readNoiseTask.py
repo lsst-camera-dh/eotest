@@ -45,6 +45,10 @@ class ReadNoiseConfig(pexConfig.Config):
                          int, default=100)
     nsamp = pexConfig.Field("Number of subregions to sample",
                             int, default=1000)
+    temp_set_point = pexConfig.Field("Required temperature (C) set point",
+                                     float, default=-95.)
+    temp_set_point_tol = pexConfig.Field("Required temperature set point tolerance (degrees C)",
+                                         float, default=0.1)
     output_dir = pexConfig.Field("Output directory", str, default=".")
     eotest_results_file = pexConfig.Field("EO test results filename",
                                           str, default=None)
@@ -58,6 +62,9 @@ class ReadNoiseTask(pipeBase.Task):
     @pipeBase.timeMethod
     def run(self, sensor_id, bias_files, gains, system_noise_files=None,
             mask_files=()):
+        imutils.check_temperatures(bias_files, self.config.temp_set_point_tol,
+                                   setpoint=self.config.temp_set_point,
+                                   warn_only=True)
         outfiles = []
         Nread_dists = dict([(amp, []) for amp in imutils.allAmps])
         if system_noise_files is None:

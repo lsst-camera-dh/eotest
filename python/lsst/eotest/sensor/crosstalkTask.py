@@ -4,12 +4,17 @@
 @author J. Chiang <jchiang@slac.stanford.edu>
 """
 import os
+import lsst.eotest.image_utils as imutils
 from lsst.eotest.sensor.crosstalk import make_crosstalk_matrix
 import lsst.pex.config as pexConfig
 import lsst.pipe.base as pipeBase
 
 class CrosstalkConfig(pexConfig.Config):
     """Configuration for CrosstalkTask"""
+    temp_set_point = pexConfig.Field("Required temperature (C) set point",
+                                     float, default=-95.)
+    temp_set_point_tol = pexConfig.Field("Required temperature set point tolerance (degrees C)",
+                                         float, default=0.1)
     output_dir = pexConfig.Field("Output directory", str, default=".")
     verbose = pexConfig.Field("Turn verbosity on", bool, default=True)
 
@@ -20,6 +25,9 @@ class CrosstalkTask(pipeBase.Task):
 
     @pipeBase.timeMethod
     def run(self, sensor_id, xtalk_files, mask_files):
+        imutils.check_temperatures(xtalk_files, self.config.temp_set_point_tol,
+                                   setpoint=self.config.temp_set_point,
+                                   warn_only=True)
         #
         # Test if we have a single (and therefore multi-aggressor) file.
         #
