@@ -122,6 +122,7 @@ class EOTestPlots(object):
         self.results = EOTestResults(results_file)
         self._qe_data = None
         self._qe_file = self._fullpath('%s_QE.fits' % self.sensor_id)
+        self.specs = ccdSpecs()
     @property
     def qe_data(self):
         if self._qe_data is None:
@@ -411,7 +412,7 @@ class EOTestPlots(object):
                           gains=self.results['GAIN'])
         win.frameAxes.set_title('Flat Fields, %s' % self.sensor_id)
         return win
-    def confluence_tables(self, outfile=False, prnu_file=None):
+    def confluence_tables(self, outfile=False):
         if outfile:
             output = open(self._outputpath('%s_results.txt' 
                                            % self.sensor_id), 'w')
@@ -429,9 +430,7 @@ class EOTestPlots(object):
         output.write('\n')
         # Write the CCD-wide results.
         # PRNU:
-        if prnu_file is None:
-            prnu_file = self.results.infile
-        prnu_results = pyfits.open(prnu_file)['PRNU_RESULTS'].data
+        prnu_results = self.prnu_results
         output.write("|| wavelength || stdev of pixel values || mean || stdev/mean ||\n")
         for wl, stdev, mean in zip(prnu_results['WAVELENGTH'],
                                    prnu_results['STDEV'], prnu_results['MEAN']):
@@ -442,8 +441,168 @@ class EOTestPlots(object):
                 output.write("| %i | ... | ... | ... |\n" % wl)
         if outfile:
             output.close()
+    @property
+    def prnu_results(self):
+        my_prnu_results = pyfits.open(self.results.infile)['PRNU_RESULTS'].data
+        return my_prnu_results
     def latex_tables(self, outfile):
         pass
+
+class CcdSpecs(OrderedDict):
+    def __init__(self, results_file, xtalk_file=None):
+        super(CcdSpecs, self).__init__()
+        self._createSpecs()
+        self._ingest_results(results_file, xtalk_file=xtalk_file)
+    def factory(self, *args, **kwds):
+        spec = CcdSpec(*args, **kwds)
+        self[spec.name] = spec
+        return spec
+    def _createSpecs(self):
+        self.factory('CCD-007', 'Read Noise')
+        self.factory('CCD-008', 'Blooming Full Well')
+        self.factory('CCD-009', 'Nonlinearity')
+        self.factory('CCD-010', 'Serial CTE')
+        self.factory('CCD-011', 'Parallel CTE')
+        self.factory('CCD-012', 'Active Imaging Area and Cosmetic Quality')
+        self.factory('CCD-012a', 'Bright Pixels')
+        self.factory('CCD-012b', 'Dark Pixels')
+        self.factory('CCD-012c', 'Bright Columns')
+        self.factory('CCD-012d', 'Dark Columns')
+        self.factory('CCD-012e', 'Traps')
+        self.factory('CCD-013', 'Crosstalk')
+        self.factory('CCD-014', 'Dark Current Percentile')
+        self.factory('CCD-021', 'u Band QE')
+        self.factory('CCD-022', 'g Band QE')
+        self.factory('CCD-023', 'r Band QE')
+        self.factory('CCD-024', 'i Band QE')
+        self.factory('CCD-025', 'z Band QE')
+        self.factory('CCD-026', 'y Band QE')
+        self.factory('CCD-027', 'PRNU')
+        self.factory('CCD-028', 'Point Spread Function')
+    @staticmethod
+    def latex_header():
+        header = """\\begin{table}[h]
+\\begin{tabular}{|c|l|l|l|}
+\hline
+\\textbf{Status} & \\textbf{Specification} & \\textbf{Description} & \\textbf{Measurement}  \\\\ \hline"""
+        return header
+    @staticmethod
+    def latex_footer():
+        footer = "\end{tabular}\n\end{table}"
+        return footer
+    def latex_table(self):
+        output = []
+        output.append(self.latex_header())
+        for name, spec in self.items():
+            output.append(spec.latex_entry())
+        output.append(self.latex_footer())
+        return '\n'.join(output)
+    def _ingestResults(self, results_file, xtalk_file=None):
+        self.results = EOTestResults(results_file)
+        rn = self.results['READ_NOISE']
+        self.specs['CCD-007'].measurement = '$\mbox{Read Noise} \ge %.2f$' % max(rn)
+        self.specs['CCD-007'].ok = (max(rn) < 8)
+        fw = self.results['FULL_WELL']
+        self.specs['CCD-008'].measurement = '$\mbox{Full Well} \ge %.2f' % max(fw)
+        self.specs['CCD-008'].ok = (max(fw) < 175000)
+        max_frac_dev = self.results['MAX_FRAC_DEV']
+        self.specs['CCD-009'].measurement = '$\mbox{deviation from linearity} \le %.2f$\%' % max(max_frac_dev)*100.
+        self.specs['CCD-009'].ok = (max(max_frac_dev) < 0.02)
+        scti = self.results['CTI_SERIAL']
+        self.specs['CCD-010'].measurement = '$\mbox{serial CTI} \le %.2e$' % max(scti)
+        self.specs['CCD-010'].ok = (max(scti) < 5e-6)
+        pcti = self.results['CTI_PARALLEL']
+        self.specs['CCD-011'].measurement = '$\mbox{parallel CTI} \le %.2e$' % max(pcti)
+        self.specs['CCD-011'].ok = (max(pcti) < 3e-6)
+        num_bright_pixels = sum(self.results['NUM_BRIGHT_PIXELS'])
+        self.specs['CCD-012a'].measurement = '# bright pixels: %i' % num_bright_pixels
+        num_dark_pixels = sum(self.results['NUM_DARK_PIXELS'])
+        self.specs['CCD-012b'].measurement = '# dark pixels: %i' % num_dark_pixels
+        num_bright_columns = sum(self.results['NUM_BRIGHT_COLUMNS'])
+        self.specs['CCD-012c'].measurement = '# bright columns: %i' % num_bright_columns
+        num_dark_columns = sum(self.results['NUM_DARK_COLUMNS'])
+        self.specs['CCD-012d'].measurement = '# dark columns: %i' % num_dark_columns
+        num_traps = sum(self.results['NUM_TRAPS'])
+        self.specs['CCD-012e'].measurement = '# traps: %i' % num_traps
+
+        col_size = 2002 - 9 # exclude masked edge rolloff.
+        num_pixels = 16129000
+        num_defects = (num_bright_pixels + num_dark_pixels + num_traps
+                       + col_size*(num_bright_columns + num_dark_columns))
+        self.specs['CCD-012'].measurement = '# defective pixels: %i' % num_defects
+        self.specs['CCD-012'].ok = (num_defects/num_pixels < 5e-3)
+        if xtalk_file is not None:
+            foo = CrosstalkMatrix(xtalk_file)
+            crosstalk = max(foo.matrix.flatten())
+            self.specs['CCD-013'].measurement = 'output-to-output crosstalk $\le %.2e$\%' % crosstalk*100.
+            self.specs['CCD-013'].ok = (crosstalk < 1.9e-3)
+        dark_current = max(self.results['DARK_CURRENT_95'])
+        self.specs['CCD-014'].measurement = 'dark current (95th percentile) $\le %.2e$\electron\,s$^{-1}$' % dark_current
+        self.specs['CCD-014'].ok = (dark_current < 0.2)
+        
+        bands = self.qe_data['QE_BANDS'].data.field('BAND')
+        bands = dict([(band, []) for band in bands])
+        for amp in imutils.allAmps:
+            values = self.qe_data['QE_BANDS'].data.field('AMP%02i' % amp)
+            for band, value in zip(bands, values):
+                bands[band].append(value)
+        for band, specnum, minQE in zip('ugrizy', range(21, 27), 
+                                        (41, 78, 83, 82, 75, 21)):
+            try:
+                qe_mean = np.mean(bands[band])
+                self.specs['CCD-0%i' % specnum].measurement \
+                    = '%s band QE = %.2e\%' % (band, qe_mean)
+                self.specs['CCD-0%i' % specnum].ok = (qe_mean > minQE)
+            except KeyError:
+                self.specs['CCD-0%i' % specnum].measurement = 'No data'
+        prnu_results = pyfits.open(self.results.infile)['PRNU_RESULTS'].data
+        target_wls = [350, 450, 500, 620, 750, 870, 1000]
+        ratios = {}
+        for wl, stdev, mean in zip(prnu_results['WAVELENGTH'],
+                                   prnu_results['STDEV'], prnu_results['MEAN']):
+            target_wls.pop(int(wl))
+            if stdev > 0:
+                ratios[wl] = stdev/mean
+        max_ratio = max(ratios.values())
+        max_wl = ratios.keys()[np.where(ratios.values() == max_ratio)[0][0]]
+        self.specs['CCD-027'].measurement = 'max variation = %.2e/% at %inm' % (max_ratio*100, max_wl)
+        if target_wls:
+            measurement = self.specs['CCD-027'].measurement + '//missing wls: ' + ', '.join(target_wls)
+            self.specs['CCD-027'].measurement = '\twolinecell{%s}' % measurement
+        self.specs['CCD-027'].ok = (max_ratio < 5e-2)
+        
+        psf_sigma = np.mean(self.results['PSF_SIGMA'])
+        self.specs['CCD-028'].measurement = 'PSF sigma = %.2f$\mu$' % psf_sigma
+        self.specs['CCD-028'].ok = (psf_sigma < 5.)
+
+class CcdSpec(object):
+    _latex_status = dict([(True, '\ok'), (False, '\fail'), (None, '$\cdots$')])
+    def __init__(self, name, description, ok=None, measurment=None,
+                 bold_name=True):
+        self._name = name
+        self.description = description
+        self.ok = ok
+        self.measurement = measurment
+        self.bold_name = bold_name
+    @property
+    def name(self):
+        if self.bold_name:
+            return '{\\bf %s}' % self._name
+        else:
+            return self._name
+    @staticmethod
+    def _table_cell(value):
+        if value is None:
+            return '$\cdots$'
+        else:
+            return value
+    def latex_entry(self):
+        entry = '%s & %s & %s & %s \\\\ \hline' % \
+                (self._latex_status[self.ok],
+                 self.name, self.description,
+                 self._table_cell(self.measurement))
+        return entry
+
 
 if __name__ == '__main__':
     plots = EOTestPlots('114-03')
