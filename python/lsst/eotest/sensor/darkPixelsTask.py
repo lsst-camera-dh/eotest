@@ -27,8 +27,6 @@ class DarkPixelsConfig(pexConfig.Config):
                                 int, default=100)
     mask_plane = pexConfig.Field("Mask plane to be used for output mask file",
                                  str, default='BAD')
-    temp_tol = pexConfig.Field("Temperature tolerance in degrees C for CCDTEMP among dark files",
-                               float, default=1.5)
     output_dir = pexConfig.Field("Output directory", str, default=".")
     eotest_results_file = pexConfig.Field("EO test results filename",
                                           str, default=None)
@@ -41,7 +39,6 @@ class DarkPixelsTask(pipeBase.Task):
 
     @pipeBase.timeMethod
     def run(self, sensor_id, sflat_files, mask_files, bias_frame=None):
-        imutils.check_temperatures(sflat_files, self.config.temp_tol)
         medfile = os.path.join(self.config.output_dir,
                                '%s_median_sflat.fits' % sensor_id)
         superflat(sflat_files, outfile=medfile)

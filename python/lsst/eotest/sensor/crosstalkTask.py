@@ -14,7 +14,7 @@ class CrosstalkConfig(pexConfig.Config):
     temp_set_point = pexConfig.Field("Required temperature (C) set point",
                                      float, default=-95.)
     temp_set_point_tol = pexConfig.Field("Required temperature set point tolerance (degrees C)",
-                                         float, default=0.1)
+                                         float, default=1.)
     output_dir = pexConfig.Field("Output directory", str, default=".")
     verbose = pexConfig.Field("Turn verbosity on", bool, default=True)
 

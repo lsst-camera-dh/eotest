@@ -65,8 +65,8 @@ class DarkPixels(object):
         md.set('DETSIZE', amp_geom[self.amp]['DETSIZE'])
         md.set('DETSEC', amp_geom[self.amp]['DETSEC'])
         md.set('DATASEC', amp_geom[self.amp]['DATASEC'])
-        md.set('NBRTPIX', len(self.dark_pixels))
-        md.set('NBRTCOL', len(self.dark_columns))
+        md.set('NDARKPIX', len(self.dark_pixels))
+        md.set('NDARKCOL', len(self.dark_columns))
         self.mask.writeFits(outfile, md, 'a')
     def _inverted_image(self, offset=None):
         """

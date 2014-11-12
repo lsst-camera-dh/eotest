@@ -26,8 +26,10 @@ class BrightPixelsConfig(pexConfig.Config):
                                 int, default=20)
     mask_plane = pexConfig.Field("Mask plane to be used for output mask file",
                                  str, default='BAD')
-    temp_tol = pexConfig.Field("Temperature tolerance in degrees C for CCDTEMP among dark files",
-                               float, default=1.5)
+    temp_set_point = pexConfig.Field("Required temperature (C) set point",
+                                     float, default=-95.)
+    temp_set_point_tol = pexConfig.Field("Required temperature set point tolerance (degrees C)",
+                                         float, default=1.)
     output_dir = pexConfig.Field("Output directory", str, default=".")
     eotest_results_file = pexConfig.Field("EO test results filename",
                                           str, default=None)
@@ -40,7 +42,9 @@ class BrightPixelsTask(pipeBase.Task):
 
     @pipeBase.timeMethod
     def run(self, sensor_id, dark_files, mask_files, gains, bias_frame=None):
-        imutils.check_temperatures(dark_files, self.config.temp_tol)
+        imutils.check_temperatures(dark_files, self.config.temp_set_point_tol,
+                                   setpoint=self.config.temp_set_point,
+                                   warn_only=True)
         median_images = {}
         for amp in imutils.allAmps:
             median_images[amp] = imutils.fits_median(dark_files,

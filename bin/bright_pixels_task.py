@@ -22,8 +22,10 @@ parser.add_argument('-c', '--colthresh', default=20, type=int,
                     help='bright column threshold in # of bright pixels')
 parser.add_argument('-p', '--mask_plane', default='BAD', type=str,
                     help='mask plane to be used for output mask file')
-parser.add_argument('-t', '--temp_tol', default=1.5, type=float,
+parser.add_argument('--temp_tol', default=1., type=float,
                     help='temperature tolerance for CCDTEMP among dark files')
+parser.add_argument('--temp_set_point', default=-95, type=float,
+                    help='temperature set point for CCDTEMP among dark files')
 args = parser.parse_args()
 
 task = sensorTest.BrightPixelsTask()
@@ -31,7 +33,8 @@ task = sensorTest.BrightPixelsTask()
 task.config.ethresh = args.ethresh
 task.config.colthresh = args.colthresh
 task.config.mask_plane = args.mask_plane
-task.config.temp_tol = args.temp_tol
+task.config.temp_set_point_tol = args.temp_tol
+task.config.temp_set_point = args.temp_set_point
 task.config.output_dir = args.output_dir
 task.config.eotest_results_file = args.results_file
 task.config.verbose = args.verbose
