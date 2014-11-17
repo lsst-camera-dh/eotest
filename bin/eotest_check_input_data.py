@@ -51,7 +51,7 @@ def eotest_check_input_data(rootdir='.', use_baselined=True):
     for test in ('fe55', 'spot', 'dark', 'lambda'):
         for infile in files[test]:
             try:
-                imutils.check_temperatures([infile], 0.1, setpoint=-95)
+                imutils.check_temperatures([infile], 1., setpoint=-95)
             except RuntimeError, eObj:
                 errors['temperature'].append(eObj.message)
     #

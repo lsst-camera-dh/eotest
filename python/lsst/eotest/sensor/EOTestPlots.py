@@ -107,14 +107,14 @@ def plot_flat(infile, nsig=3, cmap=pylab.cm.hot, win=None, subplot=(1, 1, 1),
 
 class EOTestPlots(object):
     band_pass = QE_Data.band_pass
-    def __init__(self, sensor_id, rootdir='.', output_dir='.', ps=False,
+    prnu_wls = (350, 450, 500, 620, 750, 870, 1000)
+    def __init__(self, sensor_id, rootdir='.', output_dir='.',
                  interactive=False, results_file=None):
         self.sensor_id = sensor_id
         self.rootdir = rootdir
         self.output_dir = output_dir
         if not os.path.exists(output_dir):
             os.makedirs(output_dir)
-        self.ps = ps
         self.interactive = interactive
         plot.pylab.interactive(interactive)
         if results_file is None:
@@ -124,7 +124,9 @@ class EOTestPlots(object):
         self.results = EOTestResults(results_file)
         self._qe_data = None
         self._qe_file = self._fullpath('%s_QE.fits' % self.sensor_id)
-        self.specs = CcdSpecs(results_file, plotter=self)
+        xtalk_file = os.path.join(self.rootdir, 
+                                  '%s_xtalk_matrix.fits' % self.sensor_id)
+        self.specs = CcdSpecs(results_file, plotter=self, xtalk_file=xtalk_file)
     @property
     def qe_data(self):
         if self._qe_data is None:
@@ -132,8 +134,6 @@ class EOTestPlots(object):
         return self._qe_data
     def _save_fig(self, outfile_root):
         plot.pylab.savefig(self._outputpath('%s.png' % outfile_root))
-        if self.ps:
-            plot.pylab.savefig(self._outputpath('%s.eps' % outfile_root))
     def _fullpath(self, basename):
         return os.path.join(self.rootdir, basename)
     def _outputpath(self, basename):
@@ -386,8 +386,7 @@ class EOTestPlots(object):
             plot.xyplot(band_wls, qe_band, xerr=band_wls_errs, 
                         oplot=1, color='g')
         plot.hline(100)
-    def flat_fields(self, lambda_dir, nsig=3, cmap=pylab.cm.hot,
-                    figsize=(11, 8.5)):
+    def flat_fields(self, lambda_dir, nsig=3, cmap=pylab.cm.hot):
         glob_string = os.path.join(lambda_dir, '*_lambda_*.fits')
         #print glob_string
         flats = sorted(glob.glob(glob_string))
@@ -397,23 +396,15 @@ class EOTestPlots(object):
             wls.append(int(float(os.path.basename(flat).split('_')[2])))
         wls = np.array(wls)
         #print wls
-        for i, band in enumerate(self.band_pass):
-            mid_wl = sum(self.band_pass[band])/2.
-            dwl = np.abs(wls - mid_wl)
-            # Find the observed wavelength closest to the center of
-            # the bandpass.
-            target = np.where(dwl == min(dwl))[0][0]
-            subplot = (2, 3, i+1)
-            if i == 0:
-                win = plot_flat(flats[target], subplot=subplot, nsig=nsig,
-                                cmap=cmap, wl=wls[target], figsize=figsize,
+        # Loop over PRNU wavelengths and generate a png for each.
+        for wl in self.prnu_wls:
+            try:
+                target = np.where(wls == wl)[0][0]
+                win = plot_flat(flats[target], nsig=nsig, cmap=cmap, wl=wl,
                                 gains=self.results['GAIN'])
-            else:
-                plot_flat(flats[target], subplot=subplot, win=win,
-                          nsig=nsig, cmap=cmap, wl=wls[target],
-                          gains=self.results['GAIN'])
-        win.frameAxes.set_title('Flat Fields, %s' % self.sensor_id)
-        return win
+                pylab.savefig('%s_%04inm_flat.png' % (self.sensor_id, wl))
+            except IndexError:
+                pass
     def confluence_tables(self, outfile=False):
         if outfile:
             output = open(self._outputpath('%s_results.txt' 
@@ -447,13 +438,18 @@ class EOTestPlots(object):
     def prnu_results(self):
         my_prnu_results = pyfits.open(self.results.infile)['PRNU_RESULTS'].data
         return my_prnu_results
-    def latex_tables(self, outfile):
-        output = open(outfile, 'w')
-        output.write(self.specs.latex_header() + '\n')
+    def latex_table(self, outfile=None):
+        lines = []
+        lines.append(self.specs.latex_header())
         for spec in self.specs:
-            output.write(self.specs[spec].latex_entry() + '\n')
-        output.write(self.specs.latex_footer() + '\n')
-        output.close()
+            lines.append(self.specs[spec].latex_entry())
+        lines.append(self.specs.latex_footer())
+        my_table = '\n'.join(lines) + '\n'
+        if outfile is not None:
+            output = open(outfile, 'w')
+            output.write(my_table)
+            output.close()
+        return my_table
 
 class CcdSpecs(OrderedDict):
     def __init__(self, results_file, xtalk_file=None, plotter=None):
@@ -466,45 +462,43 @@ class CcdSpecs(OrderedDict):
         self[spec.name] = spec
         return spec
     def _createSpecs(self):
-        self.factory('CCD-007', 'Read Noise ($< 8$\,\electron rms)')
-        self.factory('CCD-008', 'Blooming Full Well ($<175000$\,\electron)')
-        self.factory('CCD-009', 'Nonlinearity ($<2\\%$)')
-        self.factory('CCD-010', 'Serial CTE ($> 1 - \\num{5e-6}$)')
-        self.factory('CCD-011', 'Parallel CTE ($> 1 - \\num{3e-6}$)')
-        self.factory('CCD-012', '\\twolinecell{Active Imaging Area \\\\and Cosmetic Quality}')
+        self.factory('CCD-007', 'Read Noise', spec='$< 8$\,\electron rms')
+        self.factory('CCD-008', 'Blooming Full Well',
+                     spec='$<175000$\,\electron')
+        self.factory('CCD-009', 'Nonlinearity', spec='$<2\\%$')
+        self.factory('CCD-010', 'Serial CTE', spec='$> 1 - \\num{5e-6}$')
+        self.factory('CCD-011', 'Parallel CTE', spec='$> 1 - \\num{3e-6}$')
+        self.factory('CCD-012', '\\twolinecell{Active Imaging Area \\\\and Cosmetic Quality}', spec='\\twolinecell{$<0.5$\\% defective \\\\pixels}')
         self.factory('CCD-012a', 'Bright Pixels')
         self.factory('CCD-012b', 'Dark Pixels')
         self.factory('CCD-012c', 'Bright Columns')
         self.factory('CCD-012d', 'Dark Columns')
         self.factory('CCD-012e', 'Traps')
-        self.factory('CCD-013', 'Crosstalk ($<0.19$\\%)')
-        self.factory('CCD-014', '\\twolinecell{Dark Current 95th Percentile \\\\($<0.2$\,\electron\,s$^{-1}$)}')
-        self.factory('CCD-021', 'u Band QE ($> 41$\\%)')
-        self.factory('CCD-022', 'g Band QE ($> 78$\\%)')
-        self.factory('CCD-023', 'r Band QE ($> 83$\\%)')
-        self.factory('CCD-024', 'i Band QE ($> 82$\\%)')
-        self.factory('CCD-025', 'z Band QE ($> 75$\\%)')
-        self.factory('CCD-026', 'y Band QE ($> 21$\\%)')
-        self.factory('CCD-027', 'PRNU ($<5$\\%)')
-        self.factory('CCD-028', 'Point Spread Function ($< 5\mu$)')
+        self.factory('CCD-013', 'Crosstalk', spec='$<0.19$\\%')
+        self.factory('CCD-014',
+                     '\\twolinecell{Dark Current \\\\95th Percentile}',
+                     spec='$<0.2$\,\electron\,s$^{-1}$')
+        self.factory('CCD-021', 'u Band QE', spec='$> 41$\\%')
+        self.factory('CCD-022', 'g Band QE', spec='$> 78$\\%')
+        self.factory('CCD-023', 'r Band QE', spec='$> 83$\\%')
+        self.factory('CCD-024', 'i Band QE', spec='$> 82$\\%')
+        self.factory('CCD-025', 'z Band QE', spec='$> 75$\\%')
+        self.factory('CCD-026', 'y Band QE', spec='$> 21$\\%')
+        self.factory('CCD-027', 'PRNU', spec='$<5$\\%')
+        self.factory('CCD-028', 'Point Spread Function', spec='$\sigma < 5\mu$')
     @staticmethod
     def latex_header():
-        header = """\\begin{table}[h]
-\\begin{tabular}{|c|l|l|l|}
-\hline
-\\textbf{Status} & \\textbf{Specification} & \\textbf{Description} & \\textbf{Measurement}  \\\\ \hline"""
-        return header
+        return CcdSpec.latex_header()
     @staticmethod
     def latex_footer():
-        footer = "\end{tabular}\n\end{table}"
-        return footer
+        return CcdSpec.latex_footer()
     def latex_table(self):
         output = []
         output.append(self.latex_header())
         for name, spec in self.items():
             output.append(spec.latex_entry())
         output.append(self.latex_footer())
-        return '\n'.join(output)
+        return '\n'.join(output) + '\n'
     def _ingestResults(self, results_file, xtalk_file=None):
         self.results = EOTestResults(results_file)
         rn = self.results['READ_NOISE']
@@ -541,8 +535,10 @@ class CcdSpecs(OrderedDict):
         self['CCD-012'].ok = (num_defects/num_pixels < 5e-3)
         if xtalk_file is not None:
             foo = CrosstalkMatrix(xtalk_file)
-            crosstalk = max(foo.matrix.flatten())
-            self['CCD-013'].measurement = '$\le \\num{%.2e}$\\%%' % crosstalk*100.
+            for i in range(len(foo.matrix)):
+                foo.matrix[i][i] = 0
+            crosstalk = max(np.abs(foo.matrix.flatten()))
+            self['CCD-013'].measurement = 'max. value: $\\num{%.2e}$\\%%' % (crosstalk*100.)
             self['CCD-013'].ok = (crosstalk < 1.9e-3)
         dark_current = max(self.results['DARK_CURRENT_95'])
         self['CCD-014'].measurement = '$\\num{%.2e}$\electron\,s$^{-1}$' % dark_current
@@ -563,7 +559,8 @@ class CcdSpecs(OrderedDict):
             except KeyError:
                 self['CCD-0%i' % specnum].measurement = 'No data'
         prnu_results = self.plotter.prnu_results
-        target_wls = Set([350, 450, 500, 620, 750, 870, 1000])
+#        target_wls = Set([350, 450, 500, 620, 750, 870, 1000])
+        target_wls = Set(EOTestPlots.prnu_wls)
         ratios = {}
         for wl, stdev, mean in zip(prnu_results['WAVELENGTH'],
                                    prnu_results['STDEV'], prnu_results['MEAN']):
@@ -585,9 +582,10 @@ class CcdSpecs(OrderedDict):
 
 class CcdSpec(object):
     _latex_status = dict([(True, '\ok'), (False, '\\fail'), (None, '$\cdots$')])
-    def __init__(self, name, description, ok=None, measurment=None):
+    def __init__(self, name, description, spec=None, ok=None, measurment=None):
         self.name = name
         self.description = description
+        self.spec = spec
         self.ok = ok
         self.measurement = measurment
     @staticmethod
@@ -596,13 +594,30 @@ class CcdSpec(object):
             return '$\cdots$'
         else:
             return value
+    @staticmethod
+    def latex_header():
+        header = """\\begin{table}[h]
+\\begin{tabular}{|c|l|l|l|l|}
+\hline
+\\textbf{Status} & \\textbf{Spec. ID} & \\textbf{Description} & \\textbf{Specification} & \\textbf{Measurement}  \\\\ \hline"""
+        return header
+    @staticmethod
+    def latex_footer():
+        footer = "\end{tabular}\n\end{table}"
+        return footer
     def latex_entry(self):
-        entry = '%s & %s & %s & %s \\\\ \hline' % \
+        entry = '%s & %s & %s & %s & %s \\\\ \hline' % \
                 (self._latex_status[self.ok],
                  self.name, self.description,
+                 self._table_cell(self.spec), 
                  self._table_cell(self.measurement))
         return entry
-
+    def latex_table(self):
+        lines = []
+        lines.append(CcdSpecs.latex_header())
+        lines.append(self.latex_entry())
+        lines.append(CcdSpecs.latex_footer())
+        return '\n'.join(lines)
 
 if __name__ == '__main__':
     plots = EOTestPlots('114-03')
