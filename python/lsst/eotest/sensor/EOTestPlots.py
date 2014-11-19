@@ -22,6 +22,24 @@ import lsst.afw.image as afwImage
 import lsst.afw.math as afwMath
 import lsst.afw.display.ds9 as ds9
 
+def latex_minus_mean(values, format='%.2e'):
+    """
+    Wrapper to np.mean to handle infinities.  Returns the evaluated
+    string '-\num{<%format>}' % np.mean(values) if the result is
+    finite.
+    """
+    mean_value = np.mean(values)
+    if not np.isinf(mean_value):
+        if mean_value < 0:
+            template = '+ \\num{' + format + '}'
+        else:
+            template = '- \\num{' + format + '}'
+        return template % np.abs(mean_value)
+    elif mean_value < 0:
+        return '+ \\infty'
+    else:
+        return '- \\infty'
+
 def plot_flat(infile, nsig=3, cmap=pylab.cm.hot, win=None, subplot=(1, 1, 1),
               figsize=None, wl=None, gains=None, use_ds9=False):
     ccd = MaskedCCD(infile)
@@ -109,7 +127,7 @@ class EOTestPlots(object):
     band_pass = QE_Data.band_pass
     prnu_wls = (350, 450, 500, 620, 750, 870, 1000)
     def __init__(self, sensor_id, rootdir='.', output_dir='.',
-                 interactive=False, results_file=None):
+                 interactive=False, results_file=None, xtalk_file=None):
         self.sensor_id = sensor_id
         self.rootdir = rootdir
         self.output_dir = output_dir
@@ -124,8 +142,6 @@ class EOTestPlots(object):
         self.results = EOTestResults(results_file)
         self._qe_data = None
         self._qe_file = self._fullpath('%s_QE.fits' % self.sensor_id)
-        xtalk_file = os.path.join(self.rootdir, 
-                                  '%s_xtalk_matrix.fits' % self.sensor_id)
         self.specs = CcdSpecs(results_file, plotter=self, xtalk_file=xtalk_file)
     @property
     def qe_data(self):
@@ -502,7 +518,7 @@ class CcdSpecs(OrderedDict):
     def _ingestResults(self, results_file, xtalk_file=None):
         self.results = EOTestResults(results_file)
         rn = self.results['READ_NOISE']
-        self['CCD-007'].measurement = '$%.2f$\,\electron\,rms' % max(rn)
+        self['CCD-007'].measurement = '$%.2f$--$%.2f$\,\electron\,rms' % (min(rn), max(rn))
         self['CCD-007'].ok = (max(rn) < 8)
         fw = self.results['FULL_WELL']
         self['CCD-008'].measurement = '$%i$--$%i$\,\electron' % (min(fw), max(fw))
@@ -511,10 +527,10 @@ class CcdSpecs(OrderedDict):
         self['CCD-009'].measurement = '\\twolinecell{max. fractional deviation \\\\from linearity: $\\num{%.1e}$}' % max(max_frac_dev)
         self['CCD-009'].ok = (max(max_frac_dev) < 0.02)
         scti = self.results['CTI_SERIAL']
-        self['CCD-010'].measurement = '$1-\\num{%.2e}$' % np.mean(scti)
+        self['CCD-010'].measurement = '$1%s$' % latex_minus_mean(scti)
         self['CCD-010'].ok = (max(scti) < 5e-6)
         pcti = self.results['CTI_PARALLEL']
-        self['CCD-011'].measurement = '$1-\\num{%.2e}$' % np.mean(pcti)
+        self['CCD-011'].measurement = '$1%s$' % latex_minus_mean(pcti)
         self['CCD-011'].ok = (max(pcti) < 3e-6)
         num_bright_pixels = sum(self.results['NUM_BRIGHT_PIXELS'])
         self['CCD-012a'].measurement = '%i' % num_bright_pixels
@@ -540,7 +556,10 @@ class CcdSpecs(OrderedDict):
             crosstalk = max(np.abs(foo.matrix.flatten()))
             self['CCD-013'].measurement = 'max. value: $\\num{%.2e}$\\%%' % (crosstalk*100.)
             self['CCD-013'].ok = (crosstalk < 1.9e-3)
-        dark_current = max(self.results['DARK_CURRENT_95'])
+        try:
+            dark_current = self.results.output['AMPLIFIER_RESULTS'].header['DARK95']
+        except KeyError:
+            dark_current = max(self.results['DARK_CURRENT_95'])
         self['CCD-014'].measurement = '$\\num{%.2e}$\electron\,s$^{-1}$' % dark_current
         self['CCD-014'].ok = (dark_current < 0.2)
         
@@ -597,6 +616,7 @@ class CcdSpec(object):
     @staticmethod
     def latex_header():
         header = """\\begin{table}[h]
+\\centering
 \\begin{tabular}{|c|l|l|l|l|}
 \hline
 \\textbf{Status} & \\textbf{Spec. ID} & \\textbf{Description} & \\textbf{Specification} & \\textbf{Measurement}  \\\\ \hline"""
