@@ -23,19 +23,31 @@ class TrapTask(pipeBase.Task):
     ConfigClass = TrapConfig
     _DefaultName = "TrapTask"
     @pipeBase.timeMethod
-    def run(self, sensor_id, pocket_pumped_file, mask_files, gains):
+    def run(self, sensor_id, pocket_pumped_file, mask_files, gains,
+            cycles=100, threshold=200):
         if self.config.verbose:
-            self.log.info("processing on %s" % pocket_pumped_file)
+            self.log.info("processing %s" % pocket_pumped_file)
         ccd = MaskedCCD(pocket_pumped_file, mask_files=mask_files)
         outfile = os.path.join(self.config.output_dir,
                                '%s_traps.fits' % sensor_id)
-        my_traps = Traps(ccd, gains)
+        my_traps = Traps(ccd, gains, cycles=cycles)
         my_traps.write(outfile, clobber=True)
         results_file = self.config.eotest_results_file
         if results_file is None:
             results_file = os.path.join(self.config.output_dir,
                                         '%s_eotest_results.fits' % sensor_id)
         results = EOTestResults(results_file)
+        if self.config.verbose:
+            self.log.info("Amp     Number of traps")
         for amp in imutils.allAmps:
-            results.add_seg_result(amp, 'NUM_TRAPS', len(my_traps[amp]))
+            #
+            # Tabulate forward traps (positive polarity) with size >=
+            # threshold.
+            #
+            forward_traps = [item for item in my_traps[amp] 
+                             if (item[-1] > 0 and item[-2] >= threshold)]
+            num_traps = len(forward_traps)
+            results.add_seg_result(amp, 'NUM_TRAPS', num_traps)
+            if self.config.verbose:
+                self.log.info("%i             %i" % (amp, num_traps))
         results.write(clobber=True)
