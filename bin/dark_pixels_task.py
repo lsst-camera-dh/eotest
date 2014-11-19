@@ -22,8 +22,6 @@ parser.add_argument('-c', '--colthresh', default=20, type=int,
                     help='dark column threshold in # of dark pixels')
 parser.add_argument('-p', '--mask_plane', default='BAD', type=str,
                     help='mask plane to be used for output mask file')
-parser.add_argument('--temp_tol', default=1.5, type=float,
-                    help='temperature tolerance for CCDTEMP among dark files')
 args = parser.parse_args()
 
 task = sensorTest.DarkPixelsTask()
@@ -31,7 +29,6 @@ task = sensorTest.DarkPixelsTask()
 task.config.thresh = args.thresh
 task.config.colthresh = args.colthresh
 task.config.mask_plane = args.mask_plane
-task.config.temp_tol = args.temp_tol
 task.config.output_dir = args.output_dir
 task.config.eotest_results_file = args.results_file
 task.config.verbose = args.verbose

@@ -24,8 +24,6 @@ parser.add_argument('-p', '--mask_plane', default='BAD', type=str,
                     help='mask plane to be used for output mask file')
 parser.add_argument('--temp_tol', default=1., type=float,
                     help='temperature tolerance for CCDTEMP among dark files')
-parser.add_argument('--temp_set_point', default=-95, type=float,
-                    help='temperature set point for CCDTEMP among dark files')
 args = parser.parse_args()
 
 task = sensorTest.BrightPixelsTask()
