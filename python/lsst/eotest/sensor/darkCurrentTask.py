@@ -51,6 +51,7 @@ class DarkCurrentTask(pipeBase.Task):
         exptime = md.get('EXPTIME')
         if self.config.verbose:
             self.log.info("Segment    95 percentile    median")
+        dark_curr_pixels = []
         for amp in imutils.allAmps:
             imaging_region = ccd.amp_geom.imaging
             overscan = ccd.amp_geom.serial_overscan
@@ -64,15 +65,21 @@ class DarkCurrentTask(pipeBase.Task):
             unmasked = [pixels[i] for i in range(len(pixels)) if masked[i] == 0]
             unmasked.sort()
             unmasked = np.array(unmasked)*gains[amp]/exptime
+            dark_curr_pixels.extend(unmasked)
             dark95s[amp] = unmasked[int(len(unmasked)*0.95)]
             if self.config.verbose:
                 self.log.info("%s         %.2e         %.2e"
                               % (imutils.channelIds[amp],
                                  dark95s[amp], unmasked[len(unmasked)/2]))
-
+        #
+        # Compute 95th percentile dark current for CCD as a whole.
+        #
+        dark_curr_pixels = sorted(dark_curr_pixels)
+        darkcurr95 = dark_curr_pixels[int(len(dark_curr_pixels)*0.95)]
         dark95mean = np.mean(dark95s.values())
         if self.config.verbose:
-            self.log.info("CCD: mean 95 percentile value = %s" % dark95mean)
+            #self.log.info("CCD: mean 95 percentile value = %s" % dark95mean)
+            self.log.info("CCD-wide 95 percentile value = %s" % darkcurr95)
         #
         # Update header of dark current median image file with dark
         # files used and dark95 values, and write dark95 values to the
@@ -86,6 +93,8 @@ class DarkCurrentTask(pipeBase.Task):
         output = pyfits.open(medfile)
         for i, dark in enumerate(dark_files):
             output[0].header['DARK%02i' % i] = os.path.basename(dark)
+        # Write overall dark current 95th percentile
+        results.output['AMPLIFIER_RESULTS'].header['DARK95'] = darkcurr95
         for amp in imutils.allAmps:
             output[0].header['DARK95%s'%imutils.channelIds[amp]] = dark95s[amp]
             results.add_seg_result(amp, 'DARK_CURRENT_95', dark95s[amp])
