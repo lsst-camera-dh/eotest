@@ -25,6 +25,15 @@ class Traps(dict):
         super(Traps, self).__init__()
         for amp in amps:
             self[amp] = []
+            #
+            # ndarray of bias-subtracted, but untrimmed image so that
+            # we can address the neighboring pixels to the peak pixel
+            # to determine the polarity.
+            #
+            imarr = ccd.bias_subtracted_image(amp).getImage().getArray()
+            #
+            # Use the trimmed and unbiased image for source detection
+            #
             image = ccd.unbiased_and_trimmed_image(amp)
             stats = afwMath.makeStatistics(image,
                                            afwMath.MEDIAN | afwMath.STDEVCLIP,
@@ -44,7 +53,18 @@ class Traps(dict):
                 column = image.Factory(image, bbox)
                 colmean = imutils.mean(column)
                 trap_size = (peak.getPeakValue() - colmean)*gains[amp]/cycles
-                self[amp].append((peak.getIx(), peak.getIy(), trap_size))
+                # peak.getIx(), peak.getIy() return the pixel
+                # coordinates including prescan and starting at (1, 1)
+                # at the output node.
+                ix, iy = peak.getIx(), peak.getIy()
+                try:
+                    # A positive polarity means a forward trap, i.e.,
+                    # leading pixel has the charge deficit.
+                    polarity = imarr[iy+1][ix] - imarr[iy-1][ix]
+                except IndexError:
+                    # Skip pixels at boundaries.
+                    continue
+                self[amp].append((ix, iy, trap_size, polarity))
     def write(self, outfile, clobber=True):
         """
         Write the results as a FITS binary table.
@@ -52,10 +72,10 @@ class Traps(dict):
         nrows = sum([len(self[amp]) for amp in self])
         output = pyfits.HDUList()
         output.append(pyfits.PrimaryHDU())
-        colnames = ['AMPLIFIER', 'XPOS', 'YPOS', 'TRAP_SIZE']
-        formats = 'IIII'
-        units = ['None', 'pixel', 'pixel', 'electrons']
-        columns = [np.zeros(nrows, dtype=int)]*4
+        colnames = ['AMPLIFIER', 'XPOS', 'YPOS', 'TRAP_SIZE', 'POLARITY']
+        formats = 'IIIII'
+        units = ['None', 'pixel', 'pixel', 'electrons', 'electrons']
+        columns = [np.zeros(nrows, dtype=int)]*5
         hdu = pyfitsTableFactory([pyfits.Column(name=colname, format=format,
                                                 unit=unit, array=column) 
                                   for colname, format, unit, column in
@@ -64,12 +84,13 @@ class Traps(dict):
         output.append(hdu)
         row = 0
         for amp in self:
-            for xpos, ypos, trap_size in self[amp]:
+            for xpos, ypos, trap_size, polarity in self[amp]:
                 output['TRAPS'].data[row]['AMPLIFIER'] = amp
                 output['TRAPS'].data[row]['XPOS'] = xpos
                 output['TRAPS'].data[row]['YPOS'] = ypos
                 output['TRAPS'].data[row]['TRAP_SIZE'] = trap_size
-            row += 1
+                output['TRAPS'].data[row]['POLARITY'] = polarity
+                row += 1
         pyfitsWriteto(output, outfile, clobber=True)
 
 if __name__ == '__main__':
