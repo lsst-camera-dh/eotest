@@ -74,12 +74,12 @@ class EPERTask(pipeBase.Task):
     _DefaultName = "eper"
 	 
     @pipeBase.timeMethod
-    def run(self, infilename, amps, overscans, mask_files):
+    def run(self, infilename, amps, overscans):
         if not infilename:
             self.log.error("Please specify an input file path.")
             sys.exit(1)
 
-        ccd = MaskedCCD(infilename, mask_files=mask_files)
+        ccd = MaskedCCD(infilename)
         # iterate through amps
         cte = {}
         for amp in amps:
@@ -126,6 +126,7 @@ class EPERTask(pipeBase.Task):
                     print 'cti, amp ' + str(amp) + " = " + '{0:.16f}'.format(cte[amp])
                 else:
                     print 'cte, amp ' + str(amp) + " = " + '{0:.16f}'.format(cte[amp])
+                print
         return cte
 			
 if __name__ == '__main__':
