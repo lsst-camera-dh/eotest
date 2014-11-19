@@ -124,7 +124,7 @@ class TaskParser(argparse.ArgumentParser):
         self.add_argument('-r', '--results_file', type=str, default=None,
                           help='Results file for EO test parameters. Computed value if left at default of None: <SENSOR_ID>_eotest_results.fits')
         self.add_argument('--temp_set_point', type=float, default=-95.,
-                          help='Expected temperture set point (in degrees C) for measurement (0.1 degree tolerance)')
+                          help='Expected temperture set point (in degrees C) for measurement')
         
     def parse_args(self):
         args = argparse.ArgumentParser.parse_args(self)

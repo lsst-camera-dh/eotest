@@ -146,6 +146,9 @@ class QE_Data(object):
                     #
                     nphot = self.exptime[i]*power/hnu
                     qe_value = Ne/nphot
+                    if qe_value > 10.:
+                        # Skip obviously out-of-range values
+                        raise RuntimeError("QE value > 10")
                     qe[amp].append(100*qe_value)
                     wlarrs[amp].append(wl_nm)
                 except RuntimeError:
