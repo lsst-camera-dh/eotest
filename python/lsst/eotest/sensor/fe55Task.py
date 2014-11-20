@@ -80,6 +80,7 @@ class Fe55Task(pipeBase.Task):
         # Fit the DN distributions to obtain the system gain per amp.
         #
         gains = {}
+        gain_errors = {}
         sigma_modes = {}
         for amp in imutils.allAmps:
             data = fitter.results(min_prob=self.config.chiprob_min, amp=amp)
@@ -89,6 +90,7 @@ class Fe55Task(pipeBase.Task):
                     foo = Fe55GainFitter(dn)
                     kalpha_peak, kalpha_sigma = foo.fit()
                     gains[amp] = foo.gain
+                    gain_errors[amp] = foo.gain_error
                 except RuntimeError, e:
                     print e
                     continue
@@ -116,6 +118,7 @@ class Fe55Task(pipeBase.Task):
         results = EOTestResults(results_file)
         for amp in gains:
             results.add_seg_result(amp, 'GAIN', gains[amp])
+            results.add_seg_result(amp, 'GAIN_ERROR', gain_errors[amp])
             results.add_seg_result(amp, 'PSF_SIGMA', sigma_modes[amp])
         results.write(clobber=True)
 

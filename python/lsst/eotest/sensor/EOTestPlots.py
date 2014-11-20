@@ -272,10 +272,13 @@ class EOTestPlots(object):
         win.axes[-1].set_position(bbox)
     def gains(self, oplot=0, xoffset=0.25, width=0.5, color='b'):
         results = self.results
-        win = plot.bar(results['AMP'] - xoffset, results['GAIN'],
-                       xname='Amp', yname='gain (e-/DN)',
-                       yrange=(0, max(results['GAIN']*1.2)),
-                       xrange=(0, 17), color=color, width=width)
+        win = plot.xyplot(results['AMP'], results['GAIN'],
+                          yerr=results['GAIN_ERROR'], xname='AMP',
+                          yname='gain (e-/DN)')
+#        win = plot.bar(results['AMP'] - xoffset, results['GAIN'],
+#                       xname='Amp', yname='gain (e-/DN)',
+#                       yrange=(0, max(results['GAIN']*1.2)),
+#                       xrange=(0, 17), color=color, width=width)
         win.set_title("System Gain, %s" % self.sensor_id)
     def noise(self, oplot=0, xoffset=0.25, width=0.5, color='b'):
         results = self.results
@@ -601,12 +604,12 @@ class CcdSpecs(OrderedDict):
 
 class CcdSpec(object):
     _latex_status = dict([(True, '\ok'), (False, '\\fail'), (None, '$\cdots$')])
-    def __init__(self, name, description, spec=None, ok=None, measurment=None):
+    def __init__(self, name, description, spec=None, ok=None, measurement=None):
         self.name = name
         self.description = description
         self.spec = spec
         self.ok = ok
-        self.measurement = measurment
+        self.measurement = measurement
     @staticmethod
     def _table_cell(value):
         if value is None:

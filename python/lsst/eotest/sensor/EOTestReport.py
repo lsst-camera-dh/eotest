@@ -144,7 +144,7 @@ class EOTestReport(object):
         #
         # PRNU
         #
-        self.output.write('\section{Photresponse Non-uniformity}\n')
+        self.output.write('\section{Photoresponse Non-uniformity}\n')
         self.output.write(self.plots.specs['CCD-027'].latex_table())
         flats = []
         for wl in self.plots.prnu_wls:

@@ -48,11 +48,13 @@ class Fe55GainFitter(object):
         # and relative widths are fixed in fe55_lines(...) above.
         #
         p0 = (ntot*0.88, self.median, self.stdev/2., ntot*0.12)
-        self.pars, _ = scipy.optimize.curve_fit(fe55_lines, x, y, p0=p0)
+        self.pars, pcov = scipy.optimize.curve_fit(fe55_lines, x, y, p0=p0)
         
         kalpha_peak, kalpha_sigma = self.pars[1], self.pars[2]
+        kalpha_peak_error = np.sqrt(pcov[1][1])
         fe55_yield = Fe55Yield(self.ccdtemp)
         self.gain = fe55_yield.alpha()/kalpha_peak
+        self.gain_error = float(np.abs(self.gain/kalpha_peak)*kalpha_peak_error)
         return kalpha_peak, kalpha_sigma
     def _compute_stats(self):
         flags = afwMath.MEDIAN | afwMath.STDEVCLIP
