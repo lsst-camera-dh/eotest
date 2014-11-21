@@ -101,7 +101,7 @@ def fe55_gain_fitter(signals, ccdtemp=-95, make_plot=False, xrange=None,
         
     kalpha_peak, kalpha_sigma = pars[1], pars[2]
     fe55_yield = Fe55Yield(ccdtemp)
-    gain = fe55_yield.alpha()/kalpha_peak
+    gain = fe55_yield.alpha()[0]/kalpha_peak
 
     if make_plot:
         pylab.xlabel('Bias Corrected Event Signal (DN)')

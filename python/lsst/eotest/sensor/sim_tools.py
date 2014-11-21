@@ -224,8 +224,8 @@ class SegmentExposure(object):
         2D normal distribution.  sigma is expressed in units of linear
         pixel size.
         """
-        Ne_alpha = self.fe55_yield.alpha()
-        Ne_beta = self.fe55_yield.beta()
+        Ne_alpha = self.fe55_yield.alpha()[0]
+        Ne_beta = self.fe55_yield.beta()[0]
         ny, nx = self.imarr.shape
         if sigma is None:
             # Generated charge per hit is contained within a single pixel.

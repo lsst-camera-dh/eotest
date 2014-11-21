@@ -10,22 +10,27 @@ def pair_energy(ccdtemp):
     slope = -0.000131    # From L&S given in %/K
     Tref = 270           # L&S figure 4.
     Eref = 3.654
+    Eref_sigma = 0.040   # See LSSTTD-141@JIRA
     Epair = (1 + slope*(T - Tref))*Eref  # e-h pair creation energy (eV)
-    return Epair
+    return Epair, (1 + slope*(T - Tref))*Eref_sigma
 
 class Fe55Yield(object):
     def __init__(self, ccdtemp):
         self.ccdtemp = ccdtemp
-        self.pair_energy = pair_energy(ccdtemp)
+        self.pair_energy, self.pair_energy_error = pair_energy(ccdtemp)
+    def __call__(self, Ex):
+        Ne = Ex/self.pair_energy
+        sigma = Ne*self.pair_energy_error/self.pair_energy
+        return int(Ne), sigma
     def alpha(self, Ex=5.889e3):
-        return int(Ex/self.pair_energy)
+        return self(Ex)
     def beta(self, Ex=6.490e3):
-        return int(Ex/self.pair_energy)
+        return self(Ex)
 
 if __name__ == '__main__':
     import numpy as np
     for ccdtemp in np.linspace(-122.8, 173, 20):
         fe55_yield = Fe55Yield(ccdtemp)
         Epair = fe55_yield.pair_energy
-        Ne = fe55_yield.alpha()
+        Ne, sigma = fe55_yield.alpha()
         print "%4i   %4i   %.3f   %4i" % (273.2+ccdtemp, ccdtemp, Epair, Ne)

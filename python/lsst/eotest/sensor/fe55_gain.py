@@ -79,7 +79,7 @@ class Xrays(object):
         ny, nx = imarr.shape
         return imarr.reshape(1, nx*ny)[0]
     def signals(self, nsig=2, max_npix=9, gain_max=10.):
-        sigmin = self.fe55_yield.alpha()/gain_max
+        sigmin = self.fe55_yield.alpha()[0]/gain_max
         threshold = afwDetect.Threshold(self.mean + nsig*self.stdev)
         fpset = afwDetect.FootprintSet(self.image, threshold)
         signals = np.array([self.footprint_signal(fp) for fp in
@@ -120,7 +120,7 @@ class Xrays(object):
         pars, _ = scipy.optimize.curve_fit(fe55_lines, x, y, p0=p0)
         
         kalpha_peak = pars[1]
-        gain = self.fe55_yield.alpha()/kalpha_peak
+        gain = self.fe55_yield.alpha()[0]/kalpha_peak
         noise = self.stdev*gain
 
         if make_plot:
