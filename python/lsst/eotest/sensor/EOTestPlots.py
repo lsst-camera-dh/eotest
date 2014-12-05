@@ -272,9 +272,13 @@ class EOTestPlots(object):
         win.axes[-1].set_position(bbox)
     def gains(self, oplot=0, xoffset=0.25, width=0.5, color='b'):
         results = self.results
+        gain = results['GAIN']
+        error = results['GAIN_ERROR']
+        ymin = max(min(gain - error), min(gain - 1))
+        ymax = min(max(gain + error), max(gain + 1))
         win = plot.xyplot(results['AMP'], results['GAIN'],
                           yerr=results['GAIN_ERROR'], xname='AMP',
-                          yname='gain (e-/DN)')
+                          yname='gain (e-/DN)', yrange=(ymin, ymax))
 #        win = plot.bar(results['AMP'] - xoffset, results['GAIN'],
 #                       xname='Amp', yname='gain (e-/DN)',
 #                       yrange=(0, max(results['GAIN']*1.2)),
