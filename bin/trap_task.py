@@ -16,11 +16,17 @@ parser.add_argument('--cycles', type=int, default=100,
                     help='Number of pocket pumping cycles')
 parser.add_argument('--threshold', type=int, default=200,
                     help='Trap size threshold (electrons)')
+parser.add_argument('--C2_thresh', type=int, default=10,
+                    help='C2 correlator detection threshold for trap candidates')
+parser.add_argument('--C3_thresh', type=int, default=15,
+                    help='C3 detection threshold for trap candidates')
 args = parser.parse_args()
 
 task = sensorTest.TrapTask()
 task.config.output_dir = args.output_dir
 task.config.verbose = args.verbose
+task.config.C2_thresh = args.C2_thresh
+task.config.C3_thresh = args.C3_thresh
 
 pocket_pumped_file = glob.glob(args.pocket_pumped_file)[0]
 

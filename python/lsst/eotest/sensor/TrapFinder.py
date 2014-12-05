@@ -43,7 +43,7 @@ class TrapFinder(object):
         self.edge_rolloff = edge_rolloff
         self.prescan = ccd.amp_geom.prescan_width
         self.row_max = ccd.amp_geom.imaging.getHeight()+1
-    def find(self, regfile='ds9.reg'):
+    def find(self, regfile=None):
         nx, ny = self.imarr.shape
         my_arrays = 'ix iy c2 c3 a0 a1'.split()
         for item in my_arrays:
@@ -54,7 +54,8 @@ class TrapFinder(object):
                 exec('%(item)s.extend(results[%(i)i])' % locals())
         for item in my_arrays:
             exec('%(item)s = np.array(%(item)s)' % locals())
-        self._write_reg_file(regfile, ix, iy)
+        if regfile is not None:
+            self._write_reg_file(regfile, ix, iy)
         return ix, iy, c2, c3, a0, a1
     def _write_reg_file(self, regfile, ix, iy):
         reg_output = open(regfile, 'w')

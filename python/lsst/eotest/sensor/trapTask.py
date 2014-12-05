@@ -14,6 +14,13 @@ import lsst.pipe.base as pipeBase
 class TrapConfig(pexConfig.Config):
     """Configuration for TrapTask"""
     output_dir = pexConfig.Field("Output directory", str, default=".")
+    outfile = pexConfig.Field("Output file (base)name", str, default=None)
+    C2_thresh = pexConfig.Field("C2 threshold", float, default=10.)
+    C3_thresh = pexConfig.Field("C3 threshold", float, default=15.)
+    nx = pexConfig.Field("Local background width (pixels)", int, default=10)
+    ny = pexConfig.Field("Local background height (pixels)", int, default=10)
+    edge_rolloff = pexConfig.Field("Edge rolloff width (pixels)", int,
+                                   default=10)
     eotest_results_file = pexConfig.Field("EO test results filename",
                                           str, default=None)
     verbose = pexConfig.Field("Turn verbosity on", bool, default=True)
@@ -28,9 +35,17 @@ class TrapTask(pipeBase.Task):
         if self.config.verbose:
             self.log.info("processing %s" % pocket_pumped_file)
         ccd = MaskedCCD(pocket_pumped_file, mask_files=mask_files)
-        outfile = os.path.join(self.config.output_dir,
-                               '%s_traps.fits' % sensor_id)
-        my_traps = Traps(ccd, gains, cycles=cycles)
+        if self.config.outfile is None:
+            outfile = os.path.join(self.config.output_dir,
+                                   '%s_traps.fits' % sensor_id)
+        else:
+            outfile = os.path.join(self.config.output_dir,
+                                   self.config.outfile)
+        my_traps = Traps(ccd, gains, cycles=cycles,
+                         C2_thresh=self.config.C2_thresh,
+                         C3_thresh=self.config.C3_thresh,
+                         nx=self.config.nx, ny=self.config.ny,
+                         edge_rolloff=self.config.edge_rolloff)
         my_traps.write(outfile, clobber=True)
         results_file = self.config.eotest_results_file
         if results_file is None:
@@ -41,11 +56,10 @@ class TrapTask(pipeBase.Task):
             self.log.info("Amp     Number of traps")
         for amp in imutils.allAmps:
             #
-            # Tabulate forward traps (positive polarity) with size >=
-            # threshold.
+            # Tabulate forward traps (A0 < 0) with size >= threshold.
             #
             forward_traps = [item for item in my_traps[amp] 
-                             if (item[-1] > 0 and item[-2] >= threshold)]
+                             if (item[-2] < 0 and item[-3] >= threshold)]
             num_traps = len(forward_traps)
             results.add_seg_result(amp, 'NUM_TRAPS', num_traps)
             if self.config.verbose:
