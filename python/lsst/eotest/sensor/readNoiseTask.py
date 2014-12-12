@@ -29,7 +29,7 @@ def _write_read_noise_dists(outfile, Ntot, Nsys, gains, bias, sysnoise):
         nsys_col = pyfits.Column(name="SYSTEM_NOISE", format="E",
                                  unit="e- rms", array=sigsys)
         output.append(pyfitsTableFactory((nread_col, nsys_col)))
-        output[amp].name = "AMP%s" % imutils.channelIds[amp]
+        output[amp].name = "SEGMENT%s" % imutils.channelIds[amp]
         output[0].header["GAIN%s" % imutils.channelIds[amp]] = gains[amp]
         output[0].header["SIGTOT%s" % imutils.channelIds[amp]] = \
             imutils.median(sigtot)
@@ -103,15 +103,21 @@ class ReadNoiseTask(pipeBase.Task):
 
         results = EOTestResults(results_file)
         if self.config.verbose:
-            self.log.info("Amp    read noise")
+            self.log.info("Amp    read noise    total noise    system noise")
         for amp in imutils.allAmps:
-            var = imutils.median(Ntot[amp])**2 - imutils.median(Nsys[amp])**2
+            Ntot_med = imutils.median(Ntot[amp])
+            Nsys_med = imutils.median(Nsys[amp])
+            var = Ntot_med**2 - Nsys_med**2
             if var >= 0:
                 Nread = np.sqrt(var)
             else:
                 Nread = -1
-            line = "%s        %.4f" % (amp, Nread)
+            line = "%2s       %7.4f        %7.4f        %7.4f" % (amp, Nread,
+                                                                  Ntot_med,
+                                                                  Nsys_med)
             if self.config.verbose:
                 self.log.info(line)
             results.add_seg_result(amp, 'READ_NOISE', Nread)
+            results.add_seg_result(amp, 'TOTAL_NOISE', Ntot_med)
+            results.add_seg_result(amp, 'SYSTEM_NOISE', Nsys_med)
         results.write(clobber=True)

@@ -279,18 +279,25 @@ class EOTestPlots(object):
         win = plot.xyplot(results['AMP'], results['GAIN'],
                           yerr=results['GAIN_ERROR'], xname='AMP',
                           yname='gain (e-/DN)', yrange=(ymin, ymax))
-#        win = plot.bar(results['AMP'] - xoffset, results['GAIN'],
-#                       xname='Amp', yname='gain (e-/DN)',
-#                       yrange=(0, max(results['GAIN']*1.2)),
-#                       xrange=(0, 17), color=color, width=width)
         win.set_title("System Gain, %s" % self.sensor_id)
-    def noise(self, oplot=0, xoffset=0.25, width=0.5, color='b'):
+    def noise(self, oplot=0, xoffset=0.2, width=0.2, color='b'):
         results = self.results
-        ymax = max(1.2*max(results['READ_NOISE']), 10)
-        win = plot.bar(results['AMP'] - xoffset, results['READ_NOISE'],
-                       xname='Amp', yname='read noise (rms e-)',
+        read_noise = results['READ_NOISE']
+        system_noise = results['SYSTEM_NOISE']
+        total_noise = results['TOTAL_NOISE']
+        ymax = max(1.2*max(np.concatenate((read_noise,
+                                           system_noise,
+                                           total_noise))), 10)
+        win = plot.bar(results['AMP'] - xoffset - xoffset/2., read_noise,
+                       xname='Amp', 
+                       yname='Noise (rms e-)',
                        xrange=(0, 17), color=color, width=width,
                        yrange=(0, ymax))
+        plot.bar(results['AMP'] - xoffset/2., system_noise,
+                 oplot=1, color='g', width=width)
+        plot.bar(results['AMP'] + xoffset - xoffset/2., total_noise,
+                 oplot=1, color='c', width=width)
+        plot.legend('bgc', ('Read Noise', 'System Noise', 'Total Noise'))
         plot.hline(8)
         win.set_title("Read Noise, %s" % self.sensor_id)
     def linearity(self, gain_range=(1, 6), max_dev=0.02, figsize=(11, 8.5),

@@ -203,6 +203,12 @@ def hline(y, color='k', lineStyle=':', yrange=None, linewidth=1):
     curve([xmin, xmax], [y, y], color=color, lineStyle=lineStyle, 
           oplot=1, yrange=yrange, linewidth=linewidth)
 
+def legend(colors, labels, **kwds):
+    """Create a color legend using proxy artists"""
+    proxies = [pylab.Rectangle((0, 0), 1, 1, fc=color) for color in colors]
+    nl = min(len(proxies), len(labels))
+    pylab.legend(proxies[:nl], labels[:nl], **kwds)
+
 def clear(win_id=None):
     global _win_id, _windows
     if win_id is not None:
