@@ -22,7 +22,7 @@ class Traps(dict):
     results to a FITS file as a binary table.
     """
     def __init__(self, ccd, gains, cycles=100, C2_thresh=10,
-                 C3_thresh=15, nx=10, ny=10, 
+                 C3_thresh=1, nx=10, ny=10, 
                  edge_rolloff=10, amps=imutils.allAmps):
         super(Traps, self).__init__()
         for amp in amps:
@@ -33,8 +33,7 @@ class Traps(dict):
             results = finder.find()
             for ix, iy, c2, c3, a0, a1 in zip(*results):
                 trap_size = max(a0, a1)*gains[amp]/cycles
-                self[amp].append((ix, iy, trap_size,
-                                  a0*gains[amp], a1*gains[amp]))
+                self[amp].append((ix, iy, trap_size, a0, a1))
     def write(self, outfile, clobber=True):
         """
         Write the results as a FITS binary table.
@@ -44,8 +43,7 @@ class Traps(dict):
         output.append(pyfits.PrimaryHDU())
         colnames = ['AMPLIFIER', 'XPOS', 'YPOS', 'TRAP_SIZE', 'A0', 'A1']
         formats = 'IIIIEE'
-        units = ['None', 'pixel', 'pixel', 'electrons', 'electrons',
-                 'electrons']
+        units = ['None', 'pixel', 'pixel', 'electrons', 'ADU', 'ADU']
         columns = ([np.zeros(nrows, dtype=int)]*4 
                    + [np.zeros(nrows, dtype=float)]*2)
         hdu = pyfitsTableFactory([pyfits.Column(name=colname, format=format,
