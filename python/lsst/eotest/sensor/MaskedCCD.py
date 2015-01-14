@@ -12,8 +12,8 @@ import lsst.daf.base as dafBase
 import lsst.afw.geom as afwGeom
 import lsst.afw.image as afwImage
 import lsst.afw.math as afwMath
+import lsst.ip.isr as ipIsr
 import lsst.pex.exceptions as pexExcept
-
 import lsst.eotest.image_utils as imutils
 
 class MaskedCCDBiasImageException(RuntimeError):
@@ -28,7 +28,7 @@ class MaskedCCD(dict):
     amplifier number.  Masks can be added and manipulated separately
     by various methods.
     """
-    def __init__(self, imfile, mask_files=(), bias_frame=None):
+    def __init__(self, imfile, mask_files=(), bias_frame=None, applyMasks=True):
         dict.__init__(self)
         self.imfile = imfile
         self.md = imutils.Metadata(imfile, 1)
@@ -48,6 +48,15 @@ class MaskedCCD(dict):
             self.bias_frame = MaskedCCD(bias_frame)
         else:
             self.bias_frame = None
+        if applyMasks:
+            self.applyInterpolateFromMask()
+    def applyInterpolateFromMask(self, amps=None, fwhm=0.001, maskName='BAD',
+                                 fallbackValue=None):
+        if amps is None:
+            amps = self.keys()
+        for amp in amps:
+            ipIsr.interpolateFromMask(self[amp], fwhm=fwhm, maskName=maskName, 
+                                      fallbackValue=fallbackValue)
     def mask_plane_dict(self):
         amp = self.keys()[0]
         return dict(self[amp].getMask().getMaskPlaneDict().items())
