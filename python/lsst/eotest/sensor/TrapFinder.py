@@ -21,7 +21,7 @@ class TrapFinder(object):
     Kotov et al. 2014, NIMA 
     (http://www.sciencedirect.com/science/article/pii/S0168900214012066).
     """
-    def __init__(self, ccd, amp, C2_thresh=10, C3_thresh=15,
+    def __init__(self, ccd, amp, C2_thresh=10, C3_thresh=1,
                  nx=10, ny=10, edge_rolloff=10):
         """
         ccd = MaskedCCD object.
@@ -29,10 +29,10 @@ class TrapFinder(object):
         masked_image = afw.MaskedImage of a single amplifier segment.
         C2_thresh = Theshold for C2 correlator value.  Accepted pixels have
                     C2 < -C2_thresh.
-        C3_thresh = Threshold for C3 value, where C3 = 2*C2 + A0**2 + A1**2
+        C3_thresh = Threshold for C3 value, where C3=abs(A0 + A1)/sqrt(abs(C2))
                     (A0, A1 = bg-subtracted pixel values of dipole. 
                     NB: C2 = A0*A1 < 0 for a candidate dipole.).  Accepted
-                    pixels have C3 > C3_thresh
+                    pixels have C3 < C3_thresh
         nx, ny = size of local background region in pixels
         edge_rolloff = 10.  Ignore this number of rows near the sensor edge
                        to avoid edge rolloff regions.
@@ -72,7 +72,7 @@ image
         ix = x-pixel in image coordinates
         iy = y-pixel in image coordinates
         C2 = Correlator value = A0*A1
-        C3 = 2*C2 + A0**2 + A1**2
+        C3 = abs((A0 + A1)/sqrt(abs(C2)))
         A0 = Background-subtracted pixel value of first pixel of dipole
         A1 = Background-subtracted pixel value of second pixel of dipole
         """
@@ -80,7 +80,7 @@ image
         sigma = np.std(col0)
         col = col0/sigma
         C2 = col[1:]*col[:-1]
-        C3 = np.abs(2*C2 + col[1:]**2 + col[:-1]**2)
+        C3 = np.abs((col[1:] + col[:-1])/np.sqrt(np.abs(C2)))
         index = np.where((C2 < -self.C2_thresh) & (C3 < self.C3_thresh))
         iy, a1 = [], []
         for irow in index[0]:

@@ -22,7 +22,7 @@ class Traps(dict):
     results to a FITS file as a binary table.
     """
     def __init__(self, ccd, gains, cycles=100, C2_thresh=10,
-                 C3_thresh=15, nx=10, ny=10, 
+                 C3_thresh=1, nx=10, ny=10, 
                  edge_rolloff=10, amps=imutils.allAmps):
         super(Traps, self).__init__()
         for amp in amps:

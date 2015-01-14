@@ -16,7 +16,7 @@ class TrapConfig(pexConfig.Config):
     output_dir = pexConfig.Field("Output directory", str, default=".")
     outfile = pexConfig.Field("Output file (base)name", str, default=None)
     C2_thresh = pexConfig.Field("C2 threshold", float, default=10.)
-    C3_thresh = pexConfig.Field("C3 threshold", float, default=15.)
+    C3_thresh = pexConfig.Field("C3 threshold", float, default=1.)
     nx = pexConfig.Field("Local background width (pixels)", int, default=10)
     ny = pexConfig.Field("Local background height (pixels)", int, default=10)
     edge_rolloff = pexConfig.Field("Edge rolloff width (pixels)", int,

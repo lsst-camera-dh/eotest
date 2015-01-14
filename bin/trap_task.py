@@ -18,7 +18,7 @@ parser.add_argument('--threshold', type=int, default=200,
                     help='Trap size threshold (electrons)')
 parser.add_argument('--C2_thresh', type=int, default=10,
                     help='C2 correlator detection threshold for trap candidates')
-parser.add_argument('--C3_thresh', type=int, default=15,
+parser.add_argument('--C3_thresh', type=int, default=1,
                     help='C3 detection threshold for trap candidates')
 args = parser.parse_args()
 
