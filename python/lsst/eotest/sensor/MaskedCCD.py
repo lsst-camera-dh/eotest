@@ -50,13 +50,11 @@ class MaskedCCD(dict):
             self.bias_frame = None
         if applyMasks:
             self.applyInterpolateFromMask()
-    def applyInterpolateFromMask(self, amps=None, fwhm=0.001, maskName='BAD',
-                                 fallbackValue=None):
+    def applyInterpolateFromMask(self, amps=None, fwhm=0.001, maskName='BAD'):
         if amps is None:
             amps = self.keys()
         for amp in amps:
-            ipIsr.interpolateFromMask(self[amp], fwhm=fwhm, maskName=maskName, 
-                                      fallbackValue=fallbackValue)
+            ipIsr.interpolateFromMask(self[amp], fwhm=fwhm, maskName=maskName)
     def mask_plane_dict(self):
         amp = self.keys()[0]
         return dict(self[amp].getMask().getMaskPlaneDict().items())
