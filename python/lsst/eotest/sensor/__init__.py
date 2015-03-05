@@ -31,7 +31,7 @@ from darkPixelsTask import DarkPixelsTask
 from readNoiseTask import ReadNoiseTask
 from darkCurrentTask import DarkCurrentTask
 from crosstalkTask import CrosstalkTask
-from cteTask import CteTask
+from cteTask import CteTask, superflat
 from prnuTask import PrnuTask
 from trapTask import TrapTask
 from qeTask import QeTask
