@@ -12,7 +12,7 @@ import lsst.eotest.image_utils as imutils
 import lsst.eotest.sensor as sensorTest
 
 class RTS2_FITS_translator(object):
-    def __init__(self, luts, geom, verbose=True, args=None):
+    def __init__(self, luts, geom, args, verbose=True):
         self.luts = luts
         self.verbose = verbose
         self.args = args
@@ -43,9 +43,8 @@ class RTS2_FITS_translator(object):
         self.output[0].header.set('FILENAME', os.path.basename(infile))
         self.output[0].header.set('SEQNUM', self._seqnum(infile))
         self.output[0].header.set('HEADVER', self._headver())
-        if self.args is not None:
-            self.output[0].header.set('LSST_NUM', self.args.sensor_id)
-            self.output[0].header.set('CCD_MANU', self.args.vendor)
+        self.output[0].header.set('LSST_NUM', self.args.sensor_id)
+        self.output[0].header.set('CCD_MANU', self.args.vendor)
         self._update_keywords(0)
 
         # TEST_COND and CCD_COND extensions
@@ -209,8 +208,8 @@ if __name__ == '__main__':
 
     rts2_translator = RTS2_FITS_translator(RTS2_FITS_LUTs[args.lab],
                                            sensor_geom[args.vendor],
-                                           verbose=args.verbose,
-                                           args=args)
+                                           args,
+                                           verbose=args.verbose)
     infiles = glob.glob(args.inputs)
     for infile in infiles:
         outfile = os.path.join(args.output_dir, os.path.basename(infile))
