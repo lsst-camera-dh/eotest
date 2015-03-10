@@ -325,7 +325,8 @@ class EOTestPlots(object):
             subplot = (4, 4, amp)
             if amp == 1:
                 win = plot.Window(subplot=subplot, figsize=figsize,
-                                  xlabel='e-/pixel', ylabel='', size='large')
+                                  xlabel=r'pd current $\times$ exposure', 
+                                  ylabel='', size='large')
                 win.frameAxes.text(0.5, 1.08, 'Linearity, %s' % self.sensor_id,
                                    horizontalalignment='center',
                                    verticalalignment='top',
@@ -334,7 +335,7 @@ class EOTestPlots(object):
             else:
                 win.select_subplot(*subplot)
             self._offset_subplot(win)
-            # Resize subplot for plotting flux vs exposure.
+            # Resize subplot for plotting e-/pixel vs flux
             bbox = win.axes[-1].get_position()
             top_pts = bbox.get_points()
             bot_pts = copy.deepcopy(top_pts)
@@ -343,12 +344,12 @@ class EOTestPlots(object):
             bbox.set_points(top_pts)
             win.axes[-1].set_position(bbox)
             try:
-                win.axes[-1].loglog(Ne, flux, 'ko')
+                win.axes[-1].loglog(flux, Ne, 'ko')
             except Exception, eObj:
                 print "EOTestPlots.linearity: amp %i" % amp
                 print "  ", eObj
             try:
-                win.axes[-1].loglog(f1(flux), flux, 'r-')
+                win.axes[-1].loglog(flux, f1(flux), 'r-')
             except Exception, eObj:
                 print "EOTestPlots.linearity: amp %i" % amp
                 print "  ", eObj
@@ -356,15 +357,16 @@ class EOTestPlots(object):
             pylab.annotate('Amp %i' % amp, (0.2, 0.8),
                            xycoords='axes fraction', size='x-small')
             if amp in (1, 5, 9, 13):
-                win.axes[-1].set_ylabel('flux')
+                win.axes[-1].set_ylabel('e-/pixel')
             for label in win.axes[-1].get_xticklabels():
                 label.set_visible(False)
 
             # Add fractional residuals sub-subplot.
             bot_rect = [bot_pts[0][0], bot_pts[0][1], dx, dy/4.]
             bot_ax = win.fig.add_axes(bot_rect, sharex=win.axes[-1])
-            bot_ax.semilogx(Ne, dNfrac, 'ko')
-            bot_ax.semilogx(Ne, np.zeros(len(Ne)), 'r-')
+            bot_ax.semilogx(flux, dNfrac, 'ko')
+            bot_ax.semilogx(flux, dNfrac, 'k:')
+            bot_ax.semilogx(flux, np.zeros(len(Ne)), 'r-')
             pylab.locator_params(axis='y', nbins=5, tight=True)
             plot.setAxis(yrange=(-1.5*max_dev, 1.5*max_dev))
     def qe_ratio(self, ref, amp=None, qe_file=None):
