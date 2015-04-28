@@ -154,7 +154,10 @@ def detector_crosstalk(ccd, aggressor_amp, dnthresh=None, nsig=5,
 #    print "dnthresh =", dnthresh
     threshold = afwDetect.Threshold(dnthresh)
     fp_set = afwDetect.FootprintSet(image, threshold)
-    footprint, peak_value = get_footprint(fp_set, min_fp_size, dnthresh)
+    try:
+        footprint, peak_value = get_footprint(fp_set, min_fp_size, dnthresh)
+    except IndexError:
+        raise RuntimeError('index error in get_footprint')
 
     agg_mean = signal_extractor(ccd, aggressor_amp, footprint)[0]
     ratios = dict([(amp, signal_extractor(ccd, amp, footprint)
