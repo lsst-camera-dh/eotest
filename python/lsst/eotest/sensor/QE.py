@@ -100,6 +100,15 @@ class QE_Data(object):
         self.wl = np.array(self.wl)
         self.exptime = np.array(self.exptime)
         self.pd = np.abs(np.array(self.pd))
+    def incidentPower_e2v(self):
+        # For e2v data MONDIODE = incident power/area = nW/cm**2 so
+        # just need to multiply by times nominal pixel area in
+        # cm**2.
+        power = []
+        pixel_area = 1e-3*1e-3 # (10 microns)**2
+        for pd_current in self.pd:
+            power.append(pd_current*pixel_area)
+        self.power = np.array(power, dtype=np.float)
     def incidentPower(self, ccd_cal_file, sph_cal_file, wlscan_file,
                       pixel_area=1e-10, pd_area=1e-4):
         # Incident power per pixel (J/s)

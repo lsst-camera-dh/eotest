@@ -21,6 +21,8 @@ parser.add_argument('-p', '--pd_cal_file', type=str,
                     help='BNL photodiode calibration file', default=None)
 parser.add_argument('-M', '--medians_file', type=str,
                     help='file of median pixel values from wavelength scan dataset', default=None)
+parser.add_argument('--e2v_data', default=False, action='store_true',
+                    help='Vendor data from e2v')
 args = parser.parse_args()
 
 task = sensorTest.QeTask()
@@ -32,4 +34,4 @@ qe_files = args.files(args.qe_files, args.qe_file_list)
 task.run(args.sensor_id, qe_files, args.ccd_cal_file, args.int_sph_cal_file,
          args.wavelength_scan_file, args.mask_files(qe_files[0]),
          args.system_gains(), pd_cal_file=args.pd_cal_file,
-         medians_file=args.medians_file)
+         medians_file=args.medians_file, e2v_data=args.e2v_data)

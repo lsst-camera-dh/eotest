@@ -26,7 +26,7 @@ class QeTask(pipeBase.Task):
     @pipeBase.timeMethod
     def run(self, sensor_id, qe_files, ccd_cal_file, sph_cal_file,
             wlscan_file, mask_files, gains, pd_cal_file=None,
-            medians_file=None):
+            medians_file=None, e2v_data=False):
         imutils.check_temperatures(qe_files, self.config.temp_set_point_tol,
                                    setpoint=self.config.temp_set_point,
                                    warn_only=True)
@@ -40,10 +40,13 @@ class QeTask(pipeBase.Task):
             
         qe_data.read_medians(medians_file)
         
-        if pd_cal_file is not None:
-            qe_data.incidentPower_BNL(pd_cal_file)
+        if e2v_data:
+            qe_data.incidentPower_e2v()
         else:
-            qe_data.incidentPower(ccd_cal_file, sph_cal_file, wlscan_file)
+            if pd_cal_file is not None:
+                qe_data.incidentPower_BNL(pd_cal_file)
+            else:
+                qe_data.incidentPower(ccd_cal_file, sph_cal_file, wlscan_file)
         
         qe_data.calculate_QE(gains)
 
