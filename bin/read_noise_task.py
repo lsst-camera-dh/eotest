@@ -19,6 +19,8 @@ parser.add_argument('-y', '--dy', default=100, type=int,
                     help='subregion size in pixels along y-direction')
 parser.add_argument('-S', '--nsamp', default=1000, type=int,
                     help='number of subregions to sample')
+parser.add_argument('--use_overscan', default=False, action='store_true',
+                    help='Use serial overscan region for noise estimates.')
 args = parser.parse_args()
 
 task = sensorTest.ReadNoiseTask()
@@ -35,4 +37,5 @@ else:
     system_noise_files = args.files(args.noise, args.noise_file_list)
 
 task.run(args.sensor_id, bias_files, args.system_gains(), 
-         system_noise_files, args.mask_files(bias_files[0]))
+         system_noise_files, args.mask_files(bias_files[0]),
+         use_overscan=args.use_overscan)

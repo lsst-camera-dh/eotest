@@ -13,6 +13,7 @@ import lsst.eotest.image_utils as imutils
 from MaskedCCD import MaskedCCD
 from EOTestResults import EOTestResults
 from read_noise import noise_dists
+import lsst.afw.geom as afwGeom
 
 import lsst.pex.config as pexConfig
 import lsst.pipe.base as pipeBase
@@ -61,7 +62,7 @@ class ReadNoiseTask(pipeBase.Task):
 
     @pipeBase.timeMethod
     def run(self, sensor_id, bias_files, gains, system_noise_files=None,
-            mask_files=()):
+            mask_files=(), use_overscan=False):
         imutils.check_temperatures(bias_files, self.config.temp_set_point_tol,
                                    setpoint=self.config.temp_set_point,
                                    warn_only=True)
@@ -81,15 +82,22 @@ class ReadNoiseTask(pipeBase.Task):
 
             # Determine the nominal imaging region from the bias file.
             ccd = MaskedCCD(bias)
-            imaging = ccd.amp_geom.imaging
+            if use_overscan:
+                imaging = ccd.amp_geom.serial_overscan
+                dx = imaging.getWidth()/2
+                dy = self.config.dy
+                nsamp = self.config.nsamp
+            else:
+                imaging = ccd.amp_geom.imaging
+                dx = self.config.dx
+                dy = self.config.dy
+                nsamp = self.config.nsamp
             #
             # Create a single sub-region sampler so that the same
             # sub-regions will be used for both the bias and system
             # noise frames.
             #
-            sampler = imutils.SubRegionSampler(self.config.dx, self.config.dy,
-                                               self.config.nsamp,
-                                               imaging=imaging)
+            sampler = imutils.SubRegionSampler(dx, dy, nsamp, imaging=imaging)
 
             Ntot = noise_dists(bias, gains, sampler, mask_files=mask_files)
             Nsys = noise_dists(sysnoise, gains, sampler, mask_files=mask_files)
