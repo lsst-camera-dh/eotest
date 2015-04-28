@@ -168,7 +168,8 @@ class EOTestReport(object):
         self.output.write(_include_png(('%(sensor_id)s_gains' % locals(),),
                                        frac_height=0.45))
         self.output.write('\\pagebreak\n\n')
-        self.output.write(_include_png(('%(sensor_id)s_ptcs' % locals(),)))
+        if os.path.isfile('%(sensor_id)s_ptcs.png' % locals()):
+            self.output.write(_include_png(('%(sensor_id)s_ptcs' % locals(),)))
         
         self.output.write("\\end{document}\n")
         self.output.close()

@@ -142,7 +142,12 @@ class EOTestPlots(object):
         self.results = EOTestResults(results_file)
         self._qe_data = None
         self._qe_file = self._fullpath('%s_QE.fits' % self.sensor_id)
-        self.specs = CcdSpecs(results_file, plotter=self, xtalk_file=xtalk_file)
+        try:
+            self.specs = CcdSpecs(results_file, plotter=self,
+                                  xtalk_file=xtalk_file)
+        except KeyError:
+            print "Error reading results file for CcdSpecs object."
+            print "LaTeX table generation of specs is disabled."
     @property
     def qe_data(self):
         if self._qe_data is None:
@@ -305,7 +310,10 @@ class EOTestPlots(object):
         if ptc_file is not None:
             ptc = pyfits.open(ptc_file)
         else:
-            ptc = pyfits.open(self._fullpath('%s_ptc.fits' % self.sensor_id))
+            try:
+                ptc = pyfits.open(self._fullpath('%s_ptc.fits' % self.sensor_id))
+            except IOError:
+                ptc = None
         if detresp_file is not None:
             detresp = DetectorResponse(detresp_file, ptc=ptc,
                                        gain_range=gain_range)
@@ -425,7 +433,11 @@ class EOTestPlots(object):
         flats = [x for x in flats if x.find('bias') == -1]
         wls = []
         for flat in flats:
-            wls.append(int(float(os.path.basename(flat).split('_')[2])))
+            try:
+                wl = int(float(os.path.basename(flat).split('_')[2]))
+            except ValueError:
+                wl = int(float(os.path.basename(flat).split('_')[3]))
+            wls.append(wl)
         wls = np.array(wls)
         #print wls
         # Loop over PRNU wavelengths and generate a png for each.
