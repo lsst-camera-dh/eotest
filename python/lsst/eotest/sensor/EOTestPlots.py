@@ -142,12 +142,15 @@ class EOTestPlots(object):
         self.results = EOTestResults(results_file)
         self._qe_data = None
         self._qe_file = self._fullpath('%s_QE.fits' % self.sensor_id)
-        try:
-            self.specs = CcdSpecs(results_file, plotter=self,
-                                  xtalk_file=xtalk_file)
-        except KeyError:
-            print "Error reading results file for CcdSpecs object."
-            print "LaTeX table generation of specs is disabled."
+        self.specs = CcdSpecs(results_file, plotter=self,
+                              xtalk_file=xtalk_file)
+#        try:
+#            self.specs = CcdSpecs(results_file, plotter=self,
+#                                  xtalk_file=xtalk_file)
+#        except KeyError:
+#            print "Error reading results file for CcdSpecs object."
+#            print results_file, xtalk_file
+#            print "LaTeX table generation of specs is disabled."
     @property
     def qe_data(self):
         if self._qe_data is None:
@@ -288,8 +291,12 @@ class EOTestPlots(object):
     def noise(self, oplot=0, xoffset=0.2, width=0.2, color='b'):
         results = self.results
         read_noise = results['READ_NOISE']
-        system_noise = results['SYSTEM_NOISE']
-        total_noise = results['TOTAL_NOISE']
+        try:
+            system_noise = results['SYSTEM_NOISE']
+            total_noise = results['TOTAL_NOISE']
+        except KeyError:
+            system_noise = np.zeros(len(read_noise))
+            total_noise= read_noise
         ymax = max(1.2*max(np.concatenate((read_noise,
                                            system_noise,
                                            total_noise))), 10)
