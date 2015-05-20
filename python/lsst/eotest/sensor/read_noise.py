@@ -11,6 +11,15 @@ import lsst.afw.math as afwMath
 from MaskedCCD import MaskedCCD
 import lsst.eotest.image_utils as imutils
 
+class NoiseDistributions(dict):
+    def __init__(self, amps=range(1, 17)):
+        super(NoiseDistributions, self).__init__()
+        for amp in amps:
+            self[amp] = np.array((), dtype=np.float)
+    def append(self, other):
+        for amp in self:
+            self[amp] = np.concatenate((self[amp], other[amp]))
+
 def noise_samples(raw_image, gain, region_sampler,
                   stat_ctrl=afwMath.StatisticsControl()):
     image = raw_image.Factory(raw_image, region_sampler.imaging)
@@ -27,7 +36,7 @@ def noise_dists(imfile, gains, sampler, mask_files=()):
         return dict([(amp, np.zeros(len(sampler.xarr), dtype=np.float))
                      for amp in imutils.allAmps])
     ccd = MaskedCCD(imfile, mask_files=mask_files)
-    my_noise_dists = {}
+    my_noise_dists = NoiseDistributions()
     for amp in imutils.allAmps:
         my_noise_dists[amp] = noise_samples(ccd[amp], gains[amp], sampler,
                                             ccd.stat_ctrl)

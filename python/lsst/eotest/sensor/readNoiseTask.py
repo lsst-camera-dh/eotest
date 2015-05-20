@@ -12,7 +12,7 @@ from lsst.eotest.pyfitsTools import pyfitsTableFactory, pyfitsWriteto
 import lsst.eotest.image_utils as imutils
 from MaskedCCD import MaskedCCD
 from EOTestResults import EOTestResults
-from read_noise import noise_dists
+from read_noise import noise_dists, NoiseDistributions
 import lsst.afw.geom as afwGeom
 
 import lsst.pex.config as pexConfig
@@ -67,7 +67,8 @@ class ReadNoiseTask(pipeBase.Task):
                                    setpoint=self.config.temp_set_point,
                                    warn_only=True)
         outfiles = []
-        Nread_dists = dict([(amp, []) for amp in imutils.allAmps])
+        Ntot = NoiseDistributions()
+        Nsys = NoiseDistributions()
         if system_noise_files is None:
             system_noise_files = [None]*len(bias_files)
         for i, bias, sysnoise in zip(range(len(bias_files)), bias_files,
@@ -99,10 +100,16 @@ class ReadNoiseTask(pipeBase.Task):
             #
             sampler = imutils.SubRegionSampler(dx, dy, nsamp, imaging=imaging)
 
-            Ntot = noise_dists(bias, gains, sampler, mask_files=mask_files)
-            Nsys = noise_dists(sysnoise, gains, sampler, mask_files=mask_files)
+            Ntot_amp = noise_dists(bias, gains, sampler, mask_files=mask_files)
+            Nsys_amp = noise_dists(sysnoise, gains, sampler, mask_files=mask_files)
 
-            _write_read_noise_dists(outfile, Ntot, Nsys, gains, bias, sysnoise)
+            _write_read_noise_dists(outfile, Ntot_amp, Nsys_amp, gains, 
+                                    bias, sysnoise)
+            #
+            # Accumulate noise distributions for final median calculation
+            #
+            Ntot.append(Ntot_amp)
+            Nsys.append(Nsys_amp)
             
         results_file = self.config.eotest_results_file
         if results_file is None:
