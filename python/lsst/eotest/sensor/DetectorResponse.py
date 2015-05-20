@@ -107,8 +107,8 @@ class DetectorResponse(object):
             plot.curve(xx, fp(xx), oplot=1, color='b')
             plot.vline(flux0)
             plot.hline(full_well)
-            plot.pylab.annotate('Segment %s\nfull well = %i'
-                                % (imutils.channelIds[amp], int(full_well)),
+            plot.pylab.annotate('Amplifier %s\nfull well = %i'
+                                % (amp, int(full_well)),
                                 (0.1, 0.8), xycoords='axes fraction')
         # Restore pylab interactive state.
         plot.pylab.interactive(pylab_interactive_state)
