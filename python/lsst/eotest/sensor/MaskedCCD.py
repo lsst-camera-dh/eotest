@@ -29,7 +29,7 @@ class MaskedCCD(dict):
     by various methods.
     """
     def __init__(self, imfile, mask_files=(), bias_frame=None, applyMasks=True):
-        dict.__init__(self)
+        super(MaskedCCD, self).__init__()
         self.imfile = imfile
         self.md = imutils.Metadata(imfile, 1)
         self.amp_geom = makeAmplifierGeometry(imfile)
@@ -39,6 +39,7 @@ class MaskedCCD(dict):
             image = decorated_image.getImage()
             mask = afwImage.MaskU(image.getDimensions())
             self[amp] = afwImage.MaskedImageF(image, mask)
+        self._added_mask_types = []
         for mask_file in mask_files:
             self.add_masks(mask_file)
         self.stat_ctrl = afwMath.StatisticsControl()
@@ -48,13 +49,14 @@ class MaskedCCD(dict):
             self.bias_frame = MaskedCCD(bias_frame)
         else:
             self.bias_frame = None
-        if applyMasks:
-            self.applyInterpolateFromMask()
-    def applyInterpolateFromMask(self, amps=None, fwhm=0.001, maskName='BAD'):
-        if amps is None:
-            amps = self.keys()
-        for amp in amps:
-            ipIsr.interpolateFromMask(self[amp], fwhm=fwhm, maskName=maskName)
+        self._applyMasks = applyMasks
+    def applyInterpolateFromMask(self, maskedImage, fwhm=0.001):
+        for maskName in self._added_mask_types:
+            try:
+                ipIsr.interpolateFromMask(maskedImage, fwhm=fwhm,
+                                          maskName=maskName)
+            except pexExcept.InvalidParameterError:
+                pass
     def mask_plane_dict(self):
         amp = self.keys()[0]
         return dict(self[amp].getMask().getMaskPlaneDict().items())
@@ -62,6 +64,8 @@ class MaskedCCD(dict):
         """
         Add a masks from a mask file by or-ing with existing masks.
         """
+        md = imutils.Metadata(mask_file, 1)
+        self._added_mask_types.append(md('MASKTYPE'))
         for amp in imutils.allAmps:
             curr_mask = self[amp].getMask()
             curr_mask |= afwImage.MaskU(mask_file, imutils.dm_hdu(amp))
@@ -111,7 +115,10 @@ class MaskedCCD(dict):
         unbiased_image = self.bias_subtracted_image(amp, overscan, fit_order)
         if imaging is None:
             imaging = self.amp_geom.imaging
-        return imutils.trim(unbiased_image, imaging)
+        mi = imutils.trim(unbiased_image, imaging)
+        if self._applyMasks:
+            self.applyInterpolateFromMask(mi)
+        return mi
 
 def add_mask_files(mask_files, outfile, clobber=True):
     masks = dict([(amp, afwImage.MaskU(mask_files[0], imutils.dm_hdu(amp)))
@@ -121,6 +128,7 @@ def add_mask_files(mask_files, outfile, clobber=True):
             masks[amp] |= afwImage.MaskU(mask_file, imutils.dm_hdu(amp))
     output = pyfits.HDUList()
     output.append(pyfits.PrimaryHDU())
+    output[0].header['MASKTYPE'] = 'SUMMED_MASKS'
     pyfitsWriteto(output, outfile, clobber=clobber)
     for amp in imutils.allAmps:
         md = dafBase.PropertySet()
