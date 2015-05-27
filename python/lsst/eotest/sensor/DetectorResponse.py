@@ -12,6 +12,19 @@ import lsst.eotest.image_utils as imutils
 import pylab
 import pylab_plotter as plot
 
+def _fwc_solve(f1_pars, f2_pars, g=0.1):
+    """
+    The solution (provided by e2v) for the flux corresponding to the
+    full-well capacity described in LCA-10103-A.  This is simply the
+    flux at which the quadratic fit to the data in the vicinity of
+    full well lies below the linear extrapolation of the detector
+    response from lower flux levels by a fraction g.
+    """
+    a, b, c = f2_pars
+    d, f = f1_pars
+    x = (-np.sqrt((b + d*g - d)**2 - 4.*a*(c + f*g - f)) - b - d*g +d)/2./a
+    return x
+
 class DetectorResponse(object):
     def __init__(self, infile, amps=imutils.allAmps, ptc=None,
                  gain_range=None):
@@ -52,9 +65,44 @@ class DetectorResponse(object):
         self.flux = data[0]
         self.Ne = dict([(amp, ne) for amp, ne in
                         zip(imutils.allAmps, data[1:])])
-    def full_well(self, amp, order=15, fit_range=(1e2, 5e4),
-                  poly_fit_min=1e3, frac_offset=0.1, dfrac=None,
-                  make_plot=False):
+    def full_well(self, amp, max_non_linearity=0.02,
+                  frac_offset=0.1, make_plot=False, plotter=None):
+        if plotter is None:
+            plotter = plot
+        max_frac_dev, f1_pars, Ne, flux = self.linearity(amp)
+        f1 = np.poly1d(f1_pars)
+        dNfrac = 1 - Ne/f1(flux)
+        indexes = np.arange(len(dNfrac))
+        imin = np.where(np.abs(dNfrac) <= max_non_linearity)[0][-1]
+        imax = np.where((np.abs(dNfrac) >= frac_offset) &
+                        (indexes > imin))[0][0] + 1
+        x, y = flux[imin:imax], Ne[imin:imax]
+        f2_pars = np.polyfit(x, y, 2)
+        f2 = np.poly1d(f2_pars)
+        fwc = _fwc_solve(f1_pars, f2_pars)
+        full_well_est = f2(fwc)
+        # Save pylab interactive state.
+        pylab_interactive_state = plotter.pylab.isinteractive()
+        if make_plot:
+            plotter.pylab.ion()
+            plotter.xyplot(flux, Ne,
+                           xname='illumination (flux*exptime, arb. units)',
+                           yname='Ne (e- per pixel)')
+            plotter.xyplot(flux[imin:imax], Ne[imin:imax], oplot=1,
+                           color='r', markersize=6)
+            xx = np.linspace(min(x), max(x), 50)
+            plotter.curve(flux, f1(flux), oplot=1, color='g')
+            plotter.curve(xx, f2(xx), oplot=1, color='b')
+            plotter.hline(full_well_est)
+            plotter.vline(fwc)
+        # Restore pylab interactive state.
+        plotter.pylab.interactive(pylab_interactive_state)
+        return full_well_est, f1
+    def full_well_polyfit(self, amp, order=15, fit_range=(1e2, 5e4),
+                          poly_fit_min=1e3, frac_offset=0.1, dfrac=None,
+                          make_plot=False, plotter=None):
+        if plotter is None:
+            plotter = plot
         flux = self.flux
         Ne = self.Ne[amp]
         if self._index:
@@ -93,25 +141,25 @@ class DetectorResponse(object):
         full_well = int(fp(flux0))
         
         # Save pylab interactive state.
-        pylab_interactive_state = plot.pylab.isinteractive()
+        pylab_interactive_state = plotter.pylab.isinteractive()
         if make_plot:
-            plot.pylab.ion()
+            plotter.pylab.ion()
             yrange = (0, max(max(Ne), full_well)*1.1)
-            plot.xyplot(flux, Ne,
-                        xname='Illumination (flux*exptime, arb. units)',
-                        yname='e- per pixel',
-                        yrange=yrange)
-            plot.curve(flux, f1(flux), oplot=1, color='g')
-            plot.xyplot(flux[indxp], Ne[indxp], oplot=1, color='r')
+            plotter.xyplot(flux, Ne,
+                           xname='Illumination (flux*exptime, arb. units)',
+                           yname='e- per pixel',
+                           yrange=yrange)
+            plotter.curve(flux, f1(flux), oplot=1, color='g')
+            plotter.xyplot(flux[indxp], Ne[indxp], oplot=1, color='r')
             xx = np.linspace(0, max(flux), 100)
-            plot.curve(xx, fp(xx), oplot=1, color='b')
-            plot.vline(flux0)
-            plot.hline(full_well)
-            plot.pylab.annotate('Amplifier %s\nfull well = %i'
-                                % (amp, int(full_well)),
-                                (0.1, 0.8), xycoords='axes fraction')
+            plotter.curve(xx, fp(xx), oplot=1, color='b')
+            plotter.vline(flux0)
+            plotter.hline(full_well)
+            plotter.pylab.annotate('Amplifier %s\nfull well = %i'
+                                   % (amp, int(full_well)),
+                                   (0.1, 0.8), xycoords='axes fraction')
         # Restore pylab interactive state.
-        plot.pylab.interactive(pylab_interactive_state)
+        plotter.pylab.interactive(pylab_interactive_state)
         return full_well, fp
     def plot_diagnostics(self, flux, Ne, indxp, f1, fp):
         plot.pylab.ion()
@@ -119,16 +167,23 @@ class DetectorResponse(object):
         plot.xyplot(flux[indxp], Ne[indxp], oplot=1, color='r')
         plot.curve(flux, f1(flux), oplot=1)
         plot.curve(flux, fp(flux), oplot=1, color='b')
-    def linearity(self, amp, fit_range=(1e3, 9e4)):
+    def linearity(self, amp, fit_range=(1e2, 5e4), spec_range=(1e3, 9e4)):
         flux, Ne = self.flux, self.Ne[amp]
         if self._index:
+            # Apply selection to remove points with outlier gains from
+            # mean-variance estimate.
             flux = flux[self._index[amp]]
             Ne = Ne[self._index[amp]]
         indx = np.where((Ne > fit_range[0]) & (Ne < fit_range[1]))
         f1_pars = np.polyfit(flux[indx], Ne[indx], 1)
         f1 = np.poly1d(f1_pars)
-        dNfrac = 1 - Ne/f1(flux)
-        return max(abs(dNfrac[indx])), f1_pars, Ne, flux
+        # Further select points that are within the specification range
+        # for computing the maximum fractional deviation.
+        spec_indx = np.where((Ne > spec_range[0]) & (Ne < spec_range[1]))
+        flux_spec = flux[spec_indx]
+        Ne_spec = Ne[spec_indx]
+        dNfrac = 1 - Ne_spec/f1(flux_spec)
+        return max(abs(dNfrac)), f1_pars, Ne, flux
     def plot_linearity(self, maxdev, f1_pars, Ne, flux, max_dev=0.02):
         top_rect = [0.1, 0.3, 0.8, 0.6]
         bottom_rect = [0.1, 0.1, 0.8, 0.2]
@@ -154,11 +209,10 @@ if __name__ == '__main__':
     infile = '000-00_det_response.txt'
     detResp = DetectorResponse(infile)
     make_plot = False
-    print "Segment   max. dev.   full well"
+    print "Amp       max. dev.   full well"
     for amp in imutils.allAmps:
         max_dev, fit_pars = detResp.linearity(amp, make_plot=make_plot)
-        sys.stdout.write("%s         %.3f       "
-                         % (imutils.channelIds[amp], max_dev))
+        sys.stdout.write("%2i         %.3f       " % (amp, max_dev))
         try:
             full_well =  detResp.full_well(amp, make_plot=make_plot)
             print "%i" % full_well
