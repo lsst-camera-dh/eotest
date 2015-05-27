@@ -52,7 +52,7 @@ class DarkPixelsTask(pipeBase.Task):
         total_dark_pixels = 0
         total_dark_columns = 0
         if self.config.verbose:
-            self.log.info("Segment     # dark pixels     # dark columns")
+            self.log.info("Amp         # dark pixels     # dark columns")
         #
         # Write dark pixel and column counts to results file.
         #
@@ -75,8 +75,8 @@ class DarkPixelsTask(pipeBase.Task):
             total_dark_columns += col_count
             results.add_seg_result(amp, 'NUM_DARK_PIXELS', pix_count)
             results.add_seg_result(amp, 'NUM_DARK_COLUMNS', col_count)
-            self.log.info("%s          %i          %i" 
-                          % (imutils.channelIds[amp], pix_count, col_count))
+            self.log.info("%2i          %i          %i" 
+                          % (amp, pix_count, col_count))
         if self.config.verbose:
             self.log.info("Total dark pixels: %i" % total_dark_pixels)
             self.log.info("Total dark columns: %i" % total_dark_columns)

@@ -50,7 +50,7 @@ class DarkCurrentTask(pipeBase.Task):
         dark95s = {}
         exptime = md.get('EXPTIME')
         if self.config.verbose:
-            self.log.info("Segment    95 percentile    median")
+            self.log.info("Amp        95 percentile    median")
         dark_curr_pixels = []
         for amp in imutils.allAmps:
             imaging_region = ccd.amp_geom.imaging
@@ -68,9 +68,8 @@ class DarkCurrentTask(pipeBase.Task):
             dark_curr_pixels.extend(unmasked)
             dark95s[amp] = unmasked[int(len(unmasked)*0.95)]
             if self.config.verbose:
-                self.log.info("%s         %.2e         %.2e"
-                              % (imutils.channelIds[amp],
-                                 dark95s[amp], unmasked[len(unmasked)/2]))
+                self.log.info("%2i         %.2e         %.2e"
+                              % (amp, dark95s[amp], unmasked[len(unmasked)/2]))
         #
         # Compute 95th percentile dark current for CCD as a whole.
         #

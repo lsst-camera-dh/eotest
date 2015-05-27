@@ -82,7 +82,7 @@ class FlatPairTask(pipeBase.Task):
                                    '%s_eotest_results.fits' % self.sensor_id)
         output = EOTestResults(outfile)
         if self.config.verbose:
-            self.log.info("Segment    full well (e-/pixel)   max. frac. dev.")
+            self.log.info("Amp        full well (e-/pixel)   max. frac. dev.")
         for amp in imutils.allAmps:
             try:
                 full_well, fp = detresp.full_well(amp)
@@ -93,8 +93,8 @@ class FlatPairTask(pipeBase.Task):
             except:
                 maxdev = None
             if self.config.verbose:
-                self.log.info('%s            %s             %s' 
-                              % (imutils.channelIds[amp], full_well, maxdev))
+                self.log.info('%2i            %s             %s' 
+                              % (amp, full_well, maxdev))
             if full_well is not None:
                 output.add_seg_result(amp, 'FULL_WELL', full_well)
             if maxdev is not None:

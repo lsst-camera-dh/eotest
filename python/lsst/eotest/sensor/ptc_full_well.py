@@ -98,8 +98,7 @@ def full_well(ptcfile, amp, gain=None, fracdevmax=0.10,
         plot.curve(x, f1(x), oplot=1, lineStyle=':')
         plot.curve(x, f2(x), oplot=1, lineStyle='--')
         plot.vline(full_well_est)
-        win0.set_title('Segment %s, full well = %i e-'
-                       % (channelIds[amp], full_well_est))
+        win0.set_title('Amp %i, full well = %i e-' % (amp, full_well_est))
         if outfile_prefix is not None:
             plot.save(outfile_prefix + '_ptc.png')
 
@@ -107,8 +106,7 @@ def full_well(ptcfile, amp, gain=None, fracdevmax=0.10,
                           yname='fractional deviation from linear fit')
         plot.hline(fracdevmax)
         plot.vline(full_well_est)
-        win1.set_title('Segment %s, full well = %i e-'
-                       % (channelIds[amp], full_well_est))
+        win1.set_title('Amp %i, full well = %i e-' % (amp, full_well_est))
         if outfile_prefix is not None:
             plot.save(outfile_prefix + '_fracdev.png')
 
@@ -118,10 +116,10 @@ if __name__ == '__main__':
     ptcfile = 'ptc_results.txt'
     amp = 1
     print full_well(ptcfile, amp, make_plot=True,
-                    outfile_prefix='seg%s' % channelIds[amp])
+                    outfile_prefix='amp%02i' % amp)
     for amp in allAmps:
         try:
-            result = '%s  %i' % (channelIds[amp], full_well(ptcfile, amp))
+            result = '%2i  %i' % (amp, full_well(ptcfile, amp))
             print result
         except:
             pass

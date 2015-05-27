@@ -63,7 +63,7 @@ class BrightPixelsTask(pipeBase.Task):
         total_bright_pixels = 0
         total_bright_columns = 0
         if self.config.verbose:
-            self.log.info("Segment     # bright pixels     # bright columns")
+            self.log.info("Amp         # bright pixels     # bright columns")
         #
         # Write bright pixel and column counts to results file.
         #
@@ -84,8 +84,8 @@ class BrightPixelsTask(pipeBase.Task):
             total_bright_columns += col_count
             results.add_seg_result(amp, 'NUM_BRIGHT_PIXELS', pix_count)
             results.add_seg_result(amp, 'NUM_BRIGHT_COLUMNS', col_count)
-            self.log.info("%s          %i          %i" % 
-                          (imutils.channelIds[amp], pix_count, col_count))
+            self.log.info("%2i          %i          %i" % 
+                          (amp, pix_count, col_count))
         if self.config.verbose:
             self.log.info("Total bright pixels: %i" % total_bright_pixels)
             self.log.info("Total bright columns: %i" % total_bright_columns)

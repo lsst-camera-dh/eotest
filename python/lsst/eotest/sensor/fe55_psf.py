@@ -204,7 +204,7 @@ class PsfGaussFit(object):
         to the FITS extension corresponding to the specified
         amplifier.
         """
-        extname = 'Segment%s' % imutils.channelIds[amp]
+        extname = 'Amp%02i' % amp
         try:
             #
             # Append new rows if HDU for this segment already exists.
@@ -258,7 +258,7 @@ class PsfGaussFit(object):
         for attr in 'sigmax sigmay dn dn_fp_sum chiprob amp'.split():
             exec('self.%s = np.array((), dtype=float)' % attr)
         for amp in imutils.allAmps:
-            extname = 'Segment%s' % imutils.channelIds[amp]
+            extname = 'Amp%02i' % amp
             chiprob = catalog[extname].data.field('CHIPROB')
             index = np.where(chiprob > chiprob_min)
             self.chiprob = np.concatenate((self.chiprob, chiprob[index]))
