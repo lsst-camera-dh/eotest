@@ -12,6 +12,7 @@ from EOTestReport import EOTestReport
 from AmplifierGeometry import AmplifierGeometry, makeAmplifierGeometry, amp_loc
 from fe55_psf import PsfGaussFit
 from fe55_gain_fitter import fe55_gain_fitter
+from Fe55GainFitter import Fe55GainFitter
 from fe55_yield import Fe55Yield
 from BrightPixels import BrightPixels
 from DarkPixels import DarkPixels

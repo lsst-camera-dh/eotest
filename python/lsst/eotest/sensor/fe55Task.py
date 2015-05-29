@@ -22,9 +22,9 @@ class Fe55Config(pexConfig.Config):
                                   float, default=0.1)
     nsig = pexConfig.Field("Charge cluster footprint threshold in number of standard deviations of noise in bias section", float, default=4)
     temp_set_point = pexConfig.Field("Required temperature (C) set point",
-                                     float, default=-100.)
+                                     float, default=-95.)
     temp_set_point_tol = pexConfig.Field("Required temperature set point tolerance (degrees C)",
-                                         float, default=5.)
+                                         float, default=1.)
 
     output_dir = pexConfig.Field("Output directory", str, default='.')
     output_file = pexConfig.Field("Output filename", str, default=None)

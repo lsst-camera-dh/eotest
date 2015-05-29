@@ -69,7 +69,7 @@ class Fe55GainFitter(object):
         # Set range of histogram to include both Kalpha and Kbeta
         # peaks.
         xmin = max(self.median - hist_nsig*self.stdev, 200)
-        xmax = min(self.median*1785./1620. + hist_nsig*self.stdev, 1000)
+        xmax = min(self.median*1785./1620. + hist_nsig*self.stdev, 2000)
         xrange = xmin, xmax
         # Determine distribution mode and take that as the initial
         # estimate of the location of the Kalpha peak.
