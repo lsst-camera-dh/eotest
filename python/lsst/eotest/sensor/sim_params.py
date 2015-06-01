@@ -100,23 +100,22 @@ fe55 = Params(test_type='fe55',
               ccdtemp=-95,
               sigma=0.36)
 #
-# Determine the path to the qe subdirectory via import command.
+# Determine the path to the qe subdirectory
 #
-import QE as _qe_module
-_qe_dir = os.path.dirname(_qe_module.__file__)
-qe_path = lambda x : os.path.join(_qe_dir, 'qe', x)
+_qe_dir = os.path.join(os.environ['EOTEST_DIR'], 'data', 'qe')
+qe_path = lambda x : os.path.join(_qe_dir, x)
 
 #qe = lambda wl_nm : 1   # 100% quantum efficiency
-qe_curve = np.recfromtxt(qe_path('qe_curve.txt')).transpose()
+qe_curve = np.recfromtxt(qe_path('sim/qe_curve.txt')).transpose()
 qe = Interpolator(*qe_curve)
 wavelength_scan = Params(test_type='lambda',
 #                         wavelengths=range(320, 1100, 10),
                          wavelengths=range(400, 1000, 10),
                          exptime=1,
                          ccdtemp=-95,
-                         wlscan_file=qe_path('WLscan.txt'),
-                         ccd_cal_file=qe_path('OD142.csv'),
-                         sph_cal_file=qe_path('OD143.csv'),
+                         wlscan_file=qe_path('Harvard/WLscan.txt'),
+                         ccd_cal_file=qe_path('Harvard/OD142.csv'),
+                         sph_cal_file=qe_path('Harvard/OD143.csv'),
                          qe=qe,
                          incident_power=1e-16)
 #
