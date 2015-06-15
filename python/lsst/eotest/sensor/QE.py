@@ -109,23 +109,11 @@ class QE_Data(object):
         for pd_current in self.pd:
             power.append(pd_current*pixel_area)
         self.power = np.array(power, dtype=np.float)
-    def incidentPower(self, ccd_cal_file, sph_cal_file, wlscan_file,
-                      pixel_area=1e-10, pd_area=1e-4):
+    def incidentPower(self, pd_ratio_file, pixel_area=1e-10, pd_area=1e-4):
         # Incident power per pixel (J/s)
-        pd_sph = PhotodiodeResponse(sph_cal_file)
-        ccd_frac = CcdIllumination(wlscan_file, ccd_cal_file, sph_cal_file)
-        power = []
-        for pd_current, wl_nm in zip(self.pd, self.wl):
-            power.append(pd_current/pd_sph(wl_nm)*ccd_frac(wl_nm)
-                         *pixel_area/pd_area)
-        self.power = np.array(power, dtype=np.float)
-    def incidentPower_BNL(self, pd_calibration_file,
-                          pixel_area=1e-10, pd_area=1.05e-4):
-        # Incident power per pixel (J/s)
-        data = np.recfromtxt(pd_calibration_file, skip_header=1,
-                             names='truewl, sens, eff, monowl, ccdfrac, foo')
-        # sens is in units of mA/W, so need to divide by 1e3 to get A/W
-        sensitivity = Interpolator(data['monowl'], data['sens']/1e3)
+        data = np.recfromtxt(pd_ratio_file, skip_header=1,
+                             names='monowl, sens, qe, ccdfrac, foo, bar')
+        sensitivity = Interpolator(data['monowl'], data['sens'])
         ccd_frac = Interpolator(data['monowl'], data['ccdfrac'])
         power = []
         for pd_current, wl_nm in zip(self.pd, self.wl):

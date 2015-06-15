@@ -76,6 +76,7 @@ class DetectorResponse(object):
         imin = np.where(np.abs(dNfrac) <= max_non_linearity)[0][-1]
         imax = np.where((np.abs(dNfrac) >= frac_offset) &
                         (indexes > imin))[0][0] + 1
+        #imin = imax - 3  # this is the proposed change from e2v on 2015-06-04
         x, y = flux[imin:imax], Ne[imin:imax]
         f2_pars = np.polyfit(x, y, 2)
         f2 = np.poly1d(f2_pars)

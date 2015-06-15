@@ -62,7 +62,7 @@ def xtalk_pattern(aggressor, frac_scale=0.02):
 
 class CCD(object):
     dtypes = dict([(-32, np.float32), (16, np.int16)])
-    def __init__(self, exptime=1, gain=5, ccdtemp=-100, full_well=None,
+    def __init__(self, exptime=1, gain=5, ccdtemp=-95, full_well=None,
                  geometry=AmplifierGeometry(), amps=imutils.allAmps):
         self.segments = OrderedDict()
         for amp in amps:
@@ -146,7 +146,7 @@ class CCD(object):
         pyfitsWriteto(output, outfile, clobber=True, checksum=True)
 
 class SegmentExposure(object):
-    def __init__(self, exptime=1, gain=5, ccdtemp=-100, full_well=None,
+    def __init__(self, exptime=1, gain=5, ccdtemp=-95, full_well=None,
                  geometry=AmplifierGeometry()):
         self.exptime = exptime
         self.gain = gain

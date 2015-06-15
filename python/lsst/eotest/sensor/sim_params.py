@@ -36,10 +36,11 @@ bias_sigma = 4
 read_noise = 5.
 dark_current = 2e-3
 full_well = 150000
+ccdtemp = -95
 
 #
 # Geometry of amplifiers in a sensor.  These are nomimal values for
-# E2V devices.
+# e2v devices.
 #
 prescan = 10
 nx = 512
@@ -74,19 +75,19 @@ flat_fields = Params(test_type='flat',
                      exptime_min=1,
                      exptime_max=100,
                      nframes=100,
-                     ccdtemp=-95)
+                     ccdtemp=ccdtemp)
 
 traps = Params(test_type='trap',
                Ne=20000,
                exptime=1,
-               ccdtemp=-95,
+               ccdtemp=ccdtemp,
                cycles=100,
                size=200,
                ndefects=100,
                bias_frames=True)
 
 darks = Params(test_type='dark',
-               ccdtemp=-95,
+               ccdtemp=ccdtemp,
                exptime=500,
                nframes=5,
                bright_ncols=1,
@@ -97,7 +98,7 @@ fe55 = Params(test_type='fe55',
               nframes=25,
               nxrays=1000,
               exptime=10,
-              ccdtemp=-95,
+              ccdtemp=ccdtemp,
               sigma=0.36)
 #
 # Determine the path to the qe subdirectory
@@ -109,24 +110,18 @@ qe_path = lambda x : os.path.join(_qe_dir, x)
 qe_curve = np.recfromtxt(qe_path('sim/qe_curve.txt')).transpose()
 qe = Interpolator(*qe_curve)
 wavelength_scan = Params(test_type='lambda',
-#                         wavelengths=range(320, 1100, 10),
-                         wavelengths=range(400, 1000, 10),
+                         wavelengths=range(320, 1110, 10),
                          exptime=1,
-                         ccdtemp=-95,
-                         wlscan_file=qe_path('Harvard/WLscan.txt'),
-                         ccd_cal_file=qe_path('Harvard/OD142.csv'),
-                         sph_cal_file=qe_path('Harvard/OD143.csv'),
+                         ccdtemp=ccdtemp,
+                         pd_ratio_file=qe_path('BNL/pd_Cal_mar2013_v1.txt'),
                          qe=qe,
-                         incident_power=1e-16)
-#
-# The above photodiode calibration files and wavelength scan do not
-# cover the full range, 320 to 1100 nm, specified in the EO test
-# document, hence, the commented out lines above and below.
-#
-#wavelength_scan.wavelengths.extend((325, 355, 385))
-#wavelength_scan.wavelengths.sort()
+                         incident_power=1e-16,
+                         pixel_area=1e-10,
+                         pd_area=1e-4)
+wavelength_scan.wavelengths.extend((325, 355, 385))
+wavelength_scan.wavelengths.sort()
 
-superflat = Params(test_type='superflat_500',
+superflat = Params(test_type='sflat_500',
                    nframes=25,
                    wavelength=500.,
                    exptime=100,
@@ -141,7 +136,7 @@ xpos, ypos = multiaggressor_amplifier_coords(nx, ny)
 
 spot = Params(test_type='spot',
               exptime=1,
-              ccdtemp=-95,
+              ccdtemp=ccdtemp,
               xtalk_pattern=CrosstalkPattern(),
               frac_scale=0.02,
               dn=200,

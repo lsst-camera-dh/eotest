@@ -11,8 +11,7 @@ import copy
 import time
 import numpy as np
 import lsst.eotest.image_utils as imutils
-from lsst.eotest.sensor.PhotodiodeResponse \
-     import PhotodiodeResponse, CcdIllumination
+from lsst.eotest.sensor.PhotodiodeResponse import Interpolator
 from lsst.eotest.sensor.QE import planck, clight
 from lsst.eotest.sensor.sim_tools import *
 #from lsst.eotest.sensor.ctesim import ctesim
@@ -138,7 +137,7 @@ def generate_flats(pars):
             sensor.add_bias(level=pars.bias_level, sigma=pars.bias_sigma)
             sensor.add_bias(level=0, sigma=pars.read_noise)
             sensor.add_dark_current(pars.dark_current)
-            filename = ("%s_%s_%06.2fs_%s_%s.fits" 
+            filename = ("%s_%s_flat_%06.2fs_%s_%s.fits" 
                         % (sensor_id, flats.test_type, exptime, flat_id,
                            time_stamp(debug=pars.debug)))
             sensor.writeto(os.path.join(outputdir, filename),
@@ -183,12 +182,16 @@ def generate_traps(pars):
         frame.add_bias(level=pars.bias_level, sigma=pars.bias_sigma)
         frame.add_bias(level=0, sigma=pars.read_noise)
         frame.add_dark_current(pars.dark_current)
-        frame.md['TESTTYPE'] = 'PPUMP'
+        frame.md['TESTTYPE'] = 'TRAP'
         frame.md['IMGTYPE'] = imgtype.split('_')[0].upper()
         frame.md['LSST_NUM'] = sensor_id
-        filename = ("%s_%s_%s_%s.fits" 
-                    % (sensor_id, traps.test_type, imgtype,
-                       time_stamp(debug=pars.debug)))
+        if imgtype == 'bias_2':
+            seqno = '001'
+        else:
+            seqno = '000'
+        filename = ("%s_%s_%s_%s_%s.fits"
+                    % (sensor_id, traps.test_type, imgtype.split('_')[0],
+                       seqno, time_stamp(debug=pars.debug)))
         frame.writeto(os.path.join(outputdir, filename),
                       bitpix=pars.bitpix)
 
@@ -273,14 +276,29 @@ def generate_Fe55(pars):
         sensor.writeto(os.path.join(outputdir, filename),
                            bitpix=pars.bitpix)
 
+class SpherePhotodiodeCurrent(object):
+    def __init__(self, pd_ratio_file, pixel_area=1e-10, pd_area=1e-4):
+        data = np.recfromtxt(pd_ratio_file, skip_header=1,
+                             names='monowl, sens, qe, ccdfrac, foo, bar')
+        self.response = Interpolator(data['monowl'],
+                                     data['sens']*data['ccdfrac']
+                                     *pd_area/pixel_area)
+    def __call__(self, incident_power, wl):
+        """
+        @return Photodiode current (nA)
+        @param incident_power Incident power on CCD (W)
+        @param wl Wavelength (nm)
+        """
+        pd_current = incident_power*self.response(wl)*1e9
+        return pd_current
+
 def generate_qe_dataset(pars):
     print "Generating wavelength scan dataset..."
     wlscan = pars.wavelength_scan
     outputdir, sensor_id = setup(pars, wlscan.test_type)
-    pd_sph = PhotodiodeResponse(wlscan.sph_cal_file)
-    ccd_frac = CcdIllumination(wlscan.wlscan_file, 
-                               wlscan.ccd_cal_file,
-                               wlscan.sph_cal_file)
+    pd_current = SpherePhotodiodeCurrent(wlscan.pd_ratio_file,
+                                         pixel_area=wlscan.pixel_area,
+                                         pd_area=wlscan.pd_area)
     qe = wlscan.qe
     incident_power = wlscan.incident_power  # J/s per pixel
     for wl_nm in wlscan.wavelengths:
@@ -293,8 +311,7 @@ def generate_qe_dataset(pars):
         # The photodiode current is measured at integrating sphere.
         # Units are nA.
         #
-        sensor.md['MONDIODE'] = (incident_power*pd_sph(wl_nm)/ccd_frac(wl_nm)
-                                 *(pars.pd_area/pars.pixel_area))*1e9
+        sensor.md['MONDIODE'] = pd_current(incident_power, wl_nm)
         #
         sensor.expose_flat(incident_power*qe(wl_nm)/hnu)
         #
@@ -302,10 +319,10 @@ def generate_qe_dataset(pars):
         sensor.add_bias(level=0, sigma=pars.read_noise)
         sensor.add_dark_current(pars.dark_current)
         #
-        sensor.md['TESTTYPE'] = 'QE'
+        sensor.md['TESTTYPE'] = 'LAMBDA'
         sensor.md['IMGTYPE'] = 'FLAT'
         sensor.md['LSST_NUM'] = sensor_id
-        filename = ("%s_%s_%06.1f_%s.fits"
+        filename = ("%s_%s_flat_%06.1f_%s.fits"
                     % (sensor_id, wlscan.test_type, wl_nm,
                        time_stamp(debug=pars.debug)))
         sensor.writeto(os.path.join(outputdir, filename),
@@ -336,7 +353,7 @@ def generate_superflat(pars):
         sensor.set_dark_cols(dark_cols, superflat.dark_frac)
         sensor.set_dark_pix(dark_pix, superflat.dark_frac)
         sensor.md['MONOWL'] = superflat.wavelength
-        sensor.md['TESTTYPE'] = 'SFLAT'
+        sensor.md['TESTTYPE'] = 'SFLAT_500'
         sensor.md['IMGTYPE'] = 'FLAT'
         sensor.md['LSST_NUM'] = sensor_id
         sensor.md['PCTI'] = superflat.pcti
@@ -344,7 +361,7 @@ def generate_superflat(pars):
         sensor.writeto(tempfile)
         foo = ctesim(tempfile, pcti=superflat.pcti, scti=superflat.scti,
                      verbose=superflat.verbose)
-        filename = ("%s_%s_%02i_%s.fits" 
+        filename = ("%s_%s_flat_%02i_%s.fits" 
                     % (sensor_id, superflat.test_type, frame,
                        time_stamp(debug=pars.debug)))
         foo.writeto(os.path.join(outputdir, filename), clobber=True)
@@ -395,14 +412,14 @@ def generate_crosstalk_dataset(pars):
         sensor.md['IMGTYPE'] = 'SPOT'
         sensor.md['LSST_NUM'] = sensor_id
     if spot.multiaggressor:
-        filename = ("%s_%s_multi_%s.fits" % (sensor_id, spot.test_type, 
-                                             time_stamp(debug=pars.debug)))
+        filename = ("%s_%s_spot_multi_%s.fits" % (sensor_id, spot.test_type, 
+                                                  time_stamp(debug=pars.debug)))
         sensor.writeto(os.path.join(outputdir, filename), bitpix=pars.bitpix)
     else:
         for aggressor in imutils.allAmps:
-            filename = ("%s_%s_%02i_%s.fits" % (sensor_id, spot.test_type,
-                                                aggressor,
-                                                time_stamp(debug=pars.debug)))
+            filename = ("%s_%s_spot_%02i_%s.fits" % (sensor_id, spot.test_type,
+                                                     aggressor,
+                                                     time_stamp(debug=pars.debug)))
             sensors[aggressor].writeto(os.path.join(outputdir, filename),
                                        bitpix=pars.bitpix)
 

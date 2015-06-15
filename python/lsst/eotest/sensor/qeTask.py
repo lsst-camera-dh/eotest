@@ -24,8 +24,7 @@ class QeTask(pipeBase.Task):
     _DefaultName = "QeTask"
 
     @pipeBase.timeMethod
-    def run(self, sensor_id, qe_files, ccd_cal_file, sph_cal_file,
-            wlscan_file, mask_files, gains, pd_cal_file=None,
+    def run(self, sensor_id, qe_files, pd_ratio_file, mask_files, gains,
             medians_file=None, e2v_data=False):
         imutils.check_temperatures(qe_files, self.config.temp_set_point_tol,
                                    setpoint=self.config.temp_set_point,
@@ -43,11 +42,8 @@ class QeTask(pipeBase.Task):
         if e2v_data:
             qe_data.incidentPower_e2v()
         else:
-            if pd_cal_file is not None:
-                qe_data.incidentPower_BNL(pd_cal_file)
-            else:
-                qe_data.incidentPower(ccd_cal_file, sph_cal_file, wlscan_file)
-        
+            qe_data.incidentPower(pd_ratio_file)
+
         qe_data.calculate_QE(gains)
 
         fits_outfile = os.path.join(self.config.output_dir,
