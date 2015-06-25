@@ -20,8 +20,11 @@ import lsst.pipe.base as pipeBase
 
 def find_flat2(flat1):
     pattern = flat1.split('flat1')[0] + 'flat2*.fits'
-    flat2 = glob.glob(pattern)[0]
-    return flat2
+    try:
+        flat2 = glob.glob(pattern)[0]
+        return flat2
+    except IndexError:
+        return flat1
 
 exptime = lambda x : imutils.Metadata(x, 1).get('EXPTIME')
 

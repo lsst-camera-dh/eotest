@@ -50,35 +50,40 @@ def pair_stats(file1, file2, amp, mask_files=(), binsize=1, bias_frame=None):
     #
     # Extract imaging region for segments of both CCDs.
     #
-    image1 = ccd1[amp].Factory(ccd1[amp], ccd1.amp_geom.imaging)
-    image2 = ccd2[amp].Factory(ccd2[amp], ccd2.amp_geom.imaging)
+    image1 = ccd1.unbiased_and_trimmed_image(amp)
+    image2 = ccd2.unbiased_and_trimmed_image(amp)
     #
     # Use serial overscan for bias region.
     #
     b1 = ccd1[amp].Factory(ccd1[amp], ccd1.amp_geom.serial_overscan)
     b2 = ccd2[amp].Factory(ccd2[amp], ccd2.amp_geom.serial_overscan)
-    bmean = (mean(b1) + mean(b2))/2.
+    if file1 == file2:
+        # Don't have pairs of flats, so estimate noise and gain
+        # from a single frame, ignoring FPN.
+        bmean = mean(b1)
+        bvar = var(b1)
+        fmean = mean(image1)
+        fvar = var(image1)
+    else:
+        bmean = (mean(b1) + mean(b2))/2.
+        #
+        # Make a deep copy since otherwise the pixel values in image1
+        # would be altered in the ratio calculation.
+        #
+        fratio_im = afwImage.MaskedImageF(image1, True)
+        fratio_im /= image2
+        fratio = mean(fratio_im)
+        image2 *= fratio
+        fmean = (mean(image1) + mean(image2))/2.
 
-    image1 = ccd1.unbiased_and_trimmed_image(amp)
-    image2 = ccd2.unbiased_and_trimmed_image(amp)
-    #
-    # Make a deep copy since otherwise the pixel values in image1
-    # would be altered in the ratio calculation.
-    #
-    fratio_im = afwImage.MaskedImageF(image1, True)
-    fratio_im /= image2
-    fratio = mean(fratio_im)
-    image2 *= fratio
-    fmean = (mean(image1) + mean(image2))/2.
+        fdiff = afwImage.MaskedImageF(image1, True)
+        fdiff -= image2
+        fvar = var(fdiff)/2.
 
-    fdiff = afwImage.MaskedImageF(image1, True)
-    fdiff -= image2
-    fvar = var(fdiff)/2.
-
-    bdiff = afwImage.MaskedImageF(b1, True)
-    bdiff -= b2
-    bvar = var(bdiff)/2.
-    
+        bdiff = afwImage.MaskedImageF(b1, True)
+        bdiff -= b2
+        bvar = var(bdiff)/2.
+    # Compute final stats
     gain = fmean/(fvar - bvar)
     bias_rms = np.sqrt(bvar)
     noise = gain*bias_rms

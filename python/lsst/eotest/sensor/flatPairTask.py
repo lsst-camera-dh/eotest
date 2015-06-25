@@ -124,7 +124,12 @@ class FlatPairTask(pipeBase.Task):
         for row, file1 in enumerate(file1s):
             if self.config.verbose:
                 self.log.info("processing %s" % file1)
-            file2 = find_flat2(file1)
+            try:
+                file2 = find_flat2(file1)
+            except IndexError:
+                # Just use flat1 again since only average is taken and
+                # FPN subtraction isn't needed.
+                file2 = file1
     
             flat1 = MaskedCCD(file1, mask_files=self.mask_files,
                               bias_frame=self.bias_frame)
@@ -135,11 +140,8 @@ class FlatPairTask(pipeBase.Task):
                 raise RuntimeError("Exposure times do not match for:\n%s\n%s\n"
                                    % (file1, file2))
     
-            try:
-                flux = abs(flat1.md.get('EXPTIME')*flat1.md.get('MONDIODE') +
-                           flat2.md.get('EXPTIME')*flat2.md.get('MONDIODE'))/2.
-            except TypeError:
-                continue
+            flux = abs(flat1.md.get('EXPTIME')*flat1.md.get('MONDIODE') +
+                       flat2.md.get('EXPTIME')*flat2.md.get('MONDIODE'))/2.
 
             self.output[-1].data.field('FLUX')[row] = flux
             for amp in imutils.allAmps:
