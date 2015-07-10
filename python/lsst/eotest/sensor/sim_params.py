@@ -66,7 +66,8 @@ datasets = [
     'superflat',
     'crosstalk_dataset',
     'system_read_noise',
-    'system_crosstalk_dataset'
+    'system_crosstalk_dataset',
+    'persistence_dataset'
     ]
 
 flat_fields = Params(test_type='flat',
@@ -153,3 +154,12 @@ sysnoise = Params(test_type='noise',
 sysxtalk = Params(test_type='xtalk',
                   dn=6e4,
                   column=260)
+
+persistence = Params(test_type='persistence',
+                     num_bias_frames=5,
+                     exptimes_presat_darks=(20, 20, 20),
+                     flat_exptime=40,
+                     flat_Ne=full_well,
+                     exptimes_postsat_darks=(0, 0, 0, 5, 5, 5, 10, 10, 20, 20),
+                     deferred_charge=100,  # e-/pixel
+                     decay_time=1e2)       # seconds

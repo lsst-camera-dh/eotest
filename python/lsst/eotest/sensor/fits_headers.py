@@ -133,11 +133,6 @@ def check_noao_keywords(infile, verbose=True):
     for extnum in imutils.allAmps:
         geom_kwd = lambda x : parse_geom_kwd(input[extnum].header[x])
         try:
-            detsize = geom_kwd('DETSIZE')
-        except KeyError:
-            detsize = None
-            defects.append("HDU %i: missing DETSIZE keyword" % extnum)
-        try:
             detsec = geom_kwd('DETSEC')
         except KeyError:
             detsec = None
@@ -147,24 +142,8 @@ def check_noao_keywords(infile, verbose=True):
         except KeyError:
             datasec = None
             defects.append("HDU %i: missing DATASEC keyword" % extnum)
-
-        if (detsize is not None and 
-            (detsize['xmin'] != 1 or detsize['ymin'] != 1 or 
-             detsize['xmax'] <= detsize['xmin'] or
-             detsize['ymax'] <= detsize['ymin'])):
-            defects.append("HDU %i DETSIZE fails sanity check: %s" 
-                           % (extnum, input[extnum].header['DETSIZE']))
-        if (pdetsize is not None and detsize is not None and
-            (detsize['xmax'] >= pdetsize['xmax'] or
-             detsize['ymax'] >= pdetsize['ymax'])):
-            defects.append("HDU %i DETSIZE too big relative to PHDU values: %s"
-                           % (extnum, input[extnum].header['DETSIZE']))
         if datasec is not None and datasec['xmin'] <= 1:
             defects.append("HDU %i, No prescan pixels implied by DATASEC: %s"
-                           % (extnum, input[extnum].header['DATASEC']))
-        if (datasec is not None and detsec is not None and 
-            datasec['ymax'] != detsize['ymax']/2.):
-            defects.append("HDU %i, Inconsistent parallel DATASEC: %s"
                            % (extnum, input[extnum].header['DATASEC']))
         if (datasec is not None and detsec is not None and 
             (abs(datasec['xmin'] - datasec['xmax'])

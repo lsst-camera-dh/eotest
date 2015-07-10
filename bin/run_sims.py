@@ -92,7 +92,7 @@ def setup(pars, testtype):
     sensor_id = pars.sensor_id
     return outputdir, sensor_id
 
-def simulate_frame(exptime, pars, ccdtemp=-100, set_full_well=True):
+def simulate_frame(exptime, pars, ccdtemp=-95, set_full_well=True):
     if set_full_well:
         full_well = pars.full_well
     else:
@@ -274,7 +274,7 @@ def generate_Fe55(pars):
                     % (sensor_id, fe55.test_type, frame,
                        time_stamp(debug=pars.debug)))
         sensor.writeto(os.path.join(outputdir, filename),
-                           bitpix=pars.bitpix)
+                       bitpix=pars.bitpix)
 
 class SpherePhotodiodeCurrent(object):
     def __init__(self, pd_ratio_file, pixel_area=1e-10, pd_area=1e-4):
@@ -453,6 +453,77 @@ def generate_system_crosstalk_dataset(pars):
                        time_stamp(debug=pars.debug)))
         sensor.writeto(os.path.join(outputdir, filename),
                        bitpix=pars.bitpix)
+
+def generate_persistence_dataset(pars):
+    print "Generating persistence dataset..."
+    persistence = pars.persistence
+    outputdir, sensor_id = setup(pars, persistence.test_type)
+
+    # Baseline bias frames
+    for frame in range(persistence.num_bias_frames):
+        exptime = 0
+        sensor = simulate_frame(exptime, pars, ccdtemp=pars.ccdtemp)
+        sensor.md['TESTTYPE'] = 'PERSISTENCE'
+        sensor.md['IMGTYPE'] = 'BIAS'
+        sensor.md['LSST_NUM'] = sensor_id
+        filename = ("%s_%s_bias_%02i_%s.fits" % 
+                    (sensor_id, persistence.test_type, frame,
+                     time_stamp(debug=pars.debug)))
+        sensor.writeto(os.path.join(outputdir, filename),
+                       bitpix=pars.bitpix)
+
+    # Pre-flat darks to measure light leakage
+    for dark_frame, exptime in enumerate(persistence.exptimes_presat_darks):
+        sensor = simulate_frame(exptime, pars, ccdtemp=pars.ccdtemp)
+        sensor.md['TESTTYPE'] = 'PERSISTENCE'
+        sensor.md['IMGTYPE'] = 'DARK'
+        sensor.md['LSST_NUM'] = sensor_id
+        # Include simulated exposure time.
+        time.sleep(exptime)
+        filename = ("%s_%s_dark_%02i_%s.fits" % 
+                    (sensor_id, persistence.test_type, dark_frame,
+                     time_stamp(debug=pars.debug)))
+        sensor.writeto(os.path.join(outputdir, filename), bitpix=pars.bitpix)
+
+    # Saturated flat.
+    sensor = simulate_frame(persistence.flat_exptime, pars,
+                            ccdtemp=pars.ccdtemp)
+    # Set the imaging array in each segment to the full well value.
+    for amp in sensor.segments:
+        sensor.segments[amp].imarr[:] = persistence.flat_Ne/pars.system_gain
+    sensor.md['TESTTYPE'] = 'PERSISTENCE'
+    sensor.md['IMGTYPE'] = 'FLAT'
+    sensor.md['LSST_NUM'] = sensor_id
+    time.sleep(persistence.flat_exptime)
+    filename = ("%s_%s_flat_%02i_%s.fits" % 
+                (sensor_id, persistence.test_type, 0,
+                 time_stamp(debug=pars.debug)))
+    sensor.writeto(os.path.join(outputdir, filename), bitpix=pars.bitpix)
+
+    # Reference time for exponential decay of deferred charge.
+    t0 = utcnow()
+
+    # Post-saturation darks for characterizing persistence.
+    for i, exptime in enumerate(persistence.exptimes_postsat_darks):
+        frame = dark_frame + i + 1
+        sensor = simulate_frame(exptime, pars, ccdtemp=pars.ccdtemp)
+        sensor.md['TESTTYPE'] = 'PERSISTENCE'
+        sensor.md['IMGTYPE'] = 'DARK'
+        sensor.md['LSST_NUM'] = sensor_id
+        obs_time = utcnow()
+        # Include simulated exposure time.
+        time.sleep(exptime)
+        # Add deferred charge to darks.
+        decay_factor = np.exp(-((obs_time - t0).sec + exptime)
+                              /persistence.decay_time)
+        for amp in sensor.segments:
+            sensor.segments[amp].imarr += \
+                persistence.deferred_charge/pars.system_gain*decay_factor
+        filename = ("%s_%s_dark_%02i_%s.fits" % 
+                    (sensor_id, persistence.test_type, frame,
+                     time_stamp(debug=pars.debug)))
+        sensor.writeto(os.path.join(outputdir, filename),
+                       bitpix=pars.bitpix, obs_time=obs_time)
 
 if __name__ == '__main__':
     import sys

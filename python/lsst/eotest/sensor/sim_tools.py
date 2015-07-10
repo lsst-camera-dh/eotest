@@ -4,7 +4,8 @@ conditions.  Darks, flats, Fe55, etc..
 """
 import os
 from collections import OrderedDict
-from datetime import datetime
+import datetime
+import astropy.time
 
 import numpy as np
 import numpy.random as random
@@ -23,8 +24,9 @@ from crosstalk import CrosstalkMatrix
 
 _sqrt2 = np.sqrt(2.)
 
-def utcnow():
-    return datetime.now().isoformat()[:19]
+def utcnow(dt=0):
+    now = datetime.datetime.now() + datetime.timedelta(seconds=dt)
+    return astropy.time.Time(now.isoformat(), format='isot', scale='utc')
 
 class CrosstalkPattern(object):
     def __init__(self, infile=None):
@@ -114,7 +116,7 @@ class CCD(object):
             traps[amp] = self.segments[amp].add_traps(ndefects, cycles,
                                                       trap_size)
         return traps
-    def writeto(self, outfile, pars=None, bitpix=-32):
+    def writeto(self, outfile, pars=None, bitpix=-32, obs_time=None):
         ccd_segments = [self.segments[amp] for amp in self.segments]
         output = fitsFile(ccd_segments)
         if pars is not None:
@@ -139,10 +141,14 @@ class CCD(object):
                 pass
             my_round = lambda x : x
         for hdu in output[1:-2]:
-            hdu.data = np.array(my_round(hdu.data),
-                                dtype=self.dtypes[bitpix])
-        output[0].header['DATE-OBS'] = utcnow()
-        output[0].header['DATE'] = utcnow()
+            hdu.data = np.array(my_round(hdu.data), dtype=self.dtypes[bitpix])
+        if obs_time is None:
+            # Compute the start of the observation from the current time 
+            # minus the exposure time.
+            obs_time = utcnow(dt=-output[0].header['EXPTIME'])
+        output[0].header['DATE-OBS'] = obs_time.isot
+        output[0].header['DATE'] = obs_time.isot
+        output[0].header.set('MJD-OBS', value=float('%.5f' % obs_time.mjd))
         pyfitsWriteto(output, outfile, clobber=True, checksum=True)
 
 class SegmentExposure(object):
