@@ -23,9 +23,11 @@ class NoiseDistributions(dict):
 def noise_samples(raw_image, gain, region_sampler,
                   stat_ctrl=afwMath.StatisticsControl()):
     image = raw_image.Factory(raw_image, region_sampler.imaging)
+    bbox = image.getBBox()
     samples = []
     for x, y in zip(region_sampler.xarr, region_sampler.yarr):
-        subim = region_sampler.subim(image, x, y)
+        subim = region_sampler.subim(image, x + bbox.getMinX(),
+                                     y + bbox.getMinY())
         stdev = afwMath.makeStatistics(subim, afwMath.STDEV,
                                        stat_ctrl).getValue()
         samples.append(stdev*gain)
