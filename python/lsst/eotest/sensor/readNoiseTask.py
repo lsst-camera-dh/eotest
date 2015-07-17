@@ -62,7 +62,7 @@ class ReadNoiseTask(pipeBase.Task):
 
     @pipeBase.timeMethod
     def run(self, sensor_id, bias_files, gains, system_noise_files=None,
-            mask_files=(), use_overscan=False):
+            system_noise=None, mask_files=(), use_overscan=False):
         imutils.check_temperatures(bias_files, self.config.temp_set_point_tol,
                                    setpoint=self.config.temp_set_point,
                                    warn_only=True)
@@ -101,7 +101,8 @@ class ReadNoiseTask(pipeBase.Task):
             sampler = imutils.SubRegionSampler(dx, dy, nsamp, imaging=imaging)
 
             Ntot_amp = noise_dists(bias, gains, sampler, mask_files=mask_files)
-            Nsys_amp = noise_dists(sysnoise, gains, sampler, mask_files=mask_files)
+            Nsys_amp = noise_dists(sysnoise, gains, sampler,
+                                   mask_files=mask_files)
 
             _write_read_noise_dists(outfile, Ntot_amp, Nsys_amp, gains, 
                                     bias, sysnoise)
@@ -121,7 +122,10 @@ class ReadNoiseTask(pipeBase.Task):
             self.log.info("Amp    read noise    total noise    system noise")
         for amp in imutils.allAmps:
             Ntot_med = imutils.median(Ntot[amp])
-            Nsys_med = imutils.median(Nsys[amp])
+            if system_noise is not None:
+                Nsys_med = system_noise[amp]
+            else:
+                Nsys_med = imutils.median(Nsys[amp])
             var = Ntot_med**2 - Nsys_med**2
             if var >= 0:
                 Nread = np.sqrt(var)
