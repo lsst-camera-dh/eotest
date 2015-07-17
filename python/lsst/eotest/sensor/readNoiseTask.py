@@ -123,7 +123,7 @@ class ReadNoiseTask(pipeBase.Task):
         for amp in imutils.allAmps:
             Ntot_med = imutils.median(Ntot[amp])
             if system_noise is not None:
-                Nsys_med = system_noise[amp]
+                Nsys_med = float(system_noise[amp])
             else:
                 Nsys_med = imutils.median(Nsys[amp])
             var = Ntot_med**2 - Nsys_med**2
