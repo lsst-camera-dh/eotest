@@ -42,7 +42,7 @@ class Fe55Task(pipeBase.Task):
 
     @pipeBase.timeMethod
     def run(self, sensor_id, infiles, mask_files, bias_frame=None,
-            fe55_catalog=None):
+            fe55_catalog=None, minClustersPerAmp=None, chiprob_min=0.1):
         imutils.check_temperatures(infiles, self.config.temp_set_point_tol,
                                    setpoint=self.config.temp_set_point,
                                    warn_only=True)
@@ -61,9 +61,16 @@ class Fe55Task(pipeBase.Task):
                     self.log.info("processing %s" % infile)
                 ccd = MaskedCCD(infile, mask_files=mask_files,
                                 bias_frame=bias_frame)
+                numClusters = fitter.numGoodFits(chiprob_min=chiprob_min)
                 for amp in ccd:
                     if self.config.verbose:
                         self.log.info("  amp %i" % amp)
+                    if (minClustersPerAmp is not None and
+                        numClusters[amp] >= minClustersPerAmp):
+                        self.log.info("Number of fitted charge clusters with chiprob > %8.1e equals or exceeds minimum requested: %i > %i" 
+                                      % (chiprob_min, numClusters[amp],
+                                         minClustersPerAmp))
+                        continue
                     fitter.process_image(ccd, amp, logger=self.log)
             if self.config.output_file is None:
                 psf_results = os.path.join(self.config.output_dir,

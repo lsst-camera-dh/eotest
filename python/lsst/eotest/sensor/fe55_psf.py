@@ -197,6 +197,14 @@ class PsfGaussFit(object):
         self.dn_fp.extend(dn_fp)
         self.chiprob.extend(chiprob)
         self.amp.extend(np.ones(len(sigmax))*amp)
+    def numGoodFits(self, chiprob_min=0.1):
+        chiprob = np.array(self.chiprob)
+        amps = np.sort(np.unique(np.array(self.amp)))
+        my_numGoodFits = dict([(amp, 0) for amp in imutils.allAmps])
+        for amp in amps:
+            indx = np.where((self.chiprob >= chiprob_min) & (self.amp == amp))
+            my_numGoodFits[amp] = len(indx[0])
+        return my_numGoodFits
     def _save_ext_data(self, amp, x0, y0, sigmax, sigmay, dn, dn_fp, chiprob,
                        chi2s, dofs, maxDNs):
         """
