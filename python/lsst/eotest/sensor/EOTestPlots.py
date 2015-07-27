@@ -247,7 +247,7 @@ class EOTestPlots(object):
                          subplot=(4, 4, amp), win=win,
                          frameLabels=True, amp=amp)
             pylab.locator_params(axis='x', nbins=4, tight=True)
-    def ptcs(self, xrange=(0.1, 1e4), yrange=(0.1, 1e4), figsize=(11, 8.5),
+    def ptcs(self, xrange=None, yrange=None, figsize=(11, 8.5),
              ptc_file=None):
         if ptc_file is not None:
             ptc = pyfits.open(ptc_file)
@@ -275,6 +275,9 @@ class EOTestPlots(object):
             win = plot.xyplot(mean, var, xname='', yname='',
                               xrange=xrange, yrange=yrange,
                               xlog=1, ylog=1, new_win=False,)
+            axes = pylab.gca()
+            xrange = list(axes.get_xlim())
+            xrange[0] = max(xrange[0], 1e-1)
             xx = np.logspace(np.log10(xrange[0]), np.log10(xrange[1]), 20)
             plot.curve(xx, xx/self.results['GAIN'][amp-1], oplot=1, color='r')
             pylab.annotate('Amp %i' % amp, (0.475, 0.8),
@@ -286,7 +289,7 @@ class EOTestPlots(object):
         points[1] += yoffset
         bbox.set_points(points)
         win.axes[-1].set_position(bbox)
-    def gains(self, oplot=0, xoffset=0.25, width=0.5, color='b'):
+    def gains(self, oplot=0, xoffset=0.25, width=0.5, xrange=(0, 16.5)):
         results = self.results
         gain = results['GAIN']
         error = results['GAIN_ERROR']
@@ -294,7 +297,8 @@ class EOTestPlots(object):
         ymax = min(max(gain + error), max(gain + 1))
         win = plot.xyplot(results['AMP'], results['GAIN'],
                           yerr=results['GAIN_ERROR'], xname='AMP',
-                          yname='gain (e-/DN)', yrange=(ymin, ymax))
+                          yname='gain (e-/DN)', yrange=(ymin, ymax),
+                          xrange=xrange)
         win.set_title("System Gain, %s" % self.sensor_id)
     def noise(self, oplot=0, xoffset=0.2, width=0.2, color='b'):
         results = self.results
