@@ -101,9 +101,12 @@ class Fe55GainFitter(object):
             win.axes[-1].set_position(bbox)
         if xrange is not None:
             self.xrange = xrange
+        logscale = True
+        if max(self.signals) <= 0:
+            logscale = False
         try:
             hist = pylab.hist(self.signals, bins=bins, range=self.xrange,
-                              histtype='bar', color='b', log=True)
+                              histtype='bar', color='b', log=logscale)
             yrange = 1, max(hist[0])*1.5
             plot.setAxis(self.xrange, yrange)
         except:

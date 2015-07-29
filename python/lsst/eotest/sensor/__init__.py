@@ -22,7 +22,7 @@ from DetectorResponse import DetectorResponse
 from prnu import prnu
 from Traps import Traps
 from TrapFinder import TrapFinder
-from rolloff_mask import rolloff_mask
+from rolloff_mask import rolloff_mask, pixel_counts
 #
 # Pipe tasks
 #

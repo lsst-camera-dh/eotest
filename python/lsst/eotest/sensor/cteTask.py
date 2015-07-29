@@ -61,7 +61,7 @@ class CteTask(pipeBase.Task):
     _DefaultName = "CteTask"
 
     @pipeBase.timeMethod
-    def run(self, sensor_id, superflat_files, bias_files):
+    def run(self, sensor_id, superflat_files, bias_files=()):
         if self.config.verbose:
             self.log.info("Processing superflat files:")
             for item in superflat_files:

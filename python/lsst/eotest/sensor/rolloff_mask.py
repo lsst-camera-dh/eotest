@@ -65,7 +65,7 @@ def rolloff_mask(infile, outfile,
     # can append only image extensions (and not write to the PHDU).
     #
     hdulist = pyfits.HDUList()
-    hdulist.append(pyfits.PrimaryHDU())
+    hdulist.append(pyfits.open(infile)[0])
     # Use the mask_plane value ('ROLLOFF_DEFECTS') to distinguish
     # this file from other mask files.
     hdulist[0].header['MASKTYPE'] = mask_plane
@@ -103,8 +103,8 @@ def rolloff_mask(infile, outfile,
         #
         imarr[0:outer_edge_width, :] += signal
 
-#        if amp_geom.amp_loc == amp_loc['E2V']:
-        if True:   # Always set blooming stop mask bits.
+        if amp_geom.amp_loc == amp_loc['E2V']:
+        #if True:
             #
             # Set signal around blooming stop
             #
@@ -125,3 +125,33 @@ def rolloff_mask(infile, outfile,
         bright_pixels.generate_mask(outfile)
     if cleanup:
         os.remove(tmp_mask_image)
+
+def pixel_counts(ccd_file, input_mask=None):
+    """
+    Based on the sensor geometry and an optional input mask, compute
+    the total number of pixels in the imaging regions of the
+    amplifiers and the total number of masked pixels within the
+    imaging regions.  If no input mask is given, the standard rolloff
+    mask for the vendor device is used.
+
+    @return <total number of imaging region pixels>, <number of masked pixels>
+    """
+    if input_mask is not None:
+        mask_file = input_mask
+    else:
+        mask_file = 'temp_rolloff_mask.fits'
+        rolloff_mask(ccd_file, mask_file)
+    ccd = MaskedCCD(mask_file)
+    num_masked = 0
+    num_total = 0
+    imaging = ccd.amp_geom.imaging
+    for amp in range(1, 17):
+        imarr = imutils.trim(ccd[amp].getImage(), imaging).getArray()
+        num_masked += len(np.where(imarr != 0)[0])
+        num_total += imarr.shape[0]*imarr.shape[1]
+    if mask_file is None:
+        try:
+            os.remove(mask_file)
+        except OSError:
+            pass
+    return num_total, num_masked

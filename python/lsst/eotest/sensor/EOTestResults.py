@@ -43,7 +43,10 @@ class EOTestResults(object):
         for amp in range(1, _namps+1):
             self.add_seg_result(amp, 'AMP', amp)
     def __getitem__(self, column):
-        return self.output[self.extname].data.field(column)
+        try:
+            return self.output[self.extname].data.field(column)
+        except:
+            return self.output[colunm]
     def append_column(self, colname, dtype=np.float, unit='None', column=None):
         """
         Append a new column of amplifier data to the AMPLIFIER_RESULTS table.
@@ -68,6 +71,11 @@ class EOTestResults(object):
         if column not in self.colnames:
             self.append_column(column, type(value))
         self.output[self.extname].data.field(column)[amp-1] = value
+    def add_ccd_result(self, keyword, value):
+        """
+        Add CCD-wide key/value pair to the primary HDU of the output.
+        """
+        self.output[0].header[keyword] = value
     def write(self, outfile=None, clobber=True):
         """
         Write or update the output file.

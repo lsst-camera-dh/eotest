@@ -10,6 +10,7 @@ import pylab
 import matplotlib as mpl
 import pylab_plotter as plot
 from MaskedCCD import MaskedCCD
+from rolloff_mask import rolloff_mask
 from EOTestResults import EOTestResults
 from Fe55GainFitter import Fe55GainFitter
 from fe55_psf import psf_sigma_statistics
@@ -207,16 +208,23 @@ class EOTestPlots(object):
             else:
                 win.select_subplot(*subplot)
             self._offset_subplot(win)
-            plot.histogram(sigma, xrange=xrange, bins=bins, new_win=False,
-                           xname='', yname='')
-            pylab.xticks(range(xrange[0], xrange[1]+1))
-            # Find mode from histogram data
-            mode, median, mean = psf_sigma_statistics(sigma, bins=bins, 
-                                                      range=xrange)
-            plot.vline(5)
-            plot.vline(mode, color='r')
-            pylab.annotate('Amp %i\nmode=%.2f' % (amp, mode), (0.05, 0.8),
-                           xycoords='axes fraction', size='x-small')
+            try:
+                plot.histogram(sigma, xrange=xrange, bins=bins, new_win=False,
+                               xname='', yname='')
+                pylab.xticks(range(xrange[0], xrange[1]+1))
+                # Find mode from histogram data
+                mode, median, mean = psf_sigma_statistics(sigma, bins=bins, 
+                                                          range=xrange)
+                plot.vline(5)
+                plot.vline(mode, color='r')
+                pylab.annotate('Amp %i\nmode=%.2f' % (amp, mode), (0.05, 0.8),
+                               xycoords='axes fraction', size='x-small')
+            except Exception, eobj:
+                print "Exception raised in generating PSF sigma plot for amp", amp
+                print eobj
+                # Skip this plot so that the rest of the plots can be
+                # generated.
+                pass
     def fe55_dists(self, chiprob_min=0.1, fe55_file=None, figsize=(11, 8.5)):
         if fe55_file is None:
             fe55_file = glob.glob(self._fullpath('%s_psf_results*.fits' 
@@ -590,12 +598,17 @@ class CcdSpecs(OrderedDict):
         num_traps = sum(self.results['NUM_TRAPS'])
         self['CCD-012e'].measurement = '%i' % num_traps
 
+        try:
+            num_pixels = (self.results['TOTAL_NUM_PIXELS'] 
+                          - self.results['ROLLOFF_MASK_PIXELS'])
+        except:
+            num_pixels = 16129000
         col_size = 2002 - 9 # exclude masked edge rolloff.
-        num_pixels = 16129000
         num_defects = (num_bright_pixels + num_dark_pixels + num_traps
                        + col_size*(num_bright_columns + num_dark_columns))
-        self['CCD-012'].measurement = 'defective pixels: %i' % num_defects
-        self['CCD-012'].ok = (num_defects/num_pixels < 5e-3)
+        self['CCD-012'].measurement = 'defective pixels: %i (%.4f\\%%)' \
+            % (num_defects, 100.*float(num_defects)/float(num_pixels))
+        self['CCD-012'].ok = (float(num_defects)/float(num_pixels) < 5e-3)
         if xtalk_file is not None:
             foo = CrosstalkMatrix(xtalk_file)
             for i in range(len(foo.matrix)):
@@ -625,7 +638,6 @@ class CcdSpecs(OrderedDict):
             except KeyError:
                 self['CCD-0%i' % specnum].measurement = 'No data'
         prnu_results = self.plotter.prnu_results
-#        target_wls = Set([350, 450, 500, 620, 750, 870, 1000])
         target_wls = Set(EOTestPlots.prnu_wls)
         ratios = {}
         for wl, stdev, mean in zip(prnu_results['WAVELENGTH'],

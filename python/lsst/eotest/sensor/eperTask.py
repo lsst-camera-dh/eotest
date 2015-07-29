@@ -89,24 +89,24 @@ class EPERTask(pipeBase.Task):
             # find signal in last image row/column
             lastmed = median(subimage(lastpix), ccd.stat_ctrl)
             if self.config.verbose:
-                print "lastmed = " + str(lastmed)
+                self.log.info("lastmed = " + str(lastmed))
 		
             # find median signal in each overscan row
             overscanmeds = np.zeros(overscans)
             for i in range(1, overscans+1):
                 overscanmeds[i-1] = median(subimage(lastpix + i), ccd.stat_ctrl)
             if self.config.verbose:
-                print "Overscan medians = " + str(overscanmeds)
+                self.log.info("Overscan medians = " + str(overscanmeds))
 		
             # sum medians of first n overscan rows
             summed = np.sum(overscanmeds)
             if self.config.verbose:
-                print "summed = " + str(summed)
+                self.log.info("summed = " + str(summed))
 
             # find signal in bias
             biasmed = subimage.bias_med()
             if self.config.verbose:
-                print "biasmed = " + str(biasmed)
+                self.log.info("biasmed = " + str(biasmed))
 
             # signal = last - bias
             sig = lastmed - biasmed
@@ -123,10 +123,9 @@ class EPERTask(pipeBase.Task):
                 cte[amp] = 1. - chargelosspt
             if self.config.verbose:
                 if self.config.cti:
-                    print 'cti, amp ' + str(amp) + " = " + '{0:.16f}'.format(cte[amp])
+                    self.log.info('cti, amp ' + str(amp) + " = " + '{0:.16f}'.format(cte[amp]) + '\n')
                 else:
-                    print 'cte, amp ' + str(amp) + " = " + '{0:.16f}'.format(cte[amp])
-                print
+                    self.log.info('cte, amp ' + str(amp) + " = " + '{0:.16f}'.format(cte[amp]) + '\n')
         return cte
 			
 if __name__ == '__main__':
