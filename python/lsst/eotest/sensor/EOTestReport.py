@@ -150,8 +150,9 @@ class EOTestReport(object):
         for wl in self.plots.prnu_wls:
             flat = '%(sensor_id)s_%(wl)04inm_flat' % locals()
             if os.path.isfile(flat + '.png'):
+                self.output.write(self.plots.specs.prnu_specs[wl].latex_table())
                 self.output.write(_include_png((flat,)))
-        self.output.write('\\pagebreak\n\n')
+                self.output.write('\\pagebreak\n\n')
         #
         # Point Spread Function
         #

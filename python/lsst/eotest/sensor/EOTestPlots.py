@@ -152,7 +152,7 @@ class EOTestPlots(object):
         self._qe_data = None
         self._qe_file = self._fullpath('%s_QE.fits' % self.sensor_id)
         self.specs = CcdSpecs(results_file, plotter=self,
-                              xtalk_file=xtalk_file)
+                              xtalk_file=xtalk_file, prnu_wls=self.prnu_wls)
 #        try:
 #            self.specs = CcdSpecs(results_file, plotter=self,
 #                                  xtalk_file=xtalk_file)
@@ -523,9 +523,12 @@ class EOTestPlots(object):
         return my_table
 
 class CcdSpecs(OrderedDict):
-    def __init__(self, results_file, xtalk_file=None, plotter=None):
+    def __init__(self, results_file, xtalk_file=None, plotter=None,
+                 prnu_wls=()):
         super(CcdSpecs, self).__init__()
         self.plotter = plotter
+        self.prnu_wls = prnu_wls
+        self.prnu_specs = OrderedDict()
         self._createSpecs()
         self._ingestResults(results_file, xtalk_file=xtalk_file)
     def factory(self, *args, **kwds):
@@ -556,6 +559,9 @@ class CcdSpecs(OrderedDict):
         self.factory('CCD-025', 'z Band QE', spec='$> 75$\\%')
         self.factory('CCD-026', 'y Band QE', spec='$> 21$\\%')
         self.factory('CCD-027', 'PRNU', spec='$<5$\\%')
+        for wl in self.prnu_wls:
+            self.prnu_specs[wl] = CcdSpec("CCD-027 (%inm)" % wl, 'PRNU',
+                                          spec='$<5$\\%')
         self.factory('CCD-028', 'Point Spread Function', spec='$\sigma < 5\mu$')
     @staticmethod
     def latex_header():
@@ -645,9 +651,20 @@ class CcdSpecs(OrderedDict):
             if stdev > 0:
                 target_wls.remove(int(wl))
                 ratios[wl] = stdev/mean
+                if self.prnu_specs.has_key(wl):
+                    if ratios[wl] < 0.01:
+                        self.prnu_specs[wl].measurement = \
+                            "\\num{%.1e}\\%%" % (ratios[wl]*100)
+                    else:
+                        self.prnu_specs[wl].measurement = \
+                            "%.2f\\%%" % (ratios[wl]*100)
+                    self.prnu_specs[wl].ok = (ratios[wl] < 5e-2)
         max_ratio = max(ratios.values())
         max_wl = ratios.keys()[np.where(ratios.values() == max_ratio)[0][0]]
-        self['CCD-027'].measurement = 'max. variation = \\num{%.1e}\\%% at %i\\,nm' % (max_ratio*100, max_wl)
+        if max_ratio < 0.01:
+            self['CCD-027'].measurement = 'max. variation = \\num{%.1e}\\%% at %i\\,nm' % (max_ratio*100, max_wl)
+        else:
+            self['CCD-027'].measurement = 'max. variation = %.2f\\%% at %i\\,nm' % (max_ratio*100, max_wl)
         if target_wls:
             measurement = self['CCD-027'].measurement + '\\\\missing wavelengths: ' \
                 + ', '.join([str(x) for x in sorted(target_wls)]) + "\\,nm"
