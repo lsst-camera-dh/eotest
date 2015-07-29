@@ -9,6 +9,7 @@ https://confluence.slac.stanford.edu/x/DQvNBw
 @author J. Chiang <jchiang@slac.stanford.edu>
 """
 import os
+import numpy as np
 import pyfits
 from lsst.eotest.pyfitsTools import pyfitsWriteto
 import lsst.afw.detection as afwDetect
