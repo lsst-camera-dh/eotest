@@ -46,7 +46,7 @@ class EOTestResults(object):
         try:
             return self.output[self.extname].data.field(column)
         except:
-            return self.output[colunm]
+            return self.output[column]
     def append_column(self, colname, dtype=np.float, unit='None', column=None):
         """
         Append a new column of amplifier data to the AMPLIFIER_RESULTS table.
