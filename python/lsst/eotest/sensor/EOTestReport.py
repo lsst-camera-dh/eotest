@@ -4,7 +4,7 @@ import pylab
 from EOTestPlots import latex_minus_mean
 
 def _include_png(pngfiles, frac_height=0.6):
-    figure_template = """\\begin{figure}[!htbp]
+    figure_template = """\\begin{figure}[H]
 \\centering
 %s
 \\end{figure}
@@ -49,6 +49,7 @@ class EOTestReport(object):
 \usepackage{graphicx}
 \usepackage{amssymb}
 \usepackage{siunitx}
+\usepackage{float}
 \usepackage[table,xcdraw]{xcolor}
 \usepackage[margin=1in]{geometry}
 

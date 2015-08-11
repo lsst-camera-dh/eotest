@@ -214,6 +214,8 @@ class EOTestPlots(object):
             try:
                 plot.xyplot(times, flux, yerr=stdev, xname='', yname='',
                             new_win=False)
+                pylab.annotate('Amp %i' % amp, (0.5, 0.8),
+                               xycoords='axes fraction', size='x-small')
             except Exception, eobj:
                 print "Exception raised in generating image persistence plot for amp", amp
                 print eobj
@@ -257,7 +259,7 @@ class EOTestPlots(object):
                                                           range=xrange)
                 plot.vline(5)
                 plot.vline(mode, color='r')
-                pylab.annotate('Amp %i\nmode=%.2f' % (amp, mode), (0.05, 0.8),
+                pylab.annotate('Amp %i\nmode=%.2f' % (amp, mode), (0.5, 0.8),
                                xycoords='axes fraction', size='x-small')
             except Exception, eobj:
                 print "Exception raised in generating PSF sigma plot for amp", amp
