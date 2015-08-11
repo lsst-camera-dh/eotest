@@ -33,7 +33,8 @@ class EOTestReport(object):
                  'linearity',
                  'crosstalk_matrix',
                  'qe',
-                 'psf_dists')
+                 'psf_dists',
+                 'persistence')
         for func in funcs:
             print "  %s" % func
             try:
@@ -161,6 +162,13 @@ class EOTestReport(object):
         self.output.write(_include_png(('%(sensor_id)s_psf_dists' % locals(),)))
         self.output.write('\\pagebreak\n\n')
         #
+        # Image persistence plots
+        #
+        self.output.write('\section{Image Persistence}\n')
+        self.output.write(_include_png(('%(sensor_id)s_persistence' 
+                                        % locals(),)))
+        self.output.write('\\pagebreak\n\n')
+        #
         # Fe55 gains and PTC
         #
         self.output.write('\section{System Gain and Photon Transfer Curves}\n')
@@ -171,7 +179,9 @@ class EOTestReport(object):
         self.output.write('\\pagebreak\n\n')
         if os.path.isfile('%(sensor_id)s_ptcs.png' % locals()):
             self.output.write(_include_png(('%(sensor_id)s_ptcs' % locals(),)))
-        
+        #
+        # End and close the document.
+        #
         self.output.write("\\end{document}\n")
         self.output.close()
 

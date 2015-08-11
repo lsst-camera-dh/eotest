@@ -89,7 +89,7 @@ def plot_flat(infile, nsig=3, cmap=pylab.cm.hot, win=None, subplot=(1, 1, 1),
             #
             # Convert from ADU to e-
             if gains is not None:
-                subarr *= gains[amp-1]
+                subarr *= gains[amp]
             #
             # Set the subarray in the mosaicked image.
             mosaic[ymin:ymax, xmin:xmax] = subarr
@@ -104,6 +104,14 @@ def plot_flat(infile, nsig=3, cmap=pylab.cm.hot, win=None, subplot=(1, 1, 1),
         ds9.mtv(image)
         ds9.ds9Cmd('zoom to fit')
         return
+    #
+    # Write a fits image with the mosaicked CCD data.
+    #
+    hdulist = pyfits.HDUList()
+    hdulist.append(pyfits.PrimaryHDU())
+    hdulist[0].data = mosaic[::-1,:]
+    hdulist.writeto('mosaicked_flat_%04i.fits' % foo[0].header['MONOWL'],
+                    clobber=True)
     #
     # Set the color map to extend over the range median +/- stdev(clipped)
     # of the pixel values.
@@ -179,6 +187,38 @@ class EOTestPlots(object):
 #        foo.plot_matrix(cmap=cmap)
         win = foo.plot(title="Crosstalk, %s" % self.sensor_id)
         return foo
+    def persistence(self, infile=None, figsize=(11, 8.5)):
+        if infile is None:
+            infile = self._fullpath('%s_persistence.fits' % self.sensor_id)
+        results = pyfits.open(infile)
+        times = results[1].data.field('TIME')
+        win = None
+        for amp in imutils.allAmps:
+            subplot = (4, 4, amp)
+            if amp == 1:
+                win = plot.Window(subplot=subplot, figsize=figsize,
+                                  xlabel=r'Time since end of flat exposure (s)',
+                                  ylabel=r'Deferred charge (e-/pixel)')
+                win.frameAxes.text(0.5, 1.08,
+                                   'Image Persistence vs Time, %s' \
+                                       % self.sensor_id,
+                                   horizontalalignment='center',
+                                   verticalalignment='top',
+                                   transform=win.frameAxes.transAxes,
+                                   size='large')
+            else:
+                win.select_subplot(*subplot)
+            self._offset_subplot(win)
+            flux = results[1].data.field('MEDIAN%02i' % amp)
+            stdev = results[1].data.field('STDEV%02i' % amp)
+            try:
+                plot.xyplot(times, flux, yerr=stdev, xname='', yname='',
+                            new_win=False)
+            except Exception, eobj:
+                print "Exception raised in generating image persistence plot for amp", amp
+                print eobj
+                # Continue with remaining amps
+                pass
     def psf_dists(self, chiprob_min=0.1, fe55_file=None, figsize=(11, 8.5),
                   xrange=(2, 6), bins=50):
         if fe55_file is None:
@@ -468,11 +508,13 @@ class EOTestPlots(object):
         wls = np.array(wls)
         #print wls
         # Loop over PRNU wavelengths and generate a png for each.
+        gains = dict([(amp, gain) for amp, gain 
+                      in zip(self.results['AMP'], self.results['GAIN'])])
         for wl in self.prnu_wls:
             try:
                 target = np.where(wls == wl)[0][0]
                 win = plot_flat(flats[target], nsig=nsig, cmap=cmap, wl=wl,
-                                gains=self.results['GAIN'])
+                                gains=gains)
                 pylab.savefig('%s_%04inm_flat.png' % (self.sensor_id, wl))
             except IndexError:
                 pass

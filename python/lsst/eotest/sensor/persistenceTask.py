@@ -15,9 +15,20 @@ import lsst.afw.geom as afwGeom
 import lsst.afw.image as afwImage
 import lsst.afw.math as afwMath
 import lsst.pex.config as pexConfig
+import lsst.pex.exceptions.wrappers as pexExceptWrap
 import lsst.pipe.base as pipeBase
 import datetime
 import astropy.time
+
+def file_timestamp(infile):
+    timestamp = infile[-len('YYYYMMDDHHMMSS.fits'):-len('.fits')]
+    year, month, day, hours, minutes, seconds = \
+        [int(timestamp[:4])] + [int(timestamp[4+2*i:4+2*(i+1)])
+                                for i in range(5)]
+    t_readout = astropy.time.Time(datetime.datetime(year, month, day, hours, 
+                                                    minutes, seconds),
+                                  format='datetime', scale='utc')
+    return t_readout
 
 def readout_time(infile):
     """
@@ -25,7 +36,8 @@ def readout_time(infile):
     It is computed from the PHDU keyword values as MJD-OBS + EXPTIME
     """
     md = afwImage.readMetadata(infile, 1)
-    mjd_obs = astropy.time.Time(md.get('MJD-OBS'), format='mjd', scale='utc')
+    mjd_obs = astropy.time.Time(md.get('MJD-OBS'), format='mjd',
+                                scale='utc')
     t_readout = astropy.time.Time(mjd_obs.datetime + 
                                   datetime.timedelta(seconds=md.get('EXPTIME')),
                                   scale='utc')
@@ -124,10 +136,11 @@ class PersistenceTask(pipeBase.Task):
 
         if self.config.verbose:
             for amp in ccd:
-                print "amp:", amp
+                self.log.info("amp: %i" % amp)
                 for i, time in enumerate(times):
-                    print time, deferred_charges[i][amp][0], \
-                        deferred_charges[i][amp][1]
+                    self.log.info("%.1f  %e  %e" % 
+                                  (time, deferred_charges[i][amp][0], 
+                                   deferred_charges[i][amp][1]))
 
         outfile = os.path.join(self.config.output_dir,
                                '%s_persistence.fits' % sensor_id)
@@ -144,7 +157,7 @@ class PersistenceTask(pipeBase.Task):
                                       for i in range(len(times))]),
                             np.array([deferred_charges[i][amp][1] 
                                       for i in range(len(times))])])
-            units.extend(['e-/pixel', 'rms e-/pixell'])
+            units.extend(['e-/pixel', 'rms e-/pixel'])
         formats = ['E']*len(columns)
         
         HDUList = pyfits.HDUList()
