@@ -431,6 +431,14 @@ class EOTestPlots(object):
                 print "EOTestPlots.linearity: amp %i" % amp
                 print "  ", eObj
             sys.stdout.flush()
+
+            # Plot horizontal lines showing the range of the linearity
+            # spec in e-/pixel.
+            xmin, xmax, ymin, ymax = pylab.axis()
+            win.axes[-1].loglog([xmin, xmax], [1e3, 1e3], 'k:')
+            win.axes[-1].loglog([xmin, xmax], [9e4, 9e4], 'k:')
+
+            # Label plots by amplifier number.
             pylab.annotate('Amp %i' % amp, (0.2, 0.8),
                            xycoords='axes fraction', size='x-small')
             if amp in (1, 5, 9, 13):

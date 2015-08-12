@@ -94,6 +94,20 @@ class EOTestReport(object):
         self.output.write(self.plots.specs['CCD-008'].latex_entry() + '\n')
         self.output.write(self.plots.specs['CCD-009'].latex_entry() + '\n')
         self.output.write(self.plots.specs.latex_footer()+ '\n')
+        self.output.write("""\\begin{table}[!htbp]
+\centering
+\\begin{tabular}{|c|r|r|}
+\hline
+\\textbf{Amp} & \\textbf{Full Well} & \\twolinecell{\\textbf{Nonlinearity}\\\\(max. frac. dev.)} \\\\ \hline
+""")
+        full_well = self.plots.results['FULL_WELL']
+        max_frac_dev = self.plots.results['MAX_FRAC_DEV']
+        for amp in range(1, 17):
+            my_full_well = full_well[amp-1]
+            my_max_frac_dev = max_frac_dev[amp-1]
+            self.output.write(" %i & $%i$ & $\\num{%.1e}$ \\\\ \hline\n" 
+                              % (amp, my_full_well, my_max_frac_dev))
+        self.output.write("\\end{tabular}\n\\end{table}\n")
         self.output.write(_include_png(('%(sensor_id)s_linearity' % locals(),)))
         self.output.write('\\pagebreak\n\n')
         #
@@ -165,10 +179,11 @@ class EOTestReport(object):
         #
         # Image persistence plots
         #
-        self.output.write('\section{Image Persistence}\n')
-        self.output.write(_include_png(('%(sensor_id)s_persistence' 
-                                        % locals(),)))
-        self.output.write('\\pagebreak\n\n')
+        persistence_image = '%(sensor_id)s_persistence' % locals()
+        if os.path.isfile(persistence_image + '.png'):
+            self.output.write('\section{Image Persistence}\n')
+            self.output.write(_include_png((persistence_image,)))
+            self.output.write('\\pagebreak\n\n')
         #
         # Fe55 gains and PTC
         #
