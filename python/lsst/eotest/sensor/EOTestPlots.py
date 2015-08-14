@@ -398,6 +398,8 @@ class EOTestPlots(object):
             self._offset_subplot(win)
             detresp.full_well(amp, make_plot=True, plotter=plot,
                               multipanel=True)
+            pylab.annotate('Amp %i' % amp, (0.1, 0.8),
+                           xycoords='axes fraction', size='x-small')
     def linearity(self, gain_range=(1, 6), max_dev=0.02, figsize=(11, 8.5),
                   ptc_file=None, detresp_file=None):
         if ptc_file is not None:
