@@ -33,7 +33,8 @@ class DetectorResponse(object):
         else:
             self._read_from_text(infile)
         self._sort_by_flux()
-        self._compute_gain_selection(ptc, gain_range)
+        self._index = {}
+        #self._compute_gain_selection(ptc, gain_range)
     def _compute_gain_selection(self, ptc, gain_range):
         self._index = {}
         if ptc is None or gain_range is None:
@@ -66,7 +67,8 @@ class DetectorResponse(object):
         self.Ne = dict([(amp, ne) for amp, ne in
                         zip(imutils.allAmps, data[1:])])
     def full_well(self, amp, max_non_linearity=0.02,
-                  frac_offset=0.1, make_plot=False, plotter=None):
+                  frac_offset=0.1, make_plot=False, plotter=None,
+                  multipanel=False):
         if plotter is None:
             plotter = plot
         max_frac_dev, f1_pars, Ne, flux = self.linearity(amp)
@@ -84,24 +86,28 @@ class DetectorResponse(object):
         full_well_est = f2(fwc)
         # Save pylab interactive state.
         pylab_interactive_state = plotter.pylab.isinteractive()
+        Ne_scale = 1e-3
         if make_plot:
-            plotter.pylab.ion()
-            plotter.xyplot(flux, Ne,
-                           xname='illumination (flux*exptime, arb. units)',
-                           yname='Ne (e- per pixel)')
-            plotter.xyplot(flux[imin:imax], Ne[imin:imax], oplot=1,
+            if multipanel:
+                plotter.xyplot(flux, Ne*Ne_scale, xname='', yname='',
+                               new_win=False)
+            else:
+                plotter.xyplot(flux, Ne,
+                               xname='illumination (flux*exptime, arb. units)',
+                               yname='Ne (e- per pixel)')
+            plotter.xyplot(flux[imin:imax], Ne[imin:imax]*Ne_scale, oplot=1,
                            color='r', markersize=6)
             xx = np.linspace(min(x), max(x), 50)
-            plotter.curve(flux, f1(flux), oplot=1, color='g')
-            plotter.curve(xx, f2(xx), oplot=1, color='b')
-            plotter.hline(full_well_est)
+            plotter.curve(flux, f1(flux)*Ne_scale, oplot=1, color='g')
+            plotter.curve(xx, f2(xx)*Ne_scale, oplot=1, color='b')
+            plotter.hline(full_well_est*Ne_scale)
             plotter.vline(fwc)
         # Restore pylab interactive state.
         plotter.pylab.interactive(pylab_interactive_state)
         return full_well_est, f1
     def full_well_polyfit(self, amp, order=15, fit_range=(1e2, 5e4),
                           poly_fit_min=1e3, frac_offset=0.1, dfrac=None,
-                          make_plot=False, plotter=None):
+                          make_plot=False, plotter=None, multipanel=False):
         if plotter is None:
             plotter = plot
         flux = self.flux
@@ -144,12 +150,11 @@ class DetectorResponse(object):
         # Save pylab interactive state.
         pylab_interactive_state = plotter.pylab.isinteractive()
         if make_plot:
-            plotter.pylab.ion()
             yrange = (0, max(max(Ne), full_well)*1.1)
             plotter.xyplot(flux, Ne,
                            xname='Illumination (flux*exptime, arb. units)',
                            yname='e- per pixel',
-                           yrange=yrange)
+                           yrange=yrange, new_win=(not multipanel))
             plotter.curve(flux, f1(flux), oplot=1, color='g')
             plotter.xyplot(flux[indxp], Ne[indxp], oplot=1, color='r')
             xx = np.linspace(0, max(flux), 100)

@@ -374,6 +374,30 @@ class EOTestPlots(object):
         plot.legend('bgc', ('Read Noise', 'System Noise', 'Total Noise'))
         plot.hline(8)
         win.set_title("Read Noise, %s" % self.sensor_id)
+    def full_well(self, gain_range=(1, 6), figsize=(11, 8.5),
+                  ptc_file=None, detresp_file=None):
+        if detresp_file is not None:
+            detresp = DetectorResponse(detresp_file, gain_range=gain_range)
+        else:
+            detresp = DetectorResponse(self._fullpath('%s_det_response.fits' 
+                                                      % self.sensor_id),
+                                       gain_range=gain_range)
+        for amp in imutils.allAmps:
+            subplot = (4, 4, amp)
+            if amp == 1:
+                win = plot.Window(subplot=subplot, figsize=figsize,
+                                  xlabel=r'pd current $\times$ exposure',
+                                  ylabel=r'$10^3$ e- per pixel', size='large')
+                win.frameAxes.text(0.5, 1.08, 'Full Well, %s' % self.sensor_id,
+                                   horizontalalignment='center',
+                                   verticalalignment='top',
+                                   transform=win.frameAxes.transAxes,
+                                   size='large')
+            else:
+                win.select_subplot(*subplot)
+            self._offset_subplot(win)
+            detresp.full_well(amp, make_plot=True, plotter=plot,
+                              multipanel=True)
     def linearity(self, gain_range=(1, 6), max_dev=0.02, figsize=(11, 8.5),
                   ptc_file=None, detresp_file=None):
         if ptc_file is not None:

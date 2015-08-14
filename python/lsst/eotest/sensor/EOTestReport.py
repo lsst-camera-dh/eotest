@@ -30,6 +30,7 @@ class EOTestReport(object):
                  'ptcs',
                  'gains',
                  'noise',
+                 'full_well',
                  'linearity',
                  'crosstalk_matrix',
                  'qe',
@@ -108,6 +109,7 @@ class EOTestReport(object):
             self.output.write(" %i & $%i$ & $\\num{%.1e}$ \\\\ \hline\n" 
                               % (amp, my_full_well, my_max_frac_dev))
         self.output.write("\\end{tabular}\n\\end{table}\n")
+        self.output.write(_include_png(('%(sensor_id)s_full_well' % locals(),)))
         self.output.write(_include_png(('%(sensor_id)s_linearity' % locals(),)))
         self.output.write('\\pagebreak\n\n')
         #
