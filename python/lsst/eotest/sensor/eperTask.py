@@ -16,8 +16,11 @@ import lsst.afw.math as afwMath
 import lsst.eotest.image_utils as imutils
 from AmplifierGeometry import makeAmplifierGeometry
 
-median = lambda x, stat_ctrl : afwMath.makeStatistics(x, afwMath.MEDIAN,
-                                                      stat_ctrl).getValue()
+def point_est(image, stat_ctrl, flag=afwMath.MEAN):
+    """
+    The point estimate of the requested statistic of the pixels in the image.
+    """
+    return afwMath.makeStatistics(image, flag, stat_ctrl).getValue()
 
 class SubImage(object):
     """Functor to produce sub-images depending on scan direction."""
@@ -38,6 +41,11 @@ class SubImage(object):
             llc = afwGeom.Point2I(geom.serial_overscan.getMinX() + overscans,
                                   geom.serial_overscan.getMinY())
             urc = geom.serial_overscan.getCorners()[2]
+            #
+            # Omit the last 4 columns to avoid the bright column in the 
+            # last overscan column in the e2v vendor data.
+            #
+            urc[0] -= 4
             self._bias_reg = afwGeom.Box2I(llc, urc)
             self.lastpix = self.imaging.getMaxX()
         else:
@@ -45,7 +53,7 @@ class SubImage(object):
             sys.exit(1)
     def bias_med(self):
         subim = self.image.Factory(self.image, self._bias_reg)
-        return median(subim, self.ccd.stat_ctrl)
+        return point_est(subim, self.ccd.stat_ctrl)
     def __call__(self, start, end=None):
         if end is None:
             end = start + 1
@@ -87,14 +95,14 @@ class EPERTask(pipeBase.Task):
             lastpix = subimage.lastpix
 
             # find signal in last image row/column
-            lastmed = median(subimage(lastpix), ccd.stat_ctrl)
+            lastmed = point_est(subimage(lastpix), ccd.stat_ctrl)
             if self.config.verbose:
                 self.log.info("lastmed = " + str(lastmed))
 		
             # find median signal in each overscan row
             overscanmeds = np.zeros(overscans)
             for i in range(1, overscans+1):
-                overscanmeds[i-1] = median(subimage(lastpix + i), ccd.stat_ctrl)
+                overscanmeds[i-1] = point_est(subimage(lastpix + i), ccd.stat_ctrl)
             if self.config.verbose:
                 self.log.info("Overscan medians = " + str(overscanmeds))
 		
