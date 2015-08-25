@@ -106,6 +106,10 @@ class AmplifierGeometry(dict):
                                self.naxis1 - self.serial_overscan_width,
                                1, self.ny)
         results['DETSEC'] = self._detsec(amp)
+        results['BIASSEC'] = \
+            '[%i:%i,%i:%i]' % (self.prescan_width + self.nx + 1,
+                               self.naxis1,
+                               1, self.ny)
         return results
     def _detsec(self, amp):
         namps = self.nsegx*self.nsegy
