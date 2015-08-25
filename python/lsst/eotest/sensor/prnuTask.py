@@ -39,6 +39,7 @@ class PrnuTask(pipeBase.Task):
             wl_index[wl] = infile
         for wl in (350, 450, 500, 620, 750, 870, 1000):
             if wl_index.has_key(wl):
+                self.log.info("Processing: wl = %i nm, %s" % (wl, wl_index[wl]))
                 pix_stdev, pix_mean = prnu(wl_index[wl], mask_files, gains,
                                            correction_image=correction_image)
                 results[wl] = pix_stdev, pix_mean
