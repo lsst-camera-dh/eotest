@@ -5,3 +5,10 @@
 *.pyc
 utilLib.py
 *_wrap.cc
+.fontconfig
+.matplotlib
+.eups
+.sconsign.dblite
+.subversion
+.sconf_temp
+*.log

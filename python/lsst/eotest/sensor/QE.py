@@ -109,10 +109,12 @@ class QE_Data(object):
         for pd_current in self.pd:
             power.append(pd_current*pixel_area)
         self.power = np.array(power, dtype=np.float)
-    def incidentPower(self, pd_ratio_file, pixel_area=1e-10, pd_area=1e-4):
+    def incidentPower(self, pd_ratio_file, pixel_area=1e-10):
+        # Calibration diode collecting area.
+        pd_area = float(open(pd_ratio_file).readline().split('=')[1])
         # Incident power per pixel (J/s)
-        data = np.recfromtxt(pd_ratio_file, skip_header=1,
-                             names='monowl, sens, qe, ccdfrac, foo, bar')
+        data = np.recfromtxt(pd_ratio_file, skip_header=2,
+                             names='monowl, sens, ccdfrac')
         sensitivity = Interpolator(data['monowl'], data['sens'])
         ccd_frac = Interpolator(data['monowl'], data['ccdfrac'])
         power = []
