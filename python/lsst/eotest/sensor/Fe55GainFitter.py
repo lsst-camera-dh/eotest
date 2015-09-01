@@ -55,8 +55,10 @@ class Fe55GainFitter(object):
         fe55_yield = Fe55Yield(self.ccdtemp)
         Ne, Ne_error = fe55_yield.alpha()
         self.gain = Ne/kalpha_peak
-        self.gain_error = float(self.gain*np.sqrt((Ne_error/Ne)**2 +
-                                                  (kalpha_peak_error/kalpha_peak)**2))
+#        self.gain_error = float(self.gain*np.sqrt((Ne_error/Ne)**2 +
+#                                                  (kalpha_peak_error/kalpha_peak)**2))
+        self.gain_error = float(self.gain*kalpha_peak_error/kalpha_peak)
+            
         return kalpha_peak, kalpha_sigma
     def _compute_stats(self):
         flags = afwMath.MEDIAN | afwMath.STDEVCLIP

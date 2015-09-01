@@ -40,9 +40,36 @@ class Fe55Task(pipeBase.Task):
     ConfigClass = Fe55Config
     _DefaultName = "Fe55Task"
 
+    def fit_gains(self, fitter, gains, gain_errors, sigma_modes):
+        "Fit the DN distributions to obtain the system gain per amp."
+        my_gains, my_gain_errors, my_sigma_modes = \
+            gains, gain_errors, sigma_modes
+        for amp in imutils.allAmps:
+            data = fitter.results(min_prob=self.config.chiprob_min, amp=amp)
+            dn = data['dn']
+            if len(dn) > 2:
+                try:
+                    foo = Fe55GainFitter(dn)
+                    kalpha_peak, kalpha_sigma = foo.fit()
+                    my_gains[amp] = foo.gain
+                    my_gain_errors[amp] = foo.gain_error
+                except RuntimeError, e:
+                    print e
+                    continue
+                try:
+                    sigma = np.concatenate((data['sigmax'], data['sigmay']))*10
+                    mode, median, mean = psf_sigma_statistics(sigma, bins=50,
+                                                              range=(2,6))
+                    my_sigma_modes[amp] = float(mode)
+                except RuntimeError, e:
+                    print e
+                    continue
+        return my_gains, my_gain_errors, my_sigma_modes
+
     @pipeBase.timeMethod
     def run(self, sensor_id, infiles, mask_files, bias_frame=None,
-            fe55_catalog=None, minClustersPerAmp=None, chiprob_min=0.1):
+            fe55_catalog=None, minClustersPerAmp=None, chiprob_min=0.1,
+            accuracy_req=0):
         imutils.check_temperatures(infiles, self.config.temp_set_point_tol,
                                    setpoint=self.config.temp_set_point,
                                    warn_only=True)
@@ -55,23 +82,29 @@ class Fe55Task(pipeBase.Task):
         # accumulating the results by amplifier.
         #
         fitter = PsfGaussFit(nsig=self.config.nsig, fit_xy=self.config.fit_xy)
+        gains, gain_errors, sigma_modes = {}, {}, {}
         if fe55_catalog is None:
             for infile in infiles:
                 if self.config.verbose:
                     self.log.info("processing %s" % infile)
                 ccd = MaskedCCD(infile, mask_files=mask_files,
                                 bias_frame=bias_frame)
-                numClusters = fitter.numGoodFits(chiprob_min=chiprob_min)
                 for amp in ccd:
                     if self.config.verbose:
                         self.log.info("  amp %i" % amp)
-                    if (minClustersPerAmp is not None and
-                        numClusters[amp] >= minClustersPerAmp):
-                        self.log.info("Number of fitted charge clusters with chiprob > %8.1e equals or exceeds minimum requested: %i > %i" 
-                                      % (chiprob_min, numClusters[amp],
-                                         minClustersPerAmp))
-                        continue
+                    if gain_errors.has_key(amp):
+                        gain_accuracy = np.abs(gain_errors[amp]/gains[amp])
+                        if self.config.verbose:
+                            message = "  Relative gain accuracy, dgain/gain " \
+                                 + "= %.2e" % gain_accuracy
+                            self.log.info(message)
+                        if gain_accuracy < accuracy_req:
+                            # Requested accuracy already obtained, so
+                            # skip cluster fitting.
+                            continue
                     fitter.process_image(ccd, amp, logger=self.log)
+                    gains, gain_errors, sigma_modes = \
+                        self.fit_gains(fitter, gains, gain_errors, sigma_modes)
             if self.config.output_file is None:
                 psf_results = os.path.join(self.config.output_dir,
                                            '%s_psf_results_nsig%i.fits' 
@@ -83,35 +116,6 @@ class Fe55Task(pipeBase.Task):
             fitter.write_results(outfile=psf_results)
         else:
             fitter.read_fe55_catalog(fe55_catalog)
-        #
-        # Fit the DN distributions to obtain the system gain per amp.
-        #
-        gains = {}
-        gain_errors = {}
-        sigma_modes = {}
-        for amp in imutils.allAmps:
-            data = fitter.results(min_prob=self.config.chiprob_min, amp=amp)
-            dn = data['dn']
-            if len(dn) > 2:
-                try:
-                    foo = Fe55GainFitter(dn)
-                    kalpha_peak, kalpha_sigma = foo.fit()
-                    gains[amp] = foo.gain
-                    gain_errors[amp] = foo.gain_error
-                except RuntimeError, e:
-                    print e
-                    continue
-                try:
-                    sigma = np.concatenate((data['sigmax'], data['sigmay']))*10
-                    mode, median, mean = psf_sigma_statistics(sigma, bins=50,
-                                                              range=(2,6))
-                    sigma_modes[amp] = float(mode)
-                except RuntimeError, e:
-                    print e
-                    continue
-            else:
-                if self.config.verbose:
-                    self.log.info("Too few charge clusters (%i) found for amp %s" % (len(dn), amp))
 
         results_file = self.config.eotest_results_file
         if results_file is None:
