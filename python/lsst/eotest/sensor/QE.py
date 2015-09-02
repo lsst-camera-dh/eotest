@@ -67,6 +67,7 @@ class QE_Data(object):
                     print 'processing', item
             ccd = MaskedCCD(item, mask_files=mask_files)
             md = imutils.Metadata(item, 1)
+            wl = md.get('MONOWL')
             exptime = md.get('EXPTIME')
             if exptime == 0:
                 line = "Zero exposure time in %s. Skipping." % item
@@ -75,7 +76,7 @@ class QE_Data(object):
                 else:
                     print line 
                 continue
-            self.wl.append(md.get('MONOWL'))
+            self.wl.append(wl)
             self.exptime.append(exptime)
             if self.exptime[-1] == 0:
                 raise RuntimeError("Zero exposure time in ", item)
@@ -112,6 +113,9 @@ class QE_Data(object):
     def incidentPower(self, pd_ratio_file, pixel_area=1e-10):
         # Calibration diode collecting area.
         pd_area = float(open(pd_ratio_file).readline().split('=')[1])
+        if self.logger is not None:
+            self.logger.info("Using pd_ratio_file: %s" % pd_ratio_file)
+            self.logger.info("pd_area = %.2e mm^2" % pd_area)
         # Incident power per pixel (J/s)
         data = np.recfromtxt(pd_ratio_file, skip_header=2,
                              names='monowl, sens, ccdfrac')
