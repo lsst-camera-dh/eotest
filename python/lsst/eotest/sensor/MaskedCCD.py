@@ -34,9 +34,7 @@ class MaskedCCD(dict):
         self.md = imutils.Metadata(imfile, 1)
         self.amp_geom = makeAmplifierGeometry(imfile)
         for amp in imutils.allAmps:
-            decorated_image = afwImage.DecoratedImageF(imfile,
-                                                       imutils.dm_hdu(amp))
-            image = decorated_image.getImage()
+            image = afwImage.ImageF(imfile, imutils.dm_hdu(amp))
             mask = afwImage.MaskU(image.getDimensions())
             self[amp] = afwImage.MaskedImageF(image, mask)
         self._added_mask_types = []
