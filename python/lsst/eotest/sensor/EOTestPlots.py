@@ -53,9 +53,9 @@ def plot_flat(infile, nsig=3, cmap=pylab.cm.hot, win=None, subplot=(1, 1, 1),
               figsize=None, wl=None, gains=None, use_ds9=False):
     ccd = MaskedCCD(infile)
     foo = pyfits.open(infile)
-    detsize = parse_geom_kwd(foo[1].header['DETSIZE'])
-    nx = detsize['xmax']
-    ny = detsize['ymax']
+    datasec =  parse_geom_kwd(foo[1].header['DATASEC'])
+    nx = 8*(datasec['xmax'] - datasec['xmin'] + 1)
+    ny = 2*(datasec['ymax'] - datasec['ymin'] + 1)
     mosaic = np.zeros((ny, nx), dtype=np.float)
     for ypos in range(2):
         for xpos in range(8):

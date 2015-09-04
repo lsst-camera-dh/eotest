@@ -1,5 +1,6 @@
 import numpy as np
 import lsst.afw.math as afwMath
+import lsst.pex.exceptions as pexExcept
 import pylab_plotter as plot
 
 def getProcessedImageArray(ccd, amp, nx=10, ny=10):
@@ -10,9 +11,16 @@ def getProcessedImageArray(ccd, amp, nx=10, ny=10):
     # Define extent of local background region
     bg_ctrl = afwMath.BackgroundControl(nx, ny, ccd.stat_ctrl)
     image = ccd.unbiased_and_trimmed_image(amp)
-    bg = afwMath.makeBackground(image, bg_ctrl)
-    bg_image = bg.getImageF()
-    image -= bg.getImageF()
+    try:
+        bg = afwMath.makeBackground(image, bg_ctrl)
+        bg_image = bg.getImageF()
+        image -= bg.getImageF()
+    except pexExcept.OutOfRangeError, eObj:
+        # Stack fails to derive a local background image so rely on
+        # bias subtraction. This produces less reliable results on
+        # real and simulated data.
+        print "TrapFinder.getProcessedImageArray:", eObj
+        print "Skipping local background subtraction for amp", amp
     return image.getImage().getArray()
 
 class TrapFinder(object):
