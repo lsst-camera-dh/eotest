@@ -61,7 +61,9 @@ class CteTask(pipeBase.Task):
     _DefaultName = "CteTask"
 
     @pipeBase.timeMethod
-    def run(self, sensor_id, superflat_files, bias_files=()):
+    def run(self, sensor_id, superflat_files, bias_files=(), flux_level='high'):
+        if flux_level not in ('high', 'low'):
+            raise RuntimeError('CteTask: flux_level must be "high" or "low"')
         if self.config.verbose:
             self.log.info("Processing superflat files:")
             for item in superflat_files:
@@ -69,7 +71,8 @@ class CteTask(pipeBase.Task):
         #
         # Prepare the co-added superflat file.
         #
-        superflat_file = superflat(superflat_files, bias_files)
+        superflat_file = superflat(superflat_files, bias_files,
+                                   outfile='superflat_%s.fits' % flux_level)
         #
         # Compute serial CTE.
         #
@@ -97,11 +100,14 @@ class CteTask(pipeBase.Task):
                                         '%s_eotest_results.fits' % sensor_id)
         results = EOTestResults(results_file)
         if self.config.verbose:
+            self.log.info('CTE %s flux level results' % flux_level)
             self.log.info('amp  parallel_cti  serial_cti')
         for amp in imutils.allAmps:
             line = '%i  %12.4e  %12.4e' % (amp, pcti[amp], scti[amp])
-            results.add_seg_result(amp, 'CTI_SERIAL', scti[amp])
-            results.add_seg_result(amp, 'CTI_PARALLEL', pcti[amp])
+            results.add_seg_result(amp, 'CTI_%s_SERIAL' % flux_level.upper(), 
+                                   scti[amp])
+            results.add_seg_result(amp, 'CTI_%s_PARALLEL' % flux_level.upper(),
+                                   pcti[amp])
             if self.config.verbose:
                 self.log.info(line)
         results.write(clobber='yes')

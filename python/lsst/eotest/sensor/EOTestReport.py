@@ -120,19 +120,41 @@ class EOTestReport(object):
         self.output.write(self.plots.specs['CCD-010'].latex_entry() + '\n')
         self.output.write(self.plots.specs['CCD-011'].latex_entry() + '\n')
         self.output.write(self.plots.specs.latex_footer()+ '\n')
+        #
+        # High flux level results
+        #
+        self.output.write('\subsection{High Flux}\n')
         self.output.write("""\\begin{table}[!htbp]
 \centering
 \\begin{tabular}{|c|l|l|}
 \hline
 \\textbf{Amp} & \\textbf{Serial CTE} & \\textbf{Parallel CTE} \\\\ \hline
 """)
-        scti = self.plots.results['CTI_SERIAL']
-        pcti = self.plots.results['CTI_PARALLEL']
+        scti = self.plots.results['CTI_HIGH_SERIAL']
+        pcti = self.plots.results['CTI_HIGH_PARALLEL']
         for amp in range(1, 17):
             my_scti = latex_minus_mean([scti[amp-1]])
             my_pcti = latex_minus_mean([pcti[amp-1]])
             self.output.write(" %(amp)i & $1%(my_scti)s$ & $1%(my_pcti)s$ \\\\ \hline\n" % locals())
         self.output.write("\\end{tabular}\n\\end{table}\n")
+        #
+        # Low flux level results
+        #
+        self.output.write('\subsection{Low Flux}\n')
+        self.output.write("""\\begin{table}[!htbp]
+\centering
+\\begin{tabular}{|c|l|l|}
+\hline
+\\textbf{Amp} & \\textbf{Serial CTE} & \\textbf{Parallel CTE} \\\\ \hline
+""")
+        scti = self.plots.results['CTI_LOW_SERIAL']
+        pcti = self.plots.results['CTI_LOW_PARALLEL']
+        for amp in range(1, 17):
+            my_scti = latex_minus_mean([scti[amp-1]])
+            my_pcti = latex_minus_mean([pcti[amp-1]])
+            self.output.write(" %(amp)i & $1%(my_scti)s$ & $1%(my_pcti)s$ \\\\ \hline\n" % locals())
+        self.output.write("\\end{tabular}\n\\end{table}\n")
+
         self.output.write('\\pagebreak\n\n')
         #
         # Crosstalk
