@@ -48,8 +48,14 @@ class QE_Data(object):
         self.pd = data[2]
         self.medians = dict([(amp, col) for amp, col
                              in zip(imutils.allAmps, data[3:])])
+    def _correction_images(self, ccd, correction_image):
+        images = OrderedDict()
+        for amp in ccd:
+            correction = afwImage.ImageF(correction_image, imutils.dm_hdu(amp))
+            images[amp] = correction.Factory(correction, ccd.amp_geom.imaging)
+        return images
     def calculate_medians(self, infiles, outfile, mask_files=(),
-                          clobber=False):
+                          clobber=False, correction_image=None):
         files = sorted([x for x in infiles])
         self.medians = dict([(amp, []) for amp in imutils.allAmps])
         self.wl = []          # wavelength in nanometers
@@ -58,6 +64,13 @@ class QE_Data(object):
 
         if os.path.isfile(outfile) and not clobber:
             raise RuntimeError("Output file for image medians already exists.")
+        ccd = MaskedCCD(infiles[0])
+        if correction_image is not None:
+            self.logger.info("Applying correction image " + correction_image)
+            corrections = self._correction_images(ccd, correction_image)
+        else:
+            self.logger.info("Applying identity correction")
+            corrections = dict([(amp, 1) for amp in ccd])
         output = open(outfile, 'w')
         for item in files:
             if self.verbose:
@@ -91,6 +104,7 @@ class QE_Data(object):
             output.write('  %.3e' % self.pd[-1])
             for amp in imutils.allAmps:
                 im = ccd.unbiased_and_trimmed_image(amp)
+                im *= corrections[amp]
                 value = afwMath.makeStatistics(im, afwMath.MEDIAN,
                                                ccd.stat_ctrl).getValue()
                 self.medians[amp].append(value)

@@ -12,9 +12,13 @@ from MaskedCCD import MaskedCCD
 import lsst.afw.image as afwImage
 import lsst.afw.math as afwMath
 
-def extract_unmasked_pixels(ccd, amp, gain):
+def extract_unmasked_pixels(ccd, amp, gain, correction_image=None):
     subimage = ccd.unbiased_and_trimmed_image(amp)
     imarr = subimage.getImage().getArray()
+    if correction_image is not None:
+        correction = afwImage.ImageF(correction_image, imutils.dm_hdu(amp))
+        correction = correction.Factory(correction, ccd.amp_geom.imaging)
+        imarr *= correction.getArray()
     maskarr = subimage.getMask().getArray()
     if imarr.shape != maskarr.shape:
         raise RuntimeError("image and mask subarray shapes differ")
@@ -25,11 +29,8 @@ def prnu(infile, mask_files, gains, correction_image=None):
     ccd = MaskedCCD(infile, mask_files=mask_files)
     active_pixels = []
     for amp in ccd:
-        if correction_image is not None:
-            correction = afwImage.ImageF(correction_image, imutils.dm_hdu(amp))
-            image = ccd[amp].getImage()
-            image /= correction
-        active_pixels.extend(extract_unmasked_pixels(ccd, amp, gains[amp]))
+        active_pixels.extend(extract_unmasked_pixels(ccd, amp, gains[amp],
+                                                     correction_image))
     active_pixels = np.array(active_pixels, dtype=np.float)
     flags = afwMath.MEAN | afwMath.STDEV
     stats = afwMath.makeStatistics(active_pixels, flags)
