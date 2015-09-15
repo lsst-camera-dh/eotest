@@ -665,10 +665,12 @@ class CcdSpecs(OrderedDict):
         max_frac_dev = self.results['MAX_FRAC_DEV']
         self['CCD-009'].measurement = '\\twolinecell{max. fractional deviation \\\\from linearity: $\\num{%.1e}$}' % max(max_frac_dev)
         self['CCD-009'].ok = (max(max_frac_dev) < 0.02)
-        scti = self.results['CTI_SERIAL']
+        scti = self.results['CTI_HIGH_SERIAL']
+        scti = np.concatenate((scti, self.results['CTI_LOW_SERIAL']))
         self['CCD-010'].measurement = '$1%s$ (min. value)'%latex_minus_max(scti)
         self['CCD-010'].ok = (max(scti) < 5e-6)
-        pcti = self.results['CTI_PARALLEL']
+        pcti = self.results['CTI_HIGH_PARALLEL']
+        pcti = np.concatenate((pcti, self.results['CTI_LOW_PARALLEL']))
         self['CCD-011'].measurement = '$1%s$ (min. value)'%latex_minus_max(pcti)
         self['CCD-011'].ok = (max(pcti) < 3e-6)
         num_bright_pixels = sum(self.results['NUM_BRIGHT_PIXELS'])

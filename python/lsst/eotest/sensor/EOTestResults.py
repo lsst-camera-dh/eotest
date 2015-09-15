@@ -28,13 +28,14 @@ class EOTestResults(object):
         self.output = pyfits.HDUList()
         self.output.append(pyfits.PrimaryHDU())
         self.colnames = ["AMP", "GAIN", "GAIN_ERROR", "READ_NOISE", "FULL_WELL",
-                         "CTI_SERIAL", "CTI_PARALLEL", "DARK_CURRENT_95",
-                         "NUM_BRIGHT_PIXELS", "NUM_TRAPS"]
-        formats = "IEEEEEEEII"
+                         "CTI_HIGH_SERIAL", "CTI_HIGH_PARALLEL", 
+                         "CTI_LOW_SERIAL", "CTI_LOW_PARALLEL", 
+                         "DARK_CURRENT_95", "NUM_BRIGHT_PIXELS", "NUM_TRAPS"]
+        formats = "IEEEEEEEEEII"
         my_types = dict((("I", np.int), ("E", np.float)))
         columns = [np.zeros(_namps, dtype=my_types[fmt]) for fmt in formats]
         units = ["None", "Ne/DN", "Ne/DN", "rms e-/pixel", "e-/pixel",
-                 "None", "None", "e-/s/pixel", "None", "None"]
+                 "None", "None", "None", "None", "e-/s/pixel", "None", "None"]
         fits_cols = [pyfits.Column(name=self.colnames[i], format=formats[i],
                                    unit=units[i], array=columns[i])
                      for i in range(len(self.colnames))]
