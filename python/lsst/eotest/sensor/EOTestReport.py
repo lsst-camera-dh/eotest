@@ -1,4 +1,5 @@
 import os
+import sys
 import subprocess
 import pylab
 from EOTestPlots import latex_minus_mean
@@ -11,12 +12,17 @@ def _include_png(pngfiles, frac_height=0.6):
 """
     lines = []
     for item in pngfiles:
+        if item.endswith('.png'):
+            image_name = item[:-len('.png')]
+        else:
+            image_name = item
         lines.append('\\includegraphics[height=%s\\textheight]{%s}' 
-                     % (frac_height, item.strip('.png')))
+                     % (frac_height, image_name))
     return figure_template % ('\\\\\n'.join(lines))
 
 class EOTestReport(object):
-    def __init__(self, eotest_plots, wl_dir, tex_file=None):
+    def __init__(self, eotest_plots, wl_dir, tex_file=None, qa_plot_files=None,
+                 ccs_config_files=None, software_versions=None):
         self.plots = eotest_plots
         self.wl_dir = wl_dir
         if tex_file is None:
@@ -24,6 +30,9 @@ class EOTestReport(object):
         else:
             self.tex_file = tex_file
         self.output = open(self.tex_file, 'w')
+        self.qa_plot_files = qa_plot_files
+        self.ccs_config_files = ccs_config_files
+        self.software_versions = software_versions
     def make_figures(self):
         print "Creating eotest report figures..."
         funcs = ('fe55_dists',
@@ -219,6 +228,40 @@ class EOTestReport(object):
         self.output.write('\\pagebreak\n\n')
         if os.path.isfile('%(sensor_id)s_ptcs.png' % locals()):
             self.output.write(_include_png(('%(sensor_id)s_ptcs' % locals(),)))
+        self.output.write('\\pagebreak\n\n')
+        #
+        # QA plots
+        #
+        if self.qa_plot_files is not None:
+            self.output.write('\section{QA plots}\n')
+            for item in self.qa_plot_files:
+                self.output.write(_include_png((item,), frac_height=0.9))
+                self.output.write('\\pagebreak\n\n')
+        #
+        # Software versions
+        #
+        if self.software_versions is not None:
+            self.output.write('\section{Software Versions}\n')
+            self.output.write('\\begin{description}\n')
+            for key, value in self.software_versions.items():
+                self.output.write('\\item[%s] %s\n' % (key.replace('_', '\_'),
+                                                       value.replace('_', '\_')))
+            self.output.write('\end{description}\n')
+#        #
+#        # CCS configuration files
+#        #
+#        if self.ccs_config_files is not None:
+#            self.output.write('\section{CCS Configurations}\n')
+#            for key, full_path in self.ccs_config_files.items():
+#                sys.stdout.flush()
+#                keyname = key.replace('_', '\_')
+#                filename = os.path.basename(full_path).replace('_', '\_')
+#                self.output.write('\subsection{%s: %s}\n' % (keyname, filename))
+#                self.output.write('\\begin{verbatim}\n')
+#                for line in open(full_path):
+#                    self.output.write(line)
+#                self.output.write('\end{verbatim}\n')
+#                self.output.write('\\pagebreak\n\n')
         #
         # End and close the document.
         #
