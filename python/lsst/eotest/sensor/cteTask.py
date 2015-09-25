@@ -4,6 +4,7 @@
 @author J. Chiang <jchiang@slac.stanford.edu>
 """
 import os
+import numpy as np
 import pyfits
 from lsst.eotest.pyfitsTools import pyfitsWriteto
 import lsst.eotest.image_utils as imutils
@@ -16,7 +17,8 @@ import lsst.afw.math as afwMath
 import lsst.pex.config as pexConfig
 import lsst.pipe.base as pipeBase
 
-def superflat(files, bias_files=(), outfile='superflat.fits', bitpix=-32):
+def superflat(files, bias_files=(), outfile='superflat.fits', bitpix=-32,
+              bias_subtract=True):
     """
     The superflat is created by bias-offset correcting the input files
     and median-ing them together.
@@ -31,13 +33,17 @@ def superflat(files, bias_files=(), outfile='superflat.fits', bitpix=-32):
         images = afwImage.vectorImageF()
         for infile in files:
             image = afwImage.ImageF(infile, imutils.dm_hdu(amp))
-            if bias_files:
-                bias_image = afwImage.ImageF(bias_frame, imutils.dm_hdu(amp))
-            else:
-                geom = makeAmplifierGeometry(infile)
-                bias_image = imutils.bias_image(image,
-                                                overscan=geom.serial_overscan)
-            image -= bias_image
+            if bias_subtract:
+                if bias_files:
+                    bias_image = afwImage.ImageF(bias_frame,
+                                                 imutils.dm_hdu(amp))
+                else:
+                    geom = makeAmplifierGeometry(infile)
+                    overscan = geom.serial_overscan
+                    bias_image = imutils.bias_image(image,
+                                                    overscan=overscan,
+                                                    statistic=np.median)
+                image -= bias_image
             images.push_back(image)
         median_image = afwMath.statisticsStack(images, afwMath.MEDIAN)
         output[amp].data = median_image.getArray()
@@ -61,7 +67,8 @@ class CteTask(pipeBase.Task):
     _DefaultName = "CteTask"
 
     @pipeBase.timeMethod
-    def run(self, sensor_id, superflat_files, bias_files=(), flux_level='high'):
+    def run(self, sensor_id, superflat_files, bias_files=(), flux_level='high',
+            gains=None):
         if flux_level not in ('high', 'low'):
             raise RuntimeError('CteTask: flux_level must be "high" or "low"')
         if self.config.verbose:
@@ -69,10 +76,12 @@ class CteTask(pipeBase.Task):
             for item in superflat_files:
                 self.log.info(item)
         #
-        # Prepare the co-added superflat file.
+        # Prepare the co-added superflat file.  Bias subtraction is
+        # handled in eperTask.py.
         #
         superflat_file = superflat(superflat_files, bias_files,
-                                   outfile='superflat_%s.fits' % flux_level)
+                                   outfile='superflat_%s.fits' % flux_level,
+                                   bias_subtract=False)
         #
         # Compute serial CTE.
         #
@@ -81,7 +90,7 @@ class CteTask(pipeBase.Task):
         s_task.config.verbose = self.config.verbose
         s_task.config.cti = True
         scti = s_task.run(superflat_file, imutils.allAmps,
-                          self.config.overscans)
+                          self.config.overscans, gains=gains)
         #
         # Compute parallel CTE.
         #
@@ -90,7 +99,7 @@ class CteTask(pipeBase.Task):
         p_task.config.verbose = self.config.verbose
         p_task.config.cti = True
         pcti = p_task.run(superflat_file, imutils.allAmps,
-                          self.config.overscans)
+                          self.config.overscans, gains=gains)
         #
         # Write results to the output file.
         #
@@ -103,11 +112,17 @@ class CteTask(pipeBase.Task):
             self.log.info('CTE %s flux level results' % flux_level)
             self.log.info('amp  parallel_cti  serial_cti')
         for amp in imutils.allAmps:
-            line = '%i  %12.4e  %12.4e' % (amp, pcti[amp], scti[amp])
+            line = '%i  %s  %s' % (amp, pcti[amp], scti[amp])
             results.add_seg_result(amp, 'CTI_%s_SERIAL' % flux_level.upper(), 
-                                   scti[amp])
+                                   scti[amp].value)
             results.add_seg_result(amp, 'CTI_%s_PARALLEL' % flux_level.upper(),
-                                   pcti[amp])
+                                   pcti[amp].value)
+            results.add_seg_result(amp,
+                                   'CTI_%s_SERIAL_ERROR' % flux_level.upper(), 
+                                   scti[amp].error)
+            results.add_seg_result(amp, 
+                                   'CTI_%s_PARALLEL_ERROR' % flux_level.upper(),
+                                   pcti[amp].error)
             if self.config.verbose:
                 self.log.info(line)
         results.write(clobber='yes')

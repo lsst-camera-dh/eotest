@@ -1,8 +1,22 @@
 import os
 import sys
 import subprocess
+import numpy as np
 import pylab
-from EOTestPlots import latex_minus_mean
+
+def latex_minus_value(value, error=None, format='%.2e'):
+    """
+    A latex entry for a single value, including optional error.
+    """
+    if value < 0:
+        template = '+ \\num{' + format + '}'
+    else:
+        template = '- \\num{' + format + '}'
+    result = template % np.abs(value)
+    if error is not None:
+        template = ' \pm \\num{' + format + '}'
+        result += template % error
+    return result
 
 def _include_png(pngfiles, frac_height=0.6):
     figure_template = """\\begin{figure}[H]
@@ -140,10 +154,12 @@ class EOTestReport(object):
 \\textbf{Amp} & \\textbf{Serial CTE} & \\textbf{Parallel CTE} \\\\ \hline
 """)
         scti = self.plots.results['CTI_HIGH_SERIAL']
+        scti_err = self.plots.results['CTI_HIGH_SERIAL_ERROR']
         pcti = self.plots.results['CTI_HIGH_PARALLEL']
+        pcti_err = self.plots.results['CTI_HIGH_PARALLEL_ERROR']
         for amp in range(1, 17):
-            my_scti = latex_minus_mean([scti[amp-1]])
-            my_pcti = latex_minus_mean([pcti[amp-1]])
+            my_scti = latex_minus_value(scti[amp-1], error=scti_err[amp-1])
+            my_pcti = latex_minus_value(pcti[amp-1], error=pcti_err[amp-1])
             self.output.write(" %(amp)i & $1%(my_scti)s$ & $1%(my_pcti)s$ \\\\ \hline\n" % locals())
         self.output.write("\\end{tabular}\n\\end{table}\n")
         #
@@ -157,10 +173,12 @@ class EOTestReport(object):
 \\textbf{Amp} & \\textbf{Serial CTE} & \\textbf{Parallel CTE} \\\\ \hline
 """)
         scti = self.plots.results['CTI_LOW_SERIAL']
+        scti_err = self.plots.results['CTI_LOW_SERIAL_ERROR']
         pcti = self.plots.results['CTI_LOW_PARALLEL']
+        pcti_err = self.plots.results['CTI_LOW_PARALLEL_ERROR']
         for amp in range(1, 17):
-            my_scti = latex_minus_mean([scti[amp-1]])
-            my_pcti = latex_minus_mean([pcti[amp-1]])
+            my_scti = latex_minus_value(scti[amp-1], error=scti_err[amp-1])
+            my_pcti = latex_minus_value(pcti[amp-1], error=pcti_err[amp-1])
             self.output.write(" %(amp)i & $1%(my_scti)s$ & $1%(my_pcti)s$ \\\\ \hline\n" % locals())
         self.output.write("\\end{tabular}\n\\end{table}\n")
 

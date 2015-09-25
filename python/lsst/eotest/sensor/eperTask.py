@@ -14,13 +14,8 @@ import lsst.afw.image as afwImage
 import lsst.afw.math as afwMath
 
 import lsst.eotest.image_utils as imutils
+from lsst.eotest.Estimator import Estimator
 from AmplifierGeometry import makeAmplifierGeometry
-
-def point_est(image, stat_ctrl, flag=afwMath.MEAN):
-    """
-    The point estimate of the requested statistic of the pixels in the image.
-    """
-    return afwMath.makeStatistics(image, flag, stat_ctrl).getValue()
 
 class SubImage(object):
     """Functor to produce sub-images depending on scan direction."""
@@ -51,9 +46,16 @@ class SubImage(object):
         else:
             task.log.error("Unknown scan direction: " + str(direction))
             sys.exit(1)
-    def bias_med(self):
+    def bias_est(self, statistic=afwMath.MEAN, gain=1):
         subim = self.image.Factory(self.image, self._bias_reg)
-        return point_est(subim, self.ccd.stat_ctrl)
+        # Set bias region error to zero since it isn't governed by
+        # Poisson statistics and cannot be estimated only from a
+        # medianed, bias-subtracted superflat frame stack.
+        bias_estimate = Estimator()
+        bias_estimate.value = \
+            gain*afwMath.makeStatistics(subim, statistic).getValue()
+        bias_estimate.error = 0
+        return bias_estimate
     def __call__(self, start, end=None):
         if end is None:
             end = start + 1
@@ -82,10 +84,12 @@ class EPERTask(pipeBase.Task):
     _DefaultName = "eper"
 	 
     @pipeBase.timeMethod
-    def run(self, infilename, amps, overscans):
+    def run(self, infilename, amps, overscans, gains=None):
         if not infilename:
             self.log.error("Please specify an input file path.")
             sys.exit(1)
+        if gains is None:
+            gains = dict([(amp, 1) for amp in amps])
 
         ccd = MaskedCCD(infilename)
         # iterate through amps
@@ -94,46 +98,53 @@ class EPERTask(pipeBase.Task):
             subimage = SubImage(ccd, amp, overscans, self)
             lastpix = subimage.lastpix
 
-            # find signal in last image row/column
-            lastmed = point_est(subimage(lastpix), ccd.stat_ctrl)
+            # find signal in last image vector (i.e., row or column)
+            last_im = Estimator(subimage(lastpix), ccd.stat_ctrl,
+                                gain=gains[amp])
             if self.config.verbose:
-                self.log.info("lastmed = " + str(lastmed))
+                self.log.info("Last imaging row/column = " + str(last_im))
 		
-            # find median signal in each overscan row
-            overscanmeds = np.zeros(overscans)
+            # find signal in each overscan vector
+            overscan_ests = []
             for i in range(1, overscans+1):
-                overscanmeds[i-1] = point_est(subimage(lastpix + i), ccd.stat_ctrl)
+                overscan_ests.append(Estimator(subimage(lastpix+i),
+                                               ccd.stat_ctrl, gain=gains[amp]))
             if self.config.verbose:
-                self.log.info("Overscan medians = " + str(overscanmeds))
+                self.log.info("Overscan values = " + str(overscan_ests))
 		
             # sum medians of first n overscan rows
-            summed = np.sum(overscanmeds)
+            summed = sum(overscan_ests)
             if self.config.verbose:
-                self.log.info("summed = " + str(summed))
+                self.log.info("summed overscans = " + str(summed))
 
-            # find signal in bias
-            biasmed = subimage.bias_med()
+            # Find bias level, use afwMath.MEANCLIP to avoid
+            # contribution of bad pixels in overscan regions (e.g.,
+            # e2v vendor data).
+            bias_est = subimage.bias_est(gain=gains[amp],
+                                         statistic=afwMath.MEANCLIP)
             if self.config.verbose:
-                self.log.info("biasmed = " + str(biasmed))
+                self.log.info("bias value = " + str(bias_est))
 
             # signal = last - bias
-            sig = lastmed - biasmed
+            sig = last_im - bias_est
 
             # trailed = sum(last2) - bias
-            trailed = summed - overscans*biasmed		
+            trailed = summed - overscans*bias_est		
 
             # charge loss per transfer = (trailed/signal)/N
             chargelosspt = (trailed/sig)/(lastpix + 1.)
 
             if self.config.cti:
                 cte[amp] = chargelosspt
+                cte[amp].set_format_str("{0:.5e}")
             else:
                 cte[amp] = 1. - chargelosspt
+                cte[amp].set_format_str("{0:.16f}")
             if self.config.verbose:
                 if self.config.cti:
-                    self.log.info('cti, amp ' + str(amp) + " = " + '{0:.16f}'.format(cte[amp]) + '\n')
+                    self.log.info('cti, amp ' + str(amp) + " = " + str(cte[amp]) + '\n')
                 else:
-                    self.log.info('cte, amp ' + str(amp) + " = " + '{0:.16f}'.format(cte[amp]) + '\n')
+                    self.log.info('cte, amp ' + str(amp) + " = " + str(cte[amp]) + '\n')
         return cte
 			
 if __name__ == '__main__':
