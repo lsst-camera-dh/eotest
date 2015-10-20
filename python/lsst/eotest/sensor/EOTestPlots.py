@@ -651,14 +651,21 @@ class CcdSpecs(OrderedDict):
         self['CCD-009'].ok = (max(max_frac_dev) < 0.02)
         scti = self.results['CTI_HIGH_SERIAL']
         scti = np.concatenate((scti, self.results['CTI_LOW_SERIAL']))
-        scti_err = self.results['CTI_HIGH_SERIAL_ERROR']
-        scti_err = np.concatenate((scti_err, self.results['CTI_LOW_SERIAL_ERROR']))
+        try:
+            self.results['CTI_HIGH_SERIAL_ERROR']
+            scti_err = self.results['CTI_HIGH_SERIAL_ERROR']
+            scti_err = np.concatenate((scti_err, self.results['CTI_LOW_SERIAL_ERROR']))
+        except KeyError:
+            scti_err = np.zeros(32)
         self['CCD-010'].measurement = '$1%s$ (min. value)' % latex_minus_max(scti, scti_err)
         self['CCD-010'].ok = (max(scti) < 5e-6)
         pcti = self.results['CTI_HIGH_PARALLEL']
         pcti = np.concatenate((pcti, self.results['CTI_LOW_PARALLEL']))
-        pcti_err = self.results['CTI_HIGH_PARALLEL_ERROR']
-        pcti_err = np.concatenate((pcti_err, self.results['CTI_LOW_PARALLEL_ERROR']))
+        try:
+            pcti_err = self.results['CTI_HIGH_PARALLEL_ERROR']
+            pcti_err = np.concatenate((pcti_err, self.results['CTI_LOW_PARALLEL_ERROR']))
+        except KeyError:
+            pcti_err = np.zeros(32)
         self['CCD-011'].measurement = '$1%s$ (min. value)' % latex_minus_max(pcti, pcti_err)
         self['CCD-011'].ok = (max(pcti) < 3e-6)
         num_bright_pixels = sum(self.results['NUM_BRIGHT_PIXELS'])

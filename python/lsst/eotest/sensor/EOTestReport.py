@@ -154,9 +154,15 @@ class EOTestReport(object):
 \\textbf{Amp} & \\textbf{Serial CTE} & \\textbf{Parallel CTE} \\\\ \hline
 """)
         scti = self.plots.results['CTI_HIGH_SERIAL']
-        scti_err = self.plots.results['CTI_HIGH_SERIAL_ERROR']
+        try:
+            scti_err = self.plots.results['CTI_HIGH_SERIAL_ERROR']
+        except KeyError:
+            scti_err = np.zeros(16)
         pcti = self.plots.results['CTI_HIGH_PARALLEL']
-        pcti_err = self.plots.results['CTI_HIGH_PARALLEL_ERROR']
+        try:
+            pcti_err = self.plots.results['CTI_HIGH_PARALLEL_ERROR']
+        except KeyError:
+            pcti_err = np.zeros(16)
         for amp in range(1, 17):
             my_scti = latex_minus_value(scti[amp-1], error=scti_err[amp-1])
             my_pcti = latex_minus_value(pcti[amp-1], error=pcti_err[amp-1])
@@ -173,9 +179,15 @@ class EOTestReport(object):
 \\textbf{Amp} & \\textbf{Serial CTE} & \\textbf{Parallel CTE} \\\\ \hline
 """)
         scti = self.plots.results['CTI_LOW_SERIAL']
-        scti_err = self.plots.results['CTI_LOW_SERIAL_ERROR']
+        try:
+            scti_err = self.plots.results['CTI_LOW_SERIAL_ERROR']
+        except KeyError:
+            scti_err = np.zeros(16)
         pcti = self.plots.results['CTI_LOW_PARALLEL']
-        pcti_err = self.plots.results['CTI_LOW_PARALLEL_ERROR']
+        try:
+            pcti_err = self.plots.results['CTI_LOW_PARALLEL_ERROR']
+        except KeyError:
+            pcti_err = np.zeros(16)
         for amp in range(1, 17):
             my_scti = latex_minus_value(scti[amp-1], error=scti_err[amp-1])
             my_pcti = latex_minus_value(pcti[amp-1], error=pcti_err[amp-1])
