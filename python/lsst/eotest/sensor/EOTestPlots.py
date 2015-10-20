@@ -23,31 +23,15 @@ import lsst.afw.image as afwImage
 import lsst.afw.math as afwMath
 import lsst.afw.display.ds9 as ds9
 
-def latex_minus_mean(values, format='%.2e'):
-    """
-    Wrapper to np.mean to handle infinities.  Returns the evaluated
-    string '-\num{<%format>}' % np.mean(values) if the result is
-    finite.
-    """
-    mean_value = np.mean(values)
-    if not np.isinf(mean_value):
-        if mean_value < 0:
-            template = '+ \\num{' + format + '}'
-        else:
-            template = '- \\num{' + format + '}'
-        return template % np.abs(mean_value)
-    elif mean_value < 0:
-        return '+ \\infty'
-    else:
-        return '- \\infty'
-
-def latex_minus_max(values, format='%.2e'):
+def latex_minus_max(values, errors, format='%.2e'):
     max_value = max(values)
+    index = np.where(values == max_value)[0][0]
     if max_value < 0:
         template = '+ \\num{' + format + '}'
     else:
         template = '- \\num{' + format + '}'
-    return template % np.abs(max_value)
+    template += ' \pm \\num{' + format + '}'
+    return template % (np.abs(max_value), errors[index])
 
 def plot_flat(infile, nsig=3, cmap=pylab.cm.hot, win=None, subplot=(1, 1, 1),
               figsize=None, wl=None, gains=None, use_ds9=False):
@@ -667,11 +651,22 @@ class CcdSpecs(OrderedDict):
         self['CCD-009'].ok = (max(max_frac_dev) < 0.02)
         scti = self.results['CTI_HIGH_SERIAL']
         scti = np.concatenate((scti, self.results['CTI_LOW_SERIAL']))
-        self['CCD-010'].measurement = '$1%s$ (min. value)'%latex_minus_max(scti)
+        try:
+            self.results['CTI_HIGH_SERIAL_ERROR']
+            scti_err = self.results['CTI_HIGH_SERIAL_ERROR']
+            scti_err = np.concatenate((scti_err, self.results['CTI_LOW_SERIAL_ERROR']))
+        except KeyError:
+            scti_err = np.zeros(32)
+        self['CCD-010'].measurement = '$1%s$ (min. value)' % latex_minus_max(scti, scti_err)
         self['CCD-010'].ok = (max(scti) < 5e-6)
         pcti = self.results['CTI_HIGH_PARALLEL']
         pcti = np.concatenate((pcti, self.results['CTI_LOW_PARALLEL']))
-        self['CCD-011'].measurement = '$1%s$ (min. value)'%latex_minus_max(pcti)
+        try:
+            pcti_err = self.results['CTI_HIGH_PARALLEL_ERROR']
+            pcti_err = np.concatenate((pcti_err, self.results['CTI_LOW_PARALLEL_ERROR']))
+        except KeyError:
+            pcti_err = np.zeros(32)
+        self['CCD-011'].measurement = '$1%s$ (min. value)' % latex_minus_max(pcti, pcti_err)
         self['CCD-011'].ok = (max(pcti) < 3e-6)
         num_bright_pixels = sum(self.results['NUM_BRIGHT_PIXELS'])
         self['CCD-012a'].measurement = '%i' % num_bright_pixels
