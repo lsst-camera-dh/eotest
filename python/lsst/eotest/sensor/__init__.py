@@ -37,5 +37,6 @@ from prnuTask import PrnuTask
 from trapTask import TrapTask
 from qeTask import QeTask
 from flatPairTask import FlatPairTask
+from linearityTask import LinearityTask
 from ptcTask import PtcTask
 from persistenceTask import PersistenceTask
