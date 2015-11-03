@@ -34,7 +34,7 @@ def latex_minus_max(values, errors, format='%.2e'):
     return template % (np.abs(max_value), errors[index])
 
 def plot_flat(infile, nsig=3, cmap=pylab.cm.hot, win=None, subplot=(1, 1, 1),
-              figsize=None, wl=None, gains=None, use_ds9=False):
+              figsize=None, wl=None, gains=None, use_ds9=False, outfile=None):
     ccd = MaskedCCD(infile)
     foo = pyfits.open(infile)
     datasec =  parse_geom_kwd(foo[1].header['DATASEC'])
@@ -45,19 +45,13 @@ def plot_flat(infile, nsig=3, cmap=pylab.cm.hot, win=None, subplot=(1, 1, 1),
         for xpos in range(8):
             amp = ypos*8 + xpos + 1
             #
-            # Compute subarray boundaries for this segment in the mosaicked
-            # image array.
-            datasec = parse_geom_kwd(foo[amp].header['DATASEC'])
-            dx = np.abs(datasec['xmax'] - datasec['xmin']) + 1
-            dy = np.abs(datasec['ymax'] - datasec['ymin']) + 1
-            if ypos == 0:
-                xmin = nx - (xpos + 1)*dx
-                ymin = dy
-            else:
-                xmin = xpos*dx
-                ymin = 0
-            xmax = xmin + dx
-            ymax = ymin + dy
+            # Determine subarray boundaries in the mosaicked image array 
+            # from DETSEC keywords for each segment.
+            detsec = parse_geom_kwd(foo[amp].header['DETSEC'])
+            xmin = nx - max(detsec['xmin'], detsec['xmax'])
+            xmax = nx - min(detsec['xmin'], detsec['xmax']) + 1
+            ymin = ny - max(detsec['ymin'], detsec['ymax'])
+            ymax = ny - min(detsec['ymin'], detsec['ymax']) + 1
             #
             # Extract the bias-subtracted masked image for this segment.
             segment_image = ccd.unbiased_and_trimmed_image(amp)
@@ -65,7 +59,6 @@ def plot_flat(infile, nsig=3, cmap=pylab.cm.hot, win=None, subplot=(1, 1, 1),
             #
             # Determine flips in x- and y-directions in order to
             # get the (1, 1) pixel in the lower right corner.
-            detsec = parse_geom_kwd(foo[amp].header['DETSEC'])
             if detsec['xmax'] > detsec['xmin']:  # flip in x-direction
                 subarr = subarr[:,::-1]
             if detsec['ymax'] > detsec['ymin']:  # flip in y-direction
@@ -90,12 +83,12 @@ def plot_flat(infile, nsig=3, cmap=pylab.cm.hot, win=None, subplot=(1, 1, 1),
         return
     #
     # Write a fits image with the mosaicked CCD data.
-    #
     hdulist = pyfits.HDUList()
     hdulist.append(pyfits.PrimaryHDU())
     hdulist[0].data = mosaic[::-1,:]
-    hdulist.writeto('mosaicked_flat_%04i.fits' % foo[0].header['MONOWL'],
-                    clobber=True)
+    if outfile is None:
+        outfile = 'mosaicked_flat_%04i.fits' % foo[0].header['MONOWL']
+    hdulist.writeto(outfile, clobber=True)
     #
     # Set the color map to extend over the range median +/- stdev(clipped)
     # of the pixel values.
