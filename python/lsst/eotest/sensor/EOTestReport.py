@@ -286,8 +286,9 @@ class EOTestReport(object):
             self.output.write('\section{Test Stand Configuration}\n')
             self.output.write('\\begin{description}\n')
             for key, value in self.teststand_config.items():
-                self.output.write('\\item[%s] %s\n' % (key.replace('_', '\_'),
-                                                       value.replace('_', '\_')))
+                self.output.write('\\item[%s] %s\n' % 
+                                  (key.replace('_', '\_'),
+                                   str(value).replace('_', '\_')))
             self.output.write('\end{description}\n')
 #        #
 #        # CCS configuration files
