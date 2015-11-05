@@ -36,7 +36,8 @@ def _include_png(pngfiles, frac_height=0.6):
 
 class EOTestReport(object):
     def __init__(self, eotest_plots, wl_dir, tex_file=None, qa_plot_files=None,
-                 ccs_config_files=None, software_versions=None):
+                 ccs_config_files=None, software_versions=None,
+                 teststand_config=None):
         self.plots = eotest_plots
         self.wl_dir = wl_dir
         if tex_file is None:
@@ -47,6 +48,7 @@ class EOTestReport(object):
         self.qa_plot_files = qa_plot_files
         self.ccs_config_files = ccs_config_files
         self.software_versions = software_versions
+        self.teststand_config = teststand_config
     def make_figures(self):
         print "Creating eotest report figures..."
         funcs = ('fe55_dists',
@@ -276,6 +278,17 @@ class EOTestReport(object):
             for key, value in self.software_versions.items():
                 self.output.write('\\item[%s] %s\n' % (key.replace('_', '\_'),
                                                        value.replace('_', '\_')))
+            self.output.write('\end{description}\n')
+        #
+        # Test stand configuration
+        #
+        if self.teststand_config is not None:
+            self.output.write('\section{Test Stand Configuration}\n')
+            self.output.write('\\begin{description}\n')
+            for key, value in self.teststand_config.items():
+                self.output.write('\\item[%s] %s\n' % 
+                                  (key.replace('_', '\_'),
+                                   str(value).replace('_', '\_')))
             self.output.write('\end{description}\n')
 #        #
 #        # CCS configuration files
