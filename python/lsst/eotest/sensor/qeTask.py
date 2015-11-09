@@ -25,7 +25,7 @@ class QeTask(pipeBase.Task):
 
     @pipeBase.timeMethod
     def run(self, sensor_id, qe_files, pd_ratio_file, mask_files, gains,
-            medians_file=None, e2v_data=False, correction_image=None):
+            medians_file=None, vendor_data=False, correction_image=None):
         imutils.check_temperatures(qe_files, self.config.temp_set_point_tol,
                                    setpoint=self.config.temp_set_point,
                                    warn_only=True)
@@ -40,7 +40,7 @@ class QeTask(pipeBase.Task):
             
         qe_data.read_medians(medians_file)
         
-        if e2v_data:
+        if vendor_data:
             qe_data.incidentPower_e2v()
         else:
             qe_data.incidentPower(pd_ratio_file)
