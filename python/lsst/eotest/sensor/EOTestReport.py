@@ -23,7 +23,7 @@ def _include_multipanel_png(pngfiles, frac_width=1.5, hspace=-1.9):
 
 def _include_png(pngfiles, frac_width=1.3, hspace=-1):
     figure_template = """\\begin{figure}[H]
-\\hspace{%.1fin}
+\\hspace{%.2fin}
 %s
 \\end{figure}
 """ % (hspace, '%s')
@@ -257,7 +257,7 @@ class EOTestReport(object):
         persistence_image = '%(sensor_id)s_persistence' % locals()
         if os.path.isfile(persistence_image + '.png'):
             self.output.write('\section{Image Persistence}\n')
-            self.output.write(_include_png((persistence_image,)))
+            self.output.write(_include_multipanel_png((persistence_image,)))
             self.output.write('\\pagebreak\n\n')
         #
         # Fe55 gains and PTC
@@ -277,7 +277,8 @@ class EOTestReport(object):
         if self.qa_plot_files is not None:
             self.output.write('\section{QA plots}\n')
             for item in self.qa_plot_files:
-                self.output.write(_include_png((item,), frac_width=0.9))
+                self.output.write(_include_png((item,), frac_width=1.1,
+                                               hspace=-0.5))
                 self.output.write('\\pagebreak\n\n')
         #
         # Software versions
