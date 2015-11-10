@@ -138,13 +138,7 @@ class EOTestPlots(object):
         self._qe_file = self._fullpath('%s_QE.fits' % self.sensor_id)
         self.specs = CcdSpecs(results_file, plotter=self,
                               xtalk_file=xtalk_file, prnu_wls=self.prnu_wls)
-#        try:
-#            self.specs = CcdSpecs(results_file, plotter=self,
-#                                  xtalk_file=xtalk_file)
-#        except KeyError:
-#            print "Error reading results file for CcdSpecs object."
-#            print results_file, xtalk_file
-#            print "LaTeX table generation of specs is disabled."
+        self._linearity_results = None
     @property
     def qe_data(self):
         if self._qe_data is None:
@@ -377,13 +371,21 @@ class EOTestPlots(object):
                               multipanel=True)
             pylab.annotate('Amp %i' % amp, (0.1, 0.8),
                            xycoords='axes fraction', size='x-small')
-    def linearity(self, gain_range=(1, 6), max_dev=0.02, figsize=(11, 8.5),
-                  ptc_file=None, detresp_file=None):
+    @property
+    def linearity_results(self, gain_range=(1, 6),
+                          ptc_file=None, detresp_file=None):
+        gain_range = self._gain_range
+        ptc_file = self._ptc_file
+        detresp_file = self._detresp_file
+        if self._linearity_results is not None and detresp_file is None:
+            return self._linearity_results
+        self._linearity_results = {}
         if ptc_file is not None:
             ptc = pyfits.open(ptc_file)
         else:
             try:
-                ptc = pyfits.open(self._fullpath('%s_ptc.fits' % self.sensor_id))
+                ptc = pyfits.open(self._fullpath('%s_ptc.fits' 
+                                                 % self.sensor_id))
             except IOError:
                 ptc = None
         if detresp_file is not None:
@@ -395,10 +397,18 @@ class EOTestPlots(object):
                                        ptc=ptc, gain_range=gain_range)
         for amp in imutils.allAmps:
             try:
-                maxdev, fit_pars, Ne, flux = detresp.linearity(amp)
+                self._linearity_results[amp] = detresp.linearity(amp)
             except Exception, eObj:
                 print "EOTestPlots.linearity: amp %i" % amp
                 print "  ", eObj
+        return self._linearity_results
+    def linearity(self, gain_range=(1, 6), max_dev=0.02, figsize=(11, 8.5),
+                  ptc_file=None, detresp_file=None):
+        self._gain_range = gain_range
+        self._ptc_file = ptc_file
+        self._detresp_file = detresp_file
+        for amp in imutils.allAmps:
+            maxdev, fit_pars, Ne, flux = self.linearity_results[amp]
             f1 = np.poly1d(fit_pars)
             dNfrac = 1 - Ne/f1(flux)
 
@@ -424,7 +434,7 @@ class EOTestPlots(object):
             bbox.set_points(top_pts)
             win.axes[-1].set_position(bbox)
             try:
-                win.axes[-1].loglog(flux, Ne, 'ko')
+                win.axes[-1].loglog(flux, Ne, 'ko', markersize=3)
             except Exception, eObj:
                 print "EOTestPlots.linearity: amp %i" % amp
                 print "  ", eObj
@@ -452,11 +462,63 @@ class EOTestPlots(object):
             # Add fractional residuals sub-subplot.
             bot_rect = [bot_pts[0][0], bot_pts[0][1], dx, dy/4.]
             bot_ax = win.fig.add_axes(bot_rect, sharex=win.axes[-1])
-            bot_ax.semilogx(flux, dNfrac, 'ko')
+            bot_ax.semilogx(flux, dNfrac, 'ko', markersize=3)
             bot_ax.semilogx(flux, dNfrac, 'k:')
             bot_ax.semilogx(flux, np.zeros(len(Ne)), 'r-')
             pylab.locator_params(axis='y', nbins=5, tight=True)
             plot.setAxis(yrange=(-1.5*max_dev, 1.5*max_dev))
+    def linearity_resids(self, gain_range=(1, 6), max_dev=0.02,
+                         figsize=(11, 8.5), ptc_file=None, detresp_file=None,
+                         Ne_bounds=(1e3, 9e4)):
+        self._gain_range = gain_range
+        self._ptc_file = ptc_file
+        self._detresp_file = detresp_file
+        for amp in imutils.allAmps:
+            maxdev, fit_pars, Ne, flux = self.linearity_results[amp]
+            f1 = np.poly1d(fit_pars)
+            dNfrac = 1 - Ne/f1(flux)
+
+            subplot = (4, 4, amp)
+            if amp == 1:
+                win = plot.Window(subplot=subplot, figsize=figsize,
+                                  xlabel=r'pd current $\times$ exposure', 
+                                  ylabel='', size='large')
+                win.frameAxes.text(0.5, 1.08,
+                                   'Linearity residuals, %s' % self.sensor_id,
+                                   horizontalalignment='center',
+                                   verticalalignment='top',
+                                   transform=win.frameAxes.transAxes,
+                                   size='large')
+            else:
+                win.select_subplot(*subplot)
+            self._offset_subplot(win)
+            win.axes[-1].semilogx(flux, dNfrac, 'ko', markersize=3)
+            win.axes[-1].semilogx(flux, dNfrac, 'k:')
+            plot.setAxis(yrange=(-1.5*max_dev, 1.5*max_dev))
+            xmin, xmax, ymin, ymax = pylab.axis()
+            win.axes[-1].semilogx([xmin, xmax], [0, 0], 'r-')
+            pylab.locator_params(axis='y', nbins=5, tight=True)
+            # Plot max_dev range as horizontal lines.
+            win.axes[-1].semilogx([xmin, xmax], [max_dev, max_dev], 'k--')
+            win.axes[-1].semilogx([xmin, xmax], [-max_dev, -max_dev], 'k--')
+            # Plot flux bounds corresponding to range of Ne values over which
+            # the linearity spec is written
+            flux_min = (Ne_bounds[0] - fit_pars[1])/fit_pars[0]
+            flux_max = (Ne_bounds[1] - fit_pars[1])/fit_pars[0]
+            print 'amp, flux bounds, fit_pars:', amp, flux_min, flux_max, \
+                fit_pars
+            win.axes[-1].semilogx([flux_min, flux_min], [ymin, ymax], 'k--')
+            win.axes[-1].semilogx([flux_max, flux_max], [ymin, ymax], 'k--')
+            # Label plots by amplifier number.
+            pylab.annotate('Amp %i' % amp, (0.2, 0.9),
+                           xycoords='axes fraction', size='x-small')
+            if amp in (1, 5, 9, 13):
+                # Add y-axis label for plots at left column.
+                win.axes[-1].set_ylabel('e-/pixel residuals')
+            else:
+                # Suppress tick labels for other y-axes.
+                for label in win.axes[-1].get_yticklabels():
+                    label.set_visible(False)
     def qe_ratio(self, ref, amp=None, qe_file=None):
         if qe_file is not None:
             self._qe_file = qe_file
