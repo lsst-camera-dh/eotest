@@ -181,7 +181,8 @@ class DetectorResponse(object):
             flux = flux[self._index[amp]]
             Ne = Ne[self._index[amp]]
         indx = np.where((Ne > fit_range[0]) & (Ne < fit_range[1]))
-        f1_pars = np.polyfit(flux[indx], Ne[indx], 1)
+#        f1_pars = np.polyfit(flux[indx], Ne[indx], 1)
+        f1_pars = np.polyfit(flux[indx], Ne[indx], 1, w=1./Ne[indx])
         f1 = np.poly1d(f1_pars)
         # Further select points that are within the specification range
         # for computing the maximum fractional deviation.

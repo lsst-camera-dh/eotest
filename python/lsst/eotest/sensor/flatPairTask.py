@@ -37,7 +37,7 @@ def pair_mean(flat1, flat2, amp):
     stats2 = afwMath.makeStatistics(im2, afwMath.MEAN, flat2.stat_ctrl)
 
     avg_mean_value = (stats1.getValue(afwMath.MEAN) +
-                      stats1.getValue(afwMath.MEAN))/2.
+                      stats2.getValue(afwMath.MEAN))/2.
     return avg_mean_value
 
 def find_flat2(flat1):

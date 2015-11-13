@@ -8,6 +8,9 @@ def latex_minus_value(value, error=None, format='%.2e'):
     """
     A latex entry for a single value, including optional error.
     """
+    if value != value or error != error:
+        # handle Nan's
+        return "- \mbox{nan}"
     if value < 0:
         template = '+ \\num{' + format + '}'
     else:

@@ -24,8 +24,12 @@ import lsst.afw.math as afwMath
 import lsst.afw.display.ds9 as ds9
 
 def latex_minus_max(values, errors, format='%.2e'):
-    max_value = max(values)
-    index = np.where(values == max_value)[0][0]
+    # values or errors may contain nan's so eliminate those.
+    index = np.where(~(np.isnan(values)) & ~(np.isnan(errors)))
+    my_values = values[index]
+    my_errors = errors[index]
+    max_value = max(my_values)
+    index = np.where(my_values == max_value)[0][0]
     if max_value < 0:
         template = '+ \\num{' + format + '}'
     else:
@@ -367,8 +371,11 @@ class EOTestPlots(object):
             else:
                 win.select_subplot(*subplot)
             self._offset_subplot(win)
-            detresp.full_well(amp, make_plot=True, plotter=plot,
-                              multipanel=True)
+            try:
+                detresp.full_well(amp, make_plot=True, plotter=plot,
+                                  multipanel=True)
+            except (ValueError, RuntimeError, TypeError):
+                pass
             pylab.annotate('Amp %i' % amp, (0.1, 0.8),
                            xycoords='axes fraction', size='x-small')
     @property
@@ -408,10 +415,8 @@ class EOTestPlots(object):
         self._ptc_file = ptc_file
         self._detresp_file = detresp_file
         for amp in imutils.allAmps:
-            maxdev, fit_pars, Ne, flux = self.linearity_results[amp]
-            f1 = np.poly1d(fit_pars)
-            dNfrac = 1 - Ne/f1(flux)
-
+            #
+            # Set up the plotting subwindow.
             subplot = (4, 4, amp)
             if amp == 1:
                 win = plot.Window(subplot=subplot, figsize=figsize,
@@ -424,6 +429,17 @@ class EOTestPlots(object):
                                    size='large')
             else:
                 win.select_subplot(*subplot)
+
+            #
+            # Get the linearity fit for this amp.
+            try:
+                maxdev, fit_pars, Ne, flux = self.linearity_results[amp]
+            except KeyError:
+                continue
+            #
+            # Compute the fractional residuals
+            f1 = np.poly1d(fit_pars)
+            dNfrac = 1 - Ne/f1(flux)
             self._offset_subplot(win)
             # Resize subplot for plotting e-/pixel vs flux
             bbox = win.axes[-1].get_position()
@@ -433,6 +449,8 @@ class EOTestPlots(object):
             top_pts[0][1] += dy/4
             bbox.set_points(top_pts)
             win.axes[-1].set_position(bbox)
+            #
+            # Plot Ne vs flux
             try:
                 win.axes[-1].loglog(flux, Ne, 'ko', markersize=3)
             except Exception, eObj:
@@ -474,10 +492,6 @@ class EOTestPlots(object):
         self._ptc_file = ptc_file
         self._detresp_file = detresp_file
         for amp in imutils.allAmps:
-            maxdev, fit_pars, Ne, flux = self.linearity_results[amp]
-            f1 = np.poly1d(fit_pars)
-            dNfrac = 1 - Ne/f1(flux)
-
             subplot = (4, 4, amp)
             if amp == 1:
                 win = plot.Window(subplot=subplot, figsize=figsize,
@@ -491,6 +505,15 @@ class EOTestPlots(object):
                                    size='large')
             else:
                 win.select_subplot(*subplot)
+
+            try:
+                maxdev, fit_pars, Ne, flux = self.linearity_results[amp]
+            except KeyError:
+                continue
+
+            f1 = np.poly1d(fit_pars)
+            dNfrac = 1 - Ne/f1(flux)
+
             self._offset_subplot(win)
             win.axes[-1].semilogx(flux, dNfrac, 'ko', markersize=3)
             win.axes[-1].semilogx(flux, dNfrac, 'k:')
