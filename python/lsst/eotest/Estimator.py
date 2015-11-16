@@ -45,6 +45,12 @@ class Estimator(object):
         stats = makeStatistics(self.image, flags, self.stat_ctrl)
         pixel_sum = stats.getValue(afwMath.SUM)
         # Infer the number of pixels taking into account masking.
+        if pixel_sum == 0:
+            # Handle case where no pixel_sum is zero (and hence the
+            # mean is zero).
+            self.value = 0
+            self.error = 0
+            return
         npix = pixel_sum/stats.getValue(afwMath.MEAN)
         self.value = stats.getValue(self.statistic)
         self.error = np.sqrt(pixel_sum)/npix

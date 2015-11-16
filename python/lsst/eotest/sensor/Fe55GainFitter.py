@@ -61,10 +61,14 @@ class Fe55GainFitter(object):
             
         return kalpha_peak, kalpha_sigma
     def _compute_stats(self):
-        flags = afwMath.MEDIAN | afwMath.STDEVCLIP
-        stats = afwMath.makeStatistics(self.signals.tolist(), flags)
-        self.median = stats.getValue(afwMath.MEDIAN)
-        self.stdev = stats.getValue(afwMath.STDEVCLIP)
+        try:
+            flags = afwMath.MEDIAN | afwMath.STDEVCLIP
+            stats = afwMath.makeStatistics(self.signals.tolist(), flags)
+            self.median = stats.getValue(afwMath.MEDIAN)
+            self.stdev = stats.getValue(afwMath.STDEVCLIP)
+        except:
+            self.median = 0
+            self.stdev = 0
     def _set_hist_range(self, dADU, bins, hist_nsig):
         """Set the histogram range for the fit to bracket the estimated
         Kalpha and Kbeta peak locations by +/-dADU"""
