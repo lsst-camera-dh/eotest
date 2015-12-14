@@ -23,6 +23,22 @@ import lsst.afw.image as afwImage
 import lsst.afw.math as afwMath
 import lsst.afw.display.ds9 as ds9
 
+def op_str(arg, format, op=None):
+    if op is None:
+        my_val = arg
+    else:
+        my_val = op(arg)
+    try:
+        return format % my_val
+    except TypeError:
+        return str(my_val)
+
+def min_str(values, format):
+    return op_str(values, format, op=np.min)
+
+def max_str(values, format):
+    return op_str(values, format, op=np.max)
+
 def latex_minus_max(values, errors, format='%.2e'):
     # values or errors may contain nan's so eliminate those.
     index = np.where(~(np.isnan(values)) & ~(np.isnan(errors)))
@@ -258,7 +274,7 @@ class EOTestPlots(object):
                 foo.fit()
             except:
                 continue
-            if amp == 1:
+            if win is None:
                 win = foo.plot(interactive=self.interactive, 
                                subplot=(4, 4, amp),
                                figsize=figsize, frameLabels=True, amp=amp)
@@ -719,13 +735,14 @@ class CcdSpecs(OrderedDict):
     def _ingestResults(self, results_file, xtalk_file=None):
         self.results = EOTestResults(results_file)
         rn = self.results['READ_NOISE']
-        self['CCD-007'].measurement = '$%.2f$--$%.2f$\,\electron\,rms' % (min(rn), max(rn))
+        self['CCD-007'].measurement = '$%s$--$%s$\,\electron\,rms' \
+            % (min_str(rn, '%.2f'), max_str(rn, '%.2f'))
         self['CCD-007'].ok = (max(rn) < 8)
         fw = self.results['FULL_WELL']
-        self['CCD-008'].measurement = '$%i$--$%i$\,\electron' % (min(fw), max(fw))
+        self['CCD-008'].measurement = '$%s$--$%s$\,\electron' % (min_str(fw, '%i%'), max_str(fw, '%i'))
         self['CCD-008'].ok = (max(fw) < 175000)
         max_frac_dev = self.results['MAX_FRAC_DEV']
-        self['CCD-009'].measurement = '\\twolinecell{max. fractional deviation \\\\from linearity: $\\num{%.1e}$}' % max(max_frac_dev)
+        self['CCD-009'].measurement = '\\twolinecell{max. fractional deviation \\\\from linearity: $\\num{%s}$}' % max_str(max_frac_dev, '%.1e')
         self['CCD-009'].ok = (max(max_frac_dev) < 0.02)
         scti = self.results['CTI_HIGH_SERIAL']
         scti = np.concatenate((scti, self.results['CTI_LOW_SERIAL']))
