@@ -3,6 +3,7 @@ import sys
 import subprocess
 import numpy as np
 import pylab
+from EOTestPlots import op_str
 
 def latex_minus_value(value, error=None, format='%.2e'):
     """
@@ -136,9 +137,9 @@ class EOTestReport(object):
         full_well = self.plots.results['FULL_WELL']
         max_frac_dev = self.plots.results['MAX_FRAC_DEV']
         for amp in range(1, 17):
-            my_full_well = full_well[amp-1]
-            my_max_frac_dev = max_frac_dev[amp-1]
-            self.output.write(" %i & $%i$ & $\\num{%.1e}$ \\\\ \hline\n" 
+            my_full_well = op_str(full_well[amp-1], '%i')
+            my_max_frac_dev = op_str(max_frac_dev[amp-1], '%.1e')
+            self.output.write(" %i & $%s$ & $\\num{%s}$ \\\\ \hline\n" 
                               % (amp, my_full_well, my_max_frac_dev))
         self.output.write("\\end{tabular}\n\\end{table}\n")
         self.output.write(_include_multipanel_png(('%(sensor_id)s_full_well'
