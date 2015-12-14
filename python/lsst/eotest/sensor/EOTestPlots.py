@@ -584,7 +584,7 @@ class EOTestPlots(object):
             qe[amp] = qe_data[1].data.field('AMP%02i' % amp)
             win = plot.curve(wl, qe[amp], xname='wavelength (nm)',
                              yname='QE (% e-/photon)', oplot=amp-1,
-                             xrange=(300, 1100))
+                             xrange=(300, 1100), yrange=(0, 120))
             if amp == 1:
                 win.set_title('QE, %s' % self.sensor_id)
             qe_band = qe_data[2].data.field('AMP%02i' % amp)
