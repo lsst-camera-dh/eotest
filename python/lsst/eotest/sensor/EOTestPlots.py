@@ -739,7 +739,7 @@ class CcdSpecs(OrderedDict):
             % (min_str(rn, '%.2f'), max_str(rn, '%.2f'))
         self['CCD-007'].ok = (max(rn) < 8)
         fw = self.results['FULL_WELL']
-        self['CCD-008'].measurement = '$%s$--$%s$\,\electron' % (min_str(fw, '%i%'), max_str(fw, '%i'))
+        self['CCD-008'].measurement = '$%s$--$%s$\,\electron' % (min_str(fw, '%i'), max_str(fw, '%i'))
         self['CCD-008'].ok = (max(fw) < 175000)
         max_frac_dev = self.results['MAX_FRAC_DEV']
         self['CCD-009'].measurement = '\\twolinecell{max. fractional deviation \\\\from linearity: $\\num{%s}$}' % max_str(max_frac_dev, '%.1e')
