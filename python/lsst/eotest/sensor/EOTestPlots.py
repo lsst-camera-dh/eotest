@@ -841,7 +841,7 @@ class CcdSpecs(OrderedDict):
             self['CCD-027'].measurement = '\\twolinecell{%s}' % measurement
         self['CCD-027'].ok = (max_ratio < 5e-2)
         
-        psf_sigma = np.mean(self.results['PSF_SIGMA'])
+        psf_sigma = np.median(self.results['PSF_SIGMA'])
         self['CCD-028'].measurement = '$%.2f\,\mu$' % psf_sigma
         self['CCD-028'].ok = (psf_sigma < 5.)
 
