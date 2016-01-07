@@ -18,6 +18,7 @@ from DetectorResponse import DetectorResponse
 from crosstalk import CrosstalkMatrix
 from QE import QE_Data
 from AmplifierGeometry import parse_geom_kwd
+from cteTask import superflat
 import lsst.eotest.image_utils as imutils
 import lsst.afw.image as afwImage
 import lsst.afw.math as afwMath
@@ -607,6 +608,20 @@ class EOTestPlots(object):
             plot.xyplot(band_wls, qe_band, xerr=band_wls_errs, 
                         oplot=1, color='g')
         plot.hline(100)
+    def superflats(self, sflat_dir, bias_files, nsig=3, cmap=pylab.cm.hot):
+        sensor_id = self.sensor_id
+        gains = dict([(amp, gain) for amp, gain 
+                      in zip(self.results['AMP'], self.results['GAIN'])])
+        for level, file_ext in zip('HL', ('high', 'low')):
+            pattern = os.path.join(sflat_dir,
+                                   '%(sensor_id)s_sflat_*_flat_%(level)s*.fits'
+                                   % locals())
+            outfile = '%(sensor_id)s_superflat_%(file_ext)s_flux.fits' % locals()
+            files = sorted(glob.glob(glob_string))
+            superflat(files, bias_files=bias_files, outfile=outfile)
+            win = plot_flat(outfile, nsig=nsig, cmap=cmap, gains=gains)
+            pylab.savefig('%s_superflat_%(file_ext)s_flux.png' 
+                          % (self.sensor_id, wl))
     def flat_fields(self, lambda_dir, nsig=3, cmap=pylab.cm.hot):
         glob_string = os.path.join(lambda_dir, '*_lambda_*.fits')
         #print glob_string
