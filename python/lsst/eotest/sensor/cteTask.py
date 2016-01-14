@@ -79,9 +79,9 @@ class CteTask(pipeBase.Task):
         # Prepare the co-added superflat file.  Bias subtraction is
         # handled in eperTask.py.
         #
+        outfile = '%(sensor_id)s_superflat_%(flux_level)s.fits' % locals()
         superflat_file = superflat(superflat_files, bias_files,
-                                   outfile='superflat_%s.fits' % flux_level,
-                                   bias_subtract=False)
+                                   outfile=outfile, bias_subtract=False)
         #
         # Compute serial CTE.
         #
