@@ -18,6 +18,7 @@ from DetectorResponse import DetectorResponse
 from crosstalk import CrosstalkMatrix
 from QE import QE_Data
 from AmplifierGeometry import parse_geom_kwd
+from cteTask import superflat
 import lsst.eotest.image_utils as imutils
 import lsst.afw.image as afwImage
 import lsst.afw.math as afwMath
@@ -53,8 +54,19 @@ def latex_minus_max(values, errors, format='%.2e'):
     template += ' \pm \\num{' + format + '}'
     return template % (np.abs(max_value), errors[index])
 
+def cmap_range(image_array, nsig=5):
+    pixel_data = np.array(image_array, dtype=np.float).flatten()
+    stats = afwMath.makeStatistics(pixel_data,
+                                   afwMath.STDEVCLIP | afwMath.MEDIAN)
+    median = stats.getValue(afwMath.MEDIAN)
+    stdev = stats.getValue(afwMath.STDEVCLIP)
+    vmin = max(min(pixel_data), median - nsig*stdev)
+    vmax = min(max(pixel_data), median + nsig*stdev)
+    return vmin, vmax
+
 def plot_flat(infile, nsig=3, cmap=pylab.cm.hot, win=None, subplot=(1, 1, 1),
-              figsize=None, wl=None, gains=None, use_ds9=False, outfile=None):
+              figsize=None, wl=None, gains=None, use_ds9=False, outfile=None,
+              title=None):
     ccd = MaskedCCD(infile)
     foo = pyfits.open(infile)
     datasec =  parse_geom_kwd(foo[1].header['DATASEC'])
@@ -103,22 +115,15 @@ def plot_flat(infile, nsig=3, cmap=pylab.cm.hot, win=None, subplot=(1, 1, 1),
         return
     #
     # Write a fits image with the mosaicked CCD data.
-    hdulist = pyfits.HDUList()
-    hdulist.append(pyfits.PrimaryHDU())
-    hdulist[0].data = mosaic[::-1,:]
-    if outfile is None:
-        outfile = 'mosaicked_flat_%04i.fits' % foo[0].header['MONOWL']
-    hdulist.writeto(outfile, clobber=True)
+    if outfile is not None:
+        hdulist = pyfits.HDUList()
+        hdulist.append(pyfits.PrimaryHDU())
+        hdulist[0].data = mosaic[::-1,:]
+        hdulist.writeto(outfile, clobber=True)
     #
     # Set the color map to extend over the range median +/- stdev(clipped)
     # of the pixel values.
-    pixel_data = mosaic.flatten()
-    stats = afwMath.makeStatistics(pixel_data,
-                                   afwMath.STDEVCLIP | afwMath.MEDIAN)
-    median = stats.getValue(afwMath.MEDIAN)
-    stdev = stats.getValue(afwMath.STDEVCLIP)
-    vmin = max(min(pixel_data), median - nsig*stdev)
-    vmax = min(max(pixel_data), median + nsig*stdev)
+    vmin, vmax = cmap_range(mosaic, nsig=nsig)
     if win is None:
         win = plot.Window(subplot=subplot, figsize=figsize,
                           xlabel='', ylabel='')
@@ -130,11 +135,41 @@ def plot_flat(infile, nsig=3, cmap=pylab.cm.hot, win=None, subplot=(1, 1, 1),
     if wl is None:
         # Extract wavelength from file
         wl = foo[0].header['MONOWL']
-    win.axes[-1].set_title('%i nm' % wl)
+    if title is None:
+        title = '%i nm' % wl
+    win.axes[-1].set_title(title)
     win.fig.colorbar(image)
     # Turn off tick labels for x- and y-axes
     pylab.setp(win.axes[-1].get_xticklabels(), visible=False)
     pylab.setp(win.axes[-1].get_yticklabels(), visible=False)
+    return win
+
+def fe55_zoom(infile, size=250, amp=1, cmap=pylab.cm.hot, nsig=10,
+              subplot=(1, 1, 1), win=None, figsize=None, title=None,
+              axisRange=None):
+    ccd = MaskedCCD(infile)
+    image = ccd[amp].getImage()
+    nymax, nxmax = image.getArray().shape
+    sub_image = afwImage.ImageF(size, size)
+    sub_image.getArray()[:] = image.getArray()[:-size-1:-1, -size:]
+    if win is None:
+        win = plot.Window(subplot=subplot, figsize=figsize,
+                          xlabel='', ylabel='')
+    else:
+        win.select_subplot(*subplot)
+    if axisRange is None:
+        axisRange = (nxmax-size, nxmax, nymax-size, nymax)
+    image = win.axes[-1].imshow(sub_image.getArray(), interpolation='nearest',
+                                cmap=cmap, extent=axisRange)
+    pylab.xlabel('x pixel')
+    pylab.ylabel('y pixel')
+    vmin, vmax = cmap_range(sub_image.getArray(), nsig=nsig)
+    norm = mpl.colors.Normalize(vmin=vmin, vmax=vmax)
+    image.set_norm(norm)
+    if title is None:
+        title = os.path.basename(infile)
+    win.axes[-1].set_title(title)
+    win.fig.colorbar(image)
     return win
 
 class EOTestPlots(object):

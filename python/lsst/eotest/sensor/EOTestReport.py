@@ -151,6 +151,26 @@ class EOTestReport(object):
                                                   hspace=-1.75))
         self.output.write('\\pagebreak\n\n')
         #
+        # Mean Bias frame
+        #
+        mean_bias_file = '%(sensor_id)s_mean_bias' % locals()
+        if os.path.isfile(mean_bias_file + '.png'):
+            self.output.write('\section{Mean Bias Frame}\n')
+            self.output.write(_include_png((mean_bias_file,)))
+            self.output.write('\\pagebreak\n\n')
+        #
+        # Bright and Dark Defects mosaicked images.
+        #
+        bright_defects_file = '%(sensor_id)s_medianed_dark' % locals()
+        dark_defects_file = '%(sensor_id)s_superflat_dark_defects' % locals()
+        if (os.path.isfile(bright_defects_file + '.png') and
+            os.path.isfile(dark_defects_file + '.png')):
+            self.output.write('\section{Bright and Dark Defect Frames}')
+            self.output.write(_include_png((bright_defects_file,)))
+            self.output.write('\\pagebreak\n\n')
+            self.output.write(_include_png((dark_defects_file,)))
+            self.output.write('\\pagebreak\n\n')
+        #
         # CTE
         #
         self.output.write('\section{Charge Transfer Efficiency}\n')
@@ -210,6 +230,15 @@ class EOTestReport(object):
         self.output.write("\\end{tabular}\n\\end{table}\n")
 
         self.output.write('\\pagebreak\n\n')
+
+        sflat_high = '%(sensor_id)s_superflat_high' % locals()
+        sflat_low = '%(sensor_id)s_superflat_low' % locals()
+        if (os.path.isfile(sflat_high + '.png') and
+            os.path.isfile(sflat_low + '.png')):
+            self.output.write(_include_png((sflat_high,)))
+            self.output.write('\\pagebreak\n\n')
+            self.output.write(_include_png((sflat_low,)))
+            self.output.write('\\pagebreak\n\n')
         #
         # Crosstalk
         #
@@ -275,6 +304,14 @@ class EOTestReport(object):
             self.output.write(_include_multipanel_png(('%(sensor_id)s_ptcs'
                                                        % locals(),)))
         self.output.write('\\pagebreak\n\n')
+        #
+        # Fe55 zoom
+        #
+        fe55_zoom = '%(sensor_id)s_fe55_zoom' % locals()
+        if os.path.isfile(fe55_zoom + '.png'):
+            self.output.write('\section{Fe55 zoom on segment 1}\n')
+            self.output.write(_include_png((fe55_zoom,)))
+            self.output.write('\\pagebreak\n\n')
         #
         # QA plots
         #
