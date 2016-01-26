@@ -1,7 +1,6 @@
 """
 @brief For pairs of flats obtain for a range of exposures, compute the
-photon transfer curve (using pair_stats.py) and compute and write out
-the full well.
+photon transfer curve and compute and write out the full well.
 
 @author J. Chiang <jchiang@slac.stanford.edu>
 """
@@ -11,7 +10,7 @@ import numpy as np
 import pyfits
 from lsst.eotest.pyfitsTools import pyfitsTableFactory, pyfitsWriteto
 import lsst.eotest.image_utils as imutils
-from pair_stats import pair_stats
+from MaskedCCD import MaskedCCD
 
 import lsst.afw.image as afwImage
 import lsst.afw.math as afwMath
@@ -41,6 +40,55 @@ def find_flats(args):
                      if item.find('flat1') != -1])
     return [(f1, find_flat2(f1)) for f1 in file1s]
 
+class FlatPairStats(object):
+    def __init__(self, fmean, fvar):
+        self.flat_mean = fmean
+        self.flat_var = fvar
+
+def flat_pair_stats(ccd1, ccd2, amp, mask_files=(), bias_frame=None):
+    if ccd1.md.get('EXPTIME') != ccd2.md.get('EXPTIME'):
+        raise RuntimeError("Exposure times for files %s, %s do not match"
+                           % (ccd1.imfile, ccd2.imfile))
+    #
+    # Mean and variance calculations that account for masks (via
+    # ccd1.stat_ctrl, which is the same for both MaskedImages).
+    #
+    mean = lambda im : afwMath.makeStatistics(im, afwMath.MEAN,
+                                              ccd1.stat_ctrl).getValue()
+    var = lambda im : afwMath.makeStatistics(im, afwMath.VARIANCE,
+                                             ccd1.stat_ctrl).getValue()
+    #
+    # Extract imaging region for segments of both CCDs.
+    #
+    image1 = ccd1.unbiased_and_trimmed_image(amp)
+    image2 = ccd2.unbiased_and_trimmed_image(amp)
+    #
+    # Use serial overscan for bias region.
+    #
+    b1 = ccd1[amp].Factory(ccd1[amp], ccd1.amp_geom.serial_overscan)
+    b2 = ccd2[amp].Factory(ccd2[amp], ccd2.amp_geom.serial_overscan)
+    if ccd1.imfile == ccd2.imfile:
+        # Don't have pairs of flats, so estimate noise and gain
+        # from a single frame, ignoring FPN.
+        fmean = mean(image1)
+        fvar = var(image1)
+    else:
+        #
+        # Make a deep copy since otherwise the pixel values in image1
+        # would be altered in the ratio calculation.
+        #
+        fratio_im = afwImage.MaskedImageF(image1, True)
+        fratio_im /= image2
+        fratio = mean(fratio_im)
+        image2 *= fratio
+        fmean = (mean(image1) + mean(image2))/2.
+
+        fdiff = afwImage.MaskedImageF(image1, True)
+        fdiff -= image2
+        fvar = var(fdiff)/2.
+
+    return FlatPairStats(fmean, fvar)
+
 class PtcConfig(pexConfig.Config):
     """Configuration for ptc task"""
     output_dir = pexConfig.Field("Output directory", str, default='.')
@@ -64,9 +112,14 @@ class PtcTask(pipeBase.Task):
             if self.config.verbose:
                 self.log.info("processing %s" % flat1)
             exposure.append(exptime(flat1))
+            ccd1 = MaskedCCD(flat1, mask_files=mask_files,
+                             bias_frame=bias_frame)
+            ccd2 = MaskedCCD(flat2, mask_files=mask_files,
+                             bias_frame=bias_frame)
             for amp in imutils.allAmps:
-                results = pair_stats(flat1, flat2, amp, mask_files=mask_files,
-                                     bias_frame=bias_frame)
+                results = flat_pair_stats(ccd1, ccd2, amp,
+                                          mask_files=mask_files,
+                                          bias_frame=bias_frame)
                 ptc_stats[amp][0].append(results.flat_mean)
                 ptc_stats[amp][1].append(results.flat_var)
         output = pyfits.HDUList()
