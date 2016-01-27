@@ -32,13 +32,10 @@ class PairStats(object):
                          self.flat_mean, self.flat_var,
                          self.gain, self.noise)
 
-def pair_stats(file1, file2, amp, mask_files=(), binsize=1, bias_frame=None):
-    ccd1 = MaskedCCD(file1, mask_files=mask_files, bias_frame=bias_frame)
-    ccd2 = MaskedCCD(file2, mask_files=mask_files, bias_frame=bias_frame)
-
+def pair_stats(ccd1, ccd2, amp, mask_files=(), binsize=1, bias_frame=None):
     if ccd1.md.get('EXPTIME') != ccd2.md.get('EXPTIME'):
         raise RuntimeError("Exposure times for files %s, %s do not match"
-                           % (file1, file2))
+                           % (ccd1.imfile, ccd2.imfile))
     #
     # Mean and variance calculations that account for masks (via
     # ccd1.stat_ctrl, which is the same for both MaskedImages).
@@ -57,7 +54,7 @@ def pair_stats(file1, file2, amp, mask_files=(), binsize=1, bias_frame=None):
     #
     b1 = ccd1[amp].Factory(ccd1[amp], ccd1.amp_geom.serial_overscan)
     b2 = ccd2[amp].Factory(ccd2[amp], ccd2.amp_geom.serial_overscan)
-    if file1 == file2:
+    if ccd1.imfile == ccd2.imfile:
         # Don't have pairs of flats, so estimate noise and gain
         # from a single frame, ignoring FPN.
         bmean = mean(b1)
@@ -92,18 +89,13 @@ def pair_stats(file1, file2, amp, mask_files=(), binsize=1, bias_frame=None):
 if __name__ == '__main__':
     from lsst.eotest.sensor.sim_tools import simulateFlat
 
-    #file1 = 'test_flat1.fits'
-    #file2 = 'test_flat2.fits'
-    #simulateFlat(file1, 200, 5, hdus=16)
-    #simulateFlat(file2, 200, 5, hdus=16)
-
     datadir = '/nfs/slac/g/ki/ki18/jchiang/LSST/SensorTests/test_scripts/work/sensorData/000-00/flat/debug'
     datapath = lambda x : os.path.join(datadir, x)
-    file1 = datapath('000-00_flat_005.09s_flat1_debug.fits')
-    file2 = datapath('000-00_flat_005.09s_flat2_debug.fits')
+    ccd1 = MaskedCCD(datapath('000-00_flat_005.09s_flat1_debug.fits'))
+    ccd2 = MaskedCCD(datapath('000-00_flat_005.09s_flat2_debug.fits'))
 
     for i, amp in enumerate(imutils.allAmps):
-        my_pair_stats = pair_stats(file1, file2, amp)
+        my_pair_stats = pair_stats(ccd1, ccd2, amp)
         if i == 0:
             print my_pair_stats.header()
         print my_pair_stats.summary()

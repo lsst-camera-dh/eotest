@@ -122,8 +122,6 @@ class FlatPairTask(pipeBase.Task):
             self.log.info("writing to %s" % outfile)
         self._create_detresp_fits_output(len(file1s))
         for row, file1 in enumerate(file1s):
-            if self.config.verbose:
-                self.log.info("processing %s" % file1)
             try:
                 file2 = find_flat2(file1)
             except IndexError:
@@ -131,22 +129,36 @@ class FlatPairTask(pipeBase.Task):
                 # FPN subtraction isn't needed.
                 file2 = file1
     
+            if self.config.verbose:
+                self.log.info("processing\n   %s as flat1 and\n   %s as flat2"
+                              % (file1, file2))
+
             flat1 = MaskedCCD(file1, mask_files=self.mask_files,
                               bias_frame=self.bias_frame)
             flat2 = MaskedCCD(file2, mask_files=self.mask_files,
                               bias_frame=self.bias_frame)
 
-            if flat1.md.get('EXPTIME') != flat2.md.get('EXPTIME'):
+            pd1 = flat1.md.get('MONDIODE')
+            pd2 = flat2.md.get('MONDIODE')
+            exptime1 = flat1.md.get('EXPTIME')
+            exptime2 = flat2.md.get('EXPTIME')
+
+            if exptime1 != exptime2:
                 raise RuntimeError("Exposure times do not match for:\n%s\n%s\n"
                                    % (file1, file2))
-    
-            if (flat1.md.get('MONDIODE') != 0 and
-                flat2.md.get('MONDIODE') != 0):
-                flux = abs(flat1.md.get('EXPTIME')*flat1.md.get('MONDIODE') +
-                           flat2.md.get('EXPTIME')*flat2.md.get('MONDIODE'))/2.
+            if ((type(pd1) != str and type(pd2) != str) and 
+                (pd1 != 0 and pd2 != 0)):
+                flux = abs(pd1*exptime1 + pd2*exptime2)/2.
             else:
-                flux = flat1.md.get('EXPTIME')
+                flux = exptime1
 
+            if self.config.verbose:
+                self.log.info('   row = %s' % row)
+                self.log.info('   pd1, pd2 = %s, %s' % (pd1, pd2))
+                self.log.info('   exptime1, exptime2 = %s, %s ' 
+                              % (exptime1, exptime2))
+                self.log.info('   flux = %s' % flux)
+                self.log.info('   flux/exptime = %s' % (flux/exptime1,))
             self.output[-1].data.field('FLUX')[row] = flux
             for amp in imutils.allAmps:
                 # Convert to e- and write out for each segment.
