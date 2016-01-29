@@ -68,10 +68,11 @@ class DetectorResponse(object):
                         zip(imutils.allAmps, data[1:])])
     def full_well(self, amp, max_non_linearity=0.02,
                   frac_offset=0.1, make_plot=False, plotter=None,
-                  multipanel=False):
+                  multipanel=False, fit_range=(1e2, 5e4)):
         if plotter is None:
             plotter = plot
-        max_frac_dev, f1_pars, Ne, flux = self.linearity(amp)
+        max_frac_dev, f1_pars, Ne, flux = self.linearity(amp,
+                                                         fit_range=fit_range)
         f1 = np.poly1d(f1_pars)
         dNfrac = 1 - Ne/f1(flux)
         indexes = np.arange(len(dNfrac))
@@ -146,7 +147,6 @@ class DetectorResponse(object):
         df = lambda xx : 1 - fp(xx)/f1(xx) - frac_offset
         x = flux[indxp]
         imin = np.where(x > 1e1)[0][0]
-#        flux0 = scipy.optimize.brentq(df, x[len(x)/2], x[-1])
         flux0 = scipy.optimize.brentq(df, x[imin], x[-1])
         full_well = int(fp(flux0))
         
@@ -176,15 +176,16 @@ class DetectorResponse(object):
         plot.xyplot(flux[indxp], Ne[indxp], oplot=1, color='r')
         plot.curve(flux, f1(flux), oplot=1)
         plot.curve(flux, fp(flux), oplot=1, color='b')
-    def linearity(self, amp, fit_range=(1e2, 5e4), spec_range=(1e3, 9e4)):
+    def linearity(self, amp, fit_range=None, spec_range=(1e3, 9e4)):
         flux, Ne = self.flux, self.Ne[amp]
         if self._index:
             # Apply selection to remove points with outlier gains from
             # mean-variance estimate.
             flux = flux[self._index[amp]]
             Ne = Ne[self._index[amp]]
+        if fit_range is None:
+            fit_range = spec_range
         indx = np.where((Ne > fit_range[0]) & (Ne < fit_range[1]))
-#        f1_pars = np.polyfit(flux[indx], Ne[indx], 1)
         f1_pars = np.polyfit(flux[indx], Ne[indx], 1, w=1./Ne[indx])
         f1 = np.poly1d(f1_pars)
         # Further select points that are within the specification range
