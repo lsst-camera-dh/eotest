@@ -4,6 +4,7 @@ import glob
 import copy
 from collections import OrderedDict
 from sets import Set
+import json
 import numpy as np
 import pyfits
 import pylab
@@ -700,9 +701,9 @@ class EOTestPlots(object):
     def prnu_results(self):
         my_prnu_results = pyfits.open(self.results.infile)['PRNU_RESULTS'].data
         return my_prnu_results
-    def latex_table(self, outfile=None):
+    def latex_table(self, outfile=None, hspace=None):
         lines = []
-        lines.append(self.specs.latex_header())
+        lines.append(self.specs.latex_header(hspace=hspace))
         for spec in self.specs:
             lines.append(self.specs[spec].latex_entry())
         lines.append(self.specs.latex_footer())
@@ -714,6 +715,27 @@ class EOTestPlots(object):
         return my_table
 
 class CcdSpecs(OrderedDict):
+    _job_name_map = dict(read_noise=('CCD-007',),
+                         read_noise_offline=('CCD-007',),
+                         flat_pairs=('CCD-008', 'CCD-009'),
+                         flat_pairs_offline=('CCD-008', 'CCD-009'),
+                         cte=('CCD-010', 'CCD-011'),
+                         cte_offline=('CCD-010', 'CCD-011'),
+                         bright_defects=('CCD-012a', 'CCD-012c'),
+                         bright_defects_offline=('CCD-012a', 'CCD-012c'),
+                         dark_defects=('CCD-012b', 'CCD-012d'),
+                         dark_defects_offline=('CCD-012b', 'CCD-012d'),
+                         traps=('CCD-012e',),
+                         traps_offline=('CCD-012e',),
+                         dark_current=('CCD-014',),
+                         dark_current_offline=('CCD-014',),
+                         qe_analysis=('CCD-021', 'CCD-022', 'CCD-023', 'CCD-024', 'CCD-025', 'CCD-026'),
+                         qe_offline=('CCD-021', 'CCD-022', 'CCD-023', 'CCD-024', 'CCD-025', 'CCD-026'),
+                         prnu=('CCD-027',),
+                         prnu_offline=('CCD-027',),
+                         fe55_analysis=('CCD-028',),
+                         fe55_offline=('CCD-028',),
+                         )
     def __init__(self, results_file, xtalk_file=None, plotter=None,
                  prnu_wls=()):
         super(CcdSpecs, self).__init__()
@@ -722,6 +744,20 @@ class CcdSpecs(OrderedDict):
         self.prnu_specs = OrderedDict()
         self._createSpecs()
         self._ingestResults(results_file, xtalk_file=xtalk_file)
+    def add_job_ids(self, summary_files):
+        for summary_lims_file in summary_files:
+            foo = json.loads(open(summary_lims_file).read())
+            for result in foo:
+                if result.has_key('job_id'):
+                    try:
+                        specids = self._job_name_map[result['job_name']]
+                        for specid in specids:
+                            self[specid].job_id = result['job_id']
+                            if specid == 'CCD-027':
+                                for prnu_spec in self.prnu_specs.values():
+                                    prnu_spec.job_id = result['job_id']
+                    except KeyError:
+                        pass
     def factory(self, *args, **kwds):
         spec = CcdSpec(*args, **kwds)
         self[spec.name] = spec
@@ -755,14 +791,14 @@ class CcdSpecs(OrderedDict):
                                           spec='$<5$\\%')
         self.factory('CCD-028', 'Point Spread Function', spec='$\sigma < 5\mu$')
     @staticmethod
-    def latex_header():
-        return CcdSpec.latex_header()
+    def latex_header(hspace=None):
+        return CcdSpec.latex_header(hspace=hspace)
     @staticmethod
     def latex_footer():
         return CcdSpec.latex_footer()
-    def latex_table(self):
+    def latex_table(self, hspace=None):
         output = []
-        output.append(self.latex_header())
+        output.append(self.latex_header(hspace=hspace))
         for name, spec in self.items():
             output.append(spec.latex_entry())
         output.append(self.latex_footer())
@@ -888,6 +924,7 @@ class CcdSpec(object):
         self.spec = spec
         self.ok = ok
         self.measurement = measurement
+        self.job_id = '$\cdots$'
     @staticmethod
     def _table_cell(value):
         if value is None:
@@ -895,23 +932,32 @@ class CcdSpec(object):
         else:
             return value
     @staticmethod
-    def latex_header():
-        header = """\\begin{table}[h]
+    def latex_header(hspace=None):
+        if hspace is None:
+            header = """\\begin{table}[h]
 \\centering
-\\begin{tabular}{|c|l|l|l|l|}
+\\begin{tabular}{|c|l|l|l|l|l|}
 \hline
-\\textbf{Status} & \\textbf{Spec. ID} & \\textbf{Description} & \\textbf{Specification} & \\textbf{Measurement}  \\\\ \hline"""
+\\textbf{Status} & \\textbf{Spec. ID} & \\textbf{Description} & \\textbf{Specification} & \\textbf{Measurement}  & \\textbf{Job ID} \\\\ \hline"""
+        else:
+            header = """\\begin{table}[h]
+\\hspace{%s}
+\\begin{tabular}{|c|l|l|l|l|l|}
+\hline
+\\textbf{Status} & \\textbf{Spec. ID} & \\textbf{Description} & \\textbf{Specification} & \\textbf{Measurement}  & \\textbf{Job ID} \\\\ \hline""" % hspace
         return header
     @staticmethod
     def latex_footer():
         footer = "\end{tabular}\n\end{table}"
         return footer
     def latex_entry(self):
-        entry = '%s & %s & %s & %s & %s \\\\ \hline' % \
+        entry = '%s & %s & %s & %s & %s & %s \\\\ \hline' % \
                 (self._latex_status[self.ok],
-                 self.name, self.description,
+                 self.name, 
+                 self.description,
                  self._table_cell(self.spec), 
-                 self._table_cell(self.measurement))
+                 self._table_cell(self.measurement),
+                 self.job_id)
         return entry
     def latex_table(self):
         lines = []

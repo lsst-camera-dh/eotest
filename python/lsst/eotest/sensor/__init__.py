@@ -36,7 +36,7 @@ from cteTask import CteTask, superflat
 from prnuTask import PrnuTask
 from trapTask import TrapTask
 from qeTask import QeTask
-from flatPairTask import FlatPairTask
+from flatPairTask import FlatPairTask, find_flat2
 from linearityTask import LinearityTask
 from ptcTask import PtcTask
 from persistenceTask import PersistenceTask

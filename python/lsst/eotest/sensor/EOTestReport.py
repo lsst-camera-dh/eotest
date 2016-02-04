@@ -111,7 +111,12 @@ class EOTestReport(object):
         # Write the summary table
         #
         self.output.write('\section{Summary}\n')
-        self.output.write(self.plots.latex_table())
+        self.output.write(self.plots.latex_table(hspace='-0.5in'))
+        try:
+            test_report_job_id = os.environ['LCATR_JOB_ID']
+            self.output.write('Test Report Job ID: %s\n' % test_report_job_id)
+        except KeyError:
+            pass
         self.output.write('\\pagebreak\n\n')
         #
         # Read noise
