@@ -4,7 +4,7 @@ in units of e- per second per pixel.
 """
 import os
 import numpy as np
-import pyfits
+import astropy.io.fits as pyfits
 from lsst.eotest.pyfitsTools import pyfitsWriteto
 
 import lsst.afw.detection as afwDetect

@@ -6,7 +6,7 @@
 import os
 import time
 import numpy as np
-import pyfits
+import astropy.io.fits as pyfits
 from lsst.eotest.pyfitsTools import pyfitsWriteto
 import pylab
 import pylab_plotter as plot

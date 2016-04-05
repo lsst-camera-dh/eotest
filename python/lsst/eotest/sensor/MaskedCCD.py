@@ -5,7 +5,7 @@ afwMath.makeStatistics object.
 
 @author J. Chiang <jchiang@slac.stanford.edu>
 """
-import pyfits
+import astropy.io.fits as pyfits
 from lsst.eotest.pyfitsTools import pyfitsWriteto
 from AmplifierGeometry import makeAmplifierGeometry
 import lsst.daf.base as dafBase

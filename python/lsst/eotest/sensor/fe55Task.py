@@ -6,7 +6,7 @@ Gaussian fit parameters to Fe55 data.
 """
 import os
 import numpy as np
-import pyfits
+import astropy.io.fits as pyfits
 import lsst.eotest.image_utils as imutils
 from fe55_psf import PsfGaussFit, psf_sigma_statistics
 from MaskedCCD import MaskedCCD

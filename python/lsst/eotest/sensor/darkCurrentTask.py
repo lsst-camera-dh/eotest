@@ -6,7 +6,7 @@ units of e-/sec/pixel.
 """
 import os
 import numpy as np
-import pyfits
+import astropy.io.fits as pyfits
 from lsst.eotest.pyfitsTools import pyfitsWriteto
 import lsst.eotest.image_utils as imutils
 from MaskedCCD import MaskedCCD

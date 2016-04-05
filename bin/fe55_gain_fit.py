@@ -2,7 +2,7 @@
 import os
 import sys
 import numpy as np
-import pyfits
+import astropy.io.fits as pyfits
 import lsst.eotest.image_utils as imutils
 import lsst.eotest.sensor as sensorTest
 

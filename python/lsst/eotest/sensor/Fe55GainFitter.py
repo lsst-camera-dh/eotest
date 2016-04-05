@@ -8,7 +8,7 @@ system gain.
 import numpy as np
 import scipy.stats
 import scipy.optimize
-import pyfits
+import astropy.io.fits as pyfits
 import pylab
 import pylab_plotter as plot
 import lsst.afw.math as afwMath
@@ -131,7 +131,7 @@ class Fe55GainFitter(object):
         return win
 
 if __name__ == '__main__':
-    import pyfits
+    import astropy.io.fits as pyfits
     infile = '/u/gl/jchiang/ki18/LSST/SensorTests/eotest/0.0.0.7/work/results/000-00_psf_results_nsig4.fits'
     chiprob_min = 0.1
     results = pyfits.open(infile)

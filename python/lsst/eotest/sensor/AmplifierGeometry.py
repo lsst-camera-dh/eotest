@@ -2,7 +2,7 @@
 Code to encapsulate amplifier geometry as expressed in NOAO image
 section keywords DETSEC, DATASEC, DETSIZE.
 """
-import pyfits
+import astropy.io.fits as pyfits
 
 amp_loc = {}
 amp_loc['E2V'] = dict([(amp, -1) for amp in range(1, 9)] +

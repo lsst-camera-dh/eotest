@@ -1,6 +1,6 @@
 import warnings
 import numpy as np
-import pyfits
+import astropy.io.fits as pyfits
 
 def pyfitsTableFactory(*args, **kwds):
     """Silence deprecation warning about pyfits.new_table in pyfits 3.3"""

@@ -5,7 +5,7 @@ FITS files for analysis with eotest.
 import os
 import glob
 import subprocess
-import pyfits
+import astropy.io.fits as pyfits
 import lsst.eotest.sensor as sensorTest
 
 #

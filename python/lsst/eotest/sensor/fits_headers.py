@@ -6,7 +6,7 @@
 import os
 import sys
 import numpy as np
-import pyfits
+import astropy.io.fits as pyfits
 from collections import OrderedDict
 import lsst.eotest.image_utils as imutils
 from AmplifierGeometry import parse_geom_kwd

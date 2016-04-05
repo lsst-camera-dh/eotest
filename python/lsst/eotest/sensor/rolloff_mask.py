@@ -10,7 +10,7 @@ https://confluence.slac.stanford.edu/x/DQvNBw
 """
 import os
 import numpy as np
-import pyfits
+import astropy.io.fits as pyfits
 from lsst.eotest.pyfitsTools import pyfitsWriteto
 import lsst.afw.detection as afwDetect
 import lsst.afw.geom as afwGeom

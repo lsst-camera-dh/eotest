@@ -6,7 +6,7 @@
 import os
 import unittest
 import numpy as np
-import pyfits
+import astropy.io.fits as pyfits
 import lsst.eotest.image_utils as imutils
 from lsst.eotest.sensor.rolloff_mask import rolloff_mask
 from lsst.eotest.sensor import AmplifierGeometry, makeAmplifierGeometry, amp_loc

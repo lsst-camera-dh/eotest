@@ -6,7 +6,7 @@ conforming FITS files for analysis by the eotest package.
 import os
 import sys
 import numpy as np
-import pyfits
+import astropy.io.fits as pyfits
 from lsst.eotest.pyfitsTools import pyfitsWriteto
 import lsst.eotest.image_utils as imutils
 import lsst.eotest.sensor as sensorTest

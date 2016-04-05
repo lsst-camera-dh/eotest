@@ -7,7 +7,7 @@ These data are to be used for linearity and full-well measurments.
 import os
 import glob
 import numpy as np
-import pyfits
+import astropy.io.fits as pyfits
 from lsst.eotest.pyfitsTools import pyfitsTableFactory, pyfitsWriteto
 import lsst.eotest.image_utils as imutils
 from MaskedCCD import MaskedCCD

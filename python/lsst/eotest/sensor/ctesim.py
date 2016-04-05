@@ -6,7 +6,7 @@ ctesim.pro.
 """
 import numpy as np
 import numpy.random as random
-import pyfits
+import astropy.io.fits as pyfits
 from lsst.eotest.pyfitsTools import pyfitsWriteto
 import lsst.afw.image as afwImage
 import lsst.eotest.image_utils as imutils

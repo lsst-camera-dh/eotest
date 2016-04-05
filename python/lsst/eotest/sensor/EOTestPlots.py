@@ -6,7 +6,7 @@ from collections import OrderedDict
 from sets import Set
 import json
 import numpy as np
-import pyfits
+import astropy.io.fits as pyfits
 import pylab
 import matplotlib as mpl
 import pylab_plotter as plot

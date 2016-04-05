@@ -6,7 +6,7 @@
 import os
 import glob
 import argparse
-import pyfits
+import astropy.io.fits as pyfits
 import lsst.afw.image as afwImage
 import lsst.eotest.image_utils as imutils
 from rolloff_mask import rolloff_mask

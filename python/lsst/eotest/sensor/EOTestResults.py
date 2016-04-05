@@ -6,7 +6,7 @@ as a binary table.
 """
 import os
 import numpy as np
-import pyfits
+import astropy.io.fits as pyfits
 from lsst.eotest.pyfitsTools import pyfitsTableFactory, pyfitsWriteto
 
 _namps = 16

@@ -5,7 +5,7 @@ trimming, etc..
 """
 import numpy as np
 import numpy.random as random
-import pyfits
+import astropy.io.fits as pyfits
 from pyfitsTools import pyfitsWriteto
 import lsst.afw.geom as afwGeom
 import lsst.afw.image as afwImage

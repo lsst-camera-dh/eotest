@@ -3,7 +3,7 @@
 import os
 import glob
 import numpy as np
-import pyfits
+import astropy.io.fits as pyfits
 import lsst.eotest.image_utils as imutils
 
 def eotest_check_input_data(rootdir='.', use_baselined=True):

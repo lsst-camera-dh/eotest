@@ -7,7 +7,7 @@ compute the probability of the chi-square fit.
 """
 import numpy as np
 import warnings
-import pyfits
+import astropy.io.fits as pyfits
 from lsst.eotest.pyfitsTools import pyfitsTableFactory, pyfitsWriteto
 import scipy.optimize
 from scipy.special import erf, gammaincc

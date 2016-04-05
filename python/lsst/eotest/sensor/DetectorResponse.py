@@ -6,7 +6,7 @@ linearity) from flat pairs data.
 """
 import sys
 import numpy as np
-import pyfits
+import astropy.io.fits as pyfits
 import scipy.optimize
 import lsst.eotest.image_utils as imutils
 import pylab
