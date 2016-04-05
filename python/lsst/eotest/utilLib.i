@@ -7,10 +7,7 @@
 %feature("autodoc", "1");
 %module(package="utilLib", docstring=utilLib_DOCSTRING) utilLib
 
-// %pythonnondynamic;
-// %naturalvar;
 %include "lsst/p_lsstSwig.i"
-// %include "file.i"
 %lsst_exceptions()
 
 %{
@@ -20,6 +17,7 @@
 
 #include "lsst/pex/logging.h"
 #include "lsst/afw.h"
+#include "lsst/afw/table.h"
 #include "lsst/meas/algorithms.h"
 
 #include "lsst/eotest/ImageTools.h"
