@@ -286,7 +286,7 @@ class EOTestReport(object):
         #
         self.output.write('\section{Point Spread Function}\n')
         self.output.write(self.plots.specs['CCD-028'].latex_table())
-        self.output.write(_include_multipanel_png(('%(sensor_id)s_psf_dists' 
+        self.output.write(_include_multipanel_png(('%(sensor_id)s_psf_dists'
                                                    % locals(),)))
         self.output.write('\\pagebreak\n\n')
         #

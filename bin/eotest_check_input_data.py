@@ -3,7 +3,7 @@
 import os
 import glob
 import numpy as np
-import pyfits
+import astropy.io.fits as fits
 import lsst.eotest.image_utils as imutils
 
 def eotest_check_input_data(rootdir='.', use_baselined=True):
@@ -61,7 +61,7 @@ def eotest_check_input_data(rootdir='.', use_baselined=True):
     required_wls = (330, 350, 370, 450, 500, 620, 750, 870, 1000)
     acquired_wls = []
     for item in files['lambda']:
-        wl = int(np.round(pyfits.open(item)[0].header['MONOWL']))
+        wl = int(np.round(fits.open(item)[0].header['MONOWL']))
         acquired_wls.append(wl)
     for target_wl in required_wls:
         if target_wl not in acquired_wls:

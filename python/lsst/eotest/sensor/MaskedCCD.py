@@ -5,8 +5,8 @@ afwMath.makeStatistics object.
 
 @author J. Chiang <jchiang@slac.stanford.edu>
 """
-import pyfits
-from lsst.eotest.pyfitsTools import pyfitsWriteto
+import astropy.io.fits as fits
+from lsst.eotest.fitsTools import fitsWriteto
 from AmplifierGeometry import makeAmplifierGeometry
 import lsst.daf.base as dafBase
 import lsst.afw.geom as afwGeom
@@ -124,10 +124,10 @@ def add_mask_files(mask_files, outfile, clobber=True):
     for mask_file in mask_files[1:]:
         for amp in imutils.allAmps:
             masks[amp] |= afwImage.MaskU(mask_file, imutils.dm_hdu(amp))
-    output = pyfits.HDUList()
-    output.append(pyfits.PrimaryHDU())
+    output = fits.HDUList()
+    output.append(fits.PrimaryHDU())
     output[0].header['MASKTYPE'] = 'SUMMED_MASKS'
-    pyfitsWriteto(output, outfile, clobber=clobber)
+    fitsWriteto(output, outfile, clobber=clobber)
     for amp in imutils.allAmps:
         md = dafBase.PropertySet()
         md.set('EXTNAME', 'SEGMENT%s' % imutils.channelIds[amp])

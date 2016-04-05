@@ -7,8 +7,8 @@ photon transfer curve and compute and write out the full well.
 import os
 import glob
 import numpy as np
-import pyfits
-from lsst.eotest.pyfitsTools import pyfitsTableFactory, pyfitsWriteto
+import astropy.io.fits as fits
+from lsst.eotest.fitsTools import fitsTableFactory, fitsWriteto
 import lsst.eotest.image_utils as imutils
 from MaskedCCD import MaskedCCD
 
@@ -122,8 +122,8 @@ class PtcTask(pipeBase.Task):
                                           bias_frame=bias_frame)
                 ptc_stats[amp][0].append(results.flat_mean)
                 ptc_stats[amp][1].append(results.flat_var)
-        output = pyfits.HDUList()
-        output.append(pyfits.PrimaryHDU())
+        output = fits.HDUList()
+        output.append(fits.PrimaryHDU())
         colnames = ['EXPOSURE']
         units = ['seconds']
         columns = [np.array(exposure, dtype=np.float)]
@@ -133,9 +133,9 @@ class PtcTask(pipeBase.Task):
             columns.extend([np.array(ptc_stats[amp][0], dtype=np.float),
                             np.array(ptc_stats[amp][1], dtype=np.float)])
         formats = 'E'*len(colnames)
-        fits_cols = [pyfits.Column(name=colnames[i], format=formats[i],
-                                   unit=units[i], array=columns[i])
+        fits_cols = [fits.Column(name=colnames[i], format=formats[i],
+                                 unit=units[i], array=columns[i])
                      for i in range(len(columns))]
-        output.append(pyfitsTableFactory(fits_cols))
+        output.append(fitsTableFactory(fits_cols))
         output[-1].name = 'PTC_STATS'
-        pyfitsWriteto(output, outfile, clobber=True)
+        fitsWriteto(output, outfile, clobber=True)

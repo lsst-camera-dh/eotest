@@ -5,8 +5,8 @@ trimming, etc..
 """
 import numpy as np
 import numpy.random as random
-import pyfits
-from pyfitsTools import pyfitsWriteto
+import astropy.io.fits as fits
+from fitsTools import fitsWriteto
 import lsst.afw.geom as afwGeom
 import lsst.afw.image as afwImage
 import lsst.afw.math as afwMath
@@ -20,7 +20,7 @@ class Metadata(object):
         except:
             # This exception occurs when DM stack encounters a "." in
             # a FITS header keyword.
-            self.header = pyfits.open(infile)[hdu-1].header
+            self.header = fits.open(infile)[hdu-1].header
     def get(self, key):
         return self(key)
     def __call__(self, key):
@@ -102,28 +102,28 @@ def set_bitpix(hdu, bitpix):
             pass
         my_round = lambda x : x
     hdu.data = np.array(my_round(hdu.data), dtype=dtypes[bitpix])
-    
+
 def fits_median_file(files, outfile, bitpix=None, clobber=True):
-    output = pyfits.open(files[0])
+    output = fits.open(files[0])
     for amp in allAmps:
         output[amp].data = fits_median(files, hdu=dm_hdu(amp)).getArray()
         if bitpix is not None:
             set_bitpix(output[amp], bitpix)
-    pyfitsWriteto(output, outfile, clobber=clobber)
+    fitsWriteto(output, outfile, clobber=clobber)
 
 def fits_mean_file(files, outfile, bitpix=None, clobber=True):
-    output = pyfits.open(files[0])
+    output = fits.open(files[0])
     for amp in allAmps:
         output[amp].data = np.zeros(output[amp].data.shape)
     for infile in files:
-        input = pyfits.open(infile)
+        input = fits.open(infile)
         for amp in allAmps:
             output[amp].data += input[amp].data
     for amp in allAmps:
         output[amp].data /= len(files)
         if bitpix is not None:
             set_bitpix(output[amp], bitpix)
-    pyfitsWriteto(output, outfile, clobber=clobber)
+    fitsWriteto(output, outfile, clobber=clobber)
 
 def fits_median(files, hdu=2, fix=True):
     """Compute the median image from a set of image FITS files."""
@@ -139,7 +139,7 @@ def fits_median(files, hdu=2, fix=True):
         errs = medians - med
         for im, err in zip(ims, errs):
             im -= err
-            
+
     images = afwImage.vectorImageF()
     for image in ims:
         images.push_back(image)
@@ -148,12 +148,12 @@ def fits_median(files, hdu=2, fix=True):
     return median_image
 
 def writeFits(images, outfile, template_file, bitpix=-32):
-    output = pyfits.open(template_file)
+    output = fits.open(template_file)
     output[0].header['FILENAME'] = outfile
     for amp in images:
         output[amp].data = images[amp].getArray()
         set_bitpix(output[amp], bitpix)
-    pyfitsWriteto(output, outfile, clobber=True, checksum=True)
+    fitsWriteto(output, outfile, clobber=True, checksum=True)
 
 def check_temperatures(files, tol, setpoint=None, warn_only=False):
     for infile in files:

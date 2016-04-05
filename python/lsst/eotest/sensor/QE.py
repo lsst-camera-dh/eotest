@@ -9,8 +9,8 @@ import sys
 import glob
 from collections import OrderedDict
 import numpy as np
-import pyfits
-from lsst.eotest.pyfitsTools import pyfitsTableFactory, pyfitsWriteto
+import astropy.io.fits as fits
+from lsst.eotest.fitsTools import fitsTableFactory, fitsWriteto
 import lsst.eotest.image_utils as imutils
 import pylab_plotter as plot
 from MaskedCCD import MaskedCCD
@@ -210,16 +210,16 @@ class QE_Data(object):
         units = ["nm"]
         units.extend(["e-/photon %"]*(len(columns)-1))
 
-        fits_cols = lambda coldata : [pyfits.Column(name=colname,
-                                                    format=format,
-                                                    unit=unit, array=column) 
-                                      for colname, format, unit, column
-                                      in coldata]
+        fits_cols = lambda coldata: [fits.Column(name=colname,
+                                                 format=format,
+                                                 unit=unit, array=column)
+                                     for colname, format, unit, column
+                                     in coldata]
 
-        HDUList = pyfits.HDUList()
-        HDUList.append(pyfits.PrimaryHDU())
-        HDUList.append(pyfitsTableFactory(fits_cols(zip(colnames, formats,
-                                                        units, columns))))
+        HDUList = fits.HDUList()
+        HDUList.append(fits.PrimaryHDU())
+        HDUList.append(fitsTableFactory(fits_cols(zip(colnames, formats,
+                                                      units, columns))))
         HDUList[-1].name = 'QE_CURVES'
 
         columns = [self.ccd_qe_band.keys()]
@@ -230,10 +230,10 @@ class QE_Data(object):
         formats[0] = '2A'
         units[0] = None
 
-        HDUList.append(pyfitsTableFactory(fits_cols(zip(colnames, formats,
-                                                        units, columns))))
+        HDUList.append(fitsTableFactory(fits_cols(zip(colnames, formats,
+                                                      units, columns))))
         HDUList[-1].name = 'QE_BANDS'
-        pyfitsWriteto(HDUList, outfile, clobber=clobber)
+        fitsWriteto(HDUList, outfile, clobber=clobber)
     def plot_curves(self, outfile=None, interactive=False):
         if interactive:
             plot.pylab.ion()

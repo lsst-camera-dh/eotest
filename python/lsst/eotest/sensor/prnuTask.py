@@ -6,8 +6,8 @@
 import os
 from collections import OrderedDict
 import numpy as np
-import pyfits
-from lsst.eotest.pyfitsTools import pyfitsTableFactory, pyfitsWriteto
+import astropy.io.fits as fits
+from lsst.eotest.fitsTools import fitsTableFactory, fitsWriteto
 import lsst.eotest.image_utils as imutils
 from prnu import prnu
 import lsst.afw.image as afwImage
@@ -67,10 +67,10 @@ class PrnuTask(pipeBase.Task):
         columns = [np.zeros(len(results), dtype=my_types[fmt])
                             for fmt in formats]
         units = ['nm', 'rms e-', 'e-']
-        hdu = pyfitsTableFactory([pyfits.Column(name=colnames[i],
-                                                format=formats[i],
-                                                unit=units[i],
-                                                array=columns[i])
+        hdu = fitsTableFactory([fits.Column(name=colnames[i],
+                                            format=formats[i],
+                                            unit=units[i],
+                                            array=columns[i])
                                   for i in range(len(colnames))])
         hdu.name = 'PRNU_RESULTS'
         for i, wl in enumerate(results.keys()):
@@ -78,12 +78,12 @@ class PrnuTask(pipeBase.Task):
             hdu.data.field('STDEV')[i] = results[wl][0]
             hdu.data.field('MEAN')[i] =results[wl][1]
         if os.path.isfile(outfile):
-            output = pyfits.open(outfile)
+            output = fits.open(outfile)
         else:
-            output = pyfits.HDUList()
-            output.append(pyfits.PrimaryHDU())
+            output = fits.HDUList()
+            output.append(fits.PrimaryHDU())
         try:
             output[hdu.name] = hdu
         except KeyError:
             output.append(hdu)
-        pyfitsWriteto(output, outfile, clobber=clobber)
+        fitsWriteto(output, outfile, clobber=clobber)

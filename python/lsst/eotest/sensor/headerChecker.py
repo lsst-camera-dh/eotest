@@ -3,7 +3,7 @@
 import re
 import sys, traceback
 import glob, warnings
-import pyfits as pyf
+import astropy.io.fits as pyf
 import re, os, fnmatch
 import argparse
 

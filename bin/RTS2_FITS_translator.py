@@ -6,8 +6,8 @@ conforming FITS files for analysis by the eotest package.
 import os
 import sys
 import numpy as np
-import pyfits
-from lsst.eotest.pyfitsTools import pyfitsWriteto
+import astropy.io.fits as fits
+from lsst.eotest.fitsTools import fitsWriteto
 import lsst.eotest.image_utils as imutils
 import lsst.eotest.sensor as sensorTest
 
@@ -28,9 +28,9 @@ class RTS2_FITS_translator(object):
         # Recompute the amplifier geometry using NAXIS[12] from
         # first image extension of input file.
         self.geom.compute_geometry(fitsfile=infile)
-        
-        self.input = pyfits.open(infile)
-        self.output = pyfits.open(infile, do_not_scale_image_data=True)
+
+        self.input = fits.open(infile)
+        self.output = fits.open(infile, do_not_scale_image_data=True)
         prototypes = sensorTest.fits_headers.fits_headers()
 
         # Primary HDU
@@ -60,8 +60,8 @@ class RTS2_FITS_translator(object):
         except KeyError:
             self._set_bnl_mondiode_keyword_value()
 
-        pyfitsWriteto(self.output, outfile, clobber=clobber, checksum=True,
-                      output_verify='fix')
+        fitsWriteto(self.output, outfile, clobber=clobber, checksum=True,
+                    output_verify='fix')
     def _seqnum(self, infile):
         """This assumes the sequence number is the penultimate token
         in the base filename when split by the '_' delimiter."""
@@ -98,7 +98,7 @@ class RTS2_FITS_translator(object):
             self.output[extname]
         except KeyError:
             # No header by that name, so add it along with required keys.
-            self.output.append(pyfits.ImageHDU())
+            self.output.append(fits.ImageHDU())
             self.output[-1].name = extname
             for keyword in prototype:
                 self.output[-1].header.set(keyword, prototype[keyword])

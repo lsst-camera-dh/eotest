@@ -6,8 +6,8 @@
 import os
 import time
 import numpy as np
-import pyfits
-from lsst.eotest.pyfitsTools import pyfitsWriteto
+import astropy.io.fits as fits
+from lsst.eotest.fitsTools import fitsWriteto
 import pylab
 import pylab_plotter as plot
 import lsst.afw.detection as afwDetect
@@ -185,7 +185,7 @@ class CrosstalkMatrix(object):
         else:
             self._read_text_matrix()
     def _read_fits_matrix(self):
-        self.matrix = pyfits.open(self.filename)[0].data
+        self.matrix = fits.open(self.filename)[0].data
     def _read_text_matrix(self):
         input = open(self.filename, 'r')
         amp = 0
@@ -200,9 +200,9 @@ class CrosstalkMatrix(object):
             outfile = self.filename
         else:
             self.filename = outfile
-        output = pyfits.HDUList()
-        output.append(pyfits.PrimaryHDU(data=self.matrix))
-        pyfitsWriteto(output, outfile, clobber=clobber)
+        output = fits.HDUList()
+        output.append(fits.PrimaryHDU(data=self.matrix))
+        fitsWriteto(output, outfile, clobber=clobber)
     def write(self, outfile=None):
         if outfile is None:
             outfile = self.filename

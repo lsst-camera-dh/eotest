@@ -10,8 +10,8 @@ https://confluence.slac.stanford.edu/x/DQvNBw
 """
 import os
 import numpy as np
-import pyfits
-from lsst.eotest.pyfitsTools import pyfitsWriteto
+import astropy.io.fits as fits
+from lsst.eotest.fitsTools import fitsWriteto
 import lsst.afw.detection as afwDetect
 import lsst.afw.geom as afwGeom
 import lsst.afw.image as afwImage
@@ -65,12 +65,12 @@ def rolloff_mask(infile, outfile,
     # Write the output file with a primary HDU so that the DMstack code
     # can append only image extensions (and not write to the PHDU).
     #
-    hdulist = pyfits.HDUList()
-    hdulist.append(pyfits.open(infile)[0])
+    hdulist = fits.HDUList()
+    hdulist.append(fits.open(infile)[0])
     # Use the mask_plane value ('ROLLOFF_DEFECTS') to distinguish
     # this file from other mask files.
     hdulist[0].header['MASKTYPE'] = mask_plane
-    pyfitsWriteto(hdulist, outfile, clobber=True)
+    fitsWriteto(hdulist, outfile, clobber=True)
     #
     # Amplifiers 1 (AMP10), 8 (AMP17), 9 (AMP07) and 16 (AMP00) are
     # along the perimeter.
@@ -113,7 +113,7 @@ def rolloff_mask(infile, outfile,
     #
     # Write the images of the mask regions to the FITS file.
     #
-    pyfitsWriteto(ccd, tmp_mask_image)
+    fitsWriteto(ccd, tmp_mask_image)
     #
     # Use BrightPixels code to detect the mask regions and write the mask file.
     #

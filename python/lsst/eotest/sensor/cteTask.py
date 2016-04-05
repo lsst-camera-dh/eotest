@@ -5,8 +5,8 @@
 """
 import os
 import numpy as np
-import pyfits
-from lsst.eotest.pyfitsTools import pyfitsWriteto
+import astropy.io.fits as fits
+from lsst.eotest.fitsTools import fitsWriteto
 import lsst.eotest.image_utils as imutils
 from AmplifierGeometry import makeAmplifierGeometry
 from EOTestResults import EOTestResults
@@ -27,8 +27,8 @@ def superflat(files, bias_files=(), outfile='superflat.fits', bitpix=-32,
         bias_frame = 'mean_bias_frame.fits'
         imutils.fits_mean_file(bias_files, outfile=bias_frame, bitpix=bitpix)
 
-    # Use the first file as a template for the pyfits output.
-    output = pyfits.open(files[0])
+    # Use the first file as a template for the fits output.
+    output = fits.open(files[0])
     for amp in imutils.allAmps:
         images = afwImage.vectorImageF()
         for infile in files:
@@ -49,7 +49,7 @@ def superflat(files, bias_files=(), outfile='superflat.fits', bitpix=-32,
         output[amp].data = median_image.getArray()
         if bitpix is not None:
             imutils.set_bitpix(output[amp], bitpix)
-    pyfitsWriteto(output, outfile, clobber=True)
+    fitsWriteto(output, outfile, clobber=True)
     return outfile
 
 class CteConfig(pexConfig.Config):
