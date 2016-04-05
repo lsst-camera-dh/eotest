@@ -6,7 +6,7 @@
 import os
 import glob
 import argparse
-import astropy.io.fits as pyfits
+import astropy.io.fits as fits
 import lsst.afw.image as afwImage
 import lsst.eotest.image_utils as imutils
 from rolloff_mask import rolloff_mask
@@ -78,8 +78,8 @@ class TaskNamespace(object):
         # included.
         have_rolloff_mask = False
         for mask_file in my_mask_files:
-            hdr = pyfits.open(mask_file)[0].header
-            if ('MASKTYPE' in hdr.keys() and 
+            hdr = fits.open(mask_file)[0].header
+            if ('MASKTYPE' in hdr.keys() and
                 hdr['MASKTYPE'] == 'ROLLOFF_DEFECTS'):
                 have_rolloff_mask = True
         if infile is not None and not have_rolloff_mask:

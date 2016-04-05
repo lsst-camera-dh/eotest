@@ -6,8 +6,8 @@ units of e-/sec/pixel.
 """
 import os
 import numpy as np
-import astropy.io.fits as pyfits
-from lsst.eotest.pyfitsTools import pyfitsWriteto
+import astropy.io.fits as fits
+from lsst.eotest.fitsTools import fitsWriteto
 import lsst.eotest.image_utils as imutils
 from MaskedCCD import MaskedCCD
 from EOTestResults import EOTestResults
@@ -89,7 +89,7 @@ class DarkCurrentTask(pipeBase.Task):
             results_file = os.path.join(self.config.output_dir,
                                         '%s_eotest_results.fits' % sensor_id)
         results = EOTestResults(results_file)
-        output = pyfits.open(medfile)
+        output = fits.open(medfile)
         for i, dark in enumerate(dark_files):
             output[0].header['DARK%02i' % i] = os.path.basename(dark)
         # Write overall dark current 95th percentile
@@ -97,5 +97,5 @@ class DarkCurrentTask(pipeBase.Task):
         for amp in imutils.allAmps:
             output[0].header['DARK95%s'%imutils.channelIds[amp]] = dark95s[amp]
             results.add_seg_result(amp, 'DARK_CURRENT_95', dark95s[amp])
-        pyfitsWriteto(output, medfile, clobber=True, checksum=True)
+        fitsWriteto(output, medfile, clobber=True, checksum=True)
         results.write(clobber=True)

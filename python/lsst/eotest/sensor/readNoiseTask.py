@@ -7,8 +7,8 @@ noise contribution from the electronics, must be provided.
 """
 import os
 import numpy as np
-import astropy.io.fits as pyfits
-from lsst.eotest.pyfitsTools import pyfitsTableFactory, pyfitsWriteto
+import astropy.io.fits as fits
+from lsst.eotest.fitsTools import fitsTableFactory, fitsWriteto
 import lsst.eotest.image_utils as imutils
 from MaskedCCD import MaskedCCD
 from EOTestResults import EOTestResults
@@ -19,24 +19,24 @@ import lsst.pex.config as pexConfig
 import lsst.pipe.base as pipeBase
 
 def _write_read_noise_dists(outfile, Ntot, Nsys, gains, bias, sysnoise):
-    output = pyfits.HDUList()
-    output.append(pyfits.PrimaryHDU())
+    output = fits.HDUList()
+    output.append(fits.PrimaryHDU())
     output[0].header['BIASFILE'] = bias
     output[0].header['SYSNFILE'] = str(sysnoise)
     for amp in imutils.allAmps:
         sigtot, sigsys = Ntot[amp], Nsys[amp]
-        nread_col = pyfits.Column(name="TOTAL_NOISE", format="E",
-                                  unit="e- rms", array=sigtot)
-        nsys_col = pyfits.Column(name="SYSTEM_NOISE", format="E",
-                                 unit="e- rms", array=sigsys)
-        output.append(pyfitsTableFactory((nread_col, nsys_col)))
+        nread_col = fits.Column(name="TOTAL_NOISE", format="E",
+                                unit="e- rms", array=sigtot)
+        nsys_col = fits.Column(name="SYSTEM_NOISE", format="E",
+                               unit="e- rms", array=sigsys)
+        output.append(fitsTableFactory((nread_col, nsys_col)))
         output[amp].name = "SEGMENT%s" % imutils.channelIds[amp]
         output[0].header["GAIN%s" % imutils.channelIds[amp]] = gains[amp]
         output[0].header["SIGTOT%s" % imutils.channelIds[amp]] = \
             imutils.median(sigtot)
         output[0].header["SIGSYS%s" % imutils.channelIds[amp]] = \
             imutils.median(sigsys)
-    pyfitsWriteto(output, outfile, clobber=True)
+    fitsWriteto(output, outfile, clobber=True)
 
 class ReadNoiseConfig(pexConfig.Config):
     """Configuration for read noise task"""

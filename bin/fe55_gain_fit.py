@@ -2,7 +2,7 @@
 import os
 import sys
 import numpy as np
-import astropy.io.fits as pyfits
+import astropy.io.fits as fits
 import lsst.eotest.image_utils as imutils
 import lsst.eotest.sensor as sensorTest
 
@@ -13,10 +13,10 @@ parser.add_argument('-c', '--chiprob_min', type=float, default=0.1,
                     help='Mininum chi-square probability for cluster fit')
 parser.add_argument('-p', '--plot', action='store_true', default=False,
                     help='Plot distribution and fit')
-                    
+
 args = parser.parse_args()
 
-catalog = pyfits.open(args.fe55_catalog)
+catalog = fits.open(args.fe55_catalog)
 
 gains = {}
 for amp in imutils.allAmps:

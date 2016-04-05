@@ -2,7 +2,7 @@
 Code to encapsulate amplifier geometry as expressed in NOAO image
 section keywords DETSEC, DATASEC, DETSIZE.
 """
-import astropy.io.fits as pyfits
+import astropy.io.fits as fits
 
 amp_loc = {}
 amp_loc['E2V'] = dict([(amp, -1) for amp in range(1, 9)] +
@@ -25,7 +25,7 @@ def makeAmplifierGeometry(infile):
     """
     Make an AmplifierGeometry object from an input FITS file.
     """
-    foo = pyfits.open(infile)
+    foo = fits.open(infile)
     detsize = parse_geom_kwd(foo[0].header['DETSIZE'])
     datasec = parse_geom_kwd(foo[1].header['DATASEC'])
     prescan = datasec['xmin'] - 1
@@ -58,7 +58,7 @@ class AmplifierGeometry(dict):
         if kwds.has_key('fitsfile'):
             # Compute geometry by inferring DETSIZE from NAXIS[12] in
             # first image extension of specified FITS file.
-            foo = pyfits.open(kwds['fitsfile'])
+            foo = fits.open(kwds['fitsfile'])
             self.naxis1 = foo[1].header['NAXIS1']
             self.naxis2 = foo[1].header['NAXIS2']
             detxsize = self.naxis1*self.nsegx

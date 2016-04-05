@@ -6,8 +6,8 @@ ctesim.pro.
 """
 import numpy as np
 import numpy.random as random
-import astropy.io.fits as pyfits
-from lsst.eotest.pyfitsTools import pyfitsWriteto
+import astropy.io.fits as fits
+from lsst.eotest.fitsTools import fitsWriteto
 import lsst.afw.image as afwImage
 import lsst.eotest.image_utils as imutils
 import lsst.eotest.utilLib as testUtils
@@ -24,18 +24,18 @@ def convert(imarr, bitpix):
     return np.array(my_round(imarr), dtype=_dtypes[bitpix])
 
 def fitsFile(segments, input):
-    output = pyfits.HDUList()
-    output.append(pyfits.PrimaryHDU())
+    output = fits.HDUList()
+    output.append(fits.PrimaryHDU())
     output[0].header = input[0].header
     for amp in segments:
         bitpix = input[amp].header['BITPIX']
         imarr = convert(segments[amp].getArray(), bitpix)
-        output.append(pyfits.ImageHDU(data=imarr))
+        output.append(fits.ImageHDU(data=imarr))
         output[amp].header = input[amp].header
     return output
 
 def ctesim_cpp(infile, pcti=0, scti=0, verbose=False):
-    input = pyfits.open(infile)
+    input = fits.open(infile)
     amps = [i for i in range(1, len(input)) if input[i].is_image]
     segments = {}
     for amp in amps[:16]:  # Consider a maximum of 16 amps.
@@ -52,7 +52,7 @@ def ctesim(infile, pcti=0, scti=0, verbose=False):
     pcte = 1 - pcti
     scte = 1 - scti
 
-    input = pyfits.open(infile)
+    input = fits.open(infile)
     amps = [i for i in range(1, len(input)) if input[i].is_image]
     segments = {}
     for amp in amps:
@@ -118,7 +118,7 @@ def make_fe55(outfile, nxrays, bias_level=2000, bias_sigma=4,
 if __name__ == '__main__':
 #    test_file = 'fe55_test.fits'
 #    nxrays = 1000
-#    
+#
 #    make_fe55(test_file, nxrays, amps=(1,))
     test_file = '000-00_fe55_fe55_00_debug.fits'
 
@@ -127,7 +127,7 @@ if __name__ == '__main__':
     scti = 0
 
     foo = ctesim(test_file, pcti=pcti, scti=scti, verbose=True)
-    pyfitsWriteto(foo, 'fe55_test_cti.fits', clobber=True)
+    fitsWriteto(foo, 'fe55_test_cti.fits', clobber=True)
 
     bar = ctesim_cpp(test_file, pcti=pcti, scti=scti, verbose=True)
-    pyfitsWriteto(bar, 'fe55_test_cti_cpp.fits', clobber=True)
+    fitsWriteto(bar, 'fe55_test_cti_cpp.fits', clobber=True)

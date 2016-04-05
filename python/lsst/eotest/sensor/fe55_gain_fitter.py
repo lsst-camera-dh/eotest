@@ -8,7 +8,7 @@ system gain.
 import numpy as np
 import scipy.stats
 import scipy.optimize
-import astropy.io.fits as pyfits
+import astropy.io.fits as fits
 import pylab
 import pylab_plotter as plot
 import lsst.afw.math as afwMath
@@ -137,17 +137,17 @@ if __name__ == '__main__':
                         help='Plot distribution and fit')
     parser.add_argument('-o', '--outfile', type=str, default='fe55_dist.png',
                         help='Output file name of plot')
-   
+
     args = parser.parse_args()
-    
-    results = pyfits.open(args.psf_par_file)
+
+    results = fits.open(args.psf_par_file)
     hdu = args.amplifier
     if args.fp_est:
         dn = np.array(results[hdu].data.field('DN_FP_SUM'), dtype=np.float)
     else:
         dn = np.array(results[hdu].data.field('DN'), dtype=np.float)
     chiprob = results[hdu].data.field('CHIPROB')
-    
+
     indx = np.where(chiprob > args.chiprob_min)
 
     plot_title = '%s, amp %i' % (os.path.basename(args.psf_par_file),

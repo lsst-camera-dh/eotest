@@ -5,7 +5,7 @@ FITS files for analysis with eotest.
 import os
 import glob
 import subprocess
-import astropy.io.fits as pyfits
+import astropy.io.fits as fits
 import lsst.eotest.sensor as sensorTest
 
 #
@@ -16,7 +16,7 @@ import lsst.eotest.sensor as sensorTest
 
 def translate(infile, test_type, image_type, seqno, time_stamp='000'):
     pass
-    foo = pyfits.open(infile)
+    foo = fits.open(infile)
     detxsize = 8*foo[1].header['NAXIS1']
     detysize = 2*foo[1].header['NAXIS2']
     ampGeom = sensorTest.AmplifierGeometry(detxsize=detxsize, detysize=detysize)
@@ -73,7 +73,7 @@ for iframe, infile in enumerate(infiles):
 # flat
 #
 infiles = trr_files('satlin - multi/11093*.fits')
-exptime = lambda x : pyfits.open(x)[0].header['EXPOSURE']
+exptime = lambda x : fits.open(x)[0].header['EXPOSURE']
 for iframe, infile in enumerate(infiles):
     print "processing", os.path.basename(infile)
     seqno = '%03i_flat1' % exptime(infile)
@@ -83,7 +83,7 @@ for iframe, infile in enumerate(infiles):
 # lambda
 #
 infiles = trr_files('QE and PRNU/11093*qe*.fits')
-wl = lambda x : pyfits.open(x)[0].header['WAVELEN']
+wl = lambda x: fits.open(x)[0].header['WAVELEN']
 for infile in infiles:
     print "processing", os.path.basename(infile)
     seqno = "%04i" % wl(infile)

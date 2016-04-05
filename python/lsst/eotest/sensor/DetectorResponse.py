@@ -6,7 +6,7 @@ linearity) from flat pairs data.
 """
 import sys
 import numpy as np
-import astropy.io.fits as pyfits
+import astropy.io.fits as fits
 import scipy.optimize
 import lsst.eotest.image_utils as imutils
 import pylab
@@ -54,7 +54,7 @@ class DetectorResponse(object):
         for amp in imutils.allAmps:
             self.Ne[amp] = self.Ne[amp][index]
     def _read_from_fits(self, infile):
-        foo = pyfits.open(infile)
+        foo = fits.open(infile)
         hdu = foo['DETECTOR_RESPONSE']
         self.flux = np.array(hdu.data.field('FLUX'), dtype=np.float)
         self.Ne = dict([(amp, np.array(hdu.data.field('AMP%02i_SIGNAL' % amp),

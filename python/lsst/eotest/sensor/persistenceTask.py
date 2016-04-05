@@ -6,8 +6,8 @@ in darks taken after a saturated flat has been taken.
 """
 import os
 import numpy as np
-import astropy.io.fits as pyfits
-from lsst.eotest.pyfitsTools import pyfitsTableFactory, pyfitsWriteto
+import astropy.io.fits as fits
+from lsst.eotest.fitsTools import fitsTableFactory, fitsWriteto
 import lsst.eotest.image_utils as imutils
 from MaskedCCD import MaskedCCD
 from EOTestResults import EOTestResults
@@ -153,21 +153,20 @@ class PersistenceTask(pipeBase.Task):
         units = ['s']
         for amp in deferred_charges[0]:
             colnames.extend(['MEDIAN%02i' % amp, 'STDEV%02i' % amp])
-            columns.extend([np.array([deferred_charges[i][amp][0] 
+            columns.extend([np.array([deferred_charges[i][amp][0]
                                       for i in range(len(times))]),
-                            np.array([deferred_charges[i][amp][1] 
+                            np.array([deferred_charges[i][amp][1]
                                       for i in range(len(times))])])
             units.extend(['e-/pixel', 'rms e-/pixel'])
         formats = ['E']*len(columns)
-        
-        HDUList = pyfits.HDUList()
-        HDUList.append(pyfits.PrimaryHDU())
-        HDUList.append(pyfitsTableFactory([pyfits.Column(name=colname,
-                                                         format=format,
-                                                         unit=unit,
-                                                         array=column)
+
+        HDUList = fits.HDUList()
+        HDUList.append(fits.PrimaryHDU())
+        HDUList.append(fitsTableFactory([fits.Column(name=colname,
+                                                     format=format,
+                                                     unit=unit,
+                                                     array=column)
                                            for colname, format, unit, column in
                                            zip(colnames, formats, units, columns)]))
         HDUList[-1].name = 'IMAGE_PERSISTENCE_CURVES'
-        pyfitsWriteto(HDUList, outfile, clobber=clobber) 
-        
+        fitsWriteto(HDUList, outfile, clobber=clobber)

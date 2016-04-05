@@ -1,12 +1,12 @@
 """
-@brief pyfits-based tools for handling FITS header keywords.
+@brief astropy.io.fits-based tools for handling FITS header keywords.
 
 @author J. Chiang <jchiang@slac.stanford.edu>
 """
 import os
 import sys
 import numpy as np
-import astropy.io.fits as pyfits
+import astropy.io.fits as fits
 from collections import OrderedDict
 import lsst.eotest.image_utils as imutils
 from AmplifierGeometry import parse_geom_kwd
@@ -42,7 +42,7 @@ def fits_headers(template=template_file):
     for sensors (LCA-10140).
     """
     headers = OrderedDict()
-    hdr = pyfits.header.Header()
+    hdr = fits.header.Header()
     for line in open(template):
         # Skip comments and whitespace lines.
         if line[0] == '#' or len(line.strip()) == 0:
@@ -54,7 +54,7 @@ def fits_headers(template=template_file):
             else:
                 # Subsequent ones must be extensions with an EXTNAME
                 headers[hdr['EXTNAME']] = hdr
-            hdr = pyfits.header.Header()
+            hdr = fits.header.Header()
             continue
         data = line.split('=')
         key, value = data[0].strip(), '='.join(data[1:]).strip()
@@ -72,7 +72,7 @@ def check_keywords(infile, template=template_file, verbose=True):
     @return Dictionary of missing keywords by header extension number.
     """
     prototype_headers = fits_headers(template=template)
-    input = pyfits.open(infile)
+    input = fits.open(infile)
     report = []
     missing_keys = {}
     missing_headers = []
@@ -117,7 +117,7 @@ def check_keywords(infile, template=template_file, verbose=True):
 
 def check_noao_keywords(infile, verbose=True):
     defects = []
-    input = pyfits.open(infile)
+    input = fits.open(infile)
     geom_kwd = lambda x : parse_geom_kwd(input[0].header[x])
     # Sanity check for DETSIZE in PHDU
     try:

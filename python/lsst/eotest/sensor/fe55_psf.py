@@ -7,8 +7,8 @@ compute the probability of the chi-square fit.
 """
 import numpy as np
 import warnings
-import astropy.io.fits as pyfits
-from lsst.eotest.pyfitsTools import pyfitsTableFactory, pyfitsWriteto
+import astropy.io.fits as fits
+from lsst.eotest.fitsTools import fitsTableFactory, fitsWriteto
 import scipy.optimize
 from scipy.special import erf, gammaincc
 
@@ -94,11 +94,11 @@ class PsfGaussFit(object):
         self.amp = []
         self.outfile = outfile
         if outfile is None:
-            self.output = pyfits.HDUList()
-            self.output.append(pyfits.PrimaryHDU())
+            self.output = fits.HDUList()
+            self.output.append(fits.PrimaryHDU())
         else:
             # Append new data to existing file.
-            self.output = pyfits.open(self.outfile)
+            self.output = fits.open(self.outfile)
     def _bg_image(self, ccd, amp, nx, ny):
         "Compute background image based on clipped local mean."
         bg_ctrl = afwMath.BackgroundControl(nx, ny, ccd.stat_ctrl)
@@ -220,7 +220,7 @@ class PsfGaussFit(object):
             table_hdu = self.output[extname]
             row0 = table_hdu.header['NAXIS2']
             nrows = row0 + len(x0)
-            table_hdu = pyfitsTableFactory(table_hdu.data, nrows=nrows)
+            table_hdu = fitsTableFactory(table_hdu.data, nrows=nrows)
             for i in range(len(x0)):
                 row = i + row0
                 table_hdu.data[row]['AMPLIFIER'] = amp
@@ -250,19 +250,19 @@ class PsfGaussFit(object):
             formats = ['I'] + ['E']*(len(columns)-1)
             units = ['None', 'pixel', 'pixel', 'pixel', 'pixel',
                      'ADU', 'ADU', 'None', 'None', 'None', 'ADU']
-            fits_cols = lambda coldata : [pyfits.Column(name=colname,
-                                                        format=format,
-                                                        unit=unit,
-                                                        array=column)
+            fits_cols = lambda coldata : [fits.Column(name=colname,
+                                                      format=format,
+                                                      unit=unit,
+                                                      array=column)
                                           for colname, format, unit, column
                                           in coldata]
-            self.output.append(pyfitsTableFactory(fits_cols(zip(colnames,
-                                                                formats,
-                                                                units,
-                                                                columns))))
+            self.output.append(fitsTableFactory(fits_cols(zip(colnames,
+                                                              formats,
+                                                              units,
+                                                              columns))))
             self.output[-1].name = extname
     def read_fe55_catalog(self, psf_catalog, chiprob_min=0.1):
-        catalog = pyfits.open(psf_catalog)
+        catalog = fits.open(psf_catalog)
         for attr in 'sigmax sigmay dn dn_fp_sum chiprob amp'.split():
             exec('self.%s = np.array((), dtype=float)' % attr)
         for amp in imutils.allAmps:
@@ -295,7 +295,7 @@ class PsfGaussFit(object):
         my_results['amps'] = amps[indx]
         return my_results
     def write_results(self, outfile='fe55_psf_params.fits'):
-        pyfitsWriteto(self.output, outfile, clobber=True, checksum=True)
+        fitsWriteto(self.output, outfile, clobber=True, checksum=True)
 
 if __name__ == '__main__':
     import os

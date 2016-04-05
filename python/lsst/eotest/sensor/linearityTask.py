@@ -7,8 +7,8 @@ These data are to be used for linearity measurments.
 import os
 import glob
 import numpy as np
-import astropy.io.fits as pyfits
-from lsst.eotest.pyfitsTools import pyfitsTableFactory, pyfitsWriteto
+import astropy.io.fits as fits
+from lsst.eotest.fitsTools import fitsTableFactory, fitsWriteto
 import lsst.eotest.image_utils as imutils
 from MaskedCCD import MaskedCCD
 from EOTestResults import EOTestResults
@@ -68,20 +68,20 @@ class LinearityTask(pipeBase.Task):
                 output.add_seg_result(amp, 'MAX_FRAC_DEV', float(maxdev))
         output.write()
     def _create_detresp_fits_output(self, nrows):
-        self.output = pyfits.HDUList()
-        self.output.append(pyfits.PrimaryHDU())
+        self.output = fits.HDUList()
+        self.output.append(fits.PrimaryHDU())
         colnames = ['flux'] + ['AMP%02i_SIGNAL' % i for i in imutils.allAmps]
         formats = 'E'*len(colnames)
         units = ['None'] + ['e-']*len(imutils.allAmps)
         columns = [np.zeros(nrows, dtype=np.float) for fmt in formats]
-        fits_cols = [pyfits.Column(name=colnames[i], format=formats[i],
-                                   unit=units[i], array=columns[i])
+        fits_cols = [fits.Column(name=colnames[i], format=formats[i],
+                                 unit=units[i], array=columns[i])
                      for i in range(len(units))]
-        hdu = pyfitsTableFactory(fits_cols)
+        hdu = fitsTableFactory(fits_cols)
         hdu.name = 'DETECTOR_RESPONSE'
         self.output.append(hdu)
     def extract_det_response(self):
-        outfile = os.path.join(self.config.output_dir, 
+        outfile = os.path.join(self.config.output_dir,
                                '%s_det_response_linearity.fits' % self.sensor_id)
         file1s = sorted([item for item in self.infiles 
                          if item.find('flat1')  != -1 or 
@@ -120,7 +120,7 @@ class LinearityTask(pipeBase.Task):
                 # Convert to e- and write out for each segment.
                 signal = pair_mean(flat1, flat2, amp)*self.gains[amp]
                 self.output[-1].data.field('AMP%02i_SIGNAL' % amp)[row] = signal
-        pyfitsWriteto(self.output, outfile, clobber=True)
+        fitsWriteto(self.output, outfile, clobber=True)
         return outfile
 
 if __name__ == '__main__':

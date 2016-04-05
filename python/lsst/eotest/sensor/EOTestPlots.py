@@ -6,7 +6,7 @@ from collections import OrderedDict
 from sets import Set
 import json
 import numpy as np
-import astropy.io.fits as pyfits
+import astropy.io.fits as fits
 import pylab
 import matplotlib as mpl
 import pylab_plotter as plot
@@ -69,7 +69,7 @@ def plot_flat(infile, nsig=3, cmap=pylab.cm.hot, win=None, subplot=(1, 1, 1),
               figsize=None, wl=None, gains=None, use_ds9=False, outfile=None,
               title=None):
     ccd = MaskedCCD(infile)
-    foo = pyfits.open(infile)
+    foo = fits.open(infile)
     datasec =  parse_geom_kwd(foo[1].header['DATASEC'])
     nx = 8*(datasec['xmax'] - datasec['xmin'] + 1)
     ny = 2*(datasec['ymax'] - datasec['ymin'] + 1)
@@ -117,8 +117,8 @@ def plot_flat(infile, nsig=3, cmap=pylab.cm.hot, win=None, subplot=(1, 1, 1),
     #
     # Write a fits image with the mosaicked CCD data.
     if outfile is not None:
-        hdulist = pyfits.HDUList()
-        hdulist.append(pyfits.PrimaryHDU())
+        hdulist = fits.HDUList()
+        hdulist.append(fits.PrimaryHDU())
         hdulist[0].data = mosaic[::-1,:]
         hdulist.writeto(outfile, clobber=True)
     #
@@ -198,7 +198,7 @@ class EOTestPlots(object):
     @property
     def qe_data(self):
         if self._qe_data is None:
-            self._qe_data = pyfits.open(self._qe_file)
+            self._qe_data = fits.open(self._qe_file)
         return self._qe_data
     def _save_fig(self, outfile_root):
         plot.pylab.savefig(self._outputpath('%s.png' % outfile_root))
@@ -217,7 +217,7 @@ class EOTestPlots(object):
     def persistence(self, infile=None, figsize=(11, 8.5)):
         if infile is None:
             infile = self._fullpath('%s_persistence.fits' % self.sensor_id)
-        results = pyfits.open(infile)
+        results = fits.open(infile)
         times = results[1].data.field('TIME')
         win = None
         for amp in imutils.allAmps:
@@ -253,7 +253,7 @@ class EOTestPlots(object):
         if fe55_file is None:
             fe55_file = glob.glob(self._fullpath('%s_psf_results*.fits' 
                                                  % self.sensor_id))[0]
-        fe55_catalog = pyfits.open(fe55_file)
+        fe55_catalog = fits.open(fe55_file)
         win = None
         for amp in imutils.allAmps:
             #print "Amp", amp
@@ -298,7 +298,7 @@ class EOTestPlots(object):
         if fe55_file is None:
             fe55_file = glob.glob(self._fullpath('%s_psf_results*.fits' 
                                                  % self.sensor_id))[0]
-        fe55_catalog = pyfits.open(fe55_file)
+        fe55_catalog = fits.open(fe55_file)
         win = None
         for amp in imutils.allAmps:
             #print "Amp", amp
@@ -327,9 +327,9 @@ class EOTestPlots(object):
     def ptcs(self, xrange=None, yrange=None, figsize=(11, 8.5),
              ptc_file=None):
         if ptc_file is not None:
-            ptc = pyfits.open(ptc_file)
+            ptc = fits.open(ptc_file)
         else:
-            ptc = pyfits.open(self._fullpath('%s_ptc.fits' % self.sensor_id))
+            ptc = fits.open(self._fullpath('%s_ptc.fits' % self.sensor_id))
         for amp in imutils.allAmps:
             #print "Amp", amp
             subplot = (4, 4, amp)
@@ -440,11 +440,10 @@ class EOTestPlots(object):
             return self._linearity_results
         self._linearity_results = {}
         if ptc_file is not None:
-            ptc = pyfits.open(ptc_file)
+            ptc = fits.open(ptc_file)
         else:
             try:
-                ptc = pyfits.open(self._fullpath('%s_ptc.fits' 
-                                                 % self.sensor_id))
+                ptc = fits.open(self._fullpath('%s_ptc.fits' % self.sensor_id))
             except IOError:
                 ptc = None
         if detresp_file is not None:
@@ -699,7 +698,7 @@ class EOTestPlots(object):
             output.close()
     @property
     def prnu_results(self):
-        my_prnu_results = pyfits.open(self.results.infile)['PRNU_RESULTS'].data
+        my_prnu_results = fits.open(self.results.infile)['PRNU_RESULTS'].data
         return my_prnu_results
     def latex_table(self, outfile=None, hspace=None):
         lines = []
@@ -911,7 +910,7 @@ class CcdSpecs(OrderedDict):
                 + ', '.join([str(x) for x in sorted(target_wls)]) + "\\,nm"
             self['CCD-027'].measurement = '\\twolinecell{%s}' % measurement
         self['CCD-027'].ok = (max_ratio < 5e-2)
-        
+
         psf_sigma = np.median(self.results['PSF_SIGMA'])
         self['CCD-028'].measurement = '$%.2f\,\mu$' % psf_sigma
         self['CCD-028'].ok = (psf_sigma < 5.)

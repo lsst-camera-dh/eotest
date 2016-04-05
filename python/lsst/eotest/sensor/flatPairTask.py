@@ -7,8 +7,8 @@ These data are to be used for linearity and full-well measurments.
 import os
 import glob
 import numpy as np
-import astropy.io.fits as pyfits
-from lsst.eotest.pyfitsTools import pyfitsTableFactory, pyfitsWriteto
+import astropy.io.fits as fits
+from lsst.eotest.fitsTools import fitsTableFactory, fitsWriteto
 import lsst.eotest.image_utils as imutils
 from MaskedCCD import MaskedCCD
 from EOTestResults import EOTestResults
@@ -102,16 +102,16 @@ class FlatPairTask(pipeBase.Task):
                 output.add_seg_result(amp, 'MAX_FRAC_DEV', float(maxdev))
         output.write()
     def _create_detresp_fits_output(self, nrows):
-        self.output = pyfits.HDUList()
-        self.output.append(pyfits.PrimaryHDU())
+        self.output = fits.HDUList()
+        self.output.append(fits.PrimaryHDU())
         colnames = ['flux'] + ['AMP%02i_SIGNAL' % i for i in imutils.allAmps]
         formats = 'E'*len(colnames)
         units = ['None'] + ['e-']*len(imutils.allAmps)
         columns = [np.zeros(nrows, dtype=np.float) for fmt in formats]
-        fits_cols = [pyfits.Column(name=colnames[i], format=formats[i],
-                                   unit=units[i], array=columns[i])
+        fits_cols = [fits.Column(name=colnames[i], format=formats[i],
+                                 unit=units[i], array=columns[i])
                      for i in range(len(units))]
-        hdu = pyfitsTableFactory(fits_cols)
+        hdu = fitsTableFactory(fits_cols)
         hdu.name = 'DETECTOR_RESPONSE'
         self.output.append(hdu)
     def extract_det_response(self):
@@ -130,7 +130,7 @@ class FlatPairTask(pipeBase.Task):
                 # Just use flat1 again since only average is taken and
                 # FPN subtraction isn't needed.
                 file2 = file1
-    
+
             if self.config.verbose:
                 self.log.info("processing\n   %s as flat1 and\n   %s as flat2"
                               % (file1, file2))
@@ -148,7 +148,7 @@ class FlatPairTask(pipeBase.Task):
             if exptime1 != exptime2:
                 raise RuntimeError("Exposure times do not match for:\n%s\n%s\n"
                                    % (file1, file2))
-            if ((type(pd1) != str and type(pd2) != str) and 
+            if ((type(pd1) != str and type(pd2) != str) and
                 (pd1 != 0 and pd2 != 0)):
                 flux = abs(pd1*exptime1 + pd2*exptime2)/2.
                 if np.abs((pd1 - pd2)/((pd1 + pd2)/2.)) > max_pd_frac_dev:
@@ -159,7 +159,7 @@ class FlatPairTask(pipeBase.Task):
             if self.config.verbose:
                 self.log.info('   row = %s' % row)
                 self.log.info('   pd1, pd2 = %s, %s' % (pd1, pd2))
-                self.log.info('   exptime1, exptime2 = %s, %s ' 
+                self.log.info('   exptime1, exptime2 = %s, %s '
                               % (exptime1, exptime2))
                 self.log.info('   flux = %s' % flux)
                 self.log.info('   flux/exptime = %s' % (flux/exptime1,))
@@ -168,7 +168,7 @@ class FlatPairTask(pipeBase.Task):
                 # Convert to e- and write out for each segment.
                 signal = pair_mean(flat1, flat2, amp)*self.gains[amp]
                 self.output[-1].data.field('AMP%02i_SIGNAL' % amp)[row] = signal
-        pyfitsWriteto(self.output, outfile, clobber=True)
+        fitsWriteto(self.output, outfile, clobber=True)
         return outfile
 
 if __name__ == '__main__':

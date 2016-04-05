@@ -9,8 +9,8 @@ import astropy.time
 
 import numpy as np
 import numpy.random as random
-import astropy.io.fits as pyfits
-from lsst.eotest.pyfitsTools import pyfitsWriteto
+import astropy.io.fits as fits
+from lsst.eotest.fitsTools import fitsWriteto
 
 import lsst.afw.geom as afwGeom
 import lsst.afw.image as afwImage
@@ -47,7 +47,7 @@ class CrosstalkPattern(object):
                         vic in range(9, 17) and agg in range(9, 17)):
                         self.matrix[agg-1][vic-1] = value
     def __call__(self, aggressor, frac_scale=None):
-        return dict([(amp, victim) for amp, victim 
+        return dict([(amp, victim) for amp, victim
                      in zip(imutils.allAmps, self.matrix[aggressor-1])])
 
 def xtalk_pattern(aggressor, frac_scale=0.02):
@@ -68,10 +68,10 @@ class CCD(object):
                  geometry=AmplifierGeometry(), amps=imutils.allAmps):
         self.segments = OrderedDict()
         for amp in amps:
-            self.segments[amp] = SegmentExposure(exptime=exptime, 
-                                                 gain=gain, 
+            self.segments[amp] = SegmentExposure(exptime=exptime,
+                                                 gain=gain,
                                                  ccdtemp=ccdtemp,
-                                                 full_well=full_well, 
+                                                 full_well=full_well,
                                                  geometry=geometry)
         self.md = dict()
     def add_bias(self, level=1e4, sigma=4):
@@ -143,13 +143,13 @@ class CCD(object):
         for hdu in output[1:-2]:
             hdu.data = np.array(my_round(hdu.data), dtype=self.dtypes[bitpix])
         if obs_time is None:
-            # Compute the start of the observation from the current time 
+            # Compute the start of the observation from the current time
             # minus the exposure time.
             obs_time = utcnow(dt=-output[0].header['EXPTIME'])
         output[0].header['DATE-OBS'] = obs_time.isot
         output[0].header['DATE'] = obs_time.isot
         output[0].header.set('MJD-OBS', value=float('%.5f' % obs_time.mjd))
-        pyfitsWriteto(output, outfile, clobber=True, checksum=True)
+        fitsWriteto(output, outfile, clobber=True, checksum=True)
 
 class SegmentExposure(object):
     def __init__(self, exptime=1, gain=5, ccdtemp=-95, full_well=None,
@@ -244,7 +244,7 @@ class SegmentExposure(object):
                     signal = Ne_alpha/self.gain
                 self.imarr[y0][x0] += signal
         else:
-            # Draw interaction point from full imaging region and e- 
+            # Draw interaction point from full imaging region and e-
             # pixel distribution from 2D Gaussian.
             x0_values = random.uniform(0, nx, nxrays)
             y0_values = random.uniform(0, ny, nxrays)
@@ -270,16 +270,16 @@ class SegmentExposure(object):
                     self.imarr[y][x] += dn
     def add_sys_xtalk_col(self, dn, column):
         self.imarr[:, column] += dn
-                
+
 def fitsFile(ccd_segments):
     headers = fits_headers()
-    output = pyfits.HDUList()
-    output.append(pyfits.PrimaryHDU())
+    output = fits.HDUList()
+    output.append(fits.PrimaryHDU())
     output[0].header = headers['PRIMARY'].copy()
     output[0].header["EXPTIME"] = ccd_segments[0].exptime
     output[0].header["CCDTEMP"] = ccd_segments[0].ccdtemp
     for amp, segment in zip(imutils.allAmps, ccd_segments):
-        output.append(pyfits.ImageHDU(data=segment.image.getArray()))
+        output.append(fits.ImageHDU(data=segment.image.getArray()))
         output[amp].header = headers[headers.keys()[amp]].copy()
         output[amp].header['BZERO'] = 0
         output[amp].name = 'Segment%s' % imutils.channelIds[amp]
@@ -288,16 +288,16 @@ def fitsFile(ccd_segments):
         output[amp].header['DETSEC'] = segment.geometry[amp]['DETSEC']
         output[amp].header['CHANNEL'] = amp
     # Add Test Condition and CCD Operating Condition headers with dummy info.
-    output.append(pyfits.ImageHDU())
+    output.append(fits.ImageHDU())
     for keyword in headers['TEST_COND']:
         if keyword not in output[-1].header.keys():
             output[-1].header.set(keyword, headers['TEST_COND'][keyword])
-    output.append(pyfits.ImageHDU())
+    output.append(fits.ImageHDU())
     for keyword in headers['CCD_COND']:
         if keyword not in output[-1].header.keys():
             output[-1].header.set(keyword, headers['CCD_COND'][keyword])
     return output
-                
+
 def writeFits(ccd_segments, outfile, clobber=True):
     output = fitsFile(ccd_segments)
     if clobber:
@@ -305,9 +305,9 @@ def writeFits(ccd_segments, outfile, clobber=True):
             os.remove(outfile)
         except OSError:
             pass
-    pyfitsWriteto(output, outfile, clobber=clobber, checksum=True)
+    fitsWriteto(output, outfile, clobber=clobber, checksum=True)
     return outfile
-    
+
 def simulateDark(outfile, dark_curr, exptime=1, hdus=16, verbose=True):
     if verbose:
         print "simulating dark:", outfile
@@ -338,7 +338,7 @@ def simulateFlat(outfile, level, gain, dark_curr=1, exptime=1, hdus=16,
 
 if __name__ == '__main__':
     seg = SegmentExposure()
-    
+
     seg.add_bias(1e4, 10)
     seg.add_dark_current(1e-2)
     seg.expose_flat(200)

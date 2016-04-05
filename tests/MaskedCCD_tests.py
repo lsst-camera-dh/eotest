@@ -6,7 +6,6 @@
 import os
 import unittest
 import numpy as np
-import astropy.io.fits as pyfits
 import lsst.eotest.image_utils as imutils
 from lsst.eotest.sensor import MaskedCCD, add_mask_files, BrightPixels, \
     AmplifierGeometry

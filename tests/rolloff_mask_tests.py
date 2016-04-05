@@ -6,7 +6,7 @@
 import os
 import unittest
 import numpy as np
-import astropy.io.fits as pyfits
+import astropy.io.fits as fits
 import lsst.eotest.image_utils as imutils
 from lsst.eotest.sensor.rolloff_mask import rolloff_mask
 from lsst.eotest.sensor import AmplifierGeometry, makeAmplifierGeometry, amp_loc
@@ -15,7 +15,7 @@ import lsst.eotest.sensor.sim_tools as sim_tools
 class _FitsFile(dict):
     def __init__(self, infile):
         dict.__init__(self)
-        foo = pyfits.open(infile)
+        foo = fits.open(infile)
         for amp in imutils.allAmps:
             self[amp] = foo[amp].data
 

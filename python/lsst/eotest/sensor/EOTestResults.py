@@ -6,8 +6,8 @@ as a binary table.
 """
 import os
 import numpy as np
-import astropy.io.fits as pyfits
-from lsst.eotest.pyfitsTools import pyfitsTableFactory, pyfitsWriteto
+import astropy.io.fits as fits
+from lsst.eotest.fitsTools import fitsTableFactory, fitsWriteto
 
 _namps = 16
 
@@ -22,11 +22,11 @@ class EOTestResults(object):
         if not os.path.isfile(infile):
             self._createFitsObject()
         else:
-            self.output = pyfits.open(infile)
+            self.output = fits.open(infile)
             self.colnames = self.output[self.extname].data.names
     def _createFitsObject(self):
-        self.output = pyfits.HDUList()
-        self.output.append(pyfits.PrimaryHDU())
+        self.output = fits.HDUList()
+        self.output.append(fits.PrimaryHDU())
         self.colnames = ["AMP", "GAIN", "GAIN_ERROR", "READ_NOISE", "FULL_WELL",
                          "CTI_HIGH_SERIAL", "CTI_HIGH_PARALLEL", 
                          "CTI_LOW_SERIAL", "CTI_LOW_PARALLEL", 
@@ -36,10 +36,10 @@ class EOTestResults(object):
         columns = [np.zeros(_namps, dtype=my_types[fmt]) for fmt in formats]
         units = ["None", "Ne/DN", "Ne/DN", "rms e-/pixel", "e-/pixel",
                  "None", "None", "None", "None", "e-/s/pixel", "None", "None"]
-        fits_cols = [pyfits.Column(name=self.colnames[i], format=formats[i],
-                                   unit=units[i], array=columns[i])
+        fits_cols = [fits.Column(name=self.colnames[i], format=formats[i],
+                                 unit=units[i], array=columns[i])
                      for i in range(len(self.colnames))]
-        self.output.append(pyfitsTableFactory(fits_cols))
+        self.output.append(fitsTableFactory(fits_cols))
         self.output[-1].name = self.extname
         for amp in range(1, _namps+1):
             self.add_seg_result(amp, 'AMP', amp)
@@ -57,11 +57,11 @@ class EOTestResults(object):
         _types = dict(((int, 'I'), (float, 'E'), (np.float64, 'E')))
         if column is None:
             column = np.zeros(_namps, dtype=dtype)
-        new_cols = pyfits.ColDefs([pyfits.Column(name=colname,
-                                                 format=_types[dtype],
-                                                 unit=unit, array=column)])
-        new_hdu = pyfitsTableFactory(self.output[self.extname].data.columns 
-                                     + new_cols)
+        new_cols = fits.ColDefs([fits.Column(name=colname,
+                                             format=_types[dtype],
+                                             unit=unit, array=column)])
+        new_hdu = fitsTableFactory(self.output[self.extname].data.columns
+                                   + new_cols)
         new_hdu.name = self.extname
         self.output[self.extname] = new_hdu
         self.colnames.append(colname)
@@ -83,7 +83,7 @@ class EOTestResults(object):
         """
         if outfile is None:
             outfile = self.infile
-        pyfitsWriteto(self.output, outfile, clobber=clobber)
+        fitsWriteto(self.output, outfile, clobber=clobber)
 
 if __name__ == '__main__':
     outfile = 'foo.fits'

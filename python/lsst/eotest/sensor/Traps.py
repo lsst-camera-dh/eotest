@@ -5,8 +5,8 @@
 """
 import os
 import numpy as np
-import astropy.io.fits as pyfits
-from lsst.eotest.pyfitsTools import pyfitsTableFactory, pyfitsWriteto
+import astropy.io.fits as fits
+from lsst.eotest.fitsTools import fitsTableFactory, fitsWriteto
 import lsst.afw.detection as afwDetect
 import lsst.afw.geom as afwGeom
 import lsst.afw.image as afwImage
@@ -39,15 +39,15 @@ class Traps(dict):
         Write the results as a FITS binary table.
         """
         nrows = sum([len(self[amp]) for amp in self])
-        output = pyfits.HDUList()
-        output.append(pyfits.PrimaryHDU())
+        output = fits.HDUList()
+        output.append(fits.PrimaryHDU())
         colnames = ['AMPLIFIER', 'XPOS', 'YPOS', 'TRAP_SIZE', 'A0', 'A1']
         formats = 'IIIIEE'
         units = ['None', 'pixel', 'pixel', 'electrons', 'ADU', 'ADU']
-        columns = ([np.zeros(nrows, dtype=int)]*4 
+        columns = ([np.zeros(nrows, dtype=int)]*4
                    + [np.zeros(nrows, dtype=float)]*2)
-        hdu = pyfitsTableFactory([pyfits.Column(name=colname, format=format,
-                                                unit=unit, array=column) 
+        hdu = fitsTableFactory([fits.Column(name=colname, format=format,
+                                            unit=unit, array=column)
                                   for colname, format, unit, column in
                                   zip(colnames, formats, units, columns)])
         hdu.name = 'TRAPS'
@@ -62,12 +62,12 @@ class Traps(dict):
                 output['TRAPS'].data[row]['A0'] = a0
                 output['TRAPS'].data[row]['A1'] = a1
                 row += 1
-        pyfitsWriteto(output, outfile, clobber=True)
+        fitsWriteto(output, outfile, clobber=True)
 
 if __name__ == '__main__':
     gains = dict([(amp, 5) for amp in imutils.allAmps])
     outfile = 'trap_list.fits'
-    
+
 #    infile = 'work/sensorData/000-00/trap/debug/000-00_trap_ppump_debug.fits'
     infile = '000-00_trap_ppump_debug.fits'
     mask_files = ()
