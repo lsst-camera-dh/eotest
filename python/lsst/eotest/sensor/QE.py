@@ -140,10 +140,12 @@ class QE_Data(object):
             power.append(pd_current/(ccd_frac(wl_nm)*sensitivity(wl_nm))
                          *pixel_area/pd_area)
         self.power = np.array(power, dtype=np.float)
-    def calculate_QE(self, gains):
+    def calculate_QE(self, gains, amps=None):
+        if amps is None:
+            amps = imutils.allAmps()
         qe = OrderedDict()
         wlarrs = OrderedDict()
-        for amp in imutils.allAmps():
+        for amp in amps:
             qe[amp] = []
             wlarrs[amp] = []
             for i, wl_nm in enumerate(self.wl):
@@ -240,7 +242,7 @@ class QE_Data(object):
         else:
             plot.pylab.ioff()
         indx = np.argsort(self.wlarrs[1])
-        for i, amp in enumerate(imutils.allAmps()):
+        for i, amp in enumerate(self.qe):
             plot.curve(self.wlarrs[amp][indx], self.qe[amp][indx],
                        oplot=i, xname='wavelength (nm)', yname='QE (%)',
                        xrange=(350, 1100))

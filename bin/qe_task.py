@@ -18,8 +18,8 @@ parser.add_argument('-M', '--medians_file', type=str,
 parser.add_argument('-c', '--correction_image', type=str,
                     help='correction image for illumination non-uniformity',
                     default=None)
-parser.add_argument('--e2v_data', default=False, action='store_true',
-                    help='Vendor data from e2v')
+parser.add_argument('--vendor_data', default=False, action='store_true',
+                    help='Have data from vendor')
 args = parser.parse_args()
 
 task = sensorTest.QeTask()
@@ -28,7 +28,7 @@ task.config.verbose = args.verbose
 
 qe_files = args.files(args.qe_files, args.qe_file_list)
 
-task.run(args.sensor_id, qe_files, args.pd_ratio_file, 
+task.run(args.sensor_id, qe_files, args.pd_ratio_file,
          args.mask_files(qe_files[0]), args.system_gains(),
-         medians_file=args.medians_file, e2v_data=args.e2v_data,
+         medians_file=args.medians_file, vendor_data=args.vendor_data,
          correction_image=args.correction_image)

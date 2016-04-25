@@ -26,7 +26,7 @@ class Traps(dict):
                  edge_rolloff=10, amps=None):
         super(Traps, self).__init__()
         if amps is None:
-            amps = imutils.allAmps()
+            amps = ccd.keys()
         for amp in amps:
             self[amp] = []
             finder = TrapFinder(ccd, amp, C2_thresh=C2_thresh,

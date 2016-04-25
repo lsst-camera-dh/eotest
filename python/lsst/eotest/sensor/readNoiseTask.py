@@ -63,12 +63,13 @@ class ReadNoiseTask(pipeBase.Task):
     @pipeBase.timeMethod
     def run(self, sensor_id, bias_files, gains, system_noise_files=None,
             system_noise=None, mask_files=(), use_overscan=False):
+        all_amps = imutils.allAmps(bias_files[0])
         imutils.check_temperatures(bias_files, self.config.temp_set_point_tol,
                                    setpoint=self.config.temp_set_point,
                                    warn_only=True)
         outfiles = []
-        Ntot = NoiseDistributions()
-        Nsys = NoiseDistributions()
+        Ntot = NoiseDistributions(amps=all_amps)
+        Nsys = NoiseDistributions(amps=all_amps)
         if system_noise_files is None:
             system_noise_files = [None]*len(bias_files)
         for i, bias, sysnoise in zip(range(len(bias_files)), bias_files,

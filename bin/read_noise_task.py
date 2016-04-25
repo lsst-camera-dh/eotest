@@ -36,6 +36,7 @@ if args.noise is None and args.noise_file_list is None:
 else:
     system_noise_files = args.files(args.noise, args.noise_file_list)
 
-task.run(args.sensor_id, bias_files, args.system_gains(), 
-         system_noise_files, args.mask_files(bias_files[0]),
+task.run(args.sensor_id, bias_files, args.system_gains(),
+         system_noise_files=system_noise_files,
+         mask_files=args.mask_files(bias_files[0]),
          use_overscan=args.use_overscan)
