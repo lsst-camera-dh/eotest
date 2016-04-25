@@ -31,11 +31,17 @@ def makeAmplifierGeometry(infile):
     prescan = datasec['xmin'] - 1
     nx = datasec['xmax'] - prescan
     ny = datasec['ymax'] - datasec['ymin'] + 1
-    # kludge to infer amplifier node locations for two vendors
-    detsec = parse_geom_kwd(foo[9].header['DETSEC'])
-    if detsec['xmin'] < detsec['xmax']:
-        vendor = 'E2V'
-    else:
+    # kludge to infer amplifier node locations for two vendors for
+    # amps 9-16.  For amps 1-8, the output nodes are in the same
+    # corner for the two vendors.
+    try:
+        detsec = parse_geom_kwd(foo[9].header['DETSEC'])
+        if detsec['xmin'] < detsec['xmax']:
+            vendor = 'E2V'
+        else:
+            vendor = 'ITL'
+    except IndexError:
+        # We have a WFS, so set vendor='ITL'.
         vendor = 'ITL'
     myAmpGeom = AmplifierGeometry(prescan=prescan, nx=nx, ny=ny,
                                   detxsize=detsize['xmax'],
@@ -43,7 +49,7 @@ def makeAmplifierGeometry(infile):
                                   amp_loc=amp_loc[vendor])
     myAmpGeom.compute_geometry(fitsfile=infile)
     return myAmpGeom
-    
+
 class AmplifierGeometry(dict):
     nsegx, nsegy = 8, 2
     def __init__(self, prescan=10, nx=512, ny=2002,
@@ -117,13 +123,13 @@ class AmplifierGeometry(dict):
             x1 = (amp - 1)*self.nx + 1
             x2 = amp*self.nx
             y1, y2 = 1, self.ny
-        else: 
+        else:
             # Amps in "top half" of CCD, where the ordering of amps 9
             # to 16 is right-to-left.
             x1 = (namps - amp)*self.nx + 1
             x2 = (namps - amp + 1)*self.nx
             # Flip in y for top half of sensor.
-            y1, y2 = 2*self.ny, self.ny + 1  
+            y1, y2 = 2*self.ny, self.ny + 1
         if self.amp_loc[amp] < 0:
             # Flip since the output node is on the right side of segment.
             x1, x2 = x2, x1
@@ -147,7 +153,7 @@ if __name__ == '__main__':
     for amp in range(1, 17):
         print amp, e2v[amp]['DETSEC'], itl[amp]['DETSEC']
         print amp, e2v[amp]['DATASEC'], itl[amp]['DATASEC']
-        print 
+        print
     infile = '/u/gl/jchiang/ki18/LSST/SensorTests/eotest/0.0.0.6/work/sensorData/000-00/fe55/debug/000-00_fe55_bias_00_debug.fits'
     geom = makeAmplifierGeometry(infile)
 

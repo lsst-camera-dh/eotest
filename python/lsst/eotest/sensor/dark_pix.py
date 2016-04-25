@@ -50,9 +50,10 @@ class DarkPix(object):
 
         return len(pixlist), pixlist
 
-def run_dark_pix(fitsfile, percent=80, amps=imutils.allAmps, verbose=False):
+def run_dark_pix(fitsfile, percent=80, amps=None, verbose=False):
     """ Given an input FITS file, find bright pixels."""
-
+    if amps is None:
+        amps = imutils.allAmps(fitsfile)
     try:
         dp = DarkPix(percent)
         tot_dark_pixels, tot_per_amp, pix_per_amp, col_per_amp = dp(fitsfile, amps)

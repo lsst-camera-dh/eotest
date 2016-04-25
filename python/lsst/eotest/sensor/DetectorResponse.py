@@ -26,8 +26,7 @@ def _fwc_solve(f1_pars, f2_pars, g=0.1):
     return x
 
 class DetectorResponse(object):
-    def __init__(self, infile, amps=imutils.allAmps, ptc=None,
-                 gain_range=None):
+    def __init__(self, infile, ptc=None, gain_range=None):
         if infile[-5:] == '.fits':
             self._read_from_fits(infile)
         else:
@@ -42,30 +41,30 @@ class DetectorResponse(object):
         if len(ptc[1].data.field('AMP01_MEAN')) != len(self.flux):
             raise RuntimeError('Number of measurements in PTC file ' +
                                'differs from detector response file.')
-        for amp in imutils.allAmps:
+        for amp in imutils.allAmps():
             mean = ptc[1].data.field('AMP%02i_MEAN' % amp)
             var = ptc[1].data.field('AMP%02i_VAR' % amp)
             gain = mean/var
-            self._index[amp] = np.where((gain >= gain_range[0]) & 
+            self._index[amp] = np.where((gain >= gain_range[0]) &
                                         (gain <= gain_range[1]))
     def _sort_by_flux(self):
         index = np.argsort(self.flux)
         self.flux = self.flux[index]
-        for amp in imutils.allAmps:
+        for amp in self.Ne:
             self.Ne[amp] = self.Ne[amp][index]
     def _read_from_fits(self, infile):
+        all_amps = imutils.allAmps(infile)
         foo = fits.open(infile)
         hdu = foo['DETECTOR_RESPONSE']
         self.flux = np.array(hdu.data.field('FLUX'), dtype=np.float)
         self.Ne = dict([(amp, np.array(hdu.data.field('AMP%02i_SIGNAL' % amp),
-                                       dtype=np.float))
-                        for amp in imutils.allAmps])
+                                       dtype=np.float)) for amp in all_amps])
     def _read_from_text(self, infile):
         data = np.recfromtxt(infile)
         data = data.transpose()
         self.flux = data[0]
         self.Ne = dict([(amp, ne) for amp, ne in
-                        zip(imutils.allAmps, data[1:])])
+                        zip(imutils.allAmps(), data[1:])])
     def full_well(self, amp, max_non_linearity=0.02,
                   frac_offset=0.1, make_plot=False, plotter=None,
                   multipanel=False, fit_range=(1e2, 5e4)):
@@ -221,7 +220,7 @@ if __name__ == '__main__':
     detResp = DetectorResponse(infile)
     make_plot = False
     print "Amp       max. dev.   full well"
-    for amp in imutils.allAmps:
+    for amp in imutils.allAmps():
         max_dev, fit_pars = detResp.linearity(amp, make_plot=make_plot)
         sys.stdout.write("%2i         %.3f       " % (amp, max_dev))
         try:

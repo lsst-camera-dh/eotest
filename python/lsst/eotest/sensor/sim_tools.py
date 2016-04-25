@@ -38,9 +38,9 @@ class CrosstalkPattern(object):
             # Use default matrix.
             pattern = (0.01, 0.02, 1, 0.02, 0.01)
             offsets = (-2, -1, 0, 1, 2)
-            namps = len(imutils.allAmps)
+            namps = len(imutils.allAmps())
             self.matrix = np.zeros((namps, namps), dtype=np.float)
-            for agg in imutils.allAmps:
+            for agg in imutils.allAmps():
                 for offset, value in zip(offsets, pattern):
                     vic = agg + offset
                     if (vic in range(1, 9) and agg in range(1, 9) or
@@ -48,12 +48,12 @@ class CrosstalkPattern(object):
                         self.matrix[agg-1][vic-1] = value
     def __call__(self, aggressor, frac_scale=None):
         return dict([(amp, victim) for amp, victim
-                     in zip(imutils.allAmps, self.matrix[aggressor-1])])
+                     in zip(imutils.allAmps(), self.matrix[aggressor-1])])
 
 def xtalk_pattern(aggressor, frac_scale=0.02):
     xtalk_frac = {}
-    nside = len(imutils.allAmps)/2
-    for victim in imutils.allAmps:
+    nside = len(imutils.allAmps())/2
+    for victim in imutils.allAmps():
         if (victim != aggressor and
             (victim-1)/nside == (aggressor-1)/nside):
             dist = abs(victim - aggressor)
@@ -65,8 +65,10 @@ def xtalk_pattern(aggressor, frac_scale=0.02):
 class CCD(object):
     dtypes = dict([(-32, np.float32), (16, np.int16)])
     def __init__(self, exptime=1, gain=5, ccdtemp=-95, full_well=None,
-                 geometry=AmplifierGeometry(), amps=imutils.allAmps):
+                 geometry=AmplifierGeometry(), amps=None):
         self.segments = OrderedDict()
+        if amps is None:
+            amps = imutils.allAmps()
         for amp in amps:
             self.segments[amp] = SegmentExposure(exptime=exptime,
                                                  gain=gain,
@@ -278,7 +280,7 @@ def fitsFile(ccd_segments):
     output[0].header = headers['PRIMARY'].copy()
     output[0].header["EXPTIME"] = ccd_segments[0].exptime
     output[0].header["CCDTEMP"] = ccd_segments[0].ccdtemp
-    for amp, segment in zip(imutils.allAmps, ccd_segments):
+    for amp, segment in zip(imutils.allAmps(), ccd_segments):
         output.append(fits.ImageHDU(data=segment.image.getArray()))
         output[amp].header = headers[headers.keys()[amp]].copy()
         output[amp].header['BZERO'] = 0

@@ -148,7 +148,7 @@ if __name__ == '__main__':
     write_test_image(dark_file, emin=10, gain=5, npix=1000)
 
     ccd = MaskedCCD(dark_file)
-    for amp in imutils.allAmps:
+    for amp in ccd:
         bright_pixels = BrightPixels(ccd, amp, ccd.md.get('EXPTIME'), gain)
         pixels, columns = bright_pixels.find()
         bright_pixels.generate_mask(mask_file)

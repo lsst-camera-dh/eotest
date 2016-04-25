@@ -117,7 +117,7 @@ if __name__ == '__main__':
     amp = 1
     print full_well(ptcfile, amp, make_plot=True,
                     outfile_prefix='amp%02i' % amp)
-    for amp in allAmps:
+    for amp in allAmps():
         try:
             result = '%2i  %i' % (amp, full_well(ptcfile, amp))
             print result

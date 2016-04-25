@@ -22,9 +22,11 @@ class Traps(dict):
     results to a FITS file as a binary table.
     """
     def __init__(self, ccd, gains, cycles=100, C2_thresh=10,
-                 C3_thresh=1, nx=10, ny=10, 
-                 edge_rolloff=10, amps=imutils.allAmps):
+                 C3_thresh=1, nx=10, ny=10,
+                 edge_rolloff=10, amps=None):
         super(Traps, self).__init__()
+        if amps is None:
+            amps = imutils.allAmps()
         for amp in amps:
             self[amp] = []
             finder = TrapFinder(ccd, amp, C2_thresh=C2_thresh,
@@ -65,7 +67,7 @@ class Traps(dict):
         fitsWriteto(output, outfile, clobber=True)
 
 if __name__ == '__main__':
-    gains = dict([(amp, 5) for amp in imutils.allAmps])
+    gains = dict([(amp, 5) for amp in imutils.allAmps()])
     outfile = 'trap_list.fits'
 
 #    infile = 'work/sensorData/000-00/trap/debug/000-00_trap_ppump_debug.fits'

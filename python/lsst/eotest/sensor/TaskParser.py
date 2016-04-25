@@ -60,7 +60,7 @@ class TaskNamespace(object):
         else:
             results = EOTestResults(self.args.gains)
             gains = results['GAIN']
-            return dict([(amp, gains[amp-1]) for amp in imutils.allAmps])
+            return dict([(amp, gains[amp-1]) for amp in imutils.allAmps()])
     def mask_files(self, infile=None):
         """
         Tuple of mask files to be used.  If infile is given and a

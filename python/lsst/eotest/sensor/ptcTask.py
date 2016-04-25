@@ -100,11 +100,12 @@ class PtcTask(pipeBase.Task):
     _DefaultName = "PtcTask"
 
     @pipeBase.timeMethod
-    def run(self, sensor_id, infiles, mask_files, gains, binsize=1, 
+    def run(self, sensor_id, infiles, mask_files, gains, binsize=1,
             bias_frame=None):
-        outfile = os.path.join(self.config.output_dir, 
+        outfile = os.path.join(self.config.output_dir,
                                '%s_ptc.fits' % sensor_id)
-        ptc_stats = dict([(amp, ([], [])) for amp in imutils.allAmps])
+        all_amps = imutils.allAmps(infiles[0])
+        ptc_stats = dict([(amp, ([], [])) for amp in all_amps])
         exposure = []
         file1s = sorted([item for item in infiles if item.find('flat1')  != -1])
         for flat1 in file1s:
@@ -116,7 +117,7 @@ class PtcTask(pipeBase.Task):
                              bias_frame=bias_frame)
             ccd2 = MaskedCCD(flat2, mask_files=mask_files,
                              bias_frame=bias_frame)
-            for amp in imutils.allAmps:
+            for amp in ccd1:
                 results = flat_pair_stats(ccd1, ccd2, amp,
                                           mask_files=mask_files,
                                           bias_frame=bias_frame)
@@ -127,7 +128,7 @@ class PtcTask(pipeBase.Task):
         colnames = ['EXPOSURE']
         units = ['seconds']
         columns = [np.array(exposure, dtype=np.float)]
-        for amp in imutils.allAmps:
+        for amp in all_amps:
             colnames.extend(['AMP%02i_MEAN' % amp, 'AMP%02i_VAR' % amp])
             units.extend(['ADU', 'ADU**2'])
             columns.extend([np.array(ptc_stats[amp][0], dtype=np.float),

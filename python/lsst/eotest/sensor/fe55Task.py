@@ -27,23 +27,25 @@ class Fe55Config(pexConfig.Config):
 
     output_dir = pexConfig.Field("Output directory", str, default='.')
     output_file = pexConfig.Field("Output filename", str, default=None)
-    eotest_results_file = pexConfig.Field("EO test results filename", 
+    eotest_results_file = pexConfig.Field("EO test results filename",
                                           str, default=None)
     fit_xy = pexConfig.Field("Fit sigmas in x- and y-directions separately",
                              bool, default=False)
     verbose = pexConfig.Field("Turn verbosity on", bool, default=True)
-    
+
 class Fe55Task(pipeBase.Task):
     """Task to estimate PSF size and system gain from the distribution of
     Gaussian fit parameters to Fe55 data."""
     ConfigClass = Fe55Config
     _DefaultName = "Fe55Task"
 
-    def fit_gains(self, fitter, gains, gain_errors, sigma_modes):
+    def fit_gains(self, fitter, gains, gain_errors, sigma_modes, amps=None):
         "Fit the DN distributions to obtain the system gain per amp."
         my_gains, my_gain_errors, my_sigma_modes = \
             gains, gain_errors, sigma_modes
-        for amp in imutils.allAmps:
+        if amps is None:
+            amps = imutils.allAmps()
+        for amp in amps:
             data = fitter.results(min_prob=self.config.chiprob_min, amp=amp)
             dn = data['dn']
             if len(dn) > 2:
@@ -75,7 +77,7 @@ class Fe55Task(pipeBase.Task):
         if self.config.verbose and fe55_catalog is None:
             self.log.info("Input files:")
             for item in infiles:
-                self.log.info("  %s" % item) 
+                self.log.info("  %s" % item)
         #
         # Detect and fit 2D Gaussian to Fe55 charge clusters,
         # accumulating the results by amplifier.
@@ -103,10 +105,11 @@ class Fe55Task(pipeBase.Task):
                             continue
                     fitter.process_image(ccd, amp, logger=self.log)
                     gains, gain_errors, sigma_modes = \
-                        self.fit_gains(fitter, gains, gain_errors, sigma_modes)
+                        self.fit_gains(fitter, gains, gain_errors, sigma_modes,
+                                       amps=ccd.keys())
             if self.config.output_file is None:
                 psf_results = os.path.join(self.config.output_dir,
-                                           '%s_psf_results_nsig%i.fits' 
+                                           '%s_psf_results_nsig%i.fits'
                                            % (sensor_id, self.config.nsig))
             else:
                 psf_results = self.config.output_file

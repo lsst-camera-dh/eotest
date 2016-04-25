@@ -29,7 +29,7 @@ def superflat(files, bias_files=(), outfile='superflat.fits', bitpix=-32,
 
     # Use the first file as a template for the fits output.
     output = fits.open(files[0])
-    for amp in imutils.allAmps:
+    for amp in imutils.allAmps(files[0]):
         images = afwImage.vectorImageF()
         for infile in files:
             image = afwImage.ImageF(infile, imutils.dm_hdu(amp))
@@ -82,6 +82,7 @@ class CteTask(pipeBase.Task):
         outfile = '%(sensor_id)s_superflat_%(flux_level)s.fits' % locals()
         superflat_file = superflat(superflat_files, bias_files,
                                    outfile=outfile, bias_subtract=False)
+        all_amps = imutils.allAmps(superflat_file)
         #
         # Compute serial CTE.
         #
@@ -89,8 +90,8 @@ class CteTask(pipeBase.Task):
         s_task.config.direction = 's'
         s_task.config.verbose = self.config.verbose
         s_task.config.cti = True
-        scti = s_task.run(superflat_file, imutils.allAmps,
-                          self.config.overscans, gains=gains)
+        scti = s_task.run(superflat_file, all_amps, self.config.overscans,
+                          gains=gains)
         #
         # Compute parallel CTE.
         #
@@ -98,8 +99,8 @@ class CteTask(pipeBase.Task):
         p_task.config.direction = 'p'
         p_task.config.verbose = self.config.verbose
         p_task.config.cti = True
-        pcti = p_task.run(superflat_file, imutils.allAmps,
-                          self.config.overscans, gains=gains)
+        pcti = p_task.run(superflat_file, all_amps, self.config.overscans,
+                          gains=gains)
         #
         # Write results to the output file.
         #
@@ -111,7 +112,7 @@ class CteTask(pipeBase.Task):
         if self.config.verbose:
             self.log.info('CTE %s flux level results' % flux_level)
             self.log.info('amp  parallel_cti  serial_cti')
-        for amp in imutils.allAmps:
+        for amp in all_amps:
             line = '%i  %s  %s' % (amp, pcti[amp], scti[amp])
             results.add_seg_result(amp, 'CTI_%s_SERIAL' % flux_level.upper(), 
                                    scti[amp].value)
