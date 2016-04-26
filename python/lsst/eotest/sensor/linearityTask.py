@@ -57,7 +57,7 @@ class LinearityTask(pipeBase.Task):
         output = EOTestResults(outfile)
         if self.config.verbose:
             self.log.info("Amp        max. frac. dev.")
-        for amp in imutils.allAmps:
+        for amp in imutils.allAmps(detrespfile):
             try:
                 maxdev, fit_pars, Ne, flux = detresp.linearity(amp)
             except:
@@ -70,9 +70,10 @@ class LinearityTask(pipeBase.Task):
     def _create_detresp_fits_output(self, nrows):
         self.output = fits.HDUList()
         self.output.append(fits.PrimaryHDU())
-        colnames = ['flux'] + ['AMP%02i_SIGNAL' % i for i in imutils.allAmps]
+        all_amps = imutils.allAmps()
+        colnames = ['flux'] + ['AMP%02i_SIGNAL' % i for i in all_amps]
         formats = 'E'*len(colnames)
-        units = ['None'] + ['e-']*len(imutils.allAmps)
+        units = ['None'] + ['e-']*len(all_amps)
         columns = [np.zeros(nrows, dtype=np.float) for fmt in formats]
         fits_cols = [fits.Column(name=colnames[i], format=formats[i],
                                  unit=units[i], array=columns[i])
@@ -98,7 +99,7 @@ class LinearityTask(pipeBase.Task):
                 # Just use flat1 again since only average is taken and
                 # FPN subtraction isn't needed.
                 file2 = file1
-    
+
             flat1 = MaskedCCD(file1, mask_files=self.mask_files,
                               bias_frame=self.bias_frame)
             flat2 = MaskedCCD(file2, mask_files=self.mask_files,
@@ -107,7 +108,7 @@ class LinearityTask(pipeBase.Task):
             if flat1.md.get('EXPTIME') != flat2.md.get('EXPTIME'):
                 raise RuntimeError("Exposure times do not match for:\n%s\n%s\n"
                                    % (file1, file2))
-    
+
             if (flat1.md.get('MONDIODE') != 0 and
                 flat2.md.get('MONDIODE') != 0):
                 flux = abs(flat1.md.get('EXPTIME')*flat1.md.get('MONDIODE') +
@@ -116,7 +117,7 @@ class LinearityTask(pipeBase.Task):
                 flux = flat1.md.get('EXPTIME')
 
             self.output[-1].data.field('FLUX')[row] = flux
-            for amp in imutils.allAmps:
+            for amp in flat1:
                 # Convert to e- and write out for each segment.
                 signal = pair_mean(flat1, flat2, amp)*self.gains[amp]
                 self.output[-1].data.field('AMP%02i_SIGNAL' % amp)[row] = signal

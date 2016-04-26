@@ -33,9 +33,9 @@ class BiasHandlingTestCase(unittest.TestCase):
         bias_func = BiasFunc(cls.bias_slope, cls.bias_intercept)
         for x in range(nx):
             imarr[:,x] += bias_func(yvals)
-        ccd = sim_tools.CCD(exptime=cls.exptime, gain=cls.gain, 
+        ccd = sim_tools.CCD(exptime=cls.exptime, gain=cls.gain,
                             geometry=cls.amp_geom)
-        for amp in imutils.allAmps:
+        for amp in ccd.segments:
             ccd.segments[amp].image += cls.bias_image
         ccd.writeto(cls.image_file)
     @classmethod
@@ -44,7 +44,7 @@ class BiasHandlingTestCase(unittest.TestCase):
     def test_bias_func(self):
         bias_func = BiasFunc(self.bias_slope, self.bias_intercept)
         ccd = MaskedCCD(self.image_file)
-        for amp in imutils.allAmps:
+        for amp in ccd:
             bf_i = imutils.bias_func(ccd[amp].getImage(),
                                      self.amp_geom.serial_overscan)
             bf_m = imutils.bias_func(ccd[amp], self.amp_geom.serial_overscan)
@@ -53,7 +53,7 @@ class BiasHandlingTestCase(unittest.TestCase):
                 self.assertAlmostEqual(bias_func(y), bf_m(y))
     def test_bias_image(self):
         ccd = MaskedCCD(self.image_file)
-        for amp in imutils.allAmps:
+        for amp in ccd:
             my_bias_image = imutils.bias_image(ccd[amp],
                                                self.amp_geom.serial_overscan)
             fracdiff = ((self.bias_image.getArray() - my_bias_image.getArray())
@@ -61,7 +61,7 @@ class BiasHandlingTestCase(unittest.TestCase):
             self.assertTrue(max(np.abs(fracdiff.flat)) < 1e-6)
     def test_unbias_and_trim(self):
         ccd = MaskedCCD(self.image_file)
-        for amp in imutils.allAmps:
+        for amp in ccd:
             image = imutils.unbias_and_trim(ccd[amp],
                                             self.amp_geom.serial_overscan,
                                             self.amp_geom.imaging)
@@ -81,7 +81,7 @@ class FitsMedianTestCase(unittest.TestCase):
         for i in self.values:
             self.files.append('test_fits_median_image_%02i.fits' % i)
             ccd = sim_tools.CCD(exptime=1)
-            for amp in imutils.allAmps:
+            for amp in ccd.segments:
                 ccd.segments[amp].image += i
             ccd.writeto(self.files[-1])
     def tearDown(self):

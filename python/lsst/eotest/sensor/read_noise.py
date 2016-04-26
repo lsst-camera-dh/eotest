@@ -36,10 +36,10 @@ def noise_samples(raw_image, gain, region_sampler,
 def noise_dists(imfile, gains, sampler, mask_files=()):
     if imfile is None:
         return dict([(amp, np.zeros(len(sampler.xarr), dtype=np.float))
-                     for amp in imutils.allAmps])
+                     for amp in imutils.allAmps()])
     ccd = MaskedCCD(imfile, mask_files=mask_files)
-    my_noise_dists = NoiseDistributions()
-    for amp in imutils.allAmps:
+    my_noise_dists = NoiseDistributions(amps=ccd.keys())
+    for amp in ccd:
         my_noise_dists[amp] = noise_samples(ccd[amp], gains[amp], sampler,
                                             ccd.stat_ctrl)
     return my_noise_dists
@@ -49,11 +49,11 @@ if __name__ == '__main__':
     #
     # Simulate bias image.
     #
-    gains = dict([(amp, 5.5) for amp in imutils.allAmps])
+    gains = dict([(amp, 5.5) for amp in imutils.allAmps()])
 
     bias_file = "bias.fits"
     bias_segs = []
-    for amp in imutils.allAmps:
+    for amp in gains:
         seg = SegmentExposure(exptime=0, gain=gains[amp])
         seg.add_bias(level=1e4, sigma=5) # electronic bias and noise
         seg.add_bias(sigma=4)            # CCD read noise
@@ -64,7 +64,7 @@ if __name__ == '__main__':
     #
     readout_noise_file = 'readout_noise.fits'
     noise_segs = []
-    for amp in imutils.allAmps:
+    for amp in gains:
         seg = SegmentExposure(exptime=0, gain=gains[amp])
         seg.add_bias(level=1e4, sigma=5) # electronic bias and noise
         noise_segs.append(seg)
@@ -83,6 +83,6 @@ if __name__ == '__main__':
     #
     # Read noise distribution.
     #
-    for amp in imutils.allAmps:
+    for amp in Ntot:
         Nread = np.sqrt(Ntot[amp]*Ntot[amp] - Nsys[amp]*Nsys[amp])
         print imutils.median(Nread), imutils.stdev(Nread)

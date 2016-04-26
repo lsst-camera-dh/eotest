@@ -49,7 +49,7 @@ def multiaggressor_amplifier_coords(nx, ny, xpos=_xpos, ypos=_ypos):
     """
     amp_coords = AmpCoords(nx, ny)
     x, y = {}, {}
-    for amp, xx, yy in zip(imutils.allAmps, xpos, ypos):
+    for amp, xx, yy in zip(imutils.allAmps(), xpos, ypos):
         my_amp, x[amp], y[amp] = amp_coords(xx, yy)
         if amp != my_amp:
             raise RuntimeError("multiaggressor amp mismatch")

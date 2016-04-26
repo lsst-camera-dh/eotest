@@ -33,7 +33,8 @@ class MaskedCCD(dict):
         self.imfile = imfile
         self.md = imutils.Metadata(imfile, 1)
         self.amp_geom = makeAmplifierGeometry(imfile)
-        for amp in imutils.allAmps:
+        all_amps = imutils.allAmps(imfile)
+        for amp in all_amps:
             image = afwImage.ImageF(imfile, imutils.dm_hdu(amp))
             mask = afwImage.MaskU(image.getDimensions())
             self[amp] = afwImage.MaskedImageF(image, mask)
@@ -64,7 +65,7 @@ class MaskedCCD(dict):
         """
         md = imutils.Metadata(mask_file, 1)
         self._added_mask_types.append(md('MASKTYPE'))
-        for amp in imutils.allAmps:
+        for amp in self:
             curr_mask = self[amp].getMask()
             curr_mask |= afwImage.MaskU(mask_file, imutils.dm_hdu(amp))
     def setMask(self, mask_name=None, clear=False):
@@ -119,16 +120,17 @@ class MaskedCCD(dict):
         return mi
 
 def add_mask_files(mask_files, outfile, clobber=True):
+    amp_list = imutils.allAmps(mask_files[0])
     masks = dict([(amp, afwImage.MaskU(mask_files[0], imutils.dm_hdu(amp)))
-                  for amp in imutils.allAmps])
+                  for amp in amp_list])
     for mask_file in mask_files[1:]:
-        for amp in imutils.allAmps:
+        for amp in masks:
             masks[amp] |= afwImage.MaskU(mask_file, imutils.dm_hdu(amp))
     output = fits.HDUList()
     output.append(fits.PrimaryHDU())
     output[0].header['MASKTYPE'] = 'SUMMED_MASKS'
     fitsWriteto(output, outfile, clobber=clobber)
-    for amp in imutils.allAmps:
+    for amp in masks:
         md = dafBase.PropertySet()
         md.set('EXTNAME', 'SEGMENT%s' % imutils.channelIds[amp])
         masks[amp].writeFits(outfile, md, 'a')
@@ -153,8 +155,8 @@ if __name__ == '__main__':
         print "mask plane dict:", ccd.mask_plane_dict()
         print
 
-    amp = imutils.allAmps[0]
-    
+    amp = imutils.allAmps()[0]
+
     sctrl = ccd.stat_ctrl
     print sctrl.getAndMask(), compute_stats(ccd[amp], sctrl)
 

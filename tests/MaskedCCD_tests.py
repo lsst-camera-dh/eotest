@@ -30,7 +30,7 @@ class MaskedCCDTestCase(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         ccd = sim_tools.CCD(exptime=cls.exptime, gain=cls.gain)
-        for amp in imutils.allAmps:
+        for amp in ccd.segments:
             imarr = ccd.segments[amp].image.getArray()
             imarr[cls.ymin:cls.ymax, cls.xmin:cls.xmax] += cls.signal
         ccd.writeto(cls.mask_image)
@@ -39,7 +39,7 @@ class MaskedCCDTestCase(unittest.TestCase):
             mask_file = 'mask_file_%s.fits' % mask_plane
             cls.mask_files.append(mask_file)
             masked_ccd = MaskedCCD(cls.mask_image)
-            for amp in imutils.allAmps:
+            for amp in masked_ccd:
                 bp = BrightPixels(masked_ccd, amp, cls.exptime,
                                   cls.gain, mask_plane=mask_plane,
                                   ethresh=cls.signal/2.)
@@ -58,16 +58,16 @@ class MaskedCCDTestCase(unittest.TestCase):
         ccd.add_masks(self.summed_mask_file)
         total_signal = (self.signal*(self.ymax - self.ymin)
                         *(self.xmax - self.xmin))
-        ny, nx = ccd[imutils.allAmps[0]].getImage().getArray().shape
-        for amp in imutils.allAmps:
+        ny, nx = ccd[ccd.keys()[0]].getImage().getArray().shape
+        for amp in ccd:
             self.assertEqual(sum(ccd[amp].getImage().getArray().flat),
                              total_signal)
         stat_ctrl = ccd.setMask('BAD')
-        for amp in imutils.allAmps:
+        for amp in ccd:
             stats = afwMath.makeStatistics(ccd[amp], afwMath.MEAN, stat_ctrl)
             self.assertEqual(0, stats.getValue(afwMath.MEAN))
         stat_ctrl = ccd.setMask(clear=True)
-        for amp in imutils.allAmps:
+        for amp in ccd:
             stats = afwMath.makeStatistics(ccd[amp], afwMath.MEAN, stat_ctrl)
             self.assertAlmostEqual(float(total_signal)/(nx*ny),
                                    stats.getValue(afwMath.MEAN), places=10)
@@ -95,7 +95,7 @@ class MaskedCCD_biasHandlingTestCase(unittest.TestCase):
         for x in range(nx):
             imarr[:,x] += bias_func(yvals)
         ccd = sim_tools.CCD(exptime=cls.exptime, gain=cls.gain)
-        for amp in imutils.allAmps:
+        for amp in ccd.segments:
             ccd.segments[amp].image += cls.bias_image
         ccd.writeto(cls.image_file)
     @classmethod
@@ -103,14 +103,14 @@ class MaskedCCD_biasHandlingTestCase(unittest.TestCase):
         os.remove(cls.image_file)
     def test_bias_image(self):
         ccd = MaskedCCD(self.image_file)
-        for amp in imutils.allAmps:
+        for amp in ccd:
             my_bias_image = ccd.bias_image(amp)
             fracdiff = ( (self.bias_image.getArray()-my_bias_image.getArray())
                          /self.bias_image.getArray() )
             self.assertTrue(max(np.abs(fracdiff.flat)) < 1e-6)
     def test_unbias_and_trim(self):
         ccd = MaskedCCD(self.image_file)
-        for amp in imutils.allAmps:
+        for amp in ccd:
             #
             # Test of corresponding MaskedCCD method.
             #

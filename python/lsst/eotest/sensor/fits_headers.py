@@ -130,7 +130,7 @@ def check_noao_keywords(infile, verbose=True):
     except KeyError:
         pdetsize = None
         defects.append("Primary HDU: missing DETSIZE keyword")
-    for extnum in imutils.allAmps:
+    for extnum in imutils.allAmps(infile):
         geom_kwd = lambda x : parse_geom_kwd(input[extnum].header[x])
         try:
             detsec = geom_kwd('DETSEC')

@@ -80,7 +80,7 @@ class PersistenceTask(pipeBase.Task):
 
         # Make a median image of the preflat darks
         median_images = {}
-        for amp in imutils.allAmps:
+        for amp in imutils.allAmps(darks[0]):
             median_images[amp] = imutils.fits_median(pre_flat_darks,
                                                      imutils.dm_hdu(amp))
         medfile = os.path.join(self.config.output_dir,

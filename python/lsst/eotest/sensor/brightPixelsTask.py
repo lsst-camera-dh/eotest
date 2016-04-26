@@ -46,7 +46,7 @@ class BrightPixelsTask(pipeBase.Task):
                                    setpoint=self.config.temp_set_point,
                                    warn_only=True)
         median_images = {}
-        for amp in imutils.allAmps:
+        for amp in imutils.allAmps(dark_files[0]):
             median_images[amp] = imutils.fits_median(dark_files,
                                                      imutils.dm_hdu(amp))
         medfile = os.path.join(self.config.output_dir,
@@ -71,11 +71,11 @@ class BrightPixelsTask(pipeBase.Task):
         if results_file is None:
             results_file = os.path.join(self.config.output_dir,
                                         '%s_eotest_results.fits' % sensor_id)
-        
+
         results = EOTestResults(results_file)
-        for amp in imutils.allAmps:
+        for amp in ccd:
             bright_pixels = BrightPixels(ccd, amp, exptime, gains[amp])
-            
+
             pixels, columns = bright_pixels.find()
             bright_pixels.generate_mask(outfile)
             pix_count = len(pixels)

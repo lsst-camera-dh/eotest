@@ -200,7 +200,7 @@ class PsfGaussFit(object):
     def numGoodFits(self, chiprob_min=0.1):
         chiprob = np.array(self.chiprob)
         amps = np.sort(np.unique(np.array(self.amp)))
-        my_numGoodFits = dict([(amp, 0) for amp in imutils.allAmps])
+        my_numGoodFits = dict([(amp, 0) for amp in imutils.allAmps()])
         for amp in amps:
             indx = np.where((self.chiprob >= chiprob_min) & (self.amp == amp))
             my_numGoodFits[amp] = len(indx[0])
@@ -265,7 +265,7 @@ class PsfGaussFit(object):
         catalog = fits.open(psf_catalog)
         for attr in 'sigmax sigmay dn dn_fp_sum chiprob amp'.split():
             exec('self.%s = np.array((), dtype=float)' % attr)
-        for amp in imutils.allAmps:
+        for amp in imutils.allAmps(psf_catalog):
             extname = 'Amp%02i' % amp
             chiprob = catalog[extname].data.field('CHIPROB')
             index = np.where(chiprob > chiprob_min)
@@ -313,13 +313,13 @@ if __name__ == '__main__':
     ccd = MaskedCCD(infile)
 
     fitter = PsfGaussFit(nsig=nsig, fit_xy=fit_xy)
-    for amp in imutils.allAmps[:2]:
+    for amp in ccd.keys()[:2]:
         print 'processing amp:', amp
         fitter.process_image(ccd, amp)
     fitter.write_results(outfile)
 
     fitter = PsfGaussFit(nsig=nsig, outfile=outfile, fit_xy=fit_xy)
-    for amp in imutils.allAmps[2:]:
+    for amp in ccd.keys()[2:]:
         print "processing amp:", amp
         fitter.process_image(ccd, amp)
     fitter.write_results(outfile)

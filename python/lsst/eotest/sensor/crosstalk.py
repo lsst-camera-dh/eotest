@@ -25,9 +25,9 @@ def get_stats(image, stat_ctrl):
 def aggressor(ccd):
     """Guess the aggressor amp based on the maximum pixel value."""
     max_pix = lambda amp : max(ccd[amp].getImage().getArray().flat)
-    candidate = imutils.allAmps[0]
+    candidate = ccd.keys()[0]
     max_pix_val = max_pix(candidate)
-    for amp in imutils.allAmps[1:]:
+    for amp in ccd.keys()[1:]:
         val = max_pix(amp)
         if val > max_pix_val:
             candidate = amp
@@ -41,7 +41,7 @@ def column_mean(ccd, amp, col):
     image = ccd.unbiased_and_trimmed_image(amp)
     subim = image.Factory(image, reg)
     flags = afwMath.MEAN | afwMath.STDEV | afwMath.NPOINT
-    stats = afwMath.makeStatistics(subim, flags, ccd.stat_ctrl) 
+    stats = afwMath.makeStatistics(subim, flags, ccd.stat_ctrl)
     mean = stats.getValue(afwMath.MEAN)
     npts = stats.getValue(afwMath.NPOINT)
     sigma = stats.getValue(afwMath.STDEV)/np.sqrt(npts)
@@ -53,7 +53,7 @@ def system_crosstalk(ccd, aggressor_amp, dnthresh=None, nsig=5):
     detecting the illuminated column in the aggressor amplifier; if
     set to None, then nsig*clipped_stdev above median is used for
     the threshold.
-    
+
     This routine is optimized for system crosstalk input, i.e., for
     which the aggressor amp has a single illuminated column.
     """
@@ -77,9 +77,9 @@ def system_crosstalk(ccd, aggressor_amp, dnthresh=None, nsig=5):
 
     agg_col = columns[0]
     agg_mean = column_mean(ccd, aggressor_amp, agg_col)[0]
-    
+
     ratios = dict([(amp, column_mean(ccd, amp, agg_col)/agg_mean)
-                   for amp in imutils.allAmps])
+                   for amp in ccd])
     return ratios
 
 def get_footprint(fp_set, min_fp_size, threshold):
@@ -149,7 +149,7 @@ def detector_crosstalk(ccd, aggressor_amp, dnthresh=None, nsig=5,
     if dnthresh is None:
         median, stdev = get_stats(image, ccd.stat_ctrl)
 #        dnthresh = median + nsig*stdev
-        dnthresh = (np.max(ccd[aggressor_amp].getImage().getArray()) 
+        dnthresh = (np.max(ccd[aggressor_amp].getImage().getArray())
                     + median)/2.
 #    print "dnthresh =", dnthresh
     threshold = afwDetect.Threshold(dnthresh)
@@ -161,7 +161,7 @@ def detector_crosstalk(ccd, aggressor_amp, dnthresh=None, nsig=5,
 
     agg_mean = signal_extractor(ccd, aggressor_amp, footprint)[0]
     ratios = dict([(amp, signal_extractor(ccd, amp, footprint)
-                    /agg_mean) for amp in imutils.allAmps])
+                    /agg_mean) for amp in ccd])
 #    for amp in ratios:
 #        if ratios[amp][0] > 0.1:
 #            ratios[amp] = (0, 0)
@@ -175,8 +175,8 @@ class CrosstalkMatrix(object):
         if self.filename is not None:
             self._read_matrix()
     def set_row(self, agg, ratios):
-        self.matrix[agg-1] = np.array([ratios[amp][0] for amp 
-                                       in imutils.allAmps])
+        self.matrix[agg-1] = np.array([ratios[amp][0] for amp
+                                       in imutils.allAmps()])
     def _set_matrix(self):
         self.matrix = np.zeros((self.namps, self.namps), dtype=np.float)
     def _read_matrix(self):
@@ -192,7 +192,7 @@ class CrosstalkMatrix(object):
         for line in input:
             if line[0] == '#':
                 continue
-            self.matrix[amp] = np.array([float(x) for x 
+            self.matrix[amp] = np.array([float(x) for x
                                          in line.strip().split()])
             amp += 1
     def write_fits(self, outfile=None, clobber=True):
@@ -218,7 +218,7 @@ class CrosstalkMatrix(object):
                 output.write('%12.4e  ' % self.matrix[agg][victim])
             output.write('\n')
         output.close()
-    def plot_matrix(self, title=None, cmap_range=(0.6, 0.4), precision=3, 
+    def plot_matrix(self, title=None, cmap_range=(0.6, 0.4), precision=3,
                     scale_factor=1e2, fontsize=10, figsize=(12, 6),
                     cmap=None):
         pylab.ion()
@@ -232,7 +232,7 @@ class CrosstalkMatrix(object):
             cdict = dict(red=((0, cmin, cmin), (1, cmax, cmax)),
                          green=((0, cmin, cmin), (1, cmax, cmax)),
                          blue=((0, cmin, cmin), (1, cmax, cmax)))
-            cmap = pylab.matplotlib.colors.LinearSegmentedColormap('my_grey', 
+            cmap = pylab.matplotlib.colors.LinearSegmentedColormap('my_grey',
                                                                    cdict, 256)
         fig = pylab.figure(figsize=figsize)
         axes = fig.add_subplot(111)
@@ -253,7 +253,7 @@ class CrosstalkMatrix(object):
                     label = '0'
                 else:
                     label = '%.3f' % my_matrix[y][x]
-                pylab.text(x, y, label, horizontalalignment='center', 
+                pylab.text(x, y, label, horizontalalignment='center',
                            fontsize=fontsize)
         pylab.colorbar(image)
     def plot(self, cmap=pylab.cm.hot, title=''):
@@ -287,7 +287,7 @@ def make_crosstalk_matrix(file_list, mask_files=(),
         os.path.isfile(file_list)
         # A single file, so we assume that we have a multi-aggressor spot frame.
         ccd = MaskedCCD(file_list, mask_files=mask_files)
-        for agg_amp in imutils.allAmps:
+        for agg_amp in ccd:
             if verbose:
                 print "processing aggressor amp", agg_amp
             try:
@@ -322,7 +322,7 @@ if __name__ == '__main__':
     #
     tstart = time.time()
     sys_xtalk = CrosstalkMatrix()
-    for agg_amp in imutils.allAmps:
+    for agg_amp in imutils.allAmps():
         ccd = MaskedCCD(sys_xtfile(agg_amp), mask_files=mask_files)
         ratios = system_crosstalk(ccd, agg_amp)
         sys_xtalk.set_row(agg_amp, ratios)
@@ -342,7 +342,7 @@ if __name__ == '__main__':
     #
     tstart = time.time()
     det_xtalk = CrosstalkMatrix()
-    for agg_amp in imutils.allAmps:
+    for agg_amp in imutils.allAmps():
         ccd = MaskedCCD(sys_xtfile(agg_amp), mask_files=mask_files)
         det_ratios = detector_crosstalk(ccd, agg_amp)
         det_xtalk.set_row(agg_amp, det_ratios)
@@ -350,7 +350,7 @@ if __name__ == '__main__':
 
     tstart = time.time()
     det_xtalk_2 = CrosstalkMatrix()
-    for agg_amp in imutils.allAmps:
+    for agg_amp in imutils.allAmps():
         ccd = MaskedCCD(sys_xtfile(agg_amp), mask_files=mask_files)
         det_ratios = detector_crosstalk(ccd, agg_amp,
                                         signal_extractor=extract_mean_signal_2)

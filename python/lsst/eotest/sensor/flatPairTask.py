@@ -57,7 +57,7 @@ class FlatPairTask(pipeBase.Task):
        flat pair dataset."""
     ConfigClass = FlatPairConfig
     _DefaultName = "FlatPairTask"
-    
+
     @pipeBase.timeMethod
     def run(self, sensor_id, infiles, mask_files, gains, detrespfile=None,
             bias_frame=None, max_pd_frac_dev=0.05):
@@ -84,7 +84,7 @@ class FlatPairTask(pipeBase.Task):
         output = EOTestResults(outfile)
         if self.config.verbose:
             self.log.info("Amp        full well (e-/pixel)   max. frac. dev.")
-        for amp in imutils.allAmps:
+        for amp in imutils.allAmps(detrespfile):
             try:
                 full_well, fp = detresp.full_well(amp)
             except (ValueError, RuntimeError, TypeError):
@@ -104,9 +104,10 @@ class FlatPairTask(pipeBase.Task):
     def _create_detresp_fits_output(self, nrows):
         self.output = fits.HDUList()
         self.output.append(fits.PrimaryHDU())
-        colnames = ['flux'] + ['AMP%02i_SIGNAL' % i for i in imutils.allAmps]
+        all_amps = imutils.allAmps()
+        colnames = ['flux'] + ['AMP%02i_SIGNAL' % i for i in all_amps]
         formats = 'E'*len(colnames)
-        units = ['None'] + ['e-']*len(imutils.allAmps)
+        units = ['None'] + ['e-']*len(all_amps)
         columns = [np.zeros(nrows, dtype=np.float) for fmt in formats]
         fits_cols = [fits.Column(name=colnames[i], format=formats[i],
                                  unit=units[i], array=columns[i])
@@ -164,7 +165,7 @@ class FlatPairTask(pipeBase.Task):
                 self.log.info('   flux = %s' % flux)
                 self.log.info('   flux/exptime = %s' % (flux/exptime1,))
             self.output[-1].data.field('FLUX')[row] = flux
-            for amp in imutils.allAmps:
+            for amp in flat1:
                 # Convert to e- and write out for each segment.
                 signal = pair_mean(flat1, flat2, amp)*self.gains[amp]
                 self.output[-1].data.field('AMP%02i_SIGNAL' % amp)[row] = signal

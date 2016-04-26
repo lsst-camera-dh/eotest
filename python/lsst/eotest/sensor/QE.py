@@ -47,7 +47,7 @@ class QE_Data(object):
         self.exptime = data[1]
         self.pd = data[2]
         self.medians = dict([(amp, col) for amp, col
-                             in zip(imutils.allAmps, data[3:])])
+                             in zip(imutils.allAmps(), data[3:])])
     def _correction_images(self, ccd, correction_image):
         images = OrderedDict()
         for amp in ccd:
@@ -57,7 +57,7 @@ class QE_Data(object):
     def calculate_medians(self, infiles, outfile, mask_files=(),
                           clobber=False, correction_image=None):
         files = sorted([x for x in infiles])
-        self.medians = dict([(amp, []) for amp in imutils.allAmps])
+        self.medians = dict([(amp, []) for amp in imutils.allAmps(files[0])])
         self.wl = []          # wavelength in nanometers
         self.exptime = []     # exposure time in seconds
         self.pd = []          # photodiode current in amps
@@ -102,7 +102,7 @@ class QE_Data(object):
             output.write('%.3f' % self.wl[-1])
             output.write('  %.3e' % self.exptime[-1])
             output.write('  %.3e' % self.pd[-1])
-            for amp in imutils.allAmps:
+            for amp in ccd:
                 im = ccd.unbiased_and_trimmed_image(amp)
                 im *= corrections[amp]
                 value = afwMath.makeStatistics(im, afwMath.MEDIAN,
@@ -140,10 +140,12 @@ class QE_Data(object):
             power.append(pd_current/(ccd_frac(wl_nm)*sensitivity(wl_nm))
                          *pixel_area/pd_area)
         self.power = np.array(power, dtype=np.float)
-    def calculate_QE(self, gains):
+    def calculate_QE(self, gains, amps=None):
+        if amps is None:
+            amps = imutils.allAmps()
         qe = OrderedDict()
         wlarrs = OrderedDict()
-        for amp in imutils.allAmps:
+        for amp in amps:
             qe[amp] = []
             wlarrs[amp] = []
             for i, wl_nm in enumerate(self.wl):
@@ -240,7 +242,7 @@ class QE_Data(object):
         else:
             plot.pylab.ioff()
         indx = np.argsort(self.wlarrs[1])
-        for i, amp in enumerate(imutils.allAmps):
+        for i, amp in enumerate(self.qe):
             plot.curve(self.wlarrs[amp][indx], self.qe[amp][indx],
                        oplot=i, xname='wavelength (nm)', yname='QE (%)',
                        xrange=(350, 1100))
@@ -258,7 +260,7 @@ if __name__ == '__main__':
     sph_cal_file = 'OD143.csv'
     wlscan_file = 'WLscan.txt'
 
-    gains = dict([(amp, 2.5) for amp in imutils.allAmps])
+    gains = dict([(amp, 2.5) for amp in imutils.allAmps()])
     infiles = glob.glob('/nfs/farm/g/lsst/u1/testData/HarvardData/112-01/final/bss70/qe/112_01_qe_[0-9]*.fits.gz')
 #    medians_file = 'med_vs_wl.txt'
     medians_file = 'med_vs_wl_bss70.txt'

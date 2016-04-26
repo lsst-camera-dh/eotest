@@ -220,7 +220,8 @@ class EOTestPlots(object):
         results = fits.open(infile)
         times = results[1].data.field('TIME')
         win = None
-        for amp in imutils.allAmps:
+        all_amps = imutils.allAmps(infile)
+        for amp in all_amps:
             subplot = (4, 4, amp)
             if amp == 1:
                 win = plot.Window(subplot=subplot, figsize=figsize,
@@ -255,7 +256,8 @@ class EOTestPlots(object):
                                                  % self.sensor_id))[0]
         fe55_catalog = fits.open(fe55_file)
         win = None
-        for amp in imutils.allAmps:
+        all_amps = imutils.allAmps(fe55_file)
+        for amp in all_amps:
             #print "Amp", amp
             subplot = (4, 4, amp)
             chiprob = fe55_catalog[amp].data.field('CHIPROB')
@@ -300,7 +302,7 @@ class EOTestPlots(object):
                                                  % self.sensor_id))[0]
         fe55_catalog = fits.open(fe55_file)
         win = None
-        for amp in imutils.allAmps:
+        for amp in imutils.allAmps(fe55_file):
             #print "Amp", amp
             chiprob = fe55_catalog[amp].data.field('CHIPROB')
             index = np.where(chiprob > chiprob_min)
@@ -324,13 +326,11 @@ class EOTestPlots(object):
                          subplot=(4, 4, amp), win=win,
                          frameLabels=True, amp=amp)
             pylab.locator_params(axis='x', nbins=4, tight=True)
-    def ptcs(self, xrange=None, yrange=None, figsize=(11, 8.5),
-             ptc_file=None):
-        if ptc_file is not None:
-            ptc = fits.open(ptc_file)
-        else:
-            ptc = fits.open(self._fullpath('%s_ptc.fits' % self.sensor_id))
-        for amp in imutils.allAmps:
+    def ptcs(self, xrange=None, yrange=None, figsize=(11, 8.5), ptc_file=None):
+        if ptc_file is None:
+            ptc_file = self._fullpath('%s_ptc.fits' % self.sensor_id)
+        ptc = fits.open(ptc_file)
+        for amp in imutils.allAmps(ptc_file):
             #print "Amp", amp
             subplot = (4, 4, amp)
             if amp == 1:
@@ -403,13 +403,11 @@ class EOTestPlots(object):
         win.set_title("Read Noise, %s" % self.sensor_id)
     def full_well(self, gain_range=(1, 6), figsize=(11, 8.5),
                   ptc_file=None, detresp_file=None):
-        if detresp_file is not None:
-            detresp = DetectorResponse(detresp_file, gain_range=gain_range)
-        else:
-            detresp = DetectorResponse(self._fullpath('%s_det_response.fits' 
-                                                      % self.sensor_id),
-                                       gain_range=gain_range)
-        for amp in imutils.allAmps:
+        if detresp_file is None:
+            detresp_file = self._fullpath('%s_det_response.fits'
+                                          % self.sensor_id)
+        detresp = DetectorResponse(detresp_file, gain_range=gain_range)
+        for amp in imutils.allAmps(detresp_file):
             subplot = (4, 4, amp)
             if amp == 1:
                 win = plot.Window(subplot=subplot, figsize=figsize,
@@ -446,14 +444,11 @@ class EOTestPlots(object):
                 ptc = fits.open(self._fullpath('%s_ptc.fits' % self.sensor_id))
             except IOError:
                 ptc = None
-        if detresp_file is not None:
-            detresp = DetectorResponse(detresp_file, ptc=ptc,
-                                       gain_range=gain_range)
-        else:
-            detresp = DetectorResponse(self._fullpath('%s_det_response.fits' 
-                                                      % self.sensor_id),
-                                       ptc=ptc, gain_range=gain_range)
-        for amp in imutils.allAmps:
+        if detresp_file is None:
+            detresp_file = self._fullpath('%s_det_response.fits'
+                                          % self.sensor_id)
+        detresp = DetectorResponse(detresp_file, ptc=ptc, gain_range=gain_range)
+        for amp in imutils.allAmps(detresp_file):
             try:
                 self._linearity_results[amp] = detresp.linearity(amp)
             except Exception, eObj:
@@ -465,13 +460,13 @@ class EOTestPlots(object):
         self._gain_range = gain_range
         self._ptc_file = ptc_file
         self._detresp_file = detresp_file
-        for amp in imutils.allAmps:
+        for amp in imutils.allAmps(detresp_file):
             #
             # Set up the plotting subwindow.
             subplot = (4, 4, amp)
             if amp == 1:
                 win = plot.Window(subplot=subplot, figsize=figsize,
-                                  xlabel=r'pd current $\times$ exposure', 
+                                  xlabel=r'pd current $\times$ exposure',
                                   ylabel='', size='large')
                 win.frameAxes.text(0.5, 1.08, 'Linearity, %s' % self.sensor_id,
                                    horizontalalignment='center',
@@ -542,11 +537,11 @@ class EOTestPlots(object):
         self._gain_range = gain_range
         self._ptc_file = ptc_file
         self._detresp_file = detresp_file
-        for amp in imutils.allAmps:
+        for amp in imutils.allAmps(detresp_file):
             subplot = (4, 4, amp)
             if amp == 1:
                 win = plot.Window(subplot=subplot, figsize=figsize,
-                                  xlabel=r'pd current $\times$ exposure', 
+                                  xlabel=r'pd current $\times$ exposure',
                                   ylabel='', size='large')
                 win.frameAxes.text(0.5, 1.08,
                                    'Linearity residuals, %s' % self.sensor_id,
@@ -597,7 +592,7 @@ class EOTestPlots(object):
         if qe_file is not None:
             self._qe_file = qe_file
         if amp is None:
-            amps = imutils.allAmps
+            amps = imutils.allAmps()
         else:
             amps = (amp,)
         for amp in amps:
@@ -625,13 +620,13 @@ class EOTestPlots(object):
             self._qe_file = qe_file
         qe_data = self.qe_data
         bands = qe_data[2].data.field('BAND')
-        band_wls = np.array([sum(self.band_pass[b])/2. for b in 
+        band_wls = np.array([sum(self.band_pass[b])/2. for b in
                              self.band_pass.keys() if b in bands])
         band_wls_errs = np.array([(self.band_pass[b][1]-self.band_pass[b][0])/2.
                                   for b in self.band_pass.keys() if b in bands])
         wl = qe_data[1].data.field('WAVELENGTH')
         qe = {}
-        for amp in imutils.allAmps:
+        for amp in imutils.allAmps(self._qe_file):
             qe[amp] = qe_data[1].data.field('AMP%02i' % amp)
             win = plot.curve(wl, qe[amp], xname='wavelength (nm)',
                              yname='QE (% e-/photon)', oplot=amp-1,
@@ -639,7 +634,7 @@ class EOTestPlots(object):
             if amp == 1:
                 win.set_title('QE, %s' % self.sensor_id)
             qe_band = qe_data[2].data.field('AMP%02i' % amp)
-            plot.xyplot(band_wls, qe_band, xerr=band_wls_errs, 
+            plot.xyplot(band_wls, qe_band, xerr=band_wls_errs,
                         oplot=1, color='g')
         plot.hline(100)
     def flat_fields(self, lambda_dir, nsig=3, cmap=pylab.cm.hot):
@@ -845,7 +840,7 @@ class CcdSpecs(OrderedDict):
         self['CCD-012e'].measurement = '%i' % num_traps
 
         try:
-            num_pixels = (self.results['TOTAL_NUM_PIXELS'] 
+            num_pixels = (self.results['TOTAL_NUM_PIXELS']
                           - self.results['ROLLOFF_MASK_PIXELS'])
         except:
             num_pixels = 16129000
@@ -868,14 +863,14 @@ class CcdSpecs(OrderedDict):
             dark_current = max(self.results['DARK_CURRENT_95'])
         self['CCD-014'].measurement = '$\\num{%.2e}$\electron\,s$^{-1}$' % dark_current
         self['CCD-014'].ok = (dark_current < 0.2)
-        
+
         bands = self.plotter.qe_data['QE_BANDS'].data.field('BAND')
         bands = OrderedDict([(band, []) for band in bands])
-        for amp in imutils.allAmps:
+        for amp in imutils.allAmps():
             values = self.plotter.qe_data['QE_BANDS'].data.field('AMP%02i' % amp)
             for band, value in zip(bands, values):
                 bands[band].append(value)
-        for band, specnum, minQE in zip('ugrizy', range(21, 27), 
+        for band, specnum, minQE in zip('ugrizy', range(21, 27),
                                         (41, 78, 83, 82, 75, 21)):
             try:
                 qe_mean = np.mean(bands[band])

@@ -54,7 +54,7 @@ class TrapTask(pipeBase.Task):
         results = EOTestResults(results_file)
         if self.config.verbose:
             self.log.info("Amp     Number of traps")
-        for amp in imutils.allAmps:
+        for amp in ccd:
             #
             # Tabulate forward traps (A0 < 0) with size >= threshold.
             #

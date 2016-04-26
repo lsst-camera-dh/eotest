@@ -105,8 +105,9 @@ def ctesim(infile, pcti=0, scti=0, verbose=False):
 
     return fitsFile(segments, input)
 
-def make_fe55(outfile, nxrays, bias_level=2000, bias_sigma=4,
-              amps=imutils.allAmps):
+def make_fe55(outfile, nxrays, bias_level=2000, bias_sigma=4, amps=None):
+    if amps is None:
+        amps = imutils.allAmps()
     segments = []
     for amp in amps:
         seg = sim_tools.SegmentExposure()

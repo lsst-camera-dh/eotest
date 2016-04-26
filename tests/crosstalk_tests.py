@@ -36,7 +36,7 @@ class CrosstalkMatrixTestCase(unittest.TestCase):
         self.matrix_text_output = 'xtalk_output.txt'
         self.matrix_fits_output = 'xtalk_output.fits'
         self.xtalk_files = []
-        for agg in imutils.allAmps:
+        for agg in imutils.allAmps():
             self.xtalk_files.append('xtalk_test_%02i.fits' % agg)
             xtalk_frac = sim_tools.xtalk_pattern(agg)
             ccd = generate_crosstalk_frame(agg, 2000, 250, 250, 20,

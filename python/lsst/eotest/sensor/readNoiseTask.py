@@ -23,7 +23,7 @@ def _write_read_noise_dists(outfile, Ntot, Nsys, gains, bias, sysnoise):
     output.append(fits.PrimaryHDU())
     output[0].header['BIASFILE'] = bias
     output[0].header['SYSNFILE'] = str(sysnoise)
-    for amp in imutils.allAmps:
+    for amp in Ntot:
         sigtot, sigsys = Ntot[amp], Nsys[amp]
         nread_col = fits.Column(name="TOTAL_NOISE", format="E",
                                 unit="e- rms", array=sigtot)
@@ -63,12 +63,13 @@ class ReadNoiseTask(pipeBase.Task):
     @pipeBase.timeMethod
     def run(self, sensor_id, bias_files, gains, system_noise_files=None,
             system_noise=None, mask_files=(), use_overscan=False):
+        all_amps = imutils.allAmps(bias_files[0])
         imutils.check_temperatures(bias_files, self.config.temp_set_point_tol,
                                    setpoint=self.config.temp_set_point,
                                    warn_only=True)
         outfiles = []
-        Ntot = NoiseDistributions()
-        Nsys = NoiseDistributions()
+        Ntot = NoiseDistributions(amps=all_amps)
+        Nsys = NoiseDistributions(amps=all_amps)
         if system_noise_files is None:
             system_noise_files = [None]*len(bias_files)
         for i, bias, sysnoise in zip(range(len(bias_files)), bias_files,
@@ -76,7 +77,7 @@ class ReadNoiseTask(pipeBase.Task):
             outfile = "%s_read_noise_%03i.fits" % (sensor_id, i)
             outfile = os.path.join(self.config.output_dir, outfile)
             outfiles.append(outfile)
-            
+
             if self.config.verbose:
                 self.log.info("Processing %s %s -> %s" % (bias, sysnoise,
                                                           outfile))
@@ -104,14 +105,14 @@ class ReadNoiseTask(pipeBase.Task):
             Nsys_amp = noise_dists(sysnoise, gains, sampler,
                                    mask_files=mask_files)
 
-            _write_read_noise_dists(outfile, Ntot_amp, Nsys_amp, gains, 
+            _write_read_noise_dists(outfile, Ntot_amp, Nsys_amp, gains,
                                     bias, sysnoise)
             #
             # Accumulate noise distributions for final median calculation
             #
             Ntot.append(Ntot_amp)
             Nsys.append(Nsys_amp)
-            
+
         results_file = self.config.eotest_results_file
         if results_file is None:
             results_file = os.path.join(self.config.output_dir,
@@ -120,7 +121,7 @@ class ReadNoiseTask(pipeBase.Task):
         results = EOTestResults(results_file)
         if self.config.verbose:
             self.log.info("Amp    read noise    total noise    system noise")
-        for amp in imutils.allAmps:
+        for amp in ccd:
             Ntot_med = imutils.median(Ntot[amp])
             if system_noise is not None:
                 Nsys_med = float(system_noise[amp])

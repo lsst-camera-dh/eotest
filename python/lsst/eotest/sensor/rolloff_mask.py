@@ -25,7 +25,7 @@ from sim_tools import CCD
 def rolloff_mask(infile, outfile,
                  mask_plane='ROLLOFF_DEFECTS',
                  tmp_mask_image='temp_mask_image.fits',
-                 outer_edge_width=10, 
+                 outer_edge_width=10,
                  bloom_stop_width=5,
                  signal=10,
                  cleanup=True):
@@ -37,7 +37,7 @@ def rolloff_mask(infile, outfile,
     infile: Input file to mask.
 
     outfile: The name of the file to contain the masks.
-    
+
     outer_edge_width: This is the width in pixels of the masked region
     along the sides closest to the sensor edges of the imaging region
     of each segment.
@@ -76,7 +76,7 @@ def rolloff_mask(infile, outfile,
     # along the perimeter.
     #
     # Amps 8 & 16 have roll-off adjacent to the prescan:
-    # 
+    #
     xmin = amp_geom.imaging.getMinX()
     xmax = xmin + outer_edge_width
     for amp in (8, 16):
@@ -96,7 +96,7 @@ def rolloff_mask(infile, outfile,
     #
     ymax = amp_geom.imaging.getMaxY() + 1
     ymin = ymax - bloom_stop_width
-    for i, amp in enumerate(imutils.allAmps):
+    for i, amp in enumerate(ccd.segments):
         image = ccd.segments[amp].image
         imarr = image.getArray()
         #
@@ -120,7 +120,7 @@ def rolloff_mask(infile, outfile,
     mask = afwImage.MaskU(image.getDimensions())
     mask.addMaskPlane(mask_plane)
     maskedCCD = MaskedCCD(tmp_mask_image)
-    for amp in imutils.allAmps:
+    for amp in maskedCCD:
         bright_pixels = BrightPixels(maskedCCD, amp, exptime, gain,
                                      ethresh=signal/2., mask_plane=mask_plane)
         bright_pixels.generate_mask(outfile)

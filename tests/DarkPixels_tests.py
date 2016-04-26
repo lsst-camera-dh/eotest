@@ -40,7 +40,7 @@ class DarkPixelsTestCase(unittest.TestCase):
         os.remove(self.mask_file)
     def test_generate_mask(self):
         ccd = MaskedCCD(self.sflat_file)
-        for amp in imutils.allAmps:
+        for amp in ccd:
             dp = DarkPixels(ccd, amp, frac_thresh=0.8, colthresh=100)
             results = dp.find()
             dp.generate_mask(self.mask_file)
@@ -78,7 +78,7 @@ class DarkColumnsTestCase(unittest.TestCase):
         os.remove(self.mask_file)
     def test_generate_mask(self):
         ccd = MaskedCCD(self.sflat_file)
-        for amp in imutils.allAmps:
+        for amp in ccd:
             dp = DarkPixels(ccd, amp, frac_thresh=0.8, colthresh=100)
             results = dp.find()
             dp.generate_mask(self.mask_file)

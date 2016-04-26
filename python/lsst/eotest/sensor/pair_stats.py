@@ -94,7 +94,7 @@ if __name__ == '__main__':
     ccd1 = MaskedCCD(datapath('000-00_flat_005.09s_flat1_debug.fits'))
     ccd2 = MaskedCCD(datapath('000-00_flat_005.09s_flat2_debug.fits'))
 
-    for i, amp in enumerate(imutils.allAmps):
+    for i, amp in enumerate(ccd1.keys()):
         my_pair_stats = pair_stats(ccd1, ccd2, amp)
         if i == 0:
             print my_pair_stats.header()

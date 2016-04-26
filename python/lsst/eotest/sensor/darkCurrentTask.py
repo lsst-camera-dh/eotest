@@ -38,7 +38,7 @@ class DarkCurrentTask(pipeBase.Task):
                                    warn_only=True)
         median_images = {}
         md = imutils.Metadata(dark_files[0], 1)
-        for amp in imutils.allAmps:
+        for amp in imutils.allAmps(dark_files[0]):
             median_images[amp] = imutils.fits_median(dark_files,
                                                      imutils.dm_hdu(amp))
         medfile = os.path.join(self.config.output_dir,
@@ -52,7 +52,7 @@ class DarkCurrentTask(pipeBase.Task):
         if self.config.verbose:
             self.log.info("Amp        95 percentile    median")
         dark_curr_pixels = []
-        for amp in imutils.allAmps:
+        for amp in ccd:
             imaging_region = ccd.amp_geom.imaging
             overscan = ccd.amp_geom.serial_overscan
             image = imutils.unbias_and_trim(ccd[amp].getImage(),
@@ -94,7 +94,7 @@ class DarkCurrentTask(pipeBase.Task):
             output[0].header['DARK%02i' % i] = os.path.basename(dark)
         # Write overall dark current 95th percentile
         results.output['AMPLIFIER_RESULTS'].header['DARK95'] = darkcurr95
-        for amp in imutils.allAmps:
+        for amp in ccd:
             output[0].header['DARK95%s'%imutils.channelIds[amp]] = dark95s[amp]
             results.add_seg_result(amp, 'DARK_CURRENT_95', dark95s[amp])
         fitsWriteto(output, medfile, clobber=True, checksum=True)

@@ -141,25 +141,25 @@ def hdu_gains(fe55_file, mask_files=()):
     ccd.setAllMasks()
     ccdtemp = ccd.md.get('CCDTEMP')
     gains = {}
-    for amp in imutils.allAmps:
+    for amp in ccd:
         xrays = Xrays(ccd, amp)
         gains[amp], noise = xrays.gain()
     return gains
 
 if __name__ == '__main__':
     from MaskedCCD import MaskedCCD
-    
+
     data_dir = '/nfs/farm/g/lsst/u1/testData/eotestData/000_00/xray/data' 
     infile = os.path.join(data_dir, '000_00_fe55_0600s_000.fits')
 #    data_dir = '/nfs/slac/g/ki/ki18/jchiang/LSST/SensorTests/test_scripts/work/sensorData/000-00/fe55/debug'
 #    infile = os.path.join(data_dir, '000-00_fe55_fe55_00_debug.fits')
-    
+
     make_plot = True
 
     ccd = MaskedCCD(infile)
 
     print 'AMP   gain    noise'
-    for amp in imutils.allAmps[:1]:
+    for amp in ccd.keys()[:1]:
         xrays = Xrays(ccd, amp)
         gain, noise = xrays.gain(make_plot=make_plot)
         print '%s    %.2f    %.2f' % (imutils.channelIds[amp], gain, noise)

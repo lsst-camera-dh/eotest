@@ -30,22 +30,22 @@ class QeTask(pipeBase.Task):
                                    setpoint=self.config.temp_set_point,
                                    warn_only=True)
         qe_data = QE.QE_Data(verbose=self.config.verbose, logger=self.log)
-        
+
         if medians_file is None:
             medians_file = os.path.join(self.config.output_dir,
                                         '%s_QE_medians.txt' % sensor_id)
             qe_data.calculate_medians(qe_files, medians_file,
                                       mask_files=mask_files, clobber=True,
                                       correction_image=correction_image)
-            
+
         qe_data.read_medians(medians_file)
-        
+
         if vendor_data:
             qe_data.incidentPower_e2v()
         else:
             qe_data.incidentPower(pd_ratio_file)
 
-        qe_data.calculate_QE(gains)
+        qe_data.calculate_QE(gains, amps=imutils.allAmps(qe_files[0]))
 
         fits_outfile = os.path.join(self.config.output_dir,
                                     '%s_QE.fits' % sensor_id)

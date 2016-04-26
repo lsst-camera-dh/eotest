@@ -16,7 +16,8 @@ class _FitsFile(dict):
     def __init__(self, infile):
         dict.__init__(self)
         foo = fits.open(infile)
-        for amp in imutils.allAmps:
+        amps = imutils.allAmps(infile)
+        for amp in amps:
             self[amp] = foo[amp].data
 
 class rolloff_mask_TestCase(unittest.TestCase):
@@ -36,14 +37,14 @@ class rolloff_mask_TestCase(unittest.TestCase):
         os.remove(self.input_file)
     def test_rolloff_mask(self):
         amp_geom = makeAmplifierGeometry(self.input_file)
-        rolloff_mask(self.input_file, self.mask_file, 
+        rolloff_mask(self.input_file, self.mask_file,
                      tmp_mask_image=self.image_file,
                      outer_edge_width=self.outer_edge_width,
                      bloom_stop_width=self.bloom_stop_width,
                      signal=self.signal, cleanup=False)
         image = _FitsFile(self.image_file)
         mask = _FitsFile(self.mask_file)
-        for amp in imutils.allAmps:
+        for amp in imutils.allAmps(self.input_file):
             #
             # Unmasked region.
             #

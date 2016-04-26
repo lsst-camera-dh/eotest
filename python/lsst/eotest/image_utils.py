@@ -29,7 +29,15 @@ class Metadata(object):
         else:
             return self.header[key]
 
-allAmps = range(1, 17)
+def allAmps(fits_file=None):
+    all_amps = range(1, 17)
+    if fits_file is None:
+        return all_amps
+    try:
+        namps = fits.open(fits_file)[0].header['NAMPS']
+        return range(1, namps+1)
+    except KeyError:
+        return all_amps
 
 # Segment ID to HDU number in FITS dictionary
 hdu_dict = dict( [ (1,'Segment10'), (2,'Segment11'), (3,'Segment12'),
@@ -39,7 +47,7 @@ hdu_dict = dict( [ (1,'Segment10'), (2,'Segment11'), (3,'Segment12'),
                    (13,'Segment03'), (14,'Segment02'), (15,'Segment01'),
                    (16,'Segment00') ] )
 
-channelIds = dict([(i, hdu_dict[i][-2:]) for i in allAmps])
+channelIds = dict([(i, hdu_dict[i][-2:]) for i in allAmps()])
 
 mean = lambda x : afwMath.makeStatistics(x, afwMath.MEAN).getValue()
 median = lambda x : afwMath.makeStatistics(x, afwMath.MEDIAN).getValue()
@@ -47,7 +55,7 @@ stdev = lambda x : afwMath.makeStatistics(x, afwMath.STDEV).getValue()
 
 def dm_hdu(hdu):
     """ Compute DM HDU from the actual FITS file HDU."""
-    return hdu+1
+    return hdu + 1
 
 def bias(im, overscan):
     """Compute the bias from the mean of the pixels in the serial
@@ -105,7 +113,7 @@ def set_bitpix(hdu, bitpix):
 
 def fits_median_file(files, outfile, bitpix=None, clobber=True):
     output = fits.open(files[0])
-    for amp in allAmps:
+    for amp in allAmps(files[0]):
         output[amp].data = fits_median(files, hdu=dm_hdu(amp)).getArray()
         if bitpix is not None:
             set_bitpix(output[amp], bitpix)
@@ -113,13 +121,14 @@ def fits_median_file(files, outfile, bitpix=None, clobber=True):
 
 def fits_mean_file(files, outfile, bitpix=None, clobber=True):
     output = fits.open(files[0])
-    for amp in allAmps:
+    all_amps = allAmps(files[0])
+    for amp in all_amps:
         output[amp].data = np.zeros(output[amp].data.shape)
     for infile in files:
         input = fits.open(infile)
-        for amp in allAmps:
+        for amp in all_amps:
             output[amp].data += input[amp].data
-    for amp in allAmps:
+    for amp in all_amps:
         output[amp].data /= len(files)
         if bitpix is not None:
             set_bitpix(output[amp], bitpix)

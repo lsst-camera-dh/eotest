@@ -44,7 +44,7 @@ if __name__ == '__main__':
 
     md = imutils.Metadata('work/000-00_gains.fits', 1)
     gains = dict([(amp, md.get('GAIN%s' % imutils.channelIds[amp]))
-                  for amp in imutils.allAmps])
+                  for amp in imutils.allAmps(infile)])
 
     pix_stdev, pix_mean = prnu(infile, mask_files, gains)
 
