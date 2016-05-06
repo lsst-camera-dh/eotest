@@ -6,6 +6,7 @@ Gaussian fit parameters to Fe55 data.
 """
 import os
 import numpy as np
+import astropy.io.fits as fits
 import lsst.eotest.image_utils as imutils
 from fe55_psf import PsfGaussFit, psf_sigma_statistics
 from MaskedCCD import MaskedCCD
@@ -116,8 +117,10 @@ class Fe55Task(pipeBase.Task):
             if self.config.verbose:
                 self.log.info("Writing psf results file to %s" % psf_results)
             fitter.write_results(outfile=psf_results)
+            namps = len(ccd)
         else:
             fitter.read_fe55_catalog(fe55_catalog)
+            namps = fits.open(fe55_catalog)[0].header['NAMPS']
 
         results_file = self.config.eotest_results_file
         if results_file is None:
@@ -128,7 +131,7 @@ class Fe55Task(pipeBase.Task):
             self.log.info("Writing gain and psf sigma results to %s"
                           % results_file)
 
-        results = EOTestResults(results_file)
+        results = EOTestResults(results_file, namps=namps)
         for amp in gains:
             results.add_seg_result(amp, 'GAIN', gains[amp])
             results.add_seg_result(amp, 'GAIN_ERROR', gain_errors[amp])

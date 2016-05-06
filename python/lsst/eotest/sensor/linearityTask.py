@@ -27,11 +27,11 @@ class LinearityConfig(pexConfig.Config):
     verbose = pexConfig.Field("Turn verbosity on", bool, default=True)
 
 class LinearityTask(pipeBase.Task):
-    """Task to compute detector response vs incident flux from 
+    """Task to compute detector response vs incident flux from
        flat pair dataset."""
     ConfigClass = LinearityConfig
     _DefaultName = "LinearityTask"
-    
+
     @pipeBase.timeMethod
     def run(self, sensor_id, infiles, mask_files, gains, detrespfile=None,
             bias_frame=None):
@@ -121,6 +121,7 @@ class LinearityTask(pipeBase.Task):
                 # Convert to e- and write out for each segment.
                 signal = pair_mean(flat1, flat2, amp)*self.gains[amp]
                 self.output[-1].data.field('AMP%02i_SIGNAL' % amp)[row] = signal
+        self.output[0].header['NAMPS'] = len(flat1)
         fitsWriteto(self.output, outfile, clobber=True)
         return outfile
 

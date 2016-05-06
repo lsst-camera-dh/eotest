@@ -139,4 +139,5 @@ class PtcTask(pipeBase.Task):
                      for i in range(len(columns))]
         output.append(fitsTableFactory(fits_cols))
         output[-1].name = 'PTC_STATS'
+        output[0].header['NAMPS'] = len(all_amps)
         fitsWriteto(output, outfile, clobber=True)

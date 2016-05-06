@@ -235,6 +235,7 @@ class QE_Data(object):
         HDUList.append(fitsTableFactory(fits_cols(zip(colnames, formats,
                                                       units, columns))))
         HDUList[-1].name = 'QE_BANDS'
+        HDUList[0].header['NAMPS'] = len(amps)
         fitsWriteto(HDUList, outfile, clobber=clobber)
     def plot_curves(self, outfile=None, interactive=False):
         if interactive:

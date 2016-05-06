@@ -9,15 +9,14 @@ import numpy as np
 import astropy.io.fits as fits
 from lsst.eotest.fitsTools import fitsTableFactory, fitsWriteto
 
-_namps = 16
-
 class EOTestResults(object):
     """
     This class saves EO test results per segment/amplifier in a FITS
     binary table.  The data to be collected are specified in LCA-10301-A.
     """
-    def __init__(self, infile):
+    def __init__(self, infile, namps=16):
         self.infile = infile
+        self.namps = namps
         self.extname = 'AMPLIFIER_RESULTS'
         if not os.path.isfile(infile):
             self._createFitsObject()
@@ -28,12 +27,12 @@ class EOTestResults(object):
         self.output = fits.HDUList()
         self.output.append(fits.PrimaryHDU())
         self.colnames = ["AMP", "GAIN", "GAIN_ERROR", "READ_NOISE", "FULL_WELL",
-                         "CTI_HIGH_SERIAL", "CTI_HIGH_PARALLEL", 
-                         "CTI_LOW_SERIAL", "CTI_LOW_PARALLEL", 
+                         "CTI_HIGH_SERIAL", "CTI_HIGH_PARALLEL",
+                         "CTI_LOW_SERIAL", "CTI_LOW_PARALLEL",
                          "DARK_CURRENT_95", "NUM_BRIGHT_PIXELS", "NUM_TRAPS"]
         formats = "IEEEEEEEEEII"
         my_types = dict((("I", np.int), ("E", np.float)))
-        columns = [np.zeros(_namps, dtype=my_types[fmt]) for fmt in formats]
+        columns = [np.zeros(self.namps, dtype=my_types[fmt]) for fmt in formats]
         units = ["None", "Ne/DN", "Ne/DN", "rms e-/pixel", "e-/pixel",
                  "None", "None", "None", "None", "e-/s/pixel", "None", "None"]
         fits_cols = [fits.Column(name=self.colnames[i], format=formats[i],
@@ -41,7 +40,7 @@ class EOTestResults(object):
                      for i in range(len(self.colnames))]
         self.output.append(fitsTableFactory(fits_cols))
         self.output[-1].name = self.extname
-        for amp in range(1, _namps+1):
+        for amp in range(1, self.namps+1):
             self.add_seg_result(amp, 'AMP', amp)
     def __getitem__(self, column):
         try:
@@ -56,7 +55,7 @@ class EOTestResults(object):
             return
         _types = dict(((int, 'I'), (float, 'E'), (np.float64, 'E')))
         if column is None:
-            column = np.zeros(_namps, dtype=dtype)
+            column = np.zeros(self.namps, dtype=dtype)
         new_cols = fits.ColDefs([fits.Column(name=colname,
                                              format=_types[dtype],
                                              unit=unit, array=column)])

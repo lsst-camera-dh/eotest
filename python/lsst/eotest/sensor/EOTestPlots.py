@@ -71,12 +71,15 @@ def plot_flat(infile, nsig=3, cmap=pylab.cm.hot, win=None, subplot=(1, 1, 1),
     ccd = MaskedCCD(infile)
     foo = fits.open(infile)
     datasec =  parse_geom_kwd(foo[1].header['DATASEC'])
-    nx = 8*(datasec['xmax'] - datasec['xmin'] + 1)
-    ny = 2*(datasec['ymax'] - datasec['ymin'] + 1)
+    # Specialize to science sensor or wavefront sensor geometries.
+    nx_segments = 8
+    ny_segments = len(ccd)/nx_segments
+    nx = nx_segments*(datasec['xmax'] - datasec['xmin'] + 1)
+    ny = ny_segments*(datasec['ymax'] - datasec['ymin'] + 1)
     mosaic = np.zeros((ny, nx), dtype=np.float)
-    for ypos in range(2):
-        for xpos in range(8):
-            amp = ypos*8 + xpos + 1
+    for ypos in range(ny_segments):
+        for xpos in range(nx_segments):
+            amp = ypos*nx_segments + xpos + 1
             #
             # Determine subarray boundaries in the mosaicked image array 
             # from DETSEC keywords for each segment.
@@ -208,10 +211,9 @@ class EOTestPlots(object):
         return os.path.join(self.output_dir, basename)
     def crosstalk_matrix(self, cmap=pylab.cm.hot, xtalk_file=None):
         if xtalk_file is None:
-            xtalk_file = os.path.join(self.rootdir, 
+            xtalk_file = os.path.join(self.rootdir,
                                       '%s_xtalk_matrix.fits' % self.sensor_id)
         foo = CrosstalkMatrix(xtalk_file)
-#        foo.plot_matrix(cmap=cmap)
         win = foo.plot(title="Crosstalk, %s" % self.sensor_id)
         return foo
     def persistence(self, infile=None, figsize=(11, 8.5)):
@@ -222,6 +224,14 @@ class EOTestPlots(object):
         win = None
         all_amps = imutils.allAmps(infile)
         for amp in all_amps:
+            try:
+                flux = results[1].data.field('MEDIAN%02i' % amp)
+                stdev = results[1].data.field('STDEV%02i' % amp)
+            except KeyError as eobj:
+                if amp == 9:
+                    break
+                else:
+                    raise eobj
             subplot = (4, 4, amp)
             if amp == 1:
                 win = plot.Window(subplot=subplot, figsize=figsize,
@@ -237,14 +247,12 @@ class EOTestPlots(object):
             else:
                 win.select_subplot(*subplot)
             self._offset_subplot(win)
-            flux = results[1].data.field('MEDIAN%02i' % amp)
-            stdev = results[1].data.field('STDEV%02i' % amp)
             try:
                 plot.xyplot(times, flux, yerr=stdev, xname='', yname='',
                             new_win=False)
                 pylab.annotate('Amp %i' % amp, (0.5, 0.8),
                                xycoords='axes fraction', size='x-small')
-            except Exception, eobj:
+            except Exception as eobj:
                 print "Exception raised in generating image persistence plot for amp", amp
                 print eobj
                 # Continue with remaining amps
@@ -252,13 +260,11 @@ class EOTestPlots(object):
     def psf_dists(self, chiprob_min=0.1, fe55_file=None, figsize=(11, 8.5),
                   xrange=(2, 6), bins=50):
         if fe55_file is None:
-            fe55_file = glob.glob(self._fullpath('%s_psf_results*.fits' 
+            fe55_file = glob.glob(self._fullpath('%s_psf_results*.fits'
                                                  % self.sensor_id))[0]
         fe55_catalog = fits.open(fe55_file)
         win = None
-        all_amps = imutils.allAmps(fe55_file)
-        for amp in all_amps:
-            #print "Amp", amp
+        for amp in imutils.allAmps(fe55_file):
             subplot = (4, 4, amp)
             chiprob = fe55_catalog[amp].data.field('CHIPROB')
             index = np.where(chiprob > chiprob_min)
@@ -290,7 +296,7 @@ class EOTestPlots(object):
                 plot.vline(mode, color='r')
                 pylab.annotate('Amp %i\nmode=%.2f' % (amp, mode), (0.5, 0.8),
                                xycoords='axes fraction', size='x-small')
-            except Exception, eobj:
+            except Exception as eobj:
                 print "Exception raised in generating PSF sigma plot for amp", amp
                 print eobj
                 # Skip this plot so that the rest of the plots can be
@@ -298,12 +304,11 @@ class EOTestPlots(object):
                 pass
     def fe55_dists(self, chiprob_min=0.1, fe55_file=None, figsize=(11, 8.5)):
         if fe55_file is None:
-            fe55_file = glob.glob(self._fullpath('%s_psf_results*.fits' 
+            fe55_file = glob.glob(self._fullpath('%s_psf_results*.fits'
                                                  % self.sensor_id))[0]
         fe55_catalog = fits.open(fe55_file)
         win = None
         for amp in imutils.allAmps(fe55_file):
-            #print "Amp", amp
             chiprob = fe55_catalog[amp].data.field('CHIPROB')
             index = np.where(chiprob > chiprob_min)
             dn = fe55_catalog[amp].data.field('DN')[index]
@@ -313,7 +318,7 @@ class EOTestPlots(object):
             except:
                 continue
             if win is None:
-                win = foo.plot(interactive=self.interactive, 
+                win = foo.plot(interactive=self.interactive,
                                subplot=(4, 4, amp),
                                figsize=figsize, frameLabels=True, amp=amp)
                 win.frameAxes.text(0.5, 1.08, 'Fe55, %s' % self.sensor_id,
@@ -322,7 +327,7 @@ class EOTestPlots(object):
                                    transform=win.frameAxes.transAxes,
                                    size='large')
             else:
-                foo.plot(interactive=self.interactive, 
+                foo.plot(interactive=self.interactive,
                          subplot=(4, 4, amp), win=win,
                          frameLabels=True, amp=amp)
             pylab.locator_params(axis='x', nbins=4, tight=True)
@@ -331,7 +336,14 @@ class EOTestPlots(object):
             ptc_file = self._fullpath('%s_ptc.fits' % self.sensor_id)
         ptc = fits.open(ptc_file)
         for amp in imutils.allAmps(ptc_file):
-            #print "Amp", amp
+            try:
+                mean = ptc[1].data.field('AMP%02i_MEAN' % amp)
+                var = ptc[1].data.field('AMP%02i_VAR' % amp)
+            except KeyError as eobj:
+                if amp == 9:
+                    break
+                else:
+                    raise eobj
             subplot = (4, 4, amp)
             if amp == 1:
                 win = plot.Window(subplot=subplot, figsize=figsize,
@@ -347,8 +359,6 @@ class EOTestPlots(object):
             else:
                 win.select_subplot(*subplot)
             self._offset_subplot(win)
-            mean = ptc[1].data.field('AMP%02i_MEAN' % amp)
-            var = ptc[1].data.field('AMP%02i_VAR' % amp)
             win = plot.xyplot(mean, var, xname='', yname='',
                               xrange=xrange, yrange=yrange,
                               xlog=1, ylog=1, new_win=False,)
@@ -451,7 +461,7 @@ class EOTestPlots(object):
         for amp in imutils.allAmps(detresp_file):
             try:
                 self._linearity_results[amp] = detresp.linearity(amp)
-            except Exception, eObj:
+            except Exception as eObj:
                 print "EOTestPlots.linearity: amp %i" % amp
                 print "  ", eObj
         return self._linearity_results
@@ -627,7 +637,13 @@ class EOTestPlots(object):
         wl = qe_data[1].data.field('WAVELENGTH')
         qe = {}
         for amp in imutils.allAmps(self._qe_file):
-            qe[amp] = qe_data[1].data.field('AMP%02i' % amp)
+            try:
+                qe[amp] = qe_data[1].data.field('AMP%02i' % amp)
+            except KeyError as eobj:
+                if amp == 9:
+                    break
+                else:
+                    raise eobj
             win = plot.curve(wl, qe[amp], xname='wavelength (nm)',
                              yname='QE (% e-/photon)', oplot=amp-1,
                              xrange=(300, 1100), yrange=(0, 120))
@@ -867,9 +883,12 @@ class CcdSpecs(OrderedDict):
         bands = self.plotter.qe_data['QE_BANDS'].data.field('BAND')
         bands = OrderedDict([(band, []) for band in bands])
         for amp in imutils.allAmps():
-            values = self.plotter.qe_data['QE_BANDS'].data.field('AMP%02i' % amp)
-            for band, value in zip(bands, values):
-                bands[band].append(value)
+            try:
+                values = self.plotter.qe_data['QE_BANDS'].data.field('AMP%02i' % amp)
+                for band, value in zip(bands, values):
+                    bands[band].append(value)
+            except KeyError:
+                pass
         for band, specnum, minQE in zip('ugrizy', range(21, 27),
                                         (41, 78, 83, 82, 75, 21)):
             try:

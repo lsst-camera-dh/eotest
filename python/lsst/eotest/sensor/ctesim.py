@@ -64,12 +64,12 @@ def ctesim(infile, pcti=0, scti=0, verbose=False):
         # Temporarily remove readout bias median.
         #
         bias_med = imutils.median(image.Factory(image, geom.serial_overscan))
-                                                
+
         image -= bias_med
 
         imarr = image.getArray()
         ny, nx = imarr.shape
-    
+
         outimage = afwImage.ImageF(image, True)
         outarr = outimage.getArray()
         if pcti != 0:
