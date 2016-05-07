@@ -10,7 +10,6 @@ import astropy.io.fits as fits
 from lsst.eotest.fitsTools import fitsTableFactory, fitsWriteto
 import lsst.eotest.image_utils as imutils
 from MaskedCCD import MaskedCCD
-from EOTestResults import EOTestResults
 import lsst.afw.geom as afwGeom
 import lsst.afw.image as afwImage
 import lsst.afw.math as afwMath
@@ -106,7 +105,7 @@ class PersistenceTask(pipeBase.Task):
             dc_ref[amp] = afwMath.makeStatistics(mi, afwMath.MEDIAN,
                                                  ccd.stat_ctrl).getValue()
             dc_ref[amp] *= gains[amp]/exptime
-        
+
         # Extract reference time for computing the time dependence
         # of the deferred charge as the observation time + exposure time
         # from the saturated flat.
@@ -169,4 +168,5 @@ class PersistenceTask(pipeBase.Task):
                                            for colname, format, unit, column in
                                            zip(colnames, formats, units, columns)]))
         HDUList[-1].name = 'IMAGE_PERSISTENCE_CURVES'
+        HDUList[0].header['NAMPS'] = len(deferred_charges[0])
         fitsWriteto(HDUList, outfile, clobber=clobber)

@@ -146,7 +146,7 @@ def pixel_counts(ccd_file, input_mask=None):
     num_masked = 0
     num_total = 0
     imaging = ccd.amp_geom.imaging
-    for amp in range(1, 17):
+    for amp in ccd:
         imarr = imutils.trim(ccd[amp].getImage(), imaging).getArray()
         num_masked += len(np.where(imarr != 0)[0])
         num_total += imarr.shape[0]*imarr.shape[1]

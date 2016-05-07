@@ -61,7 +61,7 @@ class DarkPixelsTask(pipeBase.Task):
             results_file = os.path.join(self.config.output_dir,
                                         '%s_eotest_results.fits' % sensor_id)
 
-        results = EOTestResults(results_file)
+        results = EOTestResults(results_file, namps=len(ccd))
         for amp in ccd:
             dark_pixels = DarkPixels(ccd, amp,
                                      frac_thresh=self.config.thresh,

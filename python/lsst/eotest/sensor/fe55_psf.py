@@ -92,6 +92,7 @@ class PsfGaussFit(object):
         self.sigmax, self.sigmay = [], []
         self.dn, self.dn_fp, self.chiprob = [], [], []
         self.amp = []
+        self.amp_set = set()
         self.outfile = outfile
         if outfile is None:
             self.output = fits.HDUList()
@@ -191,6 +192,7 @@ class PsfGaussFit(object):
                 logger.info("Failed scipy.curve_fit calls: %s" % failed_curve_fits)
         self._save_ext_data(amp, x0, y0, sigmax, sigmay, dn, dn_fp, chiprob,
                             chi2s, dofs, maxDNs)
+        self.amp_set.add(amp)
         self.sigmax.extend(sigmax)
         self.sigmay.extend(sigmay)
         self.dn.extend(dn)
@@ -295,6 +297,7 @@ class PsfGaussFit(object):
         my_results['amps'] = amps[indx]
         return my_results
     def write_results(self, outfile='fe55_psf_params.fits'):
+        self.output[0].header['NAMPS'] = len(self.amp_set)
         fitsWriteto(self.output, outfile, clobber=True, checksum=True)
 
 if __name__ == '__main__':

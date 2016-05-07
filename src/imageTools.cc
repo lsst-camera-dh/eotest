@@ -14,7 +14,7 @@ namespace pexLogging = lsst::pex::logging;
 namespace lsst {
 namespace eotest {
 
-   afwImage::Image<float> 
+   afwImage::Image<float>
    ImageTools::rebin(const afwImage::Image<float> & input,
                      unsigned int binsize) {
       if (binsize == 1) {
@@ -57,7 +57,7 @@ namespace eotest {
       // Cast as Image<float> and return.
       return afwImage::Image<float>(outarray);
    }
-   
+
    afwImage::Image<float>
    ImageTools::applyCTI(const afwImage::Image<float> & input,
                         const afwGeom::Box2I & serial_overscan,
@@ -71,16 +71,16 @@ namespace eotest {
 
       // Prepare a working copy and temporarily remove bias.
       bool deep_copy;
-      afwImage::Image<float> 
+      afwImage::Image<float>
          work_image(afwImage::Image<float>(input, deep_copy=true));
-                                           
+
       const afwImage::Image<float>
          biassec(afwImage::Image<float>(input, serial_overscan,
                                         afwImage::LOCAL, deep_copy=false));
       float bias_med(afwMath::makeStatistics(biassec,
                                              afwMath::MEDIAN).getValue());
       work_image -= bias_med;
-      
+
       int nx(work_image.getWidth());
       int ny(work_image.getHeight());
 
@@ -88,7 +88,7 @@ namespace eotest {
       ndarray::Array<float, 2, 1> work_array(work_image.getArray());
 
       // Create a ndarray to store output.
-      ndarray::Array<float, 2, 1> outarray = 
+      ndarray::Array<float, 2, 1> outarray =
          ndarray::allocate(ndarray::makeVector(ny, nx));
 
       if (pcti != 0) {
@@ -96,7 +96,7 @@ namespace eotest {
          // Loop over rows.
          for (int j(0); j < ny-2; j++) {
             if (j % 100 == 0 and verbose) {
-               pexLogging::TTrace<0>("lsst.eotest.ImageTools.applyCTI", 
+               pexLogging::TTrace<0>("lsst.eotest.ImageTools.applyCTI",
                                      "  row %d", j);
             }
             // Copy bottom row to output.
@@ -124,7 +124,7 @@ namespace eotest {
          // Loop over columns.
          for (int i(0); i < nx-2; i++) {
             if (i % 100 == 0 and verbose) {
-               pexLogging::TTrace<0>("lsst.eotest.ImageTools.applyCTI", 
+               pexLogging::TTrace<0>("lsst.eotest.ImageTools.applyCTI",
                                      "  column %d", i);
             }
             // Copy last column to output.

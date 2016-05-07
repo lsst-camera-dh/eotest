@@ -51,7 +51,7 @@ class TrapTask(pipeBase.Task):
         if results_file is None:
             results_file = os.path.join(self.config.output_dir,
                                         '%s_eotest_results.fits' % sensor_id)
-        results = EOTestResults(results_file)
+        results = EOTestResults(results_file, namps=len(ccd))
         if self.config.verbose:
             self.log.info("Amp     Number of traps")
         for amp in ccd:

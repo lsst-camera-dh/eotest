@@ -118,7 +118,7 @@ class ReadNoiseTask(pipeBase.Task):
             results_file = os.path.join(self.config.output_dir,
                                         '%s_eotest_results.fits' % sensor_id)
 
-        results = EOTestResults(results_file)
+        results = EOTestResults(results_file, namps=len(ccd))
         if self.config.verbose:
             self.log.info("Amp    read noise    total noise    system noise")
         for amp in ccd:

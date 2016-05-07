@@ -141,7 +141,7 @@ class EOTestReport(object):
 """)
         full_well = self.plots.results['FULL_WELL']
         max_frac_dev = self.plots.results['MAX_FRAC_DEV']
-        for amp in range(1, 17):
+        for amp in range(1, len(full_well)+1):
             my_full_well = op_str(full_well[amp-1], '%i')
             my_max_frac_dev = op_str(max_frac_dev[amp-1], '%.1e')
             self.output.write(" %i & $%s$ & $\\num{%s}$ \\\\ \hline\n" 
@@ -197,13 +197,13 @@ class EOTestReport(object):
         try:
             scti_err = self.plots.results['CTI_HIGH_SERIAL_ERROR']
         except KeyError:
-            scti_err = np.zeros(16)
+            scti_err = np.zeros(len(scti))
         pcti = self.plots.results['CTI_HIGH_PARALLEL']
         try:
             pcti_err = self.plots.results['CTI_HIGH_PARALLEL_ERROR']
         except KeyError:
-            pcti_err = np.zeros(16)
-        for amp in range(1, 17):
+            pcti_err = np.zeros(len(scti))
+        for amp in range(1, len(scti)+1):
             my_scti = latex_minus_value(scti[amp-1], error=scti_err[amp-1])
             my_pcti = latex_minus_value(pcti[amp-1], error=pcti_err[amp-1])
             self.output.write(" %(amp)i & $1%(my_scti)s$ & $1%(my_pcti)s$ \\\\ \hline\n" % locals())
@@ -222,13 +222,13 @@ class EOTestReport(object):
         try:
             scti_err = self.plots.results['CTI_LOW_SERIAL_ERROR']
         except KeyError:
-            scti_err = np.zeros(16)
+            scti_err = np.zeros(len(scti))
         pcti = self.plots.results['CTI_LOW_PARALLEL']
         try:
             pcti_err = self.plots.results['CTI_LOW_PARALLEL_ERROR']
         except KeyError:
-            pcti_err = np.zeros(16)
-        for amp in range(1, 17):
+            pcti_err = np.zeros(len(scti))
+        for amp in range(1, len(scti)+1):
             my_scti = latex_minus_value(scti[amp-1], error=scti_err[amp-1])
             my_pcti = latex_minus_value(pcti[amp-1], error=pcti_err[amp-1])
             self.output.write(" %(amp)i & $1%(my_scti)s$ & $1%(my_pcti)s$ \\\\ \hline\n" % locals())

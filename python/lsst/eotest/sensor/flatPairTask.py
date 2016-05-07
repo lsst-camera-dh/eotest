@@ -81,10 +81,11 @@ class FlatPairTask(pipeBase.Task):
         if outfile is None:
             outfile = os.path.join(self.config.output_dir,
                                    '%s_eotest_results.fits' % self.sensor_id)
-        output = EOTestResults(outfile)
+        all_amps = imutils.allAmps(detrespfile)
+        output = EOTestResults(outfile, namps=len(all_amps))
         if self.config.verbose:
             self.log.info("Amp        full well (e-/pixel)   max. frac. dev.")
-        for amp in imutils.allAmps(detrespfile):
+        for amp in all_amps:
             try:
                 full_well, fp = detresp.full_well(amp)
             except (ValueError, RuntimeError, TypeError):
@@ -169,6 +170,7 @@ class FlatPairTask(pipeBase.Task):
                 # Convert to e- and write out for each segment.
                 signal = pair_mean(flat1, flat2, amp)*self.gains[amp]
                 self.output[-1].data.field('AMP%02i_SIGNAL' % amp)[row] = signal
+        self.output[0].header['NAMPS'] = len(flat1)
         fitsWriteto(self.output, outfile, clobber=True)
         return outfile
 
