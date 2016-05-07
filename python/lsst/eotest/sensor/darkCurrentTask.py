@@ -88,7 +88,7 @@ class DarkCurrentTask(pipeBase.Task):
         if results_file is None:
             results_file = os.path.join(self.config.output_dir,
                                         '%s_eotest_results.fits' % sensor_id)
-        results = EOTestResults(results_file)
+        results = EOTestResults(results_file, namps=len(ccd))
         output = fits.open(medfile)
         for i, dark in enumerate(dark_files):
             output[0].header['DARK%02i' % i] = os.path.basename(dark)

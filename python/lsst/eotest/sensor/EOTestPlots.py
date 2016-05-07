@@ -25,6 +25,13 @@ import lsst.afw.image as afwImage
 import lsst.afw.math as afwMath
 import lsst.afw.display.ds9 as ds9
 
+class Subplot(object):
+    def __init__(self, namps):
+        self.nx = 4
+        self.ny = namps/4
+    def __call__(self, amp):
+        return (self.nx, self.ny, amp)
+
 def op_str(arg, format, op=None):
     if op is None:
         my_val = arg
@@ -198,6 +205,7 @@ class EOTestPlots(object):
         self.specs = CcdSpecs(results_file, plotter=self,
                               xtalk_file=xtalk_file, prnu_wls=self.prnu_wls)
         self._linearity_results = None
+        self.subplot = Subplot(len(imutils.allAmps(self._qe_file)))
     @property
     def qe_data(self):
         if self._qe_data is None:
@@ -224,15 +232,9 @@ class EOTestPlots(object):
         win = None
         all_amps = imutils.allAmps(infile)
         for amp in all_amps:
-            try:
-                flux = results[1].data.field('MEDIAN%02i' % amp)
-                stdev = results[1].data.field('STDEV%02i' % amp)
-            except KeyError as eobj:
-                if amp == 9:
-                    break
-                else:
-                    raise eobj
-            subplot = (4, 4, amp)
+            flux = results[1].data.field('MEDIAN%02i' % amp)
+            stdev = results[1].data.field('STDEV%02i' % amp)
+            subplot = self.subplot(amp)
             if amp == 1:
                 win = plot.Window(subplot=subplot, figsize=figsize,
                                   xlabel=r'Time since end of flat exposure (s)',
@@ -265,7 +267,7 @@ class EOTestPlots(object):
         fe55_catalog = fits.open(fe55_file)
         win = None
         for amp in imutils.allAmps(fe55_file):
-            subplot = (4, 4, amp)
+            subplot = self.subplot(amp)
             chiprob = fe55_catalog[amp].data.field('CHIPROB')
             index = np.where(chiprob > chiprob_min)
             # Read sigma values and convert from pixels to microns
@@ -319,7 +321,7 @@ class EOTestPlots(object):
                 continue
             if win is None:
                 win = foo.plot(interactive=self.interactive,
-                               subplot=(4, 4, amp),
+                               subplot=self.subplot(amp),
                                figsize=figsize, frameLabels=True, amp=amp)
                 win.frameAxes.text(0.5, 1.08, 'Fe55, %s' % self.sensor_id,
                                    horizontalalignment='center',
@@ -328,7 +330,7 @@ class EOTestPlots(object):
                                    size='large')
             else:
                 foo.plot(interactive=self.interactive,
-                         subplot=(4, 4, amp), win=win,
+                         subplot=self.subplot(amp), win=win,
                          frameLabels=True, amp=amp)
             pylab.locator_params(axis='x', nbins=4, tight=True)
     def ptcs(self, xrange=None, yrange=None, figsize=(11, 8.5), ptc_file=None):
@@ -336,15 +338,9 @@ class EOTestPlots(object):
             ptc_file = self._fullpath('%s_ptc.fits' % self.sensor_id)
         ptc = fits.open(ptc_file)
         for amp in imutils.allAmps(ptc_file):
-            try:
-                mean = ptc[1].data.field('AMP%02i_MEAN' % amp)
-                var = ptc[1].data.field('AMP%02i_VAR' % amp)
-            except KeyError as eobj:
-                if amp == 9:
-                    break
-                else:
-                    raise eobj
-            subplot = (4, 4, amp)
+            mean = ptc[1].data.field('AMP%02i_MEAN' % amp)
+            var = ptc[1].data.field('AMP%02i_VAR' % amp)
+            subplot = self.subplot(amp)
             if amp == 1:
                 win = plot.Window(subplot=subplot, figsize=figsize,
                                   xlabel=r'mean (ADU)',
@@ -376,12 +372,14 @@ class EOTestPlots(object):
         points[1] += yoffset
         bbox.set_points(points)
         win.axes[-1].set_position(bbox)
-    def gains(self, oplot=0, xoffset=0.25, width=0.5, xrange=(0, 16.5)):
+    def gains(self, oplot=0, xoffset=0.25, width=0.5, xrange=None):
         results = self.results
         gain = results['GAIN']
         error = results['GAIN_ERROR']
         ymin = max(min(gain - error), min(gain - 1))
         ymax = min(max(gain + error), max(gain + 1))
+        if xrange is not None:
+            xrange = (0, len(gain) + 0.5)
         win = plot.xyplot(results['AMP'], results['GAIN'],
                           yerr=results['GAIN_ERROR'], xname='AMP',
                           yname='gain (e-/DN)', yrange=(ymin, ymax),
@@ -400,10 +398,11 @@ class EOTestPlots(object):
                                            system_noise,
                                            total_noise))), 10)
         win = plot.bar(results['AMP'] - xoffset - xoffset/2., read_noise,
-                       xname='Amp', 
+                       xname='Amp',
                        yname='Noise (rms e-)',
-                       xrange=(0, 17), color=color, width=width,
-                       yrange=(0, ymax))
+                       xrange=(0, len(read_noise)+1),
+                       yrange=(0, ymax),
+                       color=color, width=width)
         plot.bar(results['AMP'] - xoffset/2., system_noise,
                  oplot=1, color='g', width=width)
         plot.bar(results['AMP'] + xoffset - xoffset/2., total_noise,
@@ -418,7 +417,7 @@ class EOTestPlots(object):
                                           % self.sensor_id)
         detresp = DetectorResponse(detresp_file, gain_range=gain_range)
         for amp in imutils.allAmps(detresp_file):
-            subplot = (4, 4, amp)
+            subplot = self.subplot(amp)
             if amp == 1:
                 win = plot.Window(subplot=subplot, figsize=figsize,
                                   xlabel=r'pd current $\times$ exposure',
@@ -473,7 +472,7 @@ class EOTestPlots(object):
         for amp in imutils.allAmps(detresp_file):
             #
             # Set up the plotting subwindow.
-            subplot = (4, 4, amp)
+            subplot = self.subplot(amp)
             if amp == 1:
                 win = plot.Window(subplot=subplot, figsize=figsize,
                                   xlabel=r'pd current $\times$ exposure',
@@ -548,7 +547,7 @@ class EOTestPlots(object):
         self._ptc_file = ptc_file
         self._detresp_file = detresp_file
         for amp in imutils.allAmps(detresp_file):
-            subplot = (4, 4, amp)
+            subplot = self.subplot(amp)
             if amp == 1:
                 win = plot.Window(subplot=subplot, figsize=figsize,
                                   xlabel=r'pd current $\times$ exposure',
@@ -637,13 +636,7 @@ class EOTestPlots(object):
         wl = qe_data[1].data.field('WAVELENGTH')
         qe = {}
         for amp in imutils.allAmps(self._qe_file):
-            try:
-                qe[amp] = qe_data[1].data.field('AMP%02i' % amp)
-            except KeyError as eobj:
-                if amp == 9:
-                    break
-                else:
-                    raise eobj
+            qe[amp] = qe_data[1].data.field('AMP%02i' % amp)
             win = plot.curve(wl, qe[amp], xname='wavelength (nm)',
                              yname='QE (% e-/photon)', oplot=amp-1,
                              xrange=(300, 1100), yrange=(0, 120))
@@ -668,7 +661,7 @@ class EOTestPlots(object):
         wls = np.array(wls)
         #print wls
         # Loop over PRNU wavelengths and generate a png for each.
-        gains = dict([(amp, gain) for amp, gain 
+        gains = dict([(amp, gain) for amp, gain
                       in zip(self.results['AMP'], self.results['GAIN'])])
         for wl in self.prnu_wls:
             try:
