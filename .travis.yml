@@ -1,4 +1,8 @@
-language: C
+language: C++
+
+sudo: required
+
+dist: trusty
 
 install:
   - travis_wait ./travis_install.sh lsst-apps nose
