@@ -5,7 +5,7 @@ sudo: required
 dist: trusty
 
 install:
-  - travis_wait ./travis_install.sh lsst-apps nose
+  - travis_wait ./travis_install.sh lsst-apps nose astropy
   - ln -sf /home/travis/miniconda/lib/libssl.so.1.0.0 /home/travis/miniconda/lib/libssl.so.10
   - ln -sf /home/travis/miniconda/lib/libcrypto.so.1.0.0 /home/travis/miniconda/lib/libcrypto.so.10
   - export PATH="$HOME/miniconda/bin:$PATH"
