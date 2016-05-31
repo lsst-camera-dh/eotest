@@ -54,7 +54,8 @@ class SubImage(object):
         bias_estimate = Estimator()
         bias_estimate.value = \
             gain*afwMath.makeStatistics(subim, statistic).getValue()
-        bias_estimate.error = 0
+        bias_estimate.error = \
+            gain*afwMath.makeStatistics(subim, afwMath.STDEV).getValue()
         return bias_estimate
     def __call__(self, start, end=None):
         if end is None:
@@ -94,6 +95,7 @@ class EPERTask(pipeBase.Task):
         ccd = MaskedCCD(infilename)
         # iterate through amps
         cte = {}
+        bias_estimates = {}
         for amp in amps:
             subimage = SubImage(ccd, amp, overscans, self)
             lastpix = subimage.lastpix
@@ -122,6 +124,7 @@ class EPERTask(pipeBase.Task):
             # e2v vendor data).
             bias_est = subimage.bias_est(gain=gains[amp],
                                          statistic=afwMath.MEANCLIP)
+            bias_estimates[amp] = bias_est
             if self.config.verbose:
                 self.log.info("bias value = " + str(bias_est))
 
@@ -142,10 +145,12 @@ class EPERTask(pipeBase.Task):
                 cte[amp].set_format_str("{0:.16f}")
             if self.config.verbose:
                 if self.config.cti:
-                    self.log.info('cti, amp ' + str(amp) + " = " + str(cte[amp]) + '\n')
+                    self.log.info('cti, amp ' + str(amp) + " = "
+                                  + str(cte[amp]) + '\n')
                 else:
-                    self.log.info('cte, amp ' + str(amp) + " = " + str(cte[amp]) + '\n')
-        return cte
+                    self.log.info('cte, amp ' + str(amp) + " = "
+                                  + str(cte[amp]) + '\n')
+        return cte, bias_estimates
 
 if __name__ == '__main__':
     #import pdb; pdb.set_trace()
@@ -158,7 +163,7 @@ if __name__ == '__main__':
     parser.add_argument('-i', '--cti', help='return CTI (not CTE)',
                         action='store_true', default=False)
     args = parser.parse_args()
-	
+
     task = EPERTask()
     task.config.direction = args.direction
     task.config.verbose = args.verbose

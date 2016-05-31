@@ -65,7 +65,7 @@ class SerialEperTestCase(EperTestCase):
         task.config.direction = 's'
         task.config.cti = True
         task.config.verbose = self.verbose
-        cti = task.run(self.fits_file, range(1, 17), self.overscans)
+        cti, bias_ests = task.run(self.fits_file, range(1, 17), self.overscans)
         ncols = (ccd.amp_geom.prescan.getWidth() +
                  ccd.amp_geom.imaging.getWidth())
         cti_expected = (float(self.overscans*self.overscan_value)
@@ -122,7 +122,7 @@ class ParallelEperTestCase(EperTestCase):
         task.config.direction = 'p'
         task.config.cti = True
         task.config.verbose = self.verbose
-        cti = task.run(self.fits_file, range(1, 17), self.overscans)
+        cti, bias_ests = task.run(self.fits_file, range(1, 17), self.overscans)
         nrows = ccd.amp_geom.imaging.getHeight()
         cti_expected = (float(self.overscans*self.overscan_value)
                         /float(self.imaging_value)/float(nrows))
