@@ -123,7 +123,8 @@ class EPERTask(pipeBase.Task):
             # contribution of bad pixels in overscan regions (e.g.,
             # e2v vendor data).
             bias_est = subimage.bias_est(gain=gains[amp],
-                                         statistic=afwMath.MEANCLIP)
+#                                         statistic=afwMath.MEANCLIP)
+                                         statistic=afwMath.MEAN)
             bias_estimates[amp] = bias_est
             if self.config.verbose:
                 self.log.info("bias value = " + str(bias_est))
