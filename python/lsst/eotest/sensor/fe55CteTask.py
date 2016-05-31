@@ -11,6 +11,8 @@ class Fe55CteConfig(pexConfig.Config):
     "Configuration for Fe55CteTask"
     output_dir = pexConfig.Field("Output directory", str, default=".")
     direction = pexConfig.Field("Readout direction", str, default="serial")
+    selection = pexConfig.Field("Pixel selection function", str,
+                                default="kalpha")
     verbose = pexConfig.Field("Verbosity flag", bool, default=True)
 
 class Fe55CteTask(pipeBase.Task):
@@ -30,7 +32,13 @@ class Fe55CteTask(pipeBase.Task):
                                "'serial' or 'parallel'")
 
         pixel_stats = Fe55PixelStats(fe55_files, mask_files=mask_files,
-                                     logger=self.log)
+                                     sensor_id=sensor_id, logger=self.log,
+                                     selection=self.config.selection)
+
+        # Plot the histograms of cluster DN values
+        pixel_stats.dn_hists()
+        plt.savefig('%(sensor_id)s_Fe55_%(pix0)s_%(pix1)s_dn_hists.png'
+                    % locals())
 
         # Plot the histograms of p3 and p5 (or p1 and p7).
         pixel_stats.pixel_hists(pix0, pix1)

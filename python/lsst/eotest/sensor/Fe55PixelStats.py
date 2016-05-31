@@ -3,13 +3,16 @@ Find the footprints of Fe55 clusters and do statistics on the pixel
 values.
 """
 from __future__ import absolute_import, print_function, division
-import glob
+import pickle
 import numpy as np
 import numpy.lib.recfunctions as nlr
 import matplotlib.pyplot as plt
+import scipy.stats
+import scipy.optimize
 import lsst.afw.detection as afwDetect
 import lsst.afw.math as afwMath
 from .MaskedCCD import MaskedCCD
+from .fe55_gain_fitter import fe55_lines
 
 __all__ = ['Fe55PixelStats']
 
@@ -47,7 +50,8 @@ class RecArray(object):
         "Factory method wrapping numpy.rec.array"
         return RecArray(np.rec.array(data, names=names))
 
-def profile_plot(ax, xarg, yarg, bins=20, xbounds=None, color='black'):
+def profile_plot(ax, xarg, yarg, bins=20, xbounds=None, color='black',
+                 plot_points=True):
     """
     Create a profile plot and return a numpy recarray of the plotted
     profile.
@@ -66,11 +70,12 @@ def profile_plot(ax, xarg, yarg, bins=20, xbounds=None, color='black'):
         if len(index[0]) == 0:
             continue
         data.append(((bin_edges[bin_] + bin_edges[bin_+1])/2.,
-                     np.mean(yy[index]), np.std(yy[index])))
-    my_recarr = np.rec.array(data, names='bin_centers ymean yerr'.split())
-    ax.errorbar(my_recarr['bin_centers'], my_recarr['ymean'],
-                yerr=my_recarr['yerr'], xerr=(xmax-xmin)/float(bins)/2.,
-                fmt="none", ecolor=color)
+                     np.median(yy[index]), np.std(yy[index])))
+    my_recarr = np.rec.array(data, names='bin_centers ymedian yerr'.split())
+    if plot_points:
+        ax.errorbar(my_recarr['bin_centers'], my_recarr['ymedian'],
+                    yerr=my_recarr['yerr'], xerr=(xmax-xmin)/float(bins)/2.,
+                    fmt="none", ecolor=color)
     return my_recarr
 
 def get_fp_pixels(ccd, amp, nsig=4, bg_reg=(10, 10), npix_range=(5, 20)):
@@ -93,30 +98,49 @@ def get_fp_pixels(ccd, amp, nsig=4, bg_reg=(10, 10), npix_range=(5, 20)):
     threshold = afwDetect.Threshold(nsig*stats.getValue(afwMath.STDEVCLIP)
                                     + stats.getValue(afwMath.MEDIAN))
 
-    # Gather the data for the record array object.
+    # Gather the data for the record array object.  This includes the
+    # amplifier number, the coordinates of the peak pixel (x0, y0),
+    # the 3x3 pixels centered on (x0, y0), and the sum of ADU values
+    # over the footprint.
     imarr = image.getImage().getArray()
     data = []
     for fp in afwDetect.FootprintSet(image, threshold).getFootprints():
         if fp.getNpix() < npix_range[0] or npix_range[1] < fp.getNpix():
             continue
+        # Get peak coordinates and p0-p8 values
         peaks = [pk for pk in fp.getPeaks()]
         if len(peaks) > 1:
             continue
         x0, y0 = peaks[0].getIx(), peaks[0].getIy()
         row = [amp, x0, y0] + list(imarr[y0-1:y0+2, x0-1:x0+2].flatten())
         if len(row) != 12:
+            # Skip if there are too few p0-p8 values (e.g., cluster is
+            # on the imaging section edge).
             continue
+        # Sum over pixels in the footprint.
+        dn_sum = 0
+        spans = fp.getSpans()
+        for span in spans:
+            y = span.getY()
+            for x in range(span.getX0(), span.getX1() + 1):
+                dn_sum += imarr[y][x]
+        row.append(dn_sum)
         data.append(row)
-    names = 'amp x y'.split() + ['p%i' % i for i in range(9)]
+    names = 'amp x y'.split() + ['p%i' % i for i in range(9)] + ['DN_sum']
+
     return np.rec.array(data, names=names)
 
 class Fe55PixelStats(object):
     "Statistics of pixel values around an Fe55 cluster peak."
-    def __init__(self, input_files, mask_files=(), logger=None):
+    _selections = dict(amp='self._amp_selection',
+                       kalpha='self._kalpha_selection')
+    def __init__(self, input_files, mask_files=(), sensor_id=None,
+                 logger=None, selection='amp'):
         """
         Extract record array from the record arrays for all of the
         input_files.
         """
+        self.sensor_id = sensor_id
         rec_arrays = []
         for infile in input_files:
             if logger is not None:
@@ -127,53 +151,143 @@ class Fe55PixelStats(object):
         self.rec_array = nlr.stack_arrays(rec_arrays, usemask=False,
                                           autoconvert=True, asrecarray=True)
         self.amps = sorted(ccd.keys())
+        self.set_selection_function(selection)
 
-    def pixel_hists(self, pix0='p3', pix1='p5', figsize=(10, 10)):
+    def set_selection_function(self, selection):
+        try:
+            self._selection = eval(self._selections[selection])
+        except KeyError:
+            raise RuntimeError("Unrecognized data selection: " + selection)
+
+    def to_pickle(self, outfile):
+        pickle.dump(self, open(outfile, 'wb'))
+
+    @staticmethod
+    def read_pickle(infile):
+        return pickle.load(open(infile, 'rb'))
+
+    def _multi_panel_figure(self, figsize):
         """
-        Plot histograms of pix0 and pix1 values.
+        Boilerplate code for setting up the figure for showing plots
+        for all of the amplifiers.
         """
         plt.rcParams['figure.figsize'] = figsize
         fig = plt.figure()
+        if self.sensor_id is not None:
+            frame_axes = fig.add_subplot(111, frameon=False)
+            frame_axes.set_title(self.sensor_id)
+        return fig, frame_axes
+
+    def _amp_selection(self, amp, **kwds):
+        """
+        Select rows based only on amplifier.
+        """
+        return np.where(self.rec_array.amp == amp)
+
+    def _kalpha_selection(self, amp, bins=50, nsig=2):
+        """
+        For the specified amplifier, fit the DN distribution to
+        idenitfy the clusters in the K-alpha peak.
+        """
+        my_recarr = self.rec_array[np.where(self.rec_array.amp == amp)]
+        dn = my_recarr['DN_sum']
+        median = np.median(dn)
+        #stdev = np.std(dn)
+        stdev = afwMath.makeStatistics(np.array(dn, dtype=np.float),
+                                       afwMath.STDEVCLIP).getValue()
+        dn_range = (median - nsig*stdev, median + nsig*stdev)
+        results = np.histogram(dn, bins=bins, range=dn_range)
+        x = (results[1][1:] + results[1][:-1])/2.
+        y = results[0]
+        ntot = sum(y)
+        p0 = (0.88*ntot, median, stdev/2., 0.12*ntot)
+        pars, _ = scipy.optimize.curve_fit(fe55_lines, x, y, p0=p0)
+        dn_min, dn_max = pars[1] - nsig*pars[2], pars[1] + nsig*pars[2]
+        index = np.where((self.rec_array.amp == amp) &
+                         (self.rec_array.DN_sum > dn_min) &
+                         (self.rec_array.DN_sum < dn_max))
+        return index
+
+    def pixel_hists(self, pix0='p3', pix1='p5', figsize=(10, 10), bins=50,
+                    dn_range=(-10, 30)):
+        """
+        Plot histograms of pix0 and pix1 values.
+        """
+        fig, frame_axes = self._multi_panel_figure(figsize)
         for amp in self.amps:
             subplot = (4, 4, amp)
             ax = fig.add_subplot(*subplot)
-            my_recarr = self.rec_array[np.where(self.rec_array.amp == amp)]
+            selection = self._selection(amp, bins=bins)
+            my_recarr = self.rec_array[selection]
             plt.hist(my_recarr[pix0], color='blue', histtype='step',
-                     range=(-10, 60), bins=20)
+                     range=dn_range, bins=20)
             plt.hist(my_recarr[pix1], color='red', histtype='step',
-                     range=(-10, 60), bins=20)
+                     range=dn_range, bins=20)
             ax.set_xlabel('%(pix0)s, %(pix1)s (ADU)' % locals())
-            ax.set_ylabel('entries / bin')
-            ax.set_title('amp %i' % amp)
+            if amp in (1, 5, 9, 13):
+                ax.set_ylabel('entries / bin')
+            plt.annotate('Amp %i' % amp, (0.5, 0.9),
+                         xycoords='axes fraction', size='x-small')
         return fig
 
     def pixel_diff_profile(self, pixel_coord='x', pix0='p3', pix1='p5',
-                           figsize=(10, 10)):
+                           bins=50, figsize=(10, 10)):
         """
         Fit the difference of pix1 and pix0 profiles as a function of
         cluster peak pixel coordinate.
         """
-        plt.rcParams['figure.figsize'] = figsize
-        fig = plt.figure()
+        fig, frame_axes = self._multi_panel_figure(figsize)
+        frame_axes.set_xlabel('%s pixel index' % pixel_coord)
         data = []
         for amp in self.amps:
             subplot = (4, 4, amp)
             axes = fig.add_subplot(*subplot)
-            my_recarr = self.rec_array[np.where(self.rec_array.amp == amp)]
-            profile_plot(axes, my_recarr[pixel_coord], my_recarr[pix1],
-                         color='red')
-            profile_plot(axes, my_recarr[pixel_coord], my_recarr[pix0],
-                         color='blue')
-            prof = profile_plot(axes, my_recarr[pixel_coord],
-                                (my_recarr[pix1] + my_recarr[pix0])/2.,
-                                color='green')
-            axes.set_title("amp %i" % amp)
+            selection = self._selection(amp, bins=bins)
+            my_recarr = self.rec_array[selection]
+            p1_prof = profile_plot(axes, my_recarr[pixel_coord],
+                                   my_recarr[pix1], color='red',
+                                   plot_points=True)
+            p0_prof = profile_plot(axes, my_recarr[pixel_coord],
+                                   my_recarr[pix0], color='blue',
+                                   plot_points=True)
+            plt.annotate('Amp %i' % amp, (0.5, 0.9),
+                         xycoords='axes fraction', size='x-small')
             plt.xlim(min(self.rec_array[pixel_coord]),
                      max(self.rec_array[pixel_coord]))
-            # Fit a line to the pix1 - pix0 profile.
-            pars, cov = np.polyfit(prof['bin_centers'], prof['ymean'],
-                                   1, cov=True)
+            # Fit a line to the pix1 + pix0 profile.
+            x = p1_prof['bin_centers']
+            y = (p1_prof['ymedian'] + p0_prof['ymedian'])/2.
+            pars, cov = np.polyfit(x, y, 1, cov=True)
             error = np.sqrt(cov[0][0])
+            plt.plot(x, y, color='green')
+            if amp in (1, 5, 9, 13):
+                axes.set_ylabel('DN (bg-subtracted)')
             data.append([amp, pars[0], error, pars[0]/error])
         return fig, RecArray.create(data, names='amp slope error nsig'.split())
 
+    def dn_hists(self, figsize=(10, 10), nsig=2, bins=50):
+        """
+        Plot histograms of the pixel DNs summed over each cluster
+        footprint.
+        """
+        fig, frame_axes = self._multi_panel_figure(figsize)
+        frame_axes.set_xlabel('Pixel DNs summed over cluster footprint')
+        for amp in self.amps:
+            subplot = (4, 4, amp)
+            ax = fig.add_subplot(*subplot)
+            my_recarr = self.rec_array[np.where(self.rec_array.amp == amp)]
+            dn = my_recarr['DN_sum']
+            median = np.median(dn)
+#            stdev = np.std(dn)
+            stdev = afwMath.makeStatistics(np.array(dn, dtype=np.float),
+                                           afwMath.STDEVCLIP).getValue()
+            dn_range = (median - nsig*stdev, median + nsig*stdev)
+            plt.hist(dn, histtype='step', bins=bins, range=dn_range)
+            selection = self._selection(amp, bins=bins)
+            plt.hist(self.rec_array[selection]['DN_sum'], histtype='step',
+                     bins=bins, range=dn_range, color='red')
+            if amp in (1, 5, 9, 13):
+                ax.set_ylabel('entries / bin')
+            plt.annotate('Amp %i' % amp, (0.5, 0.9),
+                         xycoords='axes fraction', size='x-small')
+        return fig
