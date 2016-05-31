@@ -48,9 +48,6 @@ class SubImage(object):
             sys.exit(1)
     def bias_est(self, statistic=afwMath.MEAN, gain=1):
         subim = self.image.Factory(self.image, self._bias_reg)
-        # Set bias region error to zero since it isn't governed by
-        # Poisson statistics and cannot be estimated only from a
-        # medianed, bias-subtracted superflat frame stack.
         bias_estimate = Estimator()
         bias_estimate.value = \
             gain*afwMath.makeStatistics(subim, statistic).getValue()
@@ -119,11 +116,8 @@ class EPERTask(pipeBase.Task):
             if self.config.verbose:
                 self.log.info("summed overscans = " + str(summed))
 
-            # Find bias level, use afwMath.MEANCLIP to avoid
-            # contribution of bad pixels in overscan regions (e.g.,
-            # e2v vendor data).
+            # Find bias level.
             bias_est = subimage.bias_est(gain=gains[amp],
-#                                         statistic=afwMath.MEANCLIP)
                                          statistic=afwMath.MEAN)
             bias_estimates[amp] = bias_est
             if self.config.verbose:

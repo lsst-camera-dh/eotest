@@ -1,5 +1,8 @@
-from __future__ import print_function
-import os
+"""
+Plot the profile of mean overscan columns as a function of column # to
+illustrate the serial CTE.
+"""
+from __future__ import print_function, absolute_import, division
 import numpy as np
 import matplotlib.pyplot as plt
 import lsst.afw.math as afwMath
@@ -8,26 +11,37 @@ from lsst.eotest.Estimator import Estimator
 
 plt.ion()
 
-def make_estimator(y, bias):
+def make_estimator(pixel_values, bias):
+    """
+    Create an Estimator object (value and error) based on the counts
+    in the imaging region column after bias subtraction. Gain is
+    assumed to have been applied to both the column pixel values
+    and the bias level.
+    """
     estimator = Estimator()
-    yvals = np.array(y.flatten(), dtype=np.float)
+    yvals = np.array(pixel_values.flatten(), dtype=np.float)
     estimator.value = np.mean(yvals)
-    poisson_variance_per_pixel = np.sum(yvals - bias.value)/len(yvals)**2
+    poisson_variance_per_pixel = np.sum(yvals - bias.value)/float(len(yvals)**2)
     if poisson_variance_per_pixel > 0:
         estimator.error = np.sqrt(poisson_variance_per_pixel + bias.error**2)
     else:
         estimator.error = bias.error
     return estimator
 
-def bias_estimate(masked_image, amp_geom):
+def bias_estimate(masked_image, amp_geom, nskip_last_cols=4):
+    """
+    Estimate the bias level and error in serial overscan region,
+    skipping the nskip_last_cols columns to avoid bright columns in
+    the e2v data.
+    """
     imarr = masked_image.getImage().getArray()
     overscan = imarr[:amp_geom.serial_overscan.getMaxY()+1,
-                      amp_geom.serial_overscan.getMinX()+overscans:-4]
+                     amp_geom.serial_overscan.getMinX()+overscans:-nskip_last_cols]
     bias_est = Estimator()
     bias_stats = afwMath.makeStatistics(np.array(overscan.flatten(),
                                                  dtype=np.float),
-                                        afwMath.MEANCLIP | afwMath.STDEV)
-    bias_est.value = bias_stats.getValue(afwMath.MEANCLIP)
+                                        afwMath.MEAN | afwMath.STDEV)
+    bias_est.value = bias_stats.getValue(afwMath.MEAN)
     bias_est.error = bias_stats.getValue(afwMath.STDEV)
     return bias_est
 
@@ -39,41 +53,44 @@ class EstimatorList(list):
 
     @property
     def values(self):
-        "Return a list of the values."
-        return [x.value for x in self]
+        "Return a numpy.array of the values."
+        return np.array([x.value for x in self])
 
     @property
     def errors(self):
-        "Return a list of the errors."
-        return [x.error for x in self]
+        "Return a numpy.array of the errors."
+        return np.array([x.error for x in self])
 
 def get_overscan_columns(masked_image, gain, amp_geom, bias_est=None):
     "Compute the column Estimators, including bias subtraction"
     if bias_est is None:
         bias_est = gain*bias_estimate(masked_image, amp_geom)
     imarr = gain*masked_image.getImage().getArray()
-    columns = range(1, amp_geom.full_segment.getMaxX() + 1)
+    num_columns = amp_geom.full_segment.getMaxX()
     ymax = amp_geom.imaging.getMaxY()
     estimators = EstimatorList([make_estimator(imarr[:ymax+1, ix-1], bias_est)
-                                for ix in columns])
+                                for ix in range(1, num_columns+1)])
     return estimators
 
-def plot_cte_profile(axes, masked_image, gain, amp_geom, cti, bias_est,
+def plot_cte_profile(axes, masked_image, gain, amp_geom, cti, bias_est=None,
                      bias_subtract=True):
+    """
+    Plot the gain-corrected mean column pixel values vs column number.
+    Overlay the mean trailed signal in the selected overscan columns.
+    """
+    color = 'blue'
+    pred_color = 'red'
     if bias_subtract:
         bias_offset = bias_est.value
     else:
         bias_offset = 0
-
-    color = 'blue'
-    pred_color = 'red'
     column_ests = get_overscan_columns(masked_image, gain, amp_geom,
                                        bias_est=bias_est)
-    columns = range(1, amp_geom.full_segment.getMaxX() + 1)
+    columns = np.arange(1, amp_geom.full_segment.getMaxX()+1, dtype=np.float)
     plt.step(columns, column_ests.values-bias_offset, where='mid', color=color)
     axisrange = list(plt.axis())
-    axisrange[:2] = (amp_geom.imaging.getMaxX() + 2-0.5,
-                     amp_geom.imaging.getMaxX() + 24)
+    axisrange[:2] = (amp_geom.imaging.getMaxX() + 2 - 0.5,
+                     amp_geom.full_segment.getMaxX() + 0.5)
     axisrange[2:] = (min(column_ests.values[amp_geom.imaging.getMaxX() + 1:])
                      - bias_offset - 3,
                      max(column_ests.values[amp_geom.imaging.getMaxX() + 1:])
@@ -84,27 +101,33 @@ def plot_cte_profile(axes, masked_image, gain, amp_geom, cti, bias_est,
                   xerr=0.5, fmt='o', color=color)
 
     ntransfers = amp_geom.imaging.getMaxX()
-    Si = column_ests[amp_geom.imaging.getMaxX()]
+    si = column_ests[amp_geom.imaging.getMaxX()]
 
     if bias_subtract:
         plt.plot(axisrange[:2], (0, 0), 'k:')
     else:
         plt.plot(axisrange[:2], (bias_est.value, bias_est.value), 'k:')
 
-    pred_trail = (cti*ntransfers*(Si - bias_est.value)/float(overscans)
+    pred_trail = (cti*ntransfers*(si - bias_est.value)/float(overscans)
                   + bias_est) - bias_offset
 
-    axes.errorbar([axisrange[0] + overscans/2.], [pred_trail.value],
-                  xerr=overscans/2., yerr=pred_trail.error, fmt='o',
+    axes.errorbar([axisrange[0] + float(overscans)/2.], [pred_trail.value],
+                  xerr=float(overscans)/2., yerr=pred_trail.error, fmt='o',
                   color=pred_color)
 
-def plot_serial_cte_profiles(ccd, gains, cti, bias_est, figsize=(10, 10)):
+def plot_serial_cte_profiles(ccd, gains, cti, bias_est=None, figsize=(10, 10)):
+    """
+    Plot a 4x4 array of serial cte profiles for all 16 channels.
+    """
+    if bias_est is None:
+        bias_est = dict((amp, gains[amp]*bias_estimate(ccd[amp], ccd.amp_geom))
+                        for amp in ccd)
     plt.rcParams['figure.figsize'] = figsize
-    fig  = plt.figure()
+    fig = plt.figure()
     frame_axes = fig.add_subplot(111, frame_on=False, xticklabels=(),
                                  yticklabels=())
     frame_axes.set_xlabel('\ncolumn #')
-    frame_axes.set_ylabel('Mean e-/pixel - bias\n')
+    frame_axes.set_ylabel('column mean - bias (e-/pixel)\n')
     for amp in ccd:
         subplot = (4, 4, amp)
         axes = fig.add_subplot(*subplot)
@@ -114,23 +137,18 @@ def plot_serial_cte_profiles(ccd, gains, cti, bias_est, figsize=(10, 10)):
 
 if __name__ == '__main__':
     overscans = 2
-    sflat = 'E2V-CCD250-114_superflat_low.fits'
-    #sflat = 'E2V-CCD250-114_superflat_high.fits'
-    results = sensorTest.EOTestResults('E2V-CCD250-114_eotest_results.fits')
+    sensor_id = 'ITL-3800C-007'
+#    flux_level = 'low'
+    flux_level = 'high'
+    sflat = '%s_superflat_%s.fits' % (sensor_id, flux_level)
+    results = sensorTest.EOTestResults('%s_eotest_results.fits' % sensor_id)
     gains = dict((amp, gain) for amp, gain
                  in zip(results['AMP'], results['GAIN']))
     ccd = sensorTest.MaskedCCD(sflat)
-    #
-    # run EPERTask
-    #
-    eper_task = sensorTest.EPERTask()
-    eper_task.log.setThreshold(eper_task.log.INFO)
-    eper_task.config.verbose = False
-    eper_task.config.cti = True
-    eper_task.config.direction = 's'
-    cti, bias_est = eper_task.run(sflat, range(1, 17), overscans, gains=gains)
+    cti = dict([(amp, Estimator()) for amp in ccd])
     for amp in cti:
-        print(amp, cti[amp])
+        cti[amp].value = results['CTI_%s_SERIAL' % flux_level.upper()][amp-1]
+        cti[amp].error = results['CTI_%s_SERIAL_ERROR' % flux_level.upper()][amp-1]
 
-    fig, frame_axes = plot_serial_cte_profiles(ccd, gains, cti, bias_est)
+    fig, frame_axes = plot_serial_cte_profiles(ccd, gains, cti)
     frame_axes.set_title(sflat)
