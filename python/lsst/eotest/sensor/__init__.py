@@ -23,6 +23,7 @@ from prnu import prnu
 from Traps import Traps
 from TrapFinder import TrapFinder
 from rolloff_mask import rolloff_mask, pixel_counts
+from generate_mask import generate_mask
 #
 # Pipe tasks
 #
