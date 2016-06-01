@@ -90,8 +90,8 @@ class CteTask(pipeBase.Task):
         s_task.config.direction = 's'
         s_task.config.verbose = self.config.verbose
         s_task.config.cti = True
-        scti = s_task.run(superflat_file, all_amps, self.config.overscans,
-                          gains=gains)
+        scti, bias_ests = s_task.run(superflat_file, all_amps,
+                                     self.config.overscans, gains=gains)
         #
         # Compute parallel CTE.
         #
@@ -99,8 +99,8 @@ class CteTask(pipeBase.Task):
         p_task.config.direction = 'p'
         p_task.config.verbose = self.config.verbose
         p_task.config.cti = True
-        pcti = p_task.run(superflat_file, all_amps, self.config.overscans,
-                          gains=gains)
+        pcti, bias_ests = p_task.run(superflat_file, all_amps,
+                                     self.config.overscans, gains=gains)
         #
         # Write results to the output file.
         #
@@ -127,7 +127,3 @@ class CteTask(pipeBase.Task):
             if self.config.verbose:
                 self.log.info(line)
         results.write(clobber='yes')
-        #
-        # Clean up
-        #
-        #os.remove(superflat_file)
