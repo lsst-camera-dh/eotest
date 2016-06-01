@@ -4,6 +4,7 @@ Function to generate mask files given a set of pixels and columns to mask.
 from __future__ import absolute_import, print_function
 import os
 import astropy.io.fits as fits
+import lsst.afw.image as afwImage
 from lsst.eotest.fitsTools import fitsWriteto
 import lsst.eotest.image_utils as imutils
 from .AmplifierGeometry import makeAmplifierGeometry
@@ -41,6 +42,7 @@ def generate_mask(infile, outfile, mask_plane, pixels=None, columns=None,
     fitsWriteto(ccd, temp_mask_file)
 
     # Use BrightPixels code to detect mask regions and write the mask file.
+    afwImage.MaskU.addMaskPlane(mask_plane)
     hdulist = fits.HDUList()
     hdulist.append(fits.open(infile)[0])
     hdulist[0].header['MASKTYPE'] = mask_plane

@@ -32,7 +32,7 @@ class GenerateMaskTestCase(unittest.TestCase):
         "Test the generated mask for expected masked and unmasked pixels."
         sensorTest.generate_mask(self.template_file,
                                  self.mask_file,
-                                 mask_plane='BAD',
+                                 mask_plane='TRAPS',
                                  pixels=self.pixels,
                                  columns=self.columns,
                                  temp_mask_file='my_temp_mask_file.fits')
