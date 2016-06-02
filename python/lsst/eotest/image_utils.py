@@ -196,6 +196,20 @@ class SubRegionSampler(object):
     def subim(self, im, x, y):
         return im.Factory(im, self.bbox(x, y))
 
+def bad_column(column, threshold):
+    "Count the sizes of contiguous sequences of masked pixels."
+    masked_pixel_count = []
+    last = 0
+    for value in column:
+        if value != 0 and last == 0:
+            masked_pixel_count.append(1)
+        elif value != 0 and last != 0:
+            masked_pixel_count[-1] += 1
+        last = value
+    if len(masked_pixel_count) > 0 and max(masked_pixel_count) >= threshold:
+        return True
+    return False
+
 if __name__ == '__main__':
     import glob
 

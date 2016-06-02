@@ -18,7 +18,7 @@ parser.add_argument('-O', '--outfile', type=str, default=None,
                     help='Output file name (basename only). Computed value if left at default of None: <SENSOR_ID>_psf_results_nsig<nsig>.fits')
 parser.add_argument('-x', '--fit_xy', action='store_true', default=False,
                     help='Flag if Gaussian width is to be fit separately in x- and y-directions')
-                    
+
 args = parser.parse_args()
 
 task = sensorTest.Fe55Task()
