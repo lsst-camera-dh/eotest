@@ -30,18 +30,15 @@ class BrightPixelsTestCase(unittest.TestCase):
         self.pixels = self.ccd.generate_bright_pix(self.npix)
         self.ccd.add_bright_pix(self.pixels, nsig=self.nsig)
         self.ccd.writeto(self.dark_file)
-        self.mask_file = 'bp_mask_file.fits'
     def tearDown(self):
         os.remove(self.dark_file)
-        os.remove(self.mask_file)
-    def test_generate_mask(self):
+    def test_find_pixel_defects(self):
         ccd = MaskedCCD(self.dark_file)
         for amp in ccd:
             bp = BrightPixels(ccd, amp, ccd.md.get('EXPTIME'),
                               self.gain, ethresh=self.emin/2.,
                               colthresh=100)
             results = bp.find()
-            bp.generate_mask(self.mask_file)
             pixels = np.array(np.where(self.pixels[amp] == 1))
             pixels = pixels.transpose()
             pixels = [(x, y) for y, x in pixels]
@@ -68,18 +65,15 @@ class BrightColumnsTestCase(unittest.TestCase):
         self.columns = self.ccd.generate_bright_cols(self.ncols)
         self.ccd.add_bright_cols(self.columns, nsig=self.nsig)
         self.ccd.writeto(self.dark_file)
-        self.mask_file = 'bp_mask_file.fits'
     def tearDown(self):
         os.remove(self.dark_file)
-        os.remove(self.mask_file)
-    def test_generate_mask(self):
+    def test_find_column_defects(self):
         ccd = MaskedCCD(self.dark_file)
         for amp in ccd:
             bp = BrightPixels(ccd, amp, ccd.md.get('EXPTIME'),
                               self.gain, ethresh=self.emin/2.,
                               colthresh=100)
             results = bp.find()
-            bp.generate_mask(self.mask_file)
             columns = sorted(self.columns[amp])
             self.assertEqual(columns, results[1])
 

@@ -196,8 +196,20 @@ class SubRegionSampler(object):
     def subim(self, im, x, y):
         return im.Factory(im, self.bbox(x, y))
 
-def bad_column(column, threshold):
-    "Count the sizes of contiguous sequences of masked pixels."
+def bad_column(column_indices, threshold):
+    """
+    Count the sizes of contiguous sequences of masked pixels and
+    return True if the length of any sequence exceeds the threshold
+    number.
+    """
+    if len(column_indices) < threshold:
+        # There are not enough masked pixels to mark this as a bad
+        # column.
+        return False
+    # Fill an array with zeros, then fill with ones at mask locations.
+    column = np.zeros(max(column_indices) + 1)
+    column[(column_indices,)] = 1
+    # Count pixels in contiguous masked sequences.
     masked_pixel_count = []
     last = 0
     for value in column:

@@ -2,17 +2,20 @@
 Unit tests for bad_column code.
 """
 import unittest
+import numpy as np
 from lsst.eotest.image_utils import bad_column
 
 def make_column(pixel_counts):
     """
     Concatenate alternating sequences of 0's and 1's with lengths
-    given by the entries in pixel_counts.
+    given by the entries in pixel_counts.  Return a list with the
+    y-coordinates of the masked (value 1) pixels.
     """
     column = []
     for i, count in enumerate(pixel_counts):
         column += [i % 2]*count
-    return column
+    column = np.array(column)
+    return list(np.where(column != 0)[0])
 
 class BadColumnTestCase(unittest.TestCase):
     """

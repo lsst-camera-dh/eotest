@@ -17,14 +17,15 @@ import lsst.afw.geom as afwGeom
 import lsst.afw.image as afwImage
 import lsst.daf.base as dafBase
 import lsst.eotest.image_utils as imutils
-from MaskedCCD import MaskedCCD
-from AmplifierGeometry import makeAmplifierGeometry, amp_loc
-from BrightPixels import BrightPixels
-from sim_tools import CCD
+from .MaskedCCD import MaskedCCD
+from .AmplifierGeometry import makeAmplifierGeometry, amp_loc
+from .BrightPixels import BrightPixels
+from .sim_tools import CCD
+from .generate_mask import generate_mask
 
 def rolloff_mask(infile, outfile,
                  mask_plane='ROLLOFF_DEFECTS',
-                 tmp_mask_image='temp_mask_image.fits',
+                 tmp_mask_image='temp_rolloff_mask_image.fits',
                  outer_edge_width=10,
                  bloom_stop_width=5,
                  signal=10,
@@ -120,10 +121,12 @@ def rolloff_mask(infile, outfile,
     mask = afwImage.MaskU(image.getDimensions())
     mask.addMaskPlane(mask_plane)
     maskedCCD = MaskedCCD(tmp_mask_image)
+    pixels, columns = {}, {}
     for amp in maskedCCD:
         bright_pixels = BrightPixels(maskedCCD, amp, exptime, gain,
                                      ethresh=signal/2., mask_plane=mask_plane)
-        bright_pixels.generate_mask(outfile)
+        pixels[amp], columns[amp] = bright_pixels.find()
+    generate_mask(infile, outfile, mask_plane, pixels=pixels, columns=columns)
     if cleanup:
         os.remove(tmp_mask_image)
 

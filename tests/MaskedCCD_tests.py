@@ -8,7 +8,7 @@ import unittest
 import numpy as np
 import lsst.eotest.image_utils as imutils
 from lsst.eotest.sensor import MaskedCCD, add_mask_files, BrightPixels, \
-    AmplifierGeometry
+    AmplifierGeometry, generate_mask
 import lsst.eotest.sensor.sim_tools as sim_tools
 import lsst.afw.image as afwImage
 import lsst.afw.math as afwMath
@@ -39,11 +39,14 @@ class MaskedCCDTestCase(unittest.TestCase):
             mask_file = 'mask_file_%s.fits' % mask_plane
             cls.mask_files.append(mask_file)
             masked_ccd = MaskedCCD(cls.mask_image)
+            pixels, columns = {}, {}
             for amp in masked_ccd:
                 bp = BrightPixels(masked_ccd, amp, cls.exptime,
                                   cls.gain, mask_plane=mask_plane,
                                   ethresh=cls.signal/2.)
-                bp.generate_mask(mask_file)
+                pixels[amp], columns[amp] = bp.find()
+            generate_mask(cls.mask_image, mask_file, mask_plane,
+                          pixels=pixels, columns=columns)
         cls.summed_mask_file = 'summed_mask_file.fits'
         add_mask_files(cls.mask_files, cls.summed_mask_file)
     @classmethod
