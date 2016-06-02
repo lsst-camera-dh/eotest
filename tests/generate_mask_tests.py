@@ -20,7 +20,8 @@ class GenerateMaskTestCase(unittest.TestCase):
         self.mask_file = 'test_mask_file.fits'
         # These are physical pixel coordinates in the imaging section,
         # i.e., prescan pixels are not included in the x-coordinate.
-        self.pixels = dict([(1, [(200, 1000), (500, 300), (140, 1499)])])
+        self.pixels = dict([(1, [(200, 1000), (500, 300), (140, 1499)]),
+                            (2, [(342, 6), (50, 2), (403, 11), (420, 12)])])
         self.columns = dict([(1, (120, 212, 320, 432))])
 
     def tearDown(self):
@@ -35,7 +36,7 @@ class GenerateMaskTestCase(unittest.TestCase):
                                  mask_plane='TRAPS',
                                  pixels=self.pixels,
                                  columns=self.columns,
-                                 temp_mask_file='my_temp_mask_file.fits')
+                                 temp_mask_image='my_temp_mask_file.fits')
         ccd = sensorTest.MaskedCCD(self.mask_file)
         for amp in self.pixels:
             image = imutils.trim(ccd[amp].getImage(), ccd.amp_geom.imaging)

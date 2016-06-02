@@ -10,9 +10,10 @@ bright column is specified via the --colthresh option.
 import os
 
 import lsst.eotest.image_utils as imutils
-from MaskedCCD import MaskedCCD
-from BrightPixels import BrightPixels
-from EOTestResults import EOTestResults
+from .MaskedCCD import MaskedCCD
+from .BrightPixels import BrightPixels
+from .EOTestResults import EOTestResults
+from .generate_mask import generate_mask
 
 import lsst.afw.image as afwImage
 import lsst.pex.config as pexConfig
@@ -56,10 +57,6 @@ class BrightPixelsTask(pipeBase.Task):
         ccd = MaskedCCD(medfile, mask_files=mask_files, bias_frame=bias_frame)
         md = imutils.Metadata(dark_files[0], 1)
         exptime = ccd.md.get('EXPTIME')
-        outfile = os.path.join(self.config.output_dir,
-                               '%s_bright_pixel_mask.fits' % sensor_id)
-        if os.path.isfile(outfile):
-            os.remove(outfile)
         total_bright_pixels = 0
         total_bright_columns = 0
         if self.config.verbose:
@@ -73,20 +70,28 @@ class BrightPixelsTask(pipeBase.Task):
                                         '%s_eotest_results.fits' % sensor_id)
 
         results = EOTestResults(results_file, namps=len(ccd))
+        pixels = {}
+        columns = {}
         for amp in ccd:
             bright_pixels = BrightPixels(ccd, amp, exptime, gains[amp])
-
-            pixels, columns = bright_pixels.find()
-            bright_pixels.generate_mask(outfile)
-            pix_count = len(pixels)
-            col_count = len(columns)
+            pixels[amp], columns[amp] = bright_pixels.find()
+            pix_count = len(pixels[amp])
+            col_count = len(columns[amp])
             total_bright_pixels += pix_count
             total_bright_columns += col_count
             results.add_seg_result(amp, 'NUM_BRIGHT_PIXELS', pix_count)
             results.add_seg_result(amp, 'NUM_BRIGHT_COLUMNS', col_count)
-            self.log.info("%2i          %i          %i" % 
+            self.log.info("%2i          %i          %i" %
                           (amp, pix_count, col_count))
         if self.config.verbose:
             self.log.info("Total bright pixels: %i" % total_bright_pixels)
             self.log.info("Total bright columns: %i" % total_bright_columns)
         results.write(clobber=True)
+
+        # Generate the mask file based on the pixel and columns.
+        mask_file = os.path.join(self.config.output_dir,
+                                 '%s_bright_pixel_mask.fits' % sensor_id)
+        if os.path.isfile(mask_file):
+            os.remove(mask_file)
+        generate_mask(medfile, mask_file, 'BRIGHT_PIXELS', pixels=pixels,
+                      columns=columns)
