@@ -278,7 +278,7 @@ class EOTestPlots(object):
                 win = plot.Window(subplot=subplot, figsize=figsize,
                                   xlabel=r'PSF sigma ($\mu$)',
                                   ylabel=r'entries / bin', size='large')
-                win.frameAxes.text(0.5, 1.08, 
+                win.frameAxes.text(0.5, 1.08,
                                    'PSF from Fe55 data, %s' % self.sensor_id,
                                    horizontalalignment='center',
                                    verticalalignment='top',
@@ -288,11 +288,14 @@ class EOTestPlots(object):
                 win.select_subplot(*subplot)
             self._offset_subplot(win)
             try:
-                plot.histogram(sigma, xrange=xrange, bins=bins, new_win=False,
-                               xname='', yname='')
+                plot.histogram(sigmax, xrange=xrange, bins=bins, new_win=False,
+                               xname='', yname='', color='blue')
+                plot.histogram(sigmay, oplot=1, color='red', xrange=xrange,
+                               bins=bins)
+                plot.histogram(sigma, oplot=1, xrange=xrange, bins=bins)
                 pylab.xticks(range(xrange[0], xrange[1]+1))
                 # Find mode from histogram data
-                mode, median, mean = psf_sigma_statistics(sigma, bins=bins, 
+                mode, median, mean = psf_sigma_statistics(sigma, bins=bins,
                                                           range=xrange)
                 plot.vline(5)
                 plot.vline(mode, color='r')
@@ -918,8 +921,8 @@ class CcdSpecs(OrderedDict):
             self['CCD-027'].measurement = '\\twolinecell{%s}' % measurement
         self['CCD-027'].ok = (max_ratio < 5e-2)
 
-        psf_sigma = np.median(self.results['PSF_SIGMA'])
-        self['CCD-028'].measurement = '$%.2f\,\mu$' % psf_sigma
+        psf_sigma = max(self.results['PSF_SIGMA'])
+        self['CCD-028'].measurement = '$%.2f\,\mu$ (max. value)' % psf_sigma
         self['CCD-028'].ok = (psf_sigma < 5.)
 
 class CcdSpec(object):
