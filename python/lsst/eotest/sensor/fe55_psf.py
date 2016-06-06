@@ -17,7 +17,7 @@ import lsst.afw.image as afwImage
 import lsst.afw.math as afwMath
 
 import lsst.eotest.image_utils as imutils
-from MaskedCCD import MaskedCCD, MaskedCCDBiasImageException
+from .MaskedCCD import MaskedCCD, MaskedCCDBiasImageException
 
 _sqrt2 = np.sqrt(2)
 
@@ -44,6 +44,14 @@ def pixel_integral(x, y, x0, y0, sigmax, sigmay):
 
     return Fx*Fy
 
+def residuals_single(pars, pos, dn, errors):
+    x0, y0, sigma, DN_tot = pars
+    return (dn - psf_func(pos, x0, y0, sigma, sigma, DN_tot))/errors
+
+def residuals(pars, pos, dn, errors):
+    x0, y0, sigmax, sigmay, DN_tot = pars
+    return (dn - psf_func(pos, x0, y0, sigmax, sigmay, DN_tot))/errors
+
 def psf_func_single_sigma(pos, x0, y0, sigma, DN_tot):
     return psf_func(pos, x0, y0, sigma, sigma, DN_tot)
 
@@ -56,12 +64,12 @@ def psf_func(pos, x0, y0, sigmax, sigmay, DN_tot):
     DN_tot: Gaussian normalization in ADU
     tie_xy: if True, then assume sigmax=sigmay in the fit.
     """
-    return DN_tot*np.array([pixel_integral(x[0], x[1], x0, y0, 
+    return DN_tot*np.array([pixel_integral(x[0], x[1], x0, y0,
                                            sigmax, sigmay) for x in pos])
 
 def chisq(pos, dn, x0, y0, sigmax, sigmay, dn_fit, dn_errors):
     "The chi-square of the fit of the data to psf_func."
-    return sum((psf_func(pos, x0, y0, sigmax, sigmay, dn_fit) 
+    return sum((psf_func(pos, x0, y0, sigmax, sigmay, dn_fit)
                 - np.array(dn))**2/dn_errors**2)
 
 class PsfGaussFit(object):
@@ -115,7 +123,8 @@ class PsfGaussFit(object):
         try:
             image = ccd.bias_subtracted_image(amp)
         except MaskedCCDBiasImageException:
-            print "DM stack error encountered when generating bias image from inferred overscan region."
+            print "DM stack error encountered when generating bias image "
+            print "from inferred overscan region."
             print "Skipping bias subtraction."
             image = ccd[amp]
 
@@ -129,7 +138,7 @@ class PsfGaussFit(object):
 
         threshold = afwDetect.Threshold(median + self.nsig*stdev)
         if logger is not None:
-            logger.info("PsfGaussFit.process_image: threshold= %s" 
+            logger.info("PsfGaussFit.process_image: threshold= %s"
                         % threshold.getValue())
         fpset = afwDetect.FootprintSet(image, threshold)
 
@@ -159,17 +168,17 @@ class PsfGaussFit(object):
                 dn_errors = stdev*np.ones(len(positions))
                 if self.npars == 5:
                     p0 = (peak.getIx(), peak.getIy(), sigma0, sigma0, dn0)
-                    pars, _ = scipy.optimize.curve_fit(psf_func, positions, 
-                                                       zvals, p0=p0,
-                                                       sigma=dn_errors)
+                    pars, _ = scipy.optimize.leastsq(residuals, p0,
+                                                     args=(positions, zvals,
+                                                           dn_errors))
                     sigmax.append(pars[2])
                     sigmay.append(pars[3])
                     dn.append(pars[4])
                 else:
                     p0 = (peak.getIx(), peak.getIy(), sigma0, dn0)
-                    pars, _ = scipy.optimize.curve_fit(psf_func_single_sigma,
-                                                       positions, zvals, p0=p0,
-                                                       sigma=dn_errors)
+                    pars, _ = scipy.optimize.leastsq(residuals_single, p0,
+                                                     args=(positions, zvals,
+                                                           dn_errors))
                     sigmax.append(pars[2])
                     sigmay.append(pars[2])
                     dn.append(pars[3])
@@ -189,7 +198,8 @@ class PsfGaussFit(object):
         if logger is not None:
             logger.info("Number of footprints fitted: %i" % num_fp)
             if failed_curve_fits > 0:
-                logger.info("Failed scipy.curve_fit calls: %s" % failed_curve_fits)
+                logger.info("Failed scipy.optimize.leastsq calls: %s"
+                            % failed_curve_fits)
         self._save_ext_data(amp, x0, y0, sigmax, sigmay, dn, dn_fp, chiprob,
                             chi2s, dofs, maxDNs)
         self.amp_set.add(amp)
@@ -252,12 +262,12 @@ class PsfGaussFit(object):
             formats = ['I'] + ['E']*(len(columns)-1)
             units = ['None', 'pixel', 'pixel', 'pixel', 'pixel',
                      'ADU', 'ADU', 'None', 'None', 'None', 'ADU']
-            fits_cols = lambda coldata : [fits.Column(name=colname,
-                                                      format=format,
-                                                      unit=unit,
-                                                      array=column)
-                                          for colname, format, unit, column
-                                          in coldata]
+            fits_cols = lambda coldata: [fits.Column(name=colname,
+                                                     format=format,
+                                                     unit=unit,
+                                                     array=column)
+                                         for colname, format, unit, column
+                                         in coldata]
             self.output.append(fitsTableFactory(fits_cols(zip(colnames,
                                                               formats,
                                                               units,
