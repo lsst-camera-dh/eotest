@@ -25,7 +25,7 @@ class rolloff_mask_TestCase(unittest.TestCase):
     def setUp(self):
         self.input_file = 'input_image.fits'
         self.mask_file = 'rolloff_defects_mask.fits'
-        self.image_file = 'temp_mask_image.fits'
+        self.image_file = 'my_temp_mask_image.fits'
         self.outer_edge_width = 10
         self.bloom_stop_width = 5
         self.signal = 10

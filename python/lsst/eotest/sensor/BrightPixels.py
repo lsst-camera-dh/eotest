@@ -36,39 +36,6 @@ class BrightPixels(object):
         self.mask_plane = mask_plane
         self.bright_pixels = None
         self.bright_columns = None
-    def generate_mask(self, outfile):
-        """
-        Find bright pixels and columns, and write the mask for this
-        amplifier to a FITS file using the afwImage.MaskU.writeFits
-        method.
-        """
-        if self.bright_pixels is None or self.bright_columns is None:
-            self.find()
-        self.mask = afwImage.MaskU(self.raw_image.getDimensions())
-        self.fp_set.setMask(self.mask, self.mask_plane)
-        self._write_fits(outfile)
-    def _write_fits(self, outfile):
-        amp_geom = makeAmplifierGeometry(self.ccd.imfile)
-        hdrs = fits_headers()
-        if not os.path.isfile(outfile):
-            # We are writing the first extension, most likely, so create
-            # the output file.
-            output = fits.HDUList()
-            output.append(fits.PrimaryHDU())
-            output[0].header['MASKTYPE'] = 'BRIGHT_PIXELS'
-            output[0].header['ETHRESH'] = self.ethresh
-            output[0].header['CTHRESH'] = self.colthresh
-            fitsWriteto(output, outfile, clobber=True)
-        imaging = self.ccd.amp_geom.imaging
-        ihdr = hdrs[hdrs.keys()[self.amp]]
-        md = dafBase.PropertySet()
-        md.set('EXTNAME', 'SEGMENT%s' % imutils.channelIds[self.amp])
-        md.set('DETSIZE', amp_geom[self.amp]['DETSIZE'])
-        md.set('DETSEC', amp_geom[self.amp]['DETSEC'])
-        md.set('DATASEC', amp_geom[self.amp]['DATASEC'])
-        md.set('NBRTPIX', len(self.bright_pixels))
-        md.set('NBRTCOL', len(self.bright_columns))
-        self.mask.writeFits(outfile, md, 'a')
     def find(self):
         """
         Find and return the bright pixels and bright columns.
@@ -101,7 +68,7 @@ class BrightPixels(object):
         x0 = image.getX0()
         y0 = image.getY0()
         for x in columns:
-            if len(columns[x]) > self.colthresh:
+            if imutils.bad_column(columns[x], self.colthresh):
                 bright_cols.append(x - x0)
             else:
                 bright_pixs.extend([(x - x0, y - y0) for y in columns[x]])
@@ -151,5 +118,4 @@ if __name__ == '__main__':
     for amp in ccd:
         bright_pixels = BrightPixels(ccd, amp, ccd.md.get('EXPTIME'), gain)
         pixels, columns = bright_pixels.find()
-        bright_pixels.generate_mask(mask_file)
         print imutils.channelIds[amp], len(pixels), columns

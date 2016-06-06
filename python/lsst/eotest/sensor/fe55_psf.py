@@ -41,7 +41,7 @@ def pixel_integral(x, y, x0, y0, sigmax, sigmay):
 
     Fx = 0.5*(erf((x2 - x0)/_sqrt2/sigmax) - erf((x1 - x0)/_sqrt2/sigmax))
     Fy = 0.5*(erf((y2 - y0)/_sqrt2/sigmay) - erf((y1 - y0)/_sqrt2/sigmay))
-    
+
     return Fx*Fy
 
 def psf_func_single_sigma(pos, x0, y0, sigma, DN_tot):

@@ -93,5 +93,5 @@ class BrightPixelsTask(pipeBase.Task):
                                  '%s_bright_pixel_mask.fits' % sensor_id)
         if os.path.isfile(mask_file):
             os.remove(mask_file)
-        generate_mask(medfile, mask_file, 'BRIGHT_PIXELS', pixels=pixels,
-                      columns=columns)
+        generate_mask(medfile, mask_file, self.config.mask_plane,
+                      pixels=pixels, columns=columns)
