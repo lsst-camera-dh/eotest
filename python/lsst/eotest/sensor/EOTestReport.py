@@ -250,8 +250,22 @@ class EOTestReport(object):
         if (os.path.isfile(serial_profile_high + '.png') and
             os.path.isfile(serial_profile_low + '.png')):
             self.output.write(_include_png((serial_profile_high,)))
+            self.output.write("""\\noindent
+The blue points are the bias-subtracted column means; the red point is
+the predicted signal in the columns used for the trailed charge based
+on the measured CTI and the mean signal in the last column of the
+imaging section; and the red dotted line is the signal based on the
+CTE specification given the mean signal in the last imaging column.
+""")
             self.output.write('\\pagebreak\n\n')
             self.output.write(_include_png((serial_profile_low,)))
+            self.output.write("""\\noindent
+The blue points are the bias-subtracted column means; the red point is
+the predicted signal in the columns used for the trailed charge based
+on the measured CTI and the mean signal in the last column of the
+imaging section; and the red dotted line is the signal based on the
+CTE specification given the mean signal in the last imaging column.
+""")
             self.output.write('\\pagebreak\n\n')
 
         parallel_profile_high = '%(sensor_id)s_parallel_oscan_high' % locals()
@@ -259,8 +273,22 @@ class EOTestReport(object):
         if (os.path.isfile(parallel_profile_high + '.png') and
             os.path.isfile(parallel_profile_low + '.png')):
             self.output.write(_include_png((parallel_profile_high,)))
+            self.output.write("""\\noindent
+The blue points are the bias-subtracted row means; the red point is
+the predicted signal in the rows used for the trailed charge based on
+the measured CTI and the mean signal in the last row of the imaging
+section; and the red dotted line is the signal based on the CTE
+specification given the mean signal in the last imaging row.
+""")
             self.output.write('\\pagebreak\n\n')
             self.output.write(_include_png((parallel_profile_low,)))
+            self.output.write("""\\noindent
+The blue points are the bias-subtracted row means; the red point is
+the predicted signal in the rows used for the trailed charge based on
+the measured CTI and the mean signal in the last row of the imaging
+section; and the red dotted line is the signal based on the CTE
+specification given the mean signal in the last imaging row.
+""")
             self.output.write('\\pagebreak\n\n')
         #
         # Crosstalk

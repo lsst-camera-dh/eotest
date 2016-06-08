@@ -51,8 +51,9 @@ class SubImage(object):
         bias_estimate = Estimator()
         bias_estimate.value = \
             gain*afwMath.makeStatistics(subim, statistic).getValue()
+        num_pix = len(subim.getImage().getArray().flatten())
         bias_estimate.error = \
-            gain*afwMath.makeStatistics(subim, afwMath.STDEV).getValue()
+            gain*afwMath.makeStatistics(subim, afwMath.STDEV).getValue()/np.sqrt(float(num_pix))
         return bias_estimate
     def __call__(self, start, end=None):
         if end is None:
