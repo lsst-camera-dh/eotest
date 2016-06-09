@@ -214,7 +214,7 @@ class PsfGaussFit(object):
         amps = np.sort(np.unique(np.array(self.amp)))
         my_numGoodFits = dict([(amp, 0) for amp in imutils.allAmps()])
         for amp in amps:
-            indx = np.where((self.chiprob >= chiprob_min) & (self.amp == amp))
+            indx = np.where((self.chiprob > chiprob_min) & (self.amp == amp))
             my_numGoodFits[amp] = len(indx[0])
         return my_numGoodFits
     def _save_ext_data(self, amp, x0, y0, sigmax, sigmay, dn, dn_fp, chiprob,
