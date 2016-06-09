@@ -25,7 +25,7 @@ from .crosstalk import CrosstalkMatrix
 from .QE import QE_Data
 from .AmplifierGeometry import parse_geom_kwd
 from .cteTask import superflat
-from .cte_profiles import *
+from .cte_profile import *
 
 class Subplot(object):
     def __init__(self, namps):
