@@ -619,69 +619,36 @@ class EOTestPlots(object):
                 for label in win.axes[-1].get_yticklabels():
                     label.set_visible(False)
 
-    def serial_cte_profiles(self, flux_level, sflat_file, mask_files,
-                            figsize=(11, 8.5)):
+    def cte_profiles(self, flux_level, sflat_file, mask_files,
+                     figsize=(11, 8.5), serial=True):
         """
-        Plot an array of serial cte profiles.
+        Plot an array of serial or parallel cte profiles.
         """
         ccd = MaskedCCD(sflat_file, mask_files=mask_files)
         gains = dict((amp, gain) for amp, gain
                      in zip(self.results['AMP'], self.results['GAIN']))
         cti = dict((amp, Estimator()) for amp in ccd)
-        for amp in ccd:
-            cti[amp].value = self.results['CTI_%s_SERIAL'
-                                          % flux_level.upper()][amp-1]
-            cti[amp].error = self.results['CTI_%s_SERIAL_ERROR'
-                                          % flux_level.upper()][amp-1]
-        bias_est = dict((amp, gains[amp]*bias_estimate(ccd[amp], ccd.amp_geom))
-                        for amp in ccd)
-        title = 'Serial CTE profiles, %s flux, %s' % (flux_level,
-                                                      self.sensor_id)
-        for amp in ccd:
-            subplot = self.subplot(amp)
-            if amp == 1:
-                win = plot.Window(subplot=subplot, figsize=figsize,
-                                  xlabel='column #',
-                                  ylabel='mean signal - bias (e-/pixel)',
-                                  size='large')
-                win.frameAxes.text(0.5, 1.08, title,
-                                   horizontalalignment='center',
-                                   verticalalignment='top',
-                                   transform=win.frameAxes.transAxes,
-                                   size='large')
-            else:
-                win.select_subplot(*subplot)
-            self._offset_subplot(win)
-            serial_cte_profile(win.axes[-1], ccd[amp], gains[amp],
-                               ccd.amp_geom, cti[amp], bias_est[amp])
-            pylab.annotate('Amp %i\nCTI=%.2e' % (amp, cti[amp].value),
-                           (0.5, 0.8), xycoords='axes fraction',
-                           size='x-small')
+        bias_est = {}
+        if serial:
+            direction = 'Serial'
+            xlabel = 'column #'
+        else:
+            direction = 'Parallel'
+            xlabel = 'row #'
 
-    def parallel_cte_profiles(self, flux_level, sflat_file, mask_files,
-                              figsize=(11, 8.5)):
-        """
-        Plot an array of parallel cte profiles.
-        """
-        ccd = MaskedCCD(sflat_file, mask_files=mask_files)
-        gains = dict((amp, gain) for amp, gain
-                     in zip(self.results['AMP'], self.results['GAIN']))
-        cti = dict((amp, Estimator()) for amp in ccd)
+        keyname = '_'.join(('CTI', flux_level.upper(), direction.upper()))
         for amp in ccd:
-            cti[amp].value = self.results['CTI_%s_PARALLEL'
-                                          % flux_level.upper()][amp-1]
-            cti[amp].error = self.results['CTI_%s_PARALLEL_ERROR'
-                                          % flux_level.upper()][amp-1]
-        bias_est = dict((amp, gains[amp]*bias_estimate(ccd[amp], ccd.amp_geom,
-                                                       serial=False))
-                        for amp in ccd)
-        title = 'Parallel CTE profiles, %s flux, %s' % (flux_level,
-                                                        self.sensor_id)
+            cti[amp].value = self.results[keyname][amp-1]
+            cti[amp].error = self.results[keyname + '_ERROR'][amp-1]
+            bias_est[amp] = gains[amp]*bias_estimate(ccd[amp], ccd.amp_geom,
+                                                     serial=serial)
+        title = '%s CTE profiles, %s flux, %s' % (direction, flux_level,
+                                                  self.sensor_id)
         for amp in ccd:
             subplot = self.subplot(amp)
             if amp == 1:
                 win = plot.Window(subplot=subplot, figsize=figsize,
-                                  xlabel='row #',
+                                  xlabel=xlabel,
                                   ylabel='mean signal - bias (e-/pixel)',
                                   size='large')
                 win.frameAxes.text(0.5, 1.08, title,
@@ -692,10 +659,11 @@ class EOTestPlots(object):
             else:
                 win.select_subplot(*subplot)
             self._offset_subplot(win)
-            parallel_cte_profile(win.axes[-1], ccd[amp], gains[amp],
-                                 ccd.amp_geom, cti[amp], bias_est[amp])
-            pylab.annotate('Amp %i\nCTI=%.2e' % (amp, cti[amp].value),
-                           (0.5, 0.8), xycoords='axes fraction',
+            cte_profile(win.axes[-1], ccd[amp], gains[amp],
+                        ccd.amp_geom, cti[amp], bias_est[amp], serial=serial)
+            pylab.annotate('Amp %i\nCTI=%.2e\n    +/-%.2e'
+                           % (amp, cti[amp].value, cti[amp].error),
+                           (0.5, 0.75), xycoords='axes fraction',
                            size='x-small')
 
     def qe_ratio(self, ref, amp=None, qe_file=None):
