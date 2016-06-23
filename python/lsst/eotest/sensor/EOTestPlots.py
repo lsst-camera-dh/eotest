@@ -320,11 +320,11 @@ class EOTestPlots(object):
                 pylab.annotate('Amp %i\nmode=%.2f' % (amp, mode), (0.5, 0.8),
                                xycoords='axes fraction', size='x-small')
             except Exception as eobj:
-                print "Exception raised in generating PSF sigma plot for amp", amp
-                print eobj
                 # Skip this plot so that the rest of the plots can be
                 # generated.
-                pass
+                print "Exception raised in generating PSF sigma plot for amp", amp
+                print eobj
+
     def fe55_dists(self, chiprob_min=0.1, fe55_file=None, figsize=(11, 8.5)):
         if fe55_file is None:
             fe55_file = glob.glob(self._fullpath('%s_psf_results*.fits'
@@ -384,16 +384,11 @@ class EOTestPlots(object):
             xrange[0] = max(xrange[0], 1e-1)
             xx = np.logspace(np.log10(xrange[0]), np.log10(xrange[1]), 20)
             # Plot PTC curves using gain measurements.
-            gain = self.results['GAIN'][amp-1]
-            gain_error = self.results['GAIN_ERROR'][amp-1]
             ptc_gain = self.results['PTC_GAIN'][amp-1]
             ptc_gain_error = self.results['PTC_GAIN_ERROR'][amp-1]
-            plot.curve(xx, xx/gain, oplot=1, color='r', lineStyle=':')
             plot.curve(xx, xx/ptc_gain, oplot=1, color='b', lineStyle=':')
-            note = '''Amp %i gains:
-PTC (blue): %.2f +/- %.2f
-Fe55 (red): %.2f +/- %.2f'''\
-                % (amp, ptc_gain, ptc_gain_error, gain, gain_error)
+            note = 'Amp %i\nGain = %.2f +/- %.2f'\
+                % (amp, ptc_gain, ptc_gain_error)
             pylab.annotate(note, (0.05, 0.9), xycoords='axes fraction',
                            verticalalignment='top', size='x-small')
     def _offset_subplot(self, win, xoffset=0.025, yoffset=0.025):
@@ -407,14 +402,20 @@ Fe55 (red): %.2f +/- %.2f'''\
         results = self.results
         gain = results['GAIN']
         error = results['GAIN_ERROR']
-        ymin = max(min(gain - error), min(gain - 1))
-        ymax = min(max(gain + error), max(gain + 1))
+        ptc_gain = results['PTC_GAIN']
+        ptc_error = results['PTC_GAIN_ERROR']
+        ymin = min(max(min(gain - error), min(gain - 1)),
+                   max(min(ptc_gain - ptc_error), min(ptc_gain - 1)))
+        ymax = max(min(max(gain + error), max(gain + 1)),
+                   min(max(ptc_gain + ptc_error), max(ptc_gain + 1)))
         if xrange is not None:
             xrange = (0, len(gain) + 0.5)
         win = plot.xyplot(results['AMP'], results['GAIN'],
                           yerr=results['GAIN_ERROR'], xname='AMP',
-                          yname='gain (e-/DN)', yrange=(ymin, ymax),
-                          xrange=xrange)
+                          yname='gain (e-/DN) (Fe55: black; PTC: red)',
+                          xrange=xrange, yrange=(ymin, ymax))
+        plot.xyplot(results['AMP'], results['PTC_GAIN'],
+                    yerr=results['PTC_GAIN_ERROR'], oplot=1, color='r')
         win.set_title("System Gain, %s" % self.sensor_id)
     def noise(self, oplot=0, xoffset=0.2, width=0.2, color='b'):
         results = self.results
