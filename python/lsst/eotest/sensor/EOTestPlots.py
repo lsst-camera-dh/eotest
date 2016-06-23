@@ -383,9 +383,19 @@ class EOTestPlots(object):
             xrange = list(axes.get_xlim())
             xrange[0] = max(xrange[0], 1e-1)
             xx = np.logspace(np.log10(xrange[0]), np.log10(xrange[1]), 20)
-            plot.curve(xx, xx/self.results['GAIN'][amp-1], oplot=1, color='r')
-            pylab.annotate('Amp %i' % amp, (0.475, 0.8),
-                           xycoords='axes fraction', size='x-small')
+            # Plot PTC curves using gain measurements.
+            gain = self.results['GAIN'][amp-1]
+            gain_error = self.results['GAIN_ERROR'][amp-1]
+            ptc_gain = self.results['PTC_GAIN'][amp-1]
+            ptc_gain_error = self.results['PTC_GAIN_ERROR'][amp-1]
+            plot.curve(xx, xx/gain, oplot=1, color='r', lineStyle=':')
+            plot.curve(xx, xx/ptc_gain, oplot=1, color='b', lineStyle=':')
+            note = '''Amp %i gains:
+PTC (blue): %.2f +/- %.2f
+Fe55 (red): %.2f +/- %.2f'''\
+                % (amp, ptc_gain, ptc_gain_error, gain, gain_error)
+            pylab.annotate(note, (0.05, 0.9), xycoords='axes fraction',
+                           verticalalignment='top', size='x-small')
     def _offset_subplot(self, win, xoffset=0.025, yoffset=0.025):
         bbox = win.axes[-1].get_position()
         points = bbox.get_points()
