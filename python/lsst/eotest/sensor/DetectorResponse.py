@@ -121,7 +121,9 @@ class DetectorResponse(object):
         #
         # Fit linear part of response curve.
         #
-        indx1 = np.where((Ne > fit_range[0]) & (Ne < fit_range[1]))
+        max_Ne_index = np.where(Ne == max(Ne))[0][0]
+        indx1 = np.where((Ne > fit_range[0]) & (Ne < fit_range[1])
+                         & (flux <= flux[max_Ne_index]))
         f1 = np.poly1d(np.polyfit(flux[indx1], Ne[indx1], 1))
         #
         # Fit polynomial of specified order.
@@ -148,7 +150,7 @@ class DetectorResponse(object):
         imin = np.where(x > 1e1)[0][0]
         flux0 = scipy.optimize.brentq(df, x[imin], x[-1])
         full_well = int(fp(flux0))
-        
+
         # Save pylab interactive state.
         pylab_interactive_state = plotter.pylab.isinteractive()
         if make_plot:
@@ -184,16 +186,20 @@ class DetectorResponse(object):
             Ne = Ne[self._index[amp]]
         if fit_range is None:
             fit_range = spec_range
-        indx = np.where((Ne > fit_range[0]) & (Ne < fit_range[1]))
+        max_Ne_index = np.where(Ne == max(Ne))[0][0]
+        indx = np.where((Ne > fit_range[0]) & (Ne < fit_range[1])
+                        & (flux <= flux[max_Ne_index]))
         f1_pars = np.polyfit(flux[indx], Ne[indx], 1, w=1./Ne[indx])
         f1 = np.poly1d(f1_pars)
         # Further select points that are within the specification range
         # for computing the maximum fractional deviation.
-        spec_indx = np.where((Ne > spec_range[0]) & (Ne < spec_range[1]))
+        spec_indx = np.where((Ne > spec_range[0]) & (Ne < spec_range[1])
+                             & (flux <= flux[max_Ne_index]))
         flux_spec = flux[spec_indx]
         Ne_spec = Ne[spec_indx]
         dNfrac = 1 - Ne_spec/f1(flux_spec)
         return max(abs(dNfrac)), f1_pars, Ne, flux
+
     def plot_linearity(self, maxdev, f1_pars, Ne, flux, max_dev=0.02):
         top_rect = [0.1, 0.3, 0.8, 0.6]
         bottom_rect = [0.1, 0.1, 0.8, 0.2]
