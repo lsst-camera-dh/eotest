@@ -40,6 +40,14 @@ class Fe55CteTask(pipeBase.Task):
         plt.savefig('%(sensor_id)s_Fe55_%(pix0)s_%(pix1)s_dn_hists.png'
                     % locals())
 
+        # Plot profiles of cluster p9 aperture fluxes.
+        fig, results = pixel_stats.apflux_profile(pixel_coord)
+        plt.savefig('%(sensor_id)s_Fe55_%(pix0)s_%(pix1)s_apflux_profile.png'
+                    % locals())
+        outfile = '%(sensor_id)s_Fe55_slopes_apflux.txt' % locals()
+        with open(outfile, 'w') as output:
+            output.write(str(results) + '\n')
+
         # Plot the histograms of p3 and p5 (or p1 and p7).
         pixel_stats.pixel_hists(pix0, pix1)
         plt.savefig('%(sensor_id)s_Fe55_%(pix0)s_%(pix1)s_hists.png' % locals())

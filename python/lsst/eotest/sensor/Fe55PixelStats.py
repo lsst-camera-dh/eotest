@@ -141,6 +141,7 @@ class Fe55PixelStats(object):
         input_files.
         """
         self.sensor_id = sensor_id
+        self.set_selection_function(selection)
         rec_arrays = []
         for infile in input_files:
             if logger is not None:
@@ -151,13 +152,15 @@ class Fe55PixelStats(object):
         self.rec_array = nlr.stack_arrays(rec_arrays, usemask=False,
                                           autoconvert=True, asrecarray=True)
         self.amps = sorted(ccd.keys())
-        self.set_selection_function(selection)
 
     def set_selection_function(self, selection):
-        try:
-            self._selection = eval(self._selections[selection])
-        except KeyError:
+        if selection not in self._selections:
             raise RuntimeError("Unrecognized data selection: " + selection)
+        self._selection_key = selection
+
+    @property
+    def _selection(self):
+        return eval(self._selections[self._selection_key])
 
     def to_pickle(self, outfile):
         pickle.dump(self, open(outfile, 'wb'))
@@ -230,6 +233,7 @@ class Fe55PixelStats(object):
                          xycoords='axes fraction', size='x-small')
         return fig
 
+
     def pixel_diff_profile(self, pixel_coord='x', pix0='p3', pix1='p5',
                            bins=50, figsize=(10, 10)):
         """
@@ -262,6 +266,38 @@ class Fe55PixelStats(object):
             plt.plot(x, y, color='green')
             if amp in (1, 5, 9, 13):
                 axes.set_ylabel('DN (bg-subtracted)')
+            data.append([amp, pars[0], error, pars[0]/error])
+        return fig, RecArray.create(data, names='amp slope error nsig'.split())
+
+    def apflux_profile(self, pixel_coord='x', bins=50, figsize=(10, 10)):
+        """
+        Plot the flux summed over the 9 pixels as a function of pixel
+        coordinate.
+        """
+        fig, frame_axes = self._multi_panel_figure(figsize)
+        frame_axes.set_xlabel('%s pixel index' % pixel_coord)
+        data = []
+        for amp in self.amps:
+            subplot = (4, 4, amp)
+            axes = fig.add_subplot(*subplot)
+            selection = self._selection(amp, bins=bins)
+            my_recarr = self.rec_array[selection]
+            apflux = sum(my_recarr['p%i' % i] for i in range(9))
+            apflux_prof = profile_plot(axes, my_recarr[pixel_coord],
+                                       apflux, plot_points=True)
+            plt.annotate('Amp %i' % amp, (0.5, 0.9),
+                         xycoords='axes fraction', size='x-small')
+            plt.xlim(min(self.rec_array[pixel_coord]),
+                     max(self.rec_array[pixel_coord]))
+            # Fit a line to the apflux profile.
+            x = apflux_prof['bin_centers']
+            y = apflux_prof['ymedian']
+            pars, cov = np.polyfit(x, y, 1, cov=True)
+            error = np.sqrt(cov[0][0])
+            func = np.poly1d(pars)
+            plt.plot(x, func(x), color='green')
+            if amp in (1, 5, 9, 13):
+                axes.set_ylabel('Aperture flux (ADU)')
             data.append([amp, pars[0], error, pars[0]/error])
         return fig, RecArray.create(data, names='amp slope error nsig'.split())
 
