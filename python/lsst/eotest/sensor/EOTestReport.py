@@ -318,6 +318,17 @@ class EOTestReport(object):
             self.output.write(_include_png((fe55_zoom,)))
             self.output.write('\\pagebreak\n\n')
         #
+        # Fe55 aperture flux vs pixel number.
+        #
+        fe55_apflux_serial = '%(sensor_id)s_fe55_apflux_serial' % locals()
+        fe55_apflux_parallel = '%(sensor_id)s_fe55_apflux_parallel' % locals()
+        if (os.path.isfile(fe55_apflux_serial + '.png') and
+            os.path.isfile(fe55_apflux_parallel + '.png')):
+            self.output.write('\section{Fe55 aperture flux vs pixel number}\n')
+            self.output.write(_include_png((fe55_apflux_serial,)))
+            self.output.write(_include_png((fe55_apflux_parallel,)))
+            self.output.write('\\pagebreak\n\n')
+        #
         # QA plots
         #
         if self.qa_plot_files is not None:

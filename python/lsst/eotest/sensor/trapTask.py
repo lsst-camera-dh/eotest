@@ -58,7 +58,7 @@ class TrapTask(pipeBase.Task):
             #
             # Tabulate forward traps (A0 < 0) with size >= threshold.
             #
-            forward_traps = [item for item in my_traps[amp] 
+            forward_traps = [item for item in my_traps[amp]
                              if (item[-2] < 0 and item[-3] >= threshold)]
             num_traps = len(forward_traps)
             results.add_seg_result(amp, 'NUM_TRAPS', num_traps)
