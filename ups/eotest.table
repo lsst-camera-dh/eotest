@@ -1,6 +1,6 @@
-setupRequired(afw >= 6.2.1.0)
-setupRequired(pipe_tasks >= 6.2.1.0)
-setupRequired(ip_isr >= 9.2)
+setupRequired(afw)
+setupRequired(pipe_tasks)
+setupRequired(ip_isr)
 
 envPrepend(PATH, ${PRODUCT_DIR}/bin)
 

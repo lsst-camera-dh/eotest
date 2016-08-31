@@ -27,23 +27,20 @@ class DarkPixelsTestCase(unittest.TestCase):
         self.ccd.add_bias(self.bias_level, self.bias_sigma)
         self.ccd.add_dark_current(level=self.dark_curr)
         # For an exptime of 10, this should give about 2e5 e- per pixel.
-        self.ccd.expose_flat(1e4)  
+        self.ccd.expose_flat(1e4)
         # Number of dark pixels per segment
         self.npix = 100
         # This just generates a mask of pixel locations for each amp.
         self.pixels = self.ccd.generate_bright_pix(self.npix)
         self.ccd.set_dark_pix(self.pixels, self.frac_level)
         self.ccd.writeto(self.sflat_file)
-        self.mask_file = 'dark_pixels_mask_file.fits'
     def tearDown(self):
         os.remove(self.sflat_file)
-        os.remove(self.mask_file)
-    def test_generate_mask(self):
+    def test_find_pixel_defects(self):
         ccd = MaskedCCD(self.sflat_file)
         for amp in ccd:
             dp = DarkPixels(ccd, amp, frac_thresh=0.8, colthresh=100)
             results = dp.find()
-            dp.generate_mask(self.mask_file)
             pixels = np.array(np.where(self.pixels[amp] == 1))
             pixels = pixels.transpose()
             pixels = [(x, y) for y, x in pixels]
@@ -72,16 +69,13 @@ class DarkColumnsTestCase(unittest.TestCase):
         self.columns = self.ccd.generate_bright_cols(self.ncols)
         self.ccd.set_dark_cols(self.columns, self.frac_level)
         self.ccd.writeto(self.sflat_file)
-        self.mask_file = 'dark_columns_mask_file.fits'
     def tearDown(self):
         os.remove(self.sflat_file)
-        os.remove(self.mask_file)
-    def test_generate_mask(self):
+    def test_find_column_defects(self):
         ccd = MaskedCCD(self.sflat_file)
         for amp in ccd:
             dp = DarkPixels(ccd, amp, frac_thresh=0.8, colthresh=100)
             results = dp.find()
-            dp.generate_mask(self.mask_file)
             columns = sorted(self.columns[amp])
             self.assertEqual(len(columns), self.ncols)
             self.assertEqual(len(results[1]), self.ncols)

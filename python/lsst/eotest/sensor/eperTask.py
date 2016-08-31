@@ -37,7 +37,7 @@ class SubImage(object):
                                   geom.serial_overscan.getMinY())
             urc = geom.serial_overscan.getCorners()[2]
             #
-            # Omit the last 4 columns to avoid the bright column in the 
+            # Omit the last 4 columns to avoid the bright column in the
             # last overscan column in the e2v vendor data.
             #
             urc[0] -= 4
@@ -48,17 +48,16 @@ class SubImage(object):
             sys.exit(1)
     def bias_est(self, statistic=afwMath.MEAN, gain=1):
         subim = self.image.Factory(self.image, self._bias_reg)
-        # Set bias region error to zero since it isn't governed by
-        # Poisson statistics and cannot be estimated only from a
-        # medianed, bias-subtracted superflat frame stack.
         bias_estimate = Estimator()
         bias_estimate.value = \
             gain*afwMath.makeStatistics(subim, statistic).getValue()
-        bias_estimate.error = 0
+        num_pix = len(subim.getImage().getArray().flatten())
+        bias_estimate.error = \
+            gain*afwMath.makeStatistics(subim, afwMath.STDEV).getValue()/np.sqrt(float(num_pix))
         return bias_estimate
     def __call__(self, start, end=None):
         if end is None:
-            end = start + 1
+            end = start
         my_exp = self.image.Factory(self.image, self._bbox(start, end))
         return my_exp
     def _parallel_box(self, start, end):
@@ -72,28 +71,29 @@ class SubImage(object):
 
 class EPERConfig(pexConfig.Config):
     """Configuration for the EPERTask."""
-    direction = pexConfig.Field("Select either parallel or serial direction", 
+    direction = pexConfig.Field("Select either parallel or serial direction",
                                 str, default="p")
     verbose = pexConfig.Field("Turn verbosity on", bool, default=True)
     cti = pexConfig.Field('Return CTI instead of CTE', bool, default=False)
 
 class EPERTask(pipeBase.Task):
-    """Task to calculate either parallel or serial charge transfer 
+    """Task to calculate either parallel or serial charge transfer
        efficiency via EPER."""
     ConfigClass = EPERConfig
     _DefaultName = "eper"
-	 
+
     @pipeBase.timeMethod
-    def run(self, infilename, amps, overscans, gains=None):
+    def run(self, infilename, amps, overscans, gains=None, mask_files=()):
         if not infilename:
             self.log.error("Please specify an input file path.")
             sys.exit(1)
         if gains is None:
             gains = dict([(amp, 1) for amp in amps])
 
-        ccd = MaskedCCD(infilename)
+        ccd = MaskedCCD(infilename, mask_files=mask_files)
         # iterate through amps
         cte = {}
+        bias_estimates = {}
         for amp in amps:
             subimage = SubImage(ccd, amp, overscans, self)
             lastpix = subimage.lastpix
@@ -103,7 +103,7 @@ class EPERTask(pipeBase.Task):
                                 gain=gains[amp])
             if self.config.verbose:
                 self.log.info("Last imaging row/column = " + str(last_im))
-		
+
             # find signal in each overscan vector
             overscan_ests = []
             for i in range(1, overscans+1):
@@ -111,17 +111,16 @@ class EPERTask(pipeBase.Task):
                                                ccd.stat_ctrl, gain=gains[amp]))
             if self.config.verbose:
                 self.log.info("Overscan values = " + str(overscan_ests))
-		
+
             # sum medians of first n overscan rows
             summed = sum(overscan_ests)
             if self.config.verbose:
                 self.log.info("summed overscans = " + str(summed))
 
-            # Find bias level, use afwMath.MEANCLIP to avoid
-            # contribution of bad pixels in overscan regions (e.g.,
-            # e2v vendor data).
+            # Find bias level.
             bias_est = subimage.bias_est(gain=gains[amp],
-                                         statistic=afwMath.MEANCLIP)
+                                         statistic=afwMath.MEAN)
+            bias_estimates[amp] = bias_est
             if self.config.verbose:
                 self.log.info("bias value = " + str(bias_est))
 
@@ -129,7 +128,7 @@ class EPERTask(pipeBase.Task):
             sig = last_im - bias_est
 
             # trailed = sum(last2) - bias
-            trailed = summed - overscans*bias_est		
+            trailed = summed - overscans*bias_est
 
             # charge loss per transfer = (trailed/signal)/N
             chargelosspt = (trailed/sig)/(lastpix + 1.)
@@ -142,11 +141,13 @@ class EPERTask(pipeBase.Task):
                 cte[amp].set_format_str("{0:.16f}")
             if self.config.verbose:
                 if self.config.cti:
-                    self.log.info('cti, amp ' + str(amp) + " = " + str(cte[amp]) + '\n')
+                    self.log.info('cti, amp ' + str(amp) + " = "
+                                  + str(cte[amp]) + '\n')
                 else:
-                    self.log.info('cte, amp ' + str(amp) + " = " + str(cte[amp]) + '\n')
-        return cte
-			
+                    self.log.info('cte, amp ' + str(amp) + " = "
+                                  + str(cte[amp]) + '\n')
+        return cte, bias_estimates
+
 if __name__ == '__main__':
     #import pdb; pdb.set_trace()
     parser = argparse.ArgumentParser(description='Calculate either parallel or serial CTE via EPER.')
@@ -158,7 +159,7 @@ if __name__ == '__main__':
     parser.add_argument('-i', '--cti', help='return CTI (not CTE)',
                         action='store_true', default=False)
     args = parser.parse_args()
-	
+
     task = EPERTask()
     task.config.direction = args.direction
     task.config.verbose = args.verbose

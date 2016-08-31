@@ -3,11 +3,13 @@
 
 @author J. Chiang <jchiang@slac.stanford.edu>
 """
+from __future__ import absolute_import, print_function
 import os
 import lsst.eotest.image_utils as imutils
-from MaskedCCD import MaskedCCD
-from EOTestResults import EOTestResults
-from Traps import Traps
+from .MaskedCCD import MaskedCCD
+from .EOTestResults import EOTestResults
+from .Traps import Traps
+from .generate_mask import generate_mask
 import lsst.pex.config as pexConfig
 import lsst.pipe.base as pipeBase
 
@@ -54,14 +56,18 @@ class TrapTask(pipeBase.Task):
         results = EOTestResults(results_file, namps=len(ccd))
         if self.config.verbose:
             self.log.info("Amp     Number of traps")
+        columns = {}
         for amp in ccd:
             #
             # Tabulate forward traps (A0 < 0) with size >= threshold.
             #
             forward_traps = [item for item in my_traps[amp]
                              if (item[-2] < 0 and item[-3] >= threshold)]
+            columns[amp] = [item[0] for item in forward_traps]
             num_traps = len(forward_traps)
             results.add_seg_result(amp, 'NUM_TRAPS', num_traps)
             if self.config.verbose:
                 self.log.info("%i             %i" % (amp, num_traps))
+        mask_file = '%s_traps_mask.fits' % sensor_id
+        generate_mask(pocket_pumped_file, mask_file, 'TRAPS', columns=columns)
         results.write(clobber=True)

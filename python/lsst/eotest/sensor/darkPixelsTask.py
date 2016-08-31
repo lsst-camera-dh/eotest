@@ -10,10 +10,11 @@ rolloff/blooming stop areas.
 import os
 
 import lsst.eotest.image_utils as imutils
-from MaskedCCD import MaskedCCD
-from DarkPixels import DarkPixels
-from EOTestResults import EOTestResults
-from cteTask import superflat
+from .MaskedCCD import MaskedCCD
+from .DarkPixels import DarkPixels
+from .EOTestResults import EOTestResults
+from .cteTask import superflat
+from .generate_mask import generate_mask
 
 import lsst.afw.image as afwImage
 import lsst.pex.config as pexConfig
@@ -62,22 +63,31 @@ class DarkPixelsTask(pipeBase.Task):
                                         '%s_eotest_results.fits' % sensor_id)
 
         results = EOTestResults(results_file, namps=len(ccd))
+        pixels = {}
+        columns = {}
         for amp in ccd:
             dark_pixels = DarkPixels(ccd, amp,
                                      frac_thresh=self.config.thresh,
                                      colthresh=self.config.colthresh,
                                      mask_plane=self.config.mask_plane)
-            pixels, columns = dark_pixels.find()
-            dark_pixels.generate_mask(outfile)
-            pix_count = len(pixels)
-            col_count = len(columns)
+            pixels[amp], columns[amp] = dark_pixels.find()
+            pix_count = len(pixels[amp])
+            col_count = len(columns[amp])
             total_dark_pixels += pix_count
             total_dark_columns += col_count
             results.add_seg_result(amp, 'NUM_DARK_PIXELS', pix_count)
             results.add_seg_result(amp, 'NUM_DARK_COLUMNS', col_count)
-            self.log.info("%2i          %i          %i" 
-                          % (amp, pix_count, col_count))
+            self.log.info("%2i          %i          %i" %
+                          (amp, pix_count, col_count))
         if self.config.verbose:
             self.log.info("Total dark pixels: %i" % total_dark_pixels)
             self.log.info("Total dark columns: %i" % total_dark_columns)
         results.write(clobber=True)
+
+        # Generate the mask file based on the pixel and columns.
+        mask_file = os.path.join(self.config.output_dir,
+                                 '%s_dark_pixel_mask.fits' % sensor_id)
+        if os.path.isfile(mask_file):
+            os.remove(mask_file)
+        generate_mask(medfile, mask_file, self.config.mask_plane,
+                      pixels=pixels, columns=columns)

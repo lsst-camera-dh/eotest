@@ -7,10 +7,12 @@ photon transfer curve and compute and write out the full well.
 import os
 import glob
 import numpy as np
+import scipy.optimize
 import astropy.io.fits as fits
 from lsst.eotest.fitsTools import fitsTableFactory, fitsWriteto
 import lsst.eotest.image_utils as imutils
-from MaskedCCD import MaskedCCD
+from .MaskedCCD import MaskedCCD
+from .EOTestResults import EOTestResults
 
 import lsst.afw.image as afwImage
 import lsst.afw.math as afwMath
@@ -25,7 +27,7 @@ def find_flat2(flat1):
     except IndexError:
         return flat1
 
-exptime = lambda x : imutils.Metadata(x, 1).get('EXPTIME')
+exptime = lambda x: imutils.Metadata(x, 1).get('EXPTIME')
 
 def glob_flats(full_path, outfile='ptc_flats.txt'):
     flats = glob.glob(os.path.join(full_path, '*_flat?.fits'))
@@ -40,6 +42,18 @@ def find_flats(args):
                      if item.find('flat1') != -1])
     return [(f1, find_flat2(f1)) for f1 in file1s]
 
+def ptc_func(pars, mean):
+    """
+    Model for variance vs mean.
+    See http://adsabs.harvard.edu/abs/2015A%26A...575A..41G.
+    """
+    alpha, gain = pars
+    return mean*(1./gain - mean*alpha)
+
+def residuals(pars, mean, var):
+    "Residuals function for least-squares fit of PTC curve."
+    return (var - ptc_func(pars, mean))/np.sqrt(var)
+
 class FlatPairStats(object):
     def __init__(self, fmean, fvar):
         self.flat_mean = fmean
@@ -53,20 +67,15 @@ def flat_pair_stats(ccd1, ccd2, amp, mask_files=(), bias_frame=None):
     # Mean and variance calculations that account for masks (via
     # ccd1.stat_ctrl, which is the same for both MaskedImages).
     #
-    mean = lambda im : afwMath.makeStatistics(im, afwMath.MEAN,
-                                              ccd1.stat_ctrl).getValue()
-    var = lambda im : afwMath.makeStatistics(im, afwMath.VARIANCE,
+    mean = lambda im: afwMath.makeStatistics(im, afwMath.MEAN,
                                              ccd1.stat_ctrl).getValue()
+    var = lambda im: afwMath.makeStatistics(im, afwMath.VARIANCE,
+                                            ccd1.stat_ctrl).getValue()
     #
     # Extract imaging region for segments of both CCDs.
     #
     image1 = ccd1.unbiased_and_trimmed_image(amp)
     image2 = ccd2.unbiased_and_trimmed_image(amp)
-    #
-    # Use serial overscan for bias region.
-    #
-    b1 = ccd1[amp].Factory(ccd1[amp], ccd1.amp_geom.serial_overscan)
-    b2 = ccd2[amp].Factory(ccd2[amp], ccd2.amp_geom.serial_overscan)
     if ccd1.imfile == ccd2.imfile:
         # Don't have pairs of flats, so estimate noise and gain
         # from a single frame, ignoring FPN.
@@ -92,6 +101,9 @@ def flat_pair_stats(ccd1, ccd2, amp, mask_files=(), bias_frame=None):
 class PtcConfig(pexConfig.Config):
     """Configuration for ptc task"""
     output_dir = pexConfig.Field("Output directory", str, default='.')
+    eotest_results_file = pexConfig.Field("EO test results filename",
+                                          str, default=None)
+    max_frac_offset = pexConfig.Field("maximum fraction offset from median gain curve to omit points from PTC fit.", float, default=0.2)
     verbose = pexConfig.Field("Turn verbosity on", bool, default=True)
 
 class PtcTask(pipeBase.Task):
@@ -107,7 +119,7 @@ class PtcTask(pipeBase.Task):
         all_amps = imutils.allAmps(infiles[0])
         ptc_stats = dict([(amp, ([], [])) for amp in all_amps])
         exposure = []
-        file1s = sorted([item for item in infiles if item.find('flat1')  != -1])
+        file1s = sorted([item for item in infiles if item.find('flat1') != -1])
         for flat1 in file1s:
             flat2 = find_flat2(flat1)
             if self.config.verbose:
@@ -123,6 +135,7 @@ class PtcTask(pipeBase.Task):
                                           bias_frame=bias_frame)
                 ptc_stats[amp][0].append(results.flat_mean)
                 ptc_stats[amp][1].append(results.flat_var)
+        self._fit_curves(ptc_stats, sensor_id)
         output = fits.HDUList()
         output.append(fits.PrimaryHDU())
         colnames = ['EXPOSURE']
@@ -141,3 +154,29 @@ class PtcTask(pipeBase.Task):
         output[-1].name = 'PTC_STATS'
         output[0].header['NAMPS'] = len(all_amps)
         fitsWriteto(output, outfile, clobber=True)
+
+    def _fit_curves(self, ptc_stats, sensor_id):
+        """
+        Fit a quadratic to the variance vs mean data for each amp.
+        See http://adsabs.harvard.edu/abs/2015A%26A...575A..41G.
+        """
+        outfile = self.config.eotest_results_file
+        if outfile is None:
+            outfile = os.path.join(self.config.output_dir,
+                                   '%s_eotest_results.fits' % sensor_id)
+        output = EOTestResults(outfile, namps=len(ptc_stats))
+        for amp in ptc_stats:
+            mean, var = np.array(ptc_stats[amp][0]), np.array(ptc_stats[amp][1])
+            # Compute the median gain and remove outliers.
+            med_gain = np.median(mean/var)
+            frac_resids = np.abs((var - mean/med_gain)/var)
+            index = np.where(frac_resids < self.config.max_frac_offset)
+            # Least-squares fit to the brighter-fatter model.
+            p0 = 0, med_gain
+            results = scipy.optimize.leastsq(residuals, p0, full_output=1,
+                                             args=(mean[index], var[index]))
+            pars, cov = results[:2]
+            # Write gain and error to EO test results file.
+            output.add_seg_result(amp, 'PTC_GAIN', pars[1])
+            output.add_seg_result(amp, 'PTC_GAIN_ERROR', np.sqrt(cov[1][1]))
+        output.write()

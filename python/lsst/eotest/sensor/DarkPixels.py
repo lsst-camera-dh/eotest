@@ -13,9 +13,9 @@ import lsst.afw.math as afwMath
 import lsst.daf.base as dafBase
 
 import lsst.eotest.image_utils as imutils
-from MaskedCCD import MaskedCCD
-from AmplifierGeometry import makeAmplifierGeometry
-from fits_headers import fits_headers
+from .MaskedCCD import MaskedCCD
+from .AmplifierGeometry import makeAmplifierGeometry
+from .fits_headers import fits_headers
 
 class DarkPixels(object):
     """
@@ -35,39 +35,6 @@ class DarkPixels(object):
         self.mask_plane = mask_plane
         self.dark_pixels = None
         self.dark_columns = None
-    def generate_mask(self, outfile):
-        """
-        Find dark pixels and columns, and write the mask for this
-        amplifier to a FITS file using the afwImage.MaskU.writeFits
-        method.
-        """
-        if self.dark_pixels is None or self.dark_columns is None:
-            self.find()
-        self.mask = afwImage.MaskU(self.raw_image.getDimensions())
-        self.fp_set.setMask(self.mask, self.mask_plane)
-        self._write_fits(outfile)
-    def _write_fits(self, outfile):
-        amp_geom = makeAmplifierGeometry(self.ccd.imfile)
-        hdrs = fits_headers()
-        if not os.path.isfile(outfile):
-            # We are writing the first extension, most likely, so create
-            # the output file.
-            output = fits.HDUList()
-            output.append(fits.PrimaryHDU())
-            output[0].header['MASKTYPE'] = 'DARK_PIXELS'
-            output[0].header['FTHRESH'] = self.frac_thresh
-            output[0].header['CTHRESH'] = self.colthresh
-            fitsWriteto(output, outfile, clobber=True)
-        imaging = self.ccd.amp_geom.imaging
-        ihdr = hdrs[hdrs.keys()[self.amp]]
-        md = dafBase.PropertySet()
-        md.set('EXTNAME', 'SEGMENT%s' % imutils.channelIds[self.amp])
-        md.set('DETSIZE', amp_geom[self.amp]['DETSIZE'])
-        md.set('DETSEC', amp_geom[self.amp]['DETSEC'])
-        md.set('DATASEC', amp_geom[self.amp]['DATASEC'])
-        md.set('NDARKPIX', len(self.dark_pixels))
-        md.set('NDARKCOL', len(self.dark_columns))
-        self.mask.writeFits(outfile, md, 'a')
     def _inverted_image(self, offset=None):
         """
         Return a masked image which is the trimmed and unbiased amp
@@ -116,7 +83,7 @@ class DarkPixels(object):
         x0 = image.getX0()
         y0 = image.getY0()
         for x in columns:
-            if len(columns[x]) > self.colthresh:
+            if imutils.bad_column(columns[x], self.colthresh):
                 dark_cols.append(x - x0)
             else:
                 dark_pixs.extend([(x - x0, y - y0) for y in columns[x]])
@@ -166,5 +133,4 @@ if __name__ == '__main__':
     for amp in ccd:
         dark_pixels = DarkPixels(ccd, amp, ccd.md.get('EXPTIME'), gain)
         pixels, columns = dark_pixels.find()
-        dark_pixels.generate_mask(mask_file)
         print imutils.channelIds[amp], len(pixels), columns

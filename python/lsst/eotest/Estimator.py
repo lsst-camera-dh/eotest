@@ -1,3 +1,4 @@
+from __future__ import division
 import numpy as np
 import lsst.afw.geom as afwGeom
 import lsst.afw.image as afwImage
@@ -16,8 +17,8 @@ class Estimator(object):
         if args:
             self.set_properties(*args, **kwds)
     def set_properties(self, image, stat_ctrl, gain=1, statistic=afwMath.MEAN):
-        # Make a deep copy of the input image so that we can convert to 
-        # e- and have Poisson statistics apply. 
+        # Make a deep copy of the input image so that we can convert to
+        # e- and have Poisson statistics apply.
         self.image = image.clone()
         self.image *= gain
         self.stat_ctrl = stat_ctrl
@@ -95,6 +96,8 @@ class Estimator(object):
     def __rmul__(self, other):
         return self.__mul__(other)
     def __div__(self, other):
+        return self.__truediv__(other)
+    def __truediv__(self, other):
         result = Estimator()
         if type(other) == Estimator:
             result.value = self.value/other.value
@@ -114,4 +117,4 @@ class Estimator(object):
             return "%s +/- %s" % (self.value, self.error)
         return ' +/- '.join((self._format_str.format(self.value),
                              self._format_str.format(self.error)))
-                               
+

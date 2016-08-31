@@ -9,21 +9,23 @@ import numpy as np
 import astropy.io.fits as fits
 import pylab
 import matplotlib as mpl
-import pylab_plotter as plot
-from MaskedCCD import MaskedCCD
-from rolloff_mask import rolloff_mask
-from EOTestResults import EOTestResults
-from Fe55GainFitter import Fe55GainFitter
-from fe55_psf import psf_sigma_statistics
-from DetectorResponse import DetectorResponse
-from crosstalk import CrosstalkMatrix
-from QE import QE_Data
-from AmplifierGeometry import parse_geom_kwd
-from cteTask import superflat
-import lsst.eotest.image_utils as imutils
 import lsst.afw.image as afwImage
 import lsst.afw.math as afwMath
 import lsst.afw.display.ds9 as ds9
+import lsst.eotest.image_utils as imutils
+from lsst.eotest.Estimator import Estimator
+import pylab_plotter as plot
+from .MaskedCCD import MaskedCCD
+from .rolloff_mask import rolloff_mask
+from .EOTestResults import EOTestResults
+from .Fe55GainFitter import Fe55GainFitter
+from .fe55_psf import psf_sigma_statistics
+from .DetectorResponse import DetectorResponse
+from .crosstalk import CrosstalkMatrix
+from .QE import QE_Data
+from .AmplifierGeometry import parse_geom_kwd
+from .cteTask import superflat
+from .cte_profile import *
 
 class Subplot(object):
     def __init__(self, namps):
@@ -84,17 +86,22 @@ def plot_flat(infile, nsig=3, cmap=pylab.cm.hot, win=None, subplot=(1, 1, 1),
     nx = nx_segments*(datasec['xmax'] - datasec['xmin'] + 1)
     ny = ny_segments*(datasec['ymax'] - datasec['ymin'] + 1)
     mosaic = np.zeros((ny, nx), dtype=np.float)
+    amp_coords = {}
     for ypos in range(ny_segments):
         for xpos in range(nx_segments):
             amp = ypos*nx_segments + xpos + 1
             #
-            # Determine subarray boundaries in the mosaicked image array 
+            # Determine subarray boundaries in the mosaicked image array
             # from DETSEC keywords for each segment.
             detsec = parse_geom_kwd(foo[amp].header['DETSEC'])
             xmin = nx - max(detsec['xmin'], detsec['xmax'])
             xmax = nx - min(detsec['xmin'], detsec['xmax']) + 1
             ymin = ny - max(detsec['ymin'], detsec['ymax'])
             ymax = ny - min(detsec['ymin'], detsec['ymax']) + 1
+            #
+            # Save coordinates of segment for later use
+            #
+            amp_coords[(xpos, ypos)] = xmin, xmax, ymin, ymax
             #
             # Extract the bias-subtracted masked image for this segment.
             segment_image = ccd.unbiased_and_trimmed_image(amp)
@@ -153,6 +160,17 @@ def plot_flat(infile, nsig=3, cmap=pylab.cm.hot, win=None, subplot=(1, 1, 1),
     # Turn off tick labels for x- and y-axes
     pylab.setp(win.axes[-1].get_xticklabels(), visible=False)
     pylab.setp(win.axes[-1].get_yticklabels(), visible=False)
+    # Label each segment by amplifier number
+    for ypos in range(ny_segments):
+        for xpos in range(nx_segments):
+            amp = ypos*nx_segments + xpos + 1
+            xmin, xmax, ymin, ymax = amp_coords[(xpos, ypos)]
+            xx = float(xmax + xmin)/2./float(nx)
+            yy = 1. - (float(ymax)/float(ny) - 0.05)
+            if yy > 0.5:
+                yy = 1 - (yy - 0.5)
+            pylab.annotate('%i' % amp, (xx, yy), xycoords='axes fraction',
+                           size='x-small', horizontalalignment='center')
     return win
 
 def fe55_zoom(infile, size=250, amp=1, cmap=pylab.cm.hot, nsig=10,
@@ -276,9 +294,9 @@ class EOTestPlots(object):
             sigma = sorted(np.concatenate((sigmax, sigmay)))
             if amp == 1:
                 win = plot.Window(subplot=subplot, figsize=figsize,
-                                  xlabel=r'PSF sigma ($\mu$)',
+                                  xlabel=r'PSF sigma ($\mu$); $\sigma_x$ in blue, $\sigma_y$ in red',
                                   ylabel=r'entries / bin', size='large')
-                win.frameAxes.text(0.5, 1.08, 
+                win.frameAxes.text(0.5, 1.08,
                                    'PSF from Fe55 data, %s' % self.sensor_id,
                                    horizontalalignment='center',
                                    verticalalignment='top',
@@ -288,22 +306,25 @@ class EOTestPlots(object):
                 win.select_subplot(*subplot)
             self._offset_subplot(win)
             try:
-                plot.histogram(sigma, xrange=xrange, bins=bins, new_win=False,
-                               xname='', yname='')
+                plot.histogram(sigmax, xrange=xrange, bins=bins, new_win=False,
+                               xname='', yname='', color='blue')
+                plot.histogram(sigmay, oplot=1, color='red', xrange=xrange,
+                               bins=bins)
+                plot.histogram(sigma, oplot=1, xrange=xrange, bins=bins)
                 pylab.xticks(range(xrange[0], xrange[1]+1))
                 # Find mode from histogram data
-                mode, median, mean = psf_sigma_statistics(sigma, bins=bins, 
+                mode, median, mean = psf_sigma_statistics(sigma, bins=bins,
                                                           range=xrange)
                 plot.vline(5)
                 plot.vline(mode, color='r')
                 pylab.annotate('Amp %i\nmode=%.2f' % (amp, mode), (0.5, 0.8),
                                xycoords='axes fraction', size='x-small')
             except Exception as eobj:
-                print "Exception raised in generating PSF sigma plot for amp", amp
-                print eobj
                 # Skip this plot so that the rest of the plots can be
                 # generated.
-                pass
+                print "Exception raised in generating PSF sigma plot for amp", amp
+                print eobj
+
     def fe55_dists(self, chiprob_min=0.1, fe55_file=None, figsize=(11, 8.5)):
         if fe55_file is None:
             fe55_file = glob.glob(self._fullpath('%s_psf_results*.fits'
@@ -362,9 +383,14 @@ class EOTestPlots(object):
             xrange = list(axes.get_xlim())
             xrange[0] = max(xrange[0], 1e-1)
             xx = np.logspace(np.log10(xrange[0]), np.log10(xrange[1]), 20)
-            plot.curve(xx, xx/self.results['GAIN'][amp-1], oplot=1, color='r')
-            pylab.annotate('Amp %i' % amp, (0.475, 0.8),
-                           xycoords='axes fraction', size='x-small')
+            # Plot PTC curves using gain measurements.
+            ptc_gain = self.results['PTC_GAIN'][amp-1]
+            ptc_gain_error = self.results['PTC_GAIN_ERROR'][amp-1]
+            plot.curve(xx, xx/ptc_gain, oplot=1, color='b', lineStyle=':')
+            note = 'Amp %i\nGain = %.2f +/- %.2f'\
+                % (amp, ptc_gain, ptc_gain_error)
+            pylab.annotate(note, (0.05, 0.9), xycoords='axes fraction',
+                           verticalalignment='top', size='x-small')
     def _offset_subplot(self, win, xoffset=0.025, yoffset=0.025):
         bbox = win.axes[-1].get_position()
         points = bbox.get_points()
@@ -376,14 +402,20 @@ class EOTestPlots(object):
         results = self.results
         gain = results['GAIN']
         error = results['GAIN_ERROR']
-        ymin = max(min(gain - error), min(gain - 1))
-        ymax = min(max(gain + error), max(gain + 1))
+        ptc_gain = results['PTC_GAIN']
+        ptc_error = results['PTC_GAIN_ERROR']
+        ymin = min(max(min(gain - error), min(gain - 1)),
+                   max(min(ptc_gain - ptc_error), min(ptc_gain - 1)))
+        ymax = max(min(max(gain + error), max(gain + 1)),
+                   min(max(ptc_gain + ptc_error), max(ptc_gain + 1)))
         if xrange is not None:
             xrange = (0, len(gain) + 0.5)
         win = plot.xyplot(results['AMP'], results['GAIN'],
                           yerr=results['GAIN_ERROR'], xname='AMP',
-                          yname='gain (e-/DN)', yrange=(ymin, ymax),
-                          xrange=xrange)
+                          yname='gain (e-/DN) (Fe55: black; PTC: red)',
+                          xrange=xrange, yrange=(ymin, ymax))
+        plot.xyplot(results['AMP'], results['PTC_GAIN'],
+                    yerr=results['PTC_GAIN_ERROR'], oplot=1, color='r')
         win.set_title("System Gain, %s" % self.sensor_id)
     def noise(self, oplot=0, xoffset=0.2, width=0.2, color='b'):
         results = self.results
@@ -597,6 +629,54 @@ class EOTestPlots(object):
                 # Suppress tick labels for other y-axes.
                 for label in win.axes[-1].get_yticklabels():
                     label.set_visible(False)
+
+    def cte_profiles(self, flux_level, sflat_file, mask_files,
+                     figsize=(11, 8.5), serial=True):
+        """
+        Plot an array of serial or parallel cte profiles.
+        """
+        ccd = MaskedCCD(sflat_file, mask_files=mask_files)
+        gains = dict((amp, gain) for amp, gain
+                     in zip(self.results['AMP'], self.results['GAIN']))
+        cti = dict((amp, Estimator()) for amp in ccd)
+        bias_est = {}
+        if serial:
+            direction = 'Serial'
+            xlabel = 'column #'
+        else:
+            direction = 'Parallel'
+            xlabel = 'row #'
+
+        keyname = '_'.join(('CTI', flux_level.upper(), direction.upper()))
+        for amp in ccd:
+            cti[amp].value = self.results[keyname][amp-1]
+            cti[amp].error = self.results[keyname + '_ERROR'][amp-1]
+            bias_est[amp] = gains[amp]*bias_estimate(ccd[amp], ccd.amp_geom,
+                                                     serial=serial)
+        title = '%s CTE profiles, %s flux, %s' % (direction, flux_level,
+                                                  self.sensor_id)
+        for amp in ccd:
+            subplot = self.subplot(amp)
+            if amp == 1:
+                win = plot.Window(subplot=subplot, figsize=figsize,
+                                  xlabel=xlabel,
+                                  ylabel='mean signal - bias (e-/pixel)',
+                                  size='large')
+                win.frameAxes.text(0.5, 1.08, title,
+                                   horizontalalignment='center',
+                                   verticalalignment='top',
+                                   transform=win.frameAxes.transAxes,
+                                   size='large')
+            else:
+                win.select_subplot(*subplot)
+            self._offset_subplot(win)
+            cte_profile(win.axes[-1], ccd[amp], gains[amp],
+                        ccd.amp_geom, cti[amp], bias_est[amp], serial=serial)
+            pylab.annotate('Amp %i\nCTI=%.2e\n    +/-%.2e'
+                           % (amp, cti[amp].value, cti[amp].error),
+                           (0.5, 0.75), xycoords='axes fraction',
+                           size='x-small')
+
     def qe_ratio(self, ref, amp=None, qe_file=None):
         if qe_file is not None:
             self._qe_file = qe_file
@@ -918,8 +998,8 @@ class CcdSpecs(OrderedDict):
             self['CCD-027'].measurement = '\\twolinecell{%s}' % measurement
         self['CCD-027'].ok = (max_ratio < 5e-2)
 
-        psf_sigma = np.median(self.results['PSF_SIGMA'])
-        self['CCD-028'].measurement = '$%.2f\,\mu$' % psf_sigma
+        psf_sigma = max(self.results['PSF_SIGMA'])
+        self['CCD-028'].measurement = '$%.2f\,\mu$ (max. value)' % psf_sigma
         self['CCD-028'].ok = (psf_sigma < 5.)
 
 class CcdSpec(object):
@@ -959,9 +1039,9 @@ class CcdSpec(object):
     def latex_entry(self):
         entry = '%s & %s & %s & %s & %s & %s \\\\ \hline' % \
                 (self._latex_status[self.ok],
-                 self.name, 
+                 self.name,
                  self.description,
-                 self._table_cell(self.spec), 
+                 self._table_cell(self.spec),
                  self._table_cell(self.measurement),
                  self.job_id)
         return entry

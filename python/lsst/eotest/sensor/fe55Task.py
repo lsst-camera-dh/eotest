@@ -55,16 +55,17 @@ class Fe55Task(pipeBase.Task):
                     kalpha_peak, kalpha_sigma = foo.fit()
                     my_gains[amp] = foo.gain
                     my_gain_errors[amp] = foo.gain_error
-                except RuntimeError, e:
-                    print e
+                except RuntimeError as eobj:
+                    print(eobj)
                     continue
                 try:
-                    sigma = np.concatenate((data['sigmax'], data['sigmay']))*10
+                    sigma = sorted(np.concatenate((data['sigmax'],
+                                                   data['sigmay']))*10)
                     mode, median, mean = psf_sigma_statistics(sigma, bins=50,
-                                                              range=(2,6))
+                                                              range=(2, 6))
                     my_sigma_modes[amp] = float(mode)
-                except RuntimeError, e:
-                    print e
+                except RuntimeError as eobj:
+                    print(eobj)
                     continue
         return my_gains, my_gain_errors, my_sigma_modes
 
