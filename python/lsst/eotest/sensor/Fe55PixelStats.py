@@ -217,6 +217,8 @@ class Fe55PixelStats(object):
         Plot histograms of pix0 and pix1 values.
         """
         fig, frame_axes = self._multi_panel_figure(figsize)
+        frame_axes.set_xlabel('%(pix0)s (blue), %(pix1)s (red) (ADU)'
+                              % locals())
         for amp in self.amps:
             subplot = (4, 4, amp)
             ax = fig.add_subplot(*subplot)
@@ -226,13 +228,11 @@ class Fe55PixelStats(object):
                      range=dn_range, bins=20)
             plt.hist(my_recarr[pix1], color='red', histtype='step',
                      range=dn_range, bins=20)
-            ax.set_xlabel('%(pix0)s, %(pix1)s (ADU)' % locals())
             if amp in (1, 5, 9, 13):
                 ax.set_ylabel('entries / bin')
             plt.annotate('Amp %i' % amp, (0.5, 0.9),
                          xycoords='axes fraction', size='x-small')
         return fig
-
 
     def pixel_diff_profile(self, pixel_coord='x', pix0='p3', pix1='p5',
                            bins=50, figsize=(10, 10)):
@@ -241,7 +241,8 @@ class Fe55PixelStats(object):
         cluster peak pixel coordinate.
         """
         fig, frame_axes = self._multi_panel_figure(figsize)
-        frame_axes.set_xlabel('%s pixel index' % pixel_coord)
+        frame_axes.set_xlabel('%s pixel index (%s, red; %s, blue)'
+                              % (pixel_coord, pix1, pix0))
         data = []
         for amp in self.amps:
             subplot = (4, 4, amp)
@@ -263,7 +264,8 @@ class Fe55PixelStats(object):
             y = (p1_prof['ymedian'] + p0_prof['ymedian'])/2.
             pars, cov = np.polyfit(x, y, 1, cov=True)
             error = np.sqrt(cov[0][0])
-            plt.plot(x, y, color='green')
+            ymodel = np.poly1d(pars)(x)
+            plt.plot(x, ymodel, color='green')
             if amp in (1, 5, 9, 13):
                 axes.set_ylabel('DN (bg-subtracted)')
             data.append([amp, pars[0], error, pars[0]/error])
@@ -301,7 +303,7 @@ class Fe55PixelStats(object):
             data.append([amp, pars[0], error, pars[0]/error])
         return fig, RecArray.create(data, names='amp slope error nsig'.split())
 
-    def dn_hists(self, figsize=(10, 10), nsig=2, bins=50):
+    def dn_hists(self, figsize=(10, 10), nsig=2, bins=30):
         """
         Plot histograms of the pixel DNs summed over each cluster
         footprint.
@@ -314,7 +316,6 @@ class Fe55PixelStats(object):
             my_recarr = self.rec_array[np.where(self.rec_array.amp == amp)]
             dn = my_recarr['DN_sum']
             median = np.median(dn)
-#            stdev = np.std(dn)
             stdev = afwMath.makeStatistics(np.array(dn, dtype=np.float),
                                            afwMath.STDEVCLIP).getValue()
             dn_range = (median - nsig*stdev, median + nsig*stdev)
