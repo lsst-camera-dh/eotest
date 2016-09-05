@@ -13,22 +13,17 @@ namespace lsst {
    }
 
    namespace eotest {
-   
+
       class ImageTools {
 
       public:
 
-#ifndef SWIG         
+#ifndef SWIG
          ImageTools() {}
 #endif
          static lsst::afw::image::Image<float>
          rebin(const lsst::afw::image::Image<float> & input,
                unsigned int binsize);
-
-         static lsst::afw::image::Image<float>
-         applyCTI(const lsst::afw::image::Image<float> & input,
-                  const lsst::afw::geom::Box2I & serial_overscan,
-                  double pcti=0, double scti=0, bool verbose=false);
 
       private:
 
