@@ -100,20 +100,23 @@ def unbias_and_trim(im, overscan, imaging,
 
 def set_bitpix(hdu, bitpix):
     dtypes = {16 : np.int16, -32 : np.float32}
+    for keyword in 'BSCALE BZERO'.split():
+        if keyword in hdu.header.keys():
+            del hdu.header[keyword]
     if bitpix > 0:
         my_round = np.round
     else:
-        try:
-            del hdu.header['BSCALE']
-            del hdu.header['BZERO']
-        except KeyError:
-            pass
         my_round = lambda x : x
     hdu.data = np.array(my_round(hdu.data), dtype=dtypes[bitpix])
 
 def fits_median_file(files, outfile, bitpix=None, clobber=True):
     output = fits.open(files[0])
     for amp in allAmps(files[0]):
+        try:
+            del output[amp].header['BSCALE']
+            del output[amp].header['BZERO']
+        except KeyError:
+            pass
         output[amp].data = fits_median(files, hdu=dm_hdu(amp)).getArray()
         if bitpix is not None:
             set_bitpix(output[amp], bitpix)
@@ -123,6 +126,11 @@ def fits_mean_file(files, outfile, bitpix=None, clobber=True):
     output = fits.open(files[0])
     all_amps = allAmps(files[0])
     for amp in all_amps:
+        try:
+            del output[amp].header['BSCALE']
+            del output[amp].header['BZERO']
+        except KeyError:
+            pass
         output[amp].data = np.zeros(output[amp].data.shape)
     for infile in files:
         input = fits.open(infile)
