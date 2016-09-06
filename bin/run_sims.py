@@ -14,8 +14,7 @@ import lsst.eotest.image_utils as imutils
 from lsst.eotest.sensor.PhotodiodeResponse import Interpolator
 from lsst.eotest.sensor.QE import planck, clight
 from lsst.eotest.sensor.sim_tools import *
-#from lsst.eotest.sensor.ctesim import ctesim
-from lsst.eotest.sensor.ctesim import ctesim_cpp as ctesim
+from lsst.eotest.sensor.ctesim import ctesim
 
 class CcdFactory(object):
     """
@@ -137,7 +136,7 @@ def generate_flats(pars):
             sensor.add_bias(level=pars.bias_level, sigma=pars.bias_sigma)
             sensor.add_bias(level=0, sigma=pars.read_noise)
             sensor.add_dark_current(pars.dark_current)
-            filename = ("%s_%s_flat_%06.2fs_%s_%s.fits" 
+            filename = ("%s_%s_flat_%06.2fs_%s_%s.fits"
                         % (sensor_id, flats.test_type, exptime, flat_id,
                            time_stamp(debug=pars.debug)))
             sensor.writeto(os.path.join(outputdir, filename),
@@ -226,7 +225,7 @@ def generate_darks(pars):
         #
         sigma = sensor.segments[1].sigma()
         nsig = darks.bright_Ne_per_sec*darks.exptime/pars.system_gain/sigma
-        # Generate bright column and bright pixel locations only once and 
+        # Generate bright column and bright pixel locations only once and
         # apply the same sets of locations to each frame.
         if bright_cols is None:
             bright_cols = sensor.generate_bright_cols(darks.bright_ncols)
@@ -303,7 +302,7 @@ def generate_qe_dataset(pars):
     incident_power = wlscan.incident_power  # J/s per pixel
     for wl_nm in wlscan.wavelengths:
         print "  wavelength %06.1f nm" % wl_nm
-        sensor = ccd(exptime=wlscan.exptime, gain=pars.system_gain, 
+        sensor = ccd(exptime=wlscan.exptime, gain=pars.system_gain,
                      ccdtemp=wlscan.ccdtemp)
         hnu = planck*clight/wl_nm/1e-9    # photon energy (J)
         sensor.md['MONOWL'] = wl_nm
@@ -344,7 +343,7 @@ def generate_superflat(pars):
         print "  frame", frame
         sensor = simulate_frame(superflat.exptime, pars, set_full_well=False)
         sensor.expose_flat(intensity)
-        # Generate dark column and dark pixel locations only once and 
+        # Generate dark column and dark pixel locations only once and
         # apply the same sets of locations to each frame.
         if dark_cols is None:
             dark_cols = sensor.generate_bright_cols(superflat.dark_ncols)
@@ -361,7 +360,7 @@ def generate_superflat(pars):
         sensor.writeto(tempfile)
         foo = ctesim(tempfile, pcti=superflat.pcti, scti=superflat.scti,
                      verbose=superflat.verbose)
-        filename = ("%s_%s_flat_%02i_%s.fits" 
+        filename = ("%s_%s_flat_%02i_%s.fits"
                     % (sensor_id, superflat.test_type, frame,
                        time_stamp(debug=pars.debug)))
         foo.writeto(os.path.join(outputdir, filename), clobber=True)
@@ -371,7 +370,7 @@ def generate_superflat(pars):
     #
     print "  generating the non-uniform illumination correction file..."
     sensor = ccd(exptime=0)
-    for amp in imutils.allAmps:
+    for amp in imutils.allAmps():
         sensor.segments[amp].image += 1
     filename = ("%s_illumation_correction_%s.fits"
                 % (sensor_id, time_stamp(debug=pars.debug)))
@@ -394,8 +393,8 @@ def generate_crosstalk_dataset(pars):
                                                pars))
     else:
         sensors = dict((amp, dark_frame(spot.exptime, spot.ccdtemp, pars))
-                       for amp in imutils.allAmps)
-    for aggressor in imutils.allAmps:
+                       for amp in imutils.allAmps())
+    for aggressor in imutils.allAmps():
         print "  aggressor amp", aggressor
         xtalk_frac = spot.xtalk_pattern(aggressor, spot.frac_scale)
         sensor = sensors[aggressor]
@@ -412,11 +411,11 @@ def generate_crosstalk_dataset(pars):
         sensor.md['IMGTYPE'] = 'SPOT'
         sensor.md['LSST_NUM'] = sensor_id
     if spot.multiaggressor:
-        filename = ("%s_%s_spot_multi_%s.fits" % (sensor_id, spot.test_type, 
+        filename = ("%s_%s_spot_multi_%s.fits" % (sensor_id, spot.test_type,
                                                   time_stamp(debug=pars.debug)))
         sensor.writeto(os.path.join(outputdir, filename), bitpix=pars.bitpix)
     else:
-        for aggressor in imutils.allAmps:
+        for aggressor in imutils.allAmps():
             filename = ("%s_%s_spot_%02i_%s.fits" % (sensor_id, spot.test_type,
                                                      aggressor,
                                                      time_stamp(debug=pars.debug)))
@@ -441,7 +440,7 @@ def generate_system_crosstalk_dataset(pars):
     print "Generating system crosstalk dataset..."
     sysxtalk = pars.sysxtalk
     outputdir = system_dir(pars, sysxtalk.test_type)
-    for aggressor in imutils.allAmps:
+    for aggressor in imutils.allAmps():
         print "  aggressor amp", aggressor
         sensor = ccd(exptime=0, gain=pars.system_gain)
         sensor.segments[aggressor].add_sys_xtalk_col(sysxtalk.dn,
@@ -466,7 +465,7 @@ def generate_persistence_dataset(pars):
         sensor.md['TESTTYPE'] = 'PERSISTENCE'
         sensor.md['IMGTYPE'] = 'BIAS'
         sensor.md['LSST_NUM'] = sensor_id
-        filename = ("%s_%s_bias_%02i_%s.fits" % 
+        filename = ("%s_%s_bias_%02i_%s.fits" %
                     (sensor_id, persistence.test_type, frame,
                      time_stamp(debug=pars.debug)))
         sensor.writeto(os.path.join(outputdir, filename),
@@ -480,7 +479,7 @@ def generate_persistence_dataset(pars):
         sensor.md['LSST_NUM'] = sensor_id
         # Include simulated exposure time.
         time.sleep(exptime)
-        filename = ("%s_%s_dark_%02i_%s.fits" % 
+        filename = ("%s_%s_dark_%02i_%s.fits" %
                     (sensor_id, persistence.test_type, dark_frame,
                      time_stamp(debug=pars.debug)))
         sensor.writeto(os.path.join(outputdir, filename), bitpix=pars.bitpix)
@@ -495,7 +494,7 @@ def generate_persistence_dataset(pars):
     sensor.md['IMGTYPE'] = 'FLAT'
     sensor.md['LSST_NUM'] = sensor_id
     time.sleep(persistence.flat_exptime)
-    filename = ("%s_%s_flat_%02i_%s.fits" % 
+    filename = ("%s_%s_flat_%02i_%s.fits" %
                 (sensor_id, persistence.test_type, 0,
                  time_stamp(debug=pars.debug)))
     sensor.writeto(os.path.join(outputdir, filename), bitpix=pars.bitpix)
@@ -519,7 +518,7 @@ def generate_persistence_dataset(pars):
         for amp in sensor.segments:
             sensor.segments[amp].imarr += \
                 persistence.deferred_charge/pars.system_gain*decay_factor
-        filename = ("%s_%s_dark_%02i_%s.fits" % 
+        filename = ("%s_%s_dark_%02i_%s.fits" %
                     (sensor_id, persistence.test_type, frame,
                      time_stamp(debug=pars.debug)))
         sensor.writeto(os.path.join(outputdir, filename),
@@ -541,10 +540,10 @@ if __name__ == '__main__':
     # Set up the master CcdFactory object with the desired amplifier
     # geometry.
     #
-    geometry = AmplifierGeometry(prescan=pars.prescan, 
+    geometry = AmplifierGeometry(prescan=pars.prescan,
                                  nx=pars.nx,
                                  ny=pars.ny,
-                                 detxsize=pars.detxsize, 
+                                 detxsize=pars.detxsize,
                                  detysize=pars.detysize)
     master_factory = CcdFactory(geometry=geometry)
     #
