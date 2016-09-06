@@ -14,6 +14,7 @@ from fe55_psf import PsfGaussFit
 from fe55_gain_fitter import fe55_gain_fitter
 from Fe55GainFitter import Fe55GainFitter
 from fe55_yield import Fe55Yield
+from Fe55PixelStats import Fe55PixelStats
 from BrightPixels import BrightPixels
 from DarkPixels import DarkPixels
 from read_noise import noise_dists
@@ -42,3 +43,4 @@ from flatPairTask import FlatPairTask, find_flat2
 from linearityTask import LinearityTask
 from ptcTask import PtcTask
 from persistenceTask import PersistenceTask
+from fe55CteTask import Fe55CteTask
