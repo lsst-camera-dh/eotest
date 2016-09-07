@@ -109,7 +109,7 @@ def set_bitpix(hdu, bitpix):
         my_round = lambda x : x
     hdu.data = np.array(my_round(hdu.data), dtype=dtypes[bitpix])
 
-def fits_median_file(files, outfile, bitpix=None, clobber=True):
+def fits_median_file(files, outfile, bitpix=16, clobber=True):
     output = fits.open(files[0])
     for amp in allAmps(files[0]):
         try:
@@ -122,7 +122,7 @@ def fits_median_file(files, outfile, bitpix=None, clobber=True):
             set_bitpix(output[amp], bitpix)
     fitsWriteto(output, outfile, clobber=clobber)
 
-def fits_mean_file(files, outfile, bitpix=None, clobber=True):
+def fits_mean_file(files, outfile, bitpix=16, clobber=True):
     output = fits.open(files[0])
     all_amps = allAmps(files[0])
     for amp in all_amps:

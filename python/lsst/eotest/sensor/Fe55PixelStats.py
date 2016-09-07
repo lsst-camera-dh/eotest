@@ -219,6 +219,8 @@ class Fe55PixelStats(object):
         fig, frame_axes = self._multi_panel_figure(figsize)
         frame_axes.set_xlabel('%(pix0)s (blue), %(pix1)s (red) (ADU)'
                               % locals())
+        frame_axes.get_xaxis().set_ticks([])
+        frame_axes.get_yaxis().set_ticks([])
         for amp in self.amps:
             subplot = (4, 4, amp)
             ax = fig.add_subplot(*subplot)
@@ -243,6 +245,8 @@ class Fe55PixelStats(object):
         fig, frame_axes = self._multi_panel_figure(figsize)
         frame_axes.set_xlabel('%s pixel index (%s, red; %s, blue)'
                               % (pixel_coord, pix1, pix0))
+        frame_axes.get_xaxis().set_ticks([])
+        frame_axes.get_yaxis().set_ticks([])
         data = []
         for amp in self.amps:
             subplot = (4, 4, amp)
@@ -278,6 +282,8 @@ class Fe55PixelStats(object):
         """
         fig, frame_axes = self._multi_panel_figure(figsize)
         frame_axes.set_xlabel('%s pixel index' % pixel_coord)
+        frame_axes.get_xaxis().set_ticks([])
+        frame_axes.get_yaxis().set_ticks([])
         data = []
         for amp in self.amps:
             subplot = (4, 4, amp)
@@ -310,6 +316,8 @@ class Fe55PixelStats(object):
         """
         fig, frame_axes = self._multi_panel_figure(figsize)
         frame_axes.set_xlabel('Pixel DNs summed over cluster footprint')
+        frame_axes.get_xaxis().set_ticks([])
+        frame_axes.get_yaxis().set_ticks([])
         for amp in self.amps:
             subplot = (4, 4, amp)
             ax = fig.add_subplot(*subplot)

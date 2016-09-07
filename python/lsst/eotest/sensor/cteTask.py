@@ -11,22 +11,35 @@ import lsst.eotest.image_utils as imutils
 from AmplifierGeometry import makeAmplifierGeometry
 from EOTestResults import EOTestResults
 from eperTask import EPERTask
+from MaskedCCD import MaskedCCD
 
 import lsst.afw.image as afwImage
 import lsst.afw.math as afwMath
 import lsst.pex.config as pexConfig
 import lsst.pipe.base as pipeBase
 
-def superflat(files, bias_files=(), outfile='superflat.fits', bitpix=-32,
+def bias_subtracted_image(image, bias_image, overscan, fit_order=1,
+                          statistic=np.median):
+    # Make deep copies of image and bias image so that we can modify them.
+    im_out = image.Factory(image)
+    bias_sub = bias_image.Factory(bias_image)
+    # Subtract overscans.
+    bias_sub -= imutils.bias_image(bias_image, overscan, fit_order=fit_order,
+                                   statistic=statistic)
+    im_out -= imutils.bias_image(image, overscan, fit_order=fit_order,
+                                 statistic=statistic)
+    # Subtract remaining strucutured bias.
+    im_out -= bias_sub
+    return im_out
+
+def superflat(files, bias_frame=None, outfile='superflat.fits', bitpix=-32,
               bias_subtract=True):
     """
     The superflat is created by bias-offset correcting the input files
     and median-ing them together.
     """
-    if bias_files:
-        bias_frame = 'mean_bias_frame.fits'
-        imutils.fits_mean_file(bias_files, outfile=bias_frame, bitpix=bitpix)
-
+    # Get overscan region.
+    overscan = makeAmplifierGeometry(files[0]).serial_overscan
     # Use the first file as a template for the fits output.
     output = fits.open(files[0])
     for amp in imutils.allAmps(files[0]):
@@ -34,16 +47,13 @@ def superflat(files, bias_files=(), outfile='superflat.fits', bitpix=-32,
         for infile in files:
             image = afwImage.ImageF(infile, imutils.dm_hdu(amp))
             if bias_subtract:
-                if bias_files:
+                if bias_frame:
                     bias_image = afwImage.ImageF(bias_frame,
                                                  imutils.dm_hdu(amp))
+                    image = bias_subtracted_image(image, bias_image, overscan)
                 else:
-                    geom = makeAmplifierGeometry(infile)
-                    overscan = geom.serial_overscan
-                    bias_image = imutils.bias_image(image,
-                                                    overscan=overscan,
-                                                    statistic=np.median)
-                image -= bias_image
+                    image -= imutils.bias_image(image, overscan,
+                                                statistic=np.median)
             images.push_back(image)
         median_image = afwMath.statisticsStack(images, afwMath.MEDIAN)
         output[amp].data = median_image.getArray()
@@ -67,8 +77,8 @@ class CteTask(pipeBase.Task):
     _DefaultName = "CteTask"
 
     @pipeBase.timeMethod
-    def run(self, sensor_id, superflat_files, bias_files=(), flux_level='high',
-            gains=None, mask_files=()):
+    def run(self, sensor_id, superflat_files, bias_frame=None,
+            flux_level='high', gains=None, mask_files=()):
         if flux_level not in ('high', 'low'):
             raise RuntimeError('CteTask: flux_level must be "high" or "low"')
         if self.config.verbose:
@@ -80,7 +90,7 @@ class CteTask(pipeBase.Task):
         # handled in eperTask.py.
         #
         outfile = '%(sensor_id)s_superflat_%(flux_level)s.fits' % locals()
-        superflat_file = superflat(superflat_files, bias_files,
+        superflat_file = superflat(superflat_files, bias_frame=bias_frame,
                                    outfile=outfile, bias_subtract=False)
         all_amps = imutils.allAmps(superflat_file)
         #

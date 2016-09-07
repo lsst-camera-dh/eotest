@@ -55,7 +55,8 @@ class QE_Data(object):
             images[amp] = correction.Factory(correction, ccd.amp_geom.imaging)
         return images
     def calculate_medians(self, infiles, outfile, mask_files=(),
-                          clobber=False, correction_image=None):
+                          bias_frame=None, clobber=False,
+                          correction_image=None):
         files = sorted([x for x in infiles])
         self.medians = dict([(amp, []) for amp in imutils.allAmps(files[0])])
         self.wl = []          # wavelength in nanometers
@@ -78,7 +79,7 @@ class QE_Data(object):
                     self.logger.info('processing %s' % item)
                 else:
                     print 'processing', item
-            ccd = MaskedCCD(item, mask_files=mask_files)
+            ccd = MaskedCCD(item, mask_files=mask_files, bias_frame=bias_frame)
             md = imutils.Metadata(item, 1)
             wl = md.get('MONOWL')
             exptime = md.get('EXPTIME')
@@ -87,7 +88,7 @@ class QE_Data(object):
                 if self.logger is not None:
                     self.logger.info(line + '\n')
                 else:
-                    print line 
+                    print line
                 continue
             self.wl.append(wl)
             self.exptime.append(exptime)
