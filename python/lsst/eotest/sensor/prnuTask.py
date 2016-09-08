@@ -27,9 +27,10 @@ class PrnuTask(pipeBase.Task):
     _DefaultName = "PrnuTask"
 
     @pipeBase.timeMethod
-    def run(self, sensor_id, prnu_files, mask_files, gains, correction_image):
+    def run(self, sensor_id, prnu_files, mask_files, gains, correction_image,
+            bias_frame=None):
         results = OrderedDict()
-        line = "wavelength (nm)   pixel_stdev   pixel_mean"
+        line = "wl (nm)  pixel_stdev    pixel_mean    stdev/mean"
         if self.config.verbose:
             self.log.info(line)
         wl_index = {}
@@ -41,14 +42,16 @@ class PrnuTask(pipeBase.Task):
             if wl_index.has_key(wl):
                 self.log.info("Processing: wl = %i nm, %s" % (wl, wl_index[wl]))
                 pix_stdev, pix_mean = prnu(wl_index[wl], mask_files, gains,
+                                           bias_frame=bias_frame,
                                            correction_image=correction_image)
                 results[wl] = pix_stdev, pix_mean
-                line = "%6.1f  %12.4e  %12.4e" % (wl, pix_stdev, pix_mean)
+                line = "%6.1f  %12.4e  %12.4e  %12.4e" \
+                    % (wl, pix_stdev, pix_mean, pix_stdev/pix_mean)
             else:
                 # Enter sentinel values for pixel stats for
                 # wavelengths that do not have the corresponding
                 # exposure
-                line = "%6.1f  %12s  %12s" % (wl, '    ...     ', 
+                line = "%6.1f  %12s  %12s" % (wl, '    ...     ',
                                               '    ...     ')
                 results[wl] = -1, -1
             if self.config.verbose:

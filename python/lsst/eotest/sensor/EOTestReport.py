@@ -375,6 +375,17 @@ specification given the mean signal in the last imaging row.
             self.output.write(_include_png((fe55_apflux_parallel,)))
             self.output.write('\\pagebreak\n\n')
         #
+        # Fe55 p3-p5 statistics.
+        #
+        fe55_p3_p5_hists = '%(sensor_id)s_fe55_p3_p5_hists' % locals()
+        fe55_p3_p5_profiles = '%(sensor_id)s_fe55_p3_p5_profiles' % locals()
+        if (os.path.isfile(fe55_p3_p5_hists + '.png') and
+            os.path.isfile(fe55_p3_p5_profiles + '.png')):
+            self.output.write('\section{Fe55 p3-p5 statistics}\n')
+            self.output.write(_include_png((fe55_p3_p5_hists,)))
+            self.output.write(_include_png((fe55_p3_p5_profiles,)))
+            self.output.write('\\pagebreak\n\n')
+        #
         # QA plots
         #
         if self.qa_plot_files is not None:

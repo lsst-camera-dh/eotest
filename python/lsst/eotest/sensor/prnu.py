@@ -25,8 +25,8 @@ def extract_unmasked_pixels(ccd, amp, gain, correction_image=None):
     indx = np.where(maskarr == 0)
     return [x*gain for x in imarr[indx].flat]
 
-def prnu(infile, mask_files, gains, correction_image=None):
-    ccd = MaskedCCD(infile, mask_files=mask_files)
+def prnu(infile, mask_files, gains, bias_frame=None, correction_image=None):
+    ccd = MaskedCCD(infile, mask_files=mask_files, bias_frame=bias_frame)
     active_pixels = []
     for amp in ccd:
         active_pixels.extend(extract_unmasked_pixels(ccd, amp, gains[amp],

@@ -211,6 +211,15 @@ class Fe55PixelStats(object):
                          (self.rec_array.DN_sum < dn_max))
         return index
 
+    @staticmethod
+    def apply_offsets(axes, xoffset=0.025, yoffset=0.025):
+        bbox = axes.get_position()
+        points = bbox.get_points()
+        points[0] += xoffset
+        points[1] += yoffset
+        bbox.set_points(points)
+        axes.set_position(bbox)
+
     def pixel_hists(self, pix0='p3', pix1='p5', figsize=(10, 10), bins=50,
                     dn_range=(-10, 30)):
         """
@@ -219,9 +228,12 @@ class Fe55PixelStats(object):
         fig, frame_axes = self._multi_panel_figure(figsize)
         frame_axes.set_xlabel('%(pix0)s (blue), %(pix1)s (red) (ADU)'
                               % locals())
+        frame_axes.get_xaxis().set_ticks([])
+        frame_axes.get_yaxis().set_ticks([])
         for amp in self.amps:
             subplot = (4, 4, amp)
             ax = fig.add_subplot(*subplot)
+            self.apply_offsets(ax)
             selection = self._selection(amp, bins=bins)
             my_recarr = self.rec_array[selection]
             plt.hist(my_recarr[pix0], color='blue', histtype='step',
@@ -243,10 +255,13 @@ class Fe55PixelStats(object):
         fig, frame_axes = self._multi_panel_figure(figsize)
         frame_axes.set_xlabel('%s pixel index (%s, red; %s, blue)'
                               % (pixel_coord, pix1, pix0))
+        frame_axes.get_xaxis().set_ticks([])
+        frame_axes.get_yaxis().set_ticks([])
         data = []
         for amp in self.amps:
             subplot = (4, 4, amp)
             axes = fig.add_subplot(*subplot)
+            self.apply_offsets(axes)
             selection = self._selection(amp, bins=bins)
             my_recarr = self.rec_array[selection]
             p1_prof = profile_plot(axes, my_recarr[pixel_coord],
@@ -278,10 +293,13 @@ class Fe55PixelStats(object):
         """
         fig, frame_axes = self._multi_panel_figure(figsize)
         frame_axes.set_xlabel('%s pixel index' % pixel_coord)
+        frame_axes.get_xaxis().set_ticks([])
+        frame_axes.get_yaxis().set_ticks([])
         data = []
         for amp in self.amps:
             subplot = (4, 4, amp)
             axes = fig.add_subplot(*subplot)
+            self.apply_offsets(axes)
             selection = self._selection(amp, bins=bins)
             my_recarr = self.rec_array[selection]
             apflux = sum(my_recarr['p%i' % i] for i in range(9))
@@ -310,9 +328,12 @@ class Fe55PixelStats(object):
         """
         fig, frame_axes = self._multi_panel_figure(figsize)
         frame_axes.set_xlabel('Pixel DNs summed over cluster footprint')
+        frame_axes.get_xaxis().set_ticks([])
+        frame_axes.get_yaxis().set_ticks([])
         for amp in self.amps:
             subplot = (4, 4, amp)
             ax = fig.add_subplot(*subplot)
+            self.apply_offsets(ax)
             my_recarr = self.rec_array[np.where(self.rec_array.amp == amp)]
             dn = my_recarr['DN_sum']
             median = np.median(dn)
