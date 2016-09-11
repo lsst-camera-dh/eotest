@@ -44,7 +44,7 @@ def _include_png(pngfiles, frac_width=1.3, hspace=-1):
 class EOTestReport(object):
     def __init__(self, eotest_plots, wl_dir, tex_file=None, qa_plot_files=None,
                  ccs_config_files=None, software_versions=None,
-                 teststand_config=None):
+                 teststand_config=None, job_ids=None):
         self.plots = eotest_plots
         self.wl_dir = wl_dir
         if tex_file is None:
@@ -56,6 +56,7 @@ class EOTestReport(object):
         self.ccs_config_files = ccs_config_files
         self.software_versions = software_versions
         self.teststand_config = teststand_config
+        self.job_ids = job_ids
     def make_figures(self):
         print "Creating eotest report figures..."
         funcs = ('fe55_dists',
@@ -144,7 +145,7 @@ class EOTestReport(object):
         for amp in range(1, len(full_well)+1):
             my_full_well = op_str(full_well[amp-1], '%i')
             my_max_frac_dev = op_str(max_frac_dev[amp-1], '%.1e')
-            self.output.write(" %i & $%s$ & $\\num{%s}$ \\\\ \hline\n" 
+            self.output.write(" %i & $%s$ & $\\num{%s}$ \\\\ \hline\n"
                               % (amp, my_full_well, my_max_frac_dev))
         self.output.write("\\end{tabular}\n\\end{table}\n")
         self.output.write(_include_multipanel_png(('%(sensor_id)s_full_well'
@@ -394,6 +395,26 @@ specification given the mean signal in the last imaging row.
                 self.output.write(_include_png((item,), frac_width=1.1,
                                                hspace=-0.5))
                 self.output.write('\\pagebreak\n\n')
+        #
+        # eTraveler ActivityIDs
+        if self.job_ids is not None:
+            self.output.write('\section{eTraveler Activity IDs}\n')
+            self.output.write("""\\begin{table}[!htbp]
+\centering
+\\begin{tabular}{|l|r|}
+\hline
+\\textbf{Job Name} & \\textbf{activityId} \\\\ \hline
+""")
+            values = np.array([int(x) for x in self.job_ids.values()])
+            keys = self.job_ids.keys()
+            index = np.argsort(values)
+            print "sorted job id indexes:", index
+            for i in index:
+                job_name = keys[i].replace('_', '\_')
+                self.output.write("%s & %i \\\\ \hline\n"
+                                  % (job_name, values[i]))
+            self.output.write("\\end{tabular}\n\\end{table}\n")
+            self.output.write('\\pagebreak\n\n')
         #
         # Software versions
         #
