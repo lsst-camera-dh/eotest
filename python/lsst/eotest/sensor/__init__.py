@@ -44,3 +44,12 @@ from linearityTask import LinearityTask
 from ptcTask import PtcTask
 from persistenceTask import PersistenceTask
 from fe55CteTask import Fe55CteTask
+
+#
+# Turn off debug messages emitted by LSST Stack v12_1
+#
+try:
+    import lsst.log
+    lsst.log.setLevel(lsst.log.getDefaultLoggerName(), lsst.log.INFO)
+except ImportError:
+    pass
