@@ -402,20 +402,28 @@ class EOTestPlots(object):
         results = self.results
         gain = results['GAIN']
         error = results['GAIN_ERROR']
-        ptc_gain = results['PTC_GAIN']
-        ptc_error = results['PTC_GAIN_ERROR']
-        ymin = min(max(min(gain - error), min(gain - 1)),
-                   max(min(ptc_gain - ptc_error), min(ptc_gain - 1)))
-        ymax = max(min(max(gain + error), max(gain + 1)),
-                   min(max(ptc_gain + ptc_error), max(ptc_gain + 1)))
+        try:
+            ptc_gain = results['PTC_GAIN']
+            ptc_error = results['PTC_GAIN_ERROR']
+            ymin = min(max(min(gain - error), min(gain - 1)),
+                       max(min(ptc_gain - ptc_error), min(ptc_gain - 1)))
+            ymax = max(min(max(gain + error), max(gain + 1)),
+                       min(max(ptc_gain + ptc_error), max(ptc_gain + 1)))
+            yname='gain (e-/DN) (Fe55: black; PTC: red)'
+        except KeyError:
+            ymin = max(min(gain - error), min(gain - 1))
+            ymax = min(max(gain + error), max(gain + 1))
+            yname='gain (e-/DN)'
         if xrange is not None:
             xrange = (0, len(gain) + 0.5)
         win = plot.xyplot(results['AMP'], results['GAIN'],
                           yerr=results['GAIN_ERROR'], xname='AMP',
-                          yname='gain (e-/DN) (Fe55: black; PTC: red)',
-                          xrange=xrange, yrange=(ymin, ymax))
-        plot.xyplot(results['AMP'], results['PTC_GAIN'],
-                    yerr=results['PTC_GAIN_ERROR'], oplot=1, color='r')
+                          yname=yname, xrange=xrange, yrange=(ymin, ymax))
+        try:
+            plot.xyplot(results['AMP'], results['PTC_GAIN'],
+                        yerr=results['PTC_GAIN_ERROR'], oplot=1, color='r')
+        except:
+            pass
         win.set_title("System Gain, %s" % self.sensor_id)
     def noise(self, oplot=0, xoffset=0.2, width=0.2, color='b'):
         results = self.results
