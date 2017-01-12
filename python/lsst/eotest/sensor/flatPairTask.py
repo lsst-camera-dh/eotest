@@ -10,9 +10,9 @@ import numpy as np
 import astropy.io.fits as fits
 from lsst.eotest.fitsTools import fitsTableFactory, fitsWriteto
 import lsst.eotest.image_utils as imutils
-from MaskedCCD import MaskedCCD
-from EOTestResults import EOTestResults
-from DetectorResponse import DetectorResponse
+from .MaskedCCD import MaskedCCD
+from .EOTestResults import EOTestResults
+from .DetectorResponse import DetectorResponse
 
 import lsst.afw.math as afwMath
 import lsst.pex.config as pexConfig
@@ -53,14 +53,15 @@ class FlatPairConfig(pexConfig.Config):
     verbose = pexConfig.Field("Turn verbosity on", bool, default=True)
 
 class FlatPairTask(pipeBase.Task):
-    """Task to compute detector response vs incident flux from 
+    """Task to compute detector response vs incident flux from
        flat pair dataset."""
     ConfigClass = FlatPairConfig
     _DefaultName = "FlatPairTask"
 
     @pipeBase.timeMethod
     def run(self, sensor_id, infiles, mask_files, gains, detrespfile=None,
-            bias_frame=None, max_pd_frac_dev=0.05):
+            bias_frame=None, max_pd_frac_dev=0.05,
+            linearity_spec_range=(1e3, 9e4)):
         self.sensor_id = sensor_id
         self.infiles = infiles
         self.mask_files = mask_files
@@ -90,12 +91,15 @@ class FlatPairTask(pipeBase.Task):
                 full_well, fp = detresp.full_well(amp)
             except (ValueError, RuntimeError, TypeError):
                 full_well = None
+            self.log.info('linearity analysis range: %s, %s' %
+                          linearity_spec_range)
             try:
-                maxdev, fit_pars, Ne, flux = detresp.linearity(amp)
-            except:
+                maxdev, fit_pars, Ne, flux = \
+                    detresp.linearity(amp, spec_range=linearity_spec_range)
+            except (ValueError, RuntimeError, TypeError):
                 maxdev = None
             if self.config.verbose:
-                self.log.info('%2i            %s             %s' 
+                self.log.info('%2i            %s             %s'
                               % (amp, full_well, maxdev))
             if full_well is not None:
                 output.add_seg_result(amp, 'FULL_WELL', full_well)
@@ -118,10 +122,10 @@ class FlatPairTask(pipeBase.Task):
         self.output.append(hdu)
     def extract_det_response(self):
         max_pd_frac_dev = self.max_pd_frac_dev
-        outfile = os.path.join(self.config.output_dir, 
+        outfile = os.path.join(self.config.output_dir,
                                '%s_det_response.fits' % self.sensor_id)
-        file1s = sorted([item for item in self.infiles 
-                         if item.find('flat1')  != -1])
+        file1s = sorted([item for item in self.infiles
+                         if item.find('flat1') != -1])
         if self.config.verbose:
             self.log.info("writing to %s" % outfile)
         self._create_detresp_fits_output(len(file1s))
@@ -173,13 +177,3 @@ class FlatPairTask(pipeBase.Task):
         self.output[0].header['NAMPS'] = len(flat1)
         fitsWriteto(self.output, outfile, clobber=True)
         return outfile
-
-if __name__ == '__main__':
-    parser = TaskParser('Compute detector response vs incident flux')
-    parser.add_argument('-f', '--flats', type=str,
-                        help='flat pairs file pattern')
-    parser.add_argument('-F', '--flats_file_list', type=str,
-                        help='list of flat pairs')
-    args = parser.parse_args()
-    sensor = args.sensor()
-    sensor_id = args.sensor_id
