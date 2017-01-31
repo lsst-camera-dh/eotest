@@ -223,7 +223,7 @@ class EOTestPlots(object):
         self.specs = CcdSpecs(results_file, plotter=self,
                               xtalk_file=xtalk_file, prnu_wls=self.prnu_wls)
         self._linearity_results = None
-        self.subplot = Subplot(len(imutils.allAmps(self._qe_file)))
+        self.subplot = Subplot(len(self.results['AMP']))
     @property
     def qe_data(self):
         if self._qe_data is None:
@@ -834,7 +834,11 @@ class CcdSpecs(OrderedDict):
         self.prnu_wls = prnu_wls
         self.prnu_specs = OrderedDict()
         self._createSpecs()
-        self._ingestResults(results_file, xtalk_file=xtalk_file)
+        try:
+            self._ingestResults(results_file, xtalk_file=xtalk_file)
+        except Exception as eobj:
+            print "EOTestPlots.CcdSpecs: exception:"
+            print "  ", str(eobj)
     def add_job_ids(self, summary_files):
         for summary_lims_file in summary_files:
             foo = json.loads(open(summary_lims_file).read())
