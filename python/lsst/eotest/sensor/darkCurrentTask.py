@@ -66,10 +66,16 @@ class DarkCurrentTask(pipeBase.Task):
             unmasked.sort()
             unmasked = np.array(unmasked)*gains[amp]/exptime
             dark_curr_pixels.extend(unmasked)
-            dark95s[amp] = unmasked[int(len(unmasked)*0.95)]
+            try:
+                dark95s[amp] = unmasked[int(len(unmasked)*0.95)]
+                median = unmasked[len(unmasked)/2]
+            except IndexError as eobj:
+                print str(eobj)
+                dark95s[amp] = -1.
+                median = -1.
             if self.config.verbose:
                 self.log.info("%2i         %.2e         %.2e"
-                              % (amp, dark95s[amp], unmasked[len(unmasked)/2]))
+                              % (amp, dark95s[amp], median))
         #
         # Compute 95th percentile dark current for CCD as a whole.
         #

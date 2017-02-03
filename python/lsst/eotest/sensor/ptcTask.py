@@ -173,10 +173,16 @@ class PtcTask(pipeBase.Task):
             index = np.where(frac_resids < self.config.max_frac_offset)
             # Least-squares fit to the brighter-fatter model.
             p0 = 0, med_gain
-            results = scipy.optimize.leastsq(residuals, p0, full_output=1,
-                                             args=(mean[index], var[index]))
-            pars, cov = results[:2]
-            # Write gain and error to EO test results file.
-            output.add_seg_result(amp, 'PTC_GAIN', pars[1])
-            output.add_seg_result(amp, 'PTC_GAIN_ERROR', np.sqrt(cov[1][1]))
+            try:
+                results = scipy.optimize.leastsq(residuals, p0, full_output=1,
+                                                 args=(mean[index], var[index]))
+                pars, cov = results[:2]
+                # Write gain and error to EO test results file.
+                output.add_seg_result(amp, 'PTC_GAIN', pars[1])
+                output.add_seg_result(amp, 'PTC_GAIN_ERROR', np.sqrt(cov[1][1]))
+            except Exception as eobj:
+                print "Exception caught while fitting PTC:"
+                print str(eobj)
+                output.add_seg_result(amp, 'PTC_GAIN', 0)
+                output.add_seg_result(amp, 'PTC_GAIN_ERROR', -1)
         output.write()
