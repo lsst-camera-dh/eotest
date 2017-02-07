@@ -140,10 +140,10 @@ class RaftMosaic(object):
         plt.setp(ax.get_yticklabels(), visible=False)
         # Label segments by sensor bay and segment number.
         for slot in self.fits_files:
-            seg_coords = self._amp_coords[slot].values()[0]
+            seg_coords = self._amp_coords[slot].values()[-1]
             xmin, xmax, ymin, ymax = seg_coords
             xx = float(xmax + xmin)/2./float(self.nx)
-            yy = (float(ymax - ymin)*0.95 + ymin)/float(self.ny)
+            yy = 1. - (float(ymax - ymin)*0.05 + ymin)/float(self.ny)
             plt.annotate('%s' % slot,
                          (xx, yy), xycoords='axes fraction',
                          size='x-small', horizontalalignment='center',
@@ -152,9 +152,9 @@ class RaftMosaic(object):
                 xmin, xmax, ymin, ymax = seg_coords
                 xx = float(xmax + xmin)/2./float(self.nx)
                 if amp <= 8:
-                    yy = (float(ymax - ymin)*0.85 + ymin)/float(self.ny)
-                if amp > 8:
-                    yy = (float(ymax - ymin)*0.15 + ymin)/float(self.ny)
+                    yy = 1. - (float(ymax - ymin)*0.85 + ymin)/float(self.ny)
+                else:
+                    yy = 1. - (float(ymax - ymin)*0.15 + ymin)/float(self.ny)
                 plt.annotate('%s' % self._segment_mapping[amp],
                              (xx, yy), xycoords='axes fraction',
                              size='x-small', horizontalalignment='center',
