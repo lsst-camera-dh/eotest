@@ -51,6 +51,7 @@ class RaftMosaic(object):
         """
         self.fits_files = fits_files
         self.raft_name = fits.open(fits_files.values()[0])[0].header['RAFTNAME']
+        self.wl = fits.open(fits_files.values()[0])[0].header['MONOWL']
         self.image_array = np.zeros((nx, ny), dtype=np.float32)
         self.nx = nx
         self.ny = ny
@@ -104,7 +105,7 @@ class RaftMosaic(object):
         # Write the segment pixel values into the full raft image mosaic.
         self.image_array[ymin:ymax, xmin:xmax] = seg_array
 
-    def plot(self, cmap=plt.cm.hot, nsig=5, figsize=(10, 10)):
+    def plot(self, title=None, cmap=plt.cm.hot, nsig=5, figsize=(10, 10)):
         """
         Render the raft mosaic.
         """
@@ -117,7 +118,9 @@ class RaftMosaic(object):
         vmin, vmax = cmap_range(self.image_array, nsig=nsig)
         norm = matplotlib.colors.Normalize(vmin=vmin, vmax=vmax)
         image.set_norm(norm)
-        ax.set_title(self.raft_name)
+        if title is None:
+            title = "%s, %i nm" % (self.raft_name, self.wl)
+        ax.set_title(title)
         fig.colorbar(image)
         # Turn off tick labels for x- and y-axes.
         plt.setp(ax.get_xticklabels(), visible=False)
