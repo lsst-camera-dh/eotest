@@ -23,6 +23,9 @@ class RaftMosaicTestCase(unittest.TestCase):
             os.remove(self.outfile)
         except OSError:
             pass
+        fits_files = glob.glob('*_test_image_*.fits')
+        for item in fits_files:
+            os.remove(item)
 
     def test_raft_image_mosaic(self):
         """
