@@ -108,6 +108,19 @@ class RaftMosaic(object):
     def plot(self, title=None, cmap=plt.cm.hot, nsig=5, figsize=(10, 10)):
         """
         Render the raft mosaic.
+
+        Parameters
+        ----------
+        title : str, optional
+            The plot title. If None (default), then build the title
+            from the RAFTNAME and MONOWL primary header keyword values.
+        cmap : matplotlib.colors.Colormap, optional
+            The color map to use. Default: matplotlib.pyplot.cm.hot.
+        nsig : float, optional
+            The n-sigma value for the sigma clipping used to determine
+            the pixel value range over which the color map is mapped.
+        figsize : (float, float), optional
+            The width x height size of the figure in inches. Default: (10, 10).
         """
         plt.rcParams['figure.figsize'] = figsize
         fig = plt.figure()
