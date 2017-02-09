@@ -15,6 +15,13 @@ from lsst.eotest.sensor.EOTestPlots import cmap_range
 
 __all__ = ['RaftMosaic']
 
+def rebin(arr, binsize):
+    "See http://scipython.com/blog/binning-a-2d-array-in-numpy/"
+    if binsize == 1:
+        return arr
+    shape = (arr.shape[0]//binsize, binsize, arr.shape[1]//binsize, binsize)
+    return arr.reshape(shape).mean(-1).mean(1)
+
 class RaftMosaic(object):
     """
     Raft level mosaic of individual CCDs.
@@ -105,7 +112,8 @@ class RaftMosaic(object):
         # Write the segment pixel values into the full raft image mosaic.
         self.image_array[ymin:ymax, xmin:xmax] = seg_array
 
-    def plot(self, title=None, cmap=plt.cm.hot, nsig=5, figsize=(10, 10)):
+    def plot(self, title=None, cmap=plt.cm.hot, nsig=5, figsize=(10, 10),
+             binsize=10, flipx=True, textcolor='c'):
         """
         Render the raft mosaic.
 
@@ -121,14 +129,26 @@ class RaftMosaic(object):
             the pixel value range over which the color map is mapped.
         figsize : (float, float), optional
             The width x height size of the figure in inches. Default: (10, 10).
+        binsize : int, optional
+            Rebin the plotted image data by binsize*binsize,
+            averging over the coarser bin.  Default: 10
+        flipx : bool, optional
+            Flip full raft mosaic in x so that parity of image matches
+            LCA-13381. Default: True
+        textcolor : str, optional
+            Color of the text for the segment and sensor labeling.
+            Default: 'c' (cyan)
         """
         plt.rcParams['figure.figsize'] = figsize
         fig = plt.figure()
         ax = fig.add_subplot(1, 1, 1)
-        image = ax.imshow(self.image_array, interpolation='nearest', cmap=cmap)
+        output_array = rebin(self.image_array, binsize)
+        if flipx:
+            output_array = output_array[:,::-1]
+        image = ax.imshow(output_array, interpolation='nearest', cmap=cmap)
         # Set range and normalization of color map based on sigma-clip
         # of pixel values.
-        vmin, vmax = cmap_range(self.image_array, nsig=nsig)
+        vmin, vmax = cmap_range(output_array, nsig=nsig)
         norm = matplotlib.colors.Normalize(vmin=vmin, vmax=vmax)
         image.set_norm(norm)
         if title is None:
@@ -141,17 +161,21 @@ class RaftMosaic(object):
                         labelbottom='off', labelleft='off')
         # Label segments by sensor bay and segment number.
         for slot in self.fits_files:
-            seg_coords = self._amp_coords[slot].values()[-1]
+            seg_coords = self._amp_coords[slot].values()[-8]
             xmin, xmax, ymin, ymax = seg_coords
             xx = float(xmax + xmin)/2./float(self.nx)
+            if flipx:
+                xx = 1 - xx
             yy = 1. - (float(ymax - ymin)*0.05 + ymin)/float(self.ny)
             plt.annotate('%s' % slot,
                          (xx, yy), xycoords='axes fraction',
                          size='x-small', horizontalalignment='center',
-                         verticalalignment='center')
+                         verticalalignment='center', color=textcolor)
             for amp, seg_coords in self._amp_coords[slot].items():
                 xmin, xmax, ymin, ymax = seg_coords
                 xx = float(xmax + xmin)/2./float(self.nx)
+                if flipx:
+                    xx = 1. - xx
                 if amp <= 8:
                     yy = 1. - (float(ymax - ymin)*0.85 + ymin)/float(self.ny)
                 else:
@@ -159,5 +183,5 @@ class RaftMosaic(object):
                 plt.annotate('%s' % self._segment_mapping[amp],
                              (xx, yy), xycoords='axes fraction',
                              size='x-small', horizontalalignment='center',
-                             verticalalignment='center')
+                             verticalalignment='center', color=textcolor)
         return fig

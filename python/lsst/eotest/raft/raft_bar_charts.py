@@ -34,7 +34,7 @@ class RaftBarCharts(object):
             self.results[slot] = sensorTest.EOTestResults(filename)
 
     def make_bar_chart(self, column, ylabel=None, spec=None, step=20,
-                       marker='r--', title=None, ylog=False):
+                       marker='r--', title=None, ylog=False, figsize=(8, 6)):
         """
         Make a bar chart for the specified column for all 9 sensors
         in a raft.
@@ -59,12 +59,15 @@ class RaftBarCharts(object):
             Title of the plot. If None, then leave blank.
         ylog : bool, optional
             If True, make the y-axis log scale. Default: False
+        figsize : tuple(float, float), optional
+            Figure size in inches. Default: (8, 6)
 
         Returns
         ------
         matplotlib.figure.Figure
             The figure containing the plot.
         """
+        plt.rcParams['figure.figsize'] = figsize
         fig = plt.figure()
         ax = fig.add_subplot(1, 1, 1)
         for slot, results in self.results.items():
@@ -86,7 +89,7 @@ class RaftBarCharts(object):
 
     def make_multi_bar_chart(self, columns, ylabel=None, spec=None, step=20,
                              marker='r--', title=None, add_legend=True,
-                             ylog=False, colors=None):
+                             ylog=False, colors=None, figsize=(8, 6)):
         """
         Make a bar chart for the specified columns for all 9 sensors
         in a raft.
@@ -116,12 +119,15 @@ class RaftBarCharts(object):
         colors : tuple, optional
             Colors to cycle over, e.g., 'krgbcym'.  If None (default),
             then use the default color cycle.
+        figsize : tuple(float, float), optional
+            Figure size in inches. Default: (8, 6)
 
         Returns
         ------
         matplotlib.figure.Figure
             The figure containing the plot.
         """
+        plt.rcParams['figure.figsize'] = figsize
         dx = 1./len(columns)
         fig = plt.figure()
         ax = fig.add_subplot(1, 1, 1)
