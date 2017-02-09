@@ -135,9 +135,10 @@ class RaftMosaic(object):
             title = "%s, %i nm" % (self.raft_name, self.wl)
         ax.set_title(title)
         fig.colorbar(image)
-        # Turn off tick labels for x- and y-axes.
-        plt.setp(ax.get_xticklabels(), visible=False)
-        plt.setp(ax.get_yticklabels(), visible=False)
+        # Turn off ticks and tick labels for x- and y-axes.
+        plt.tick_params(axis='both', which='both',
+                        top='off', bottom='off', left='off', right='off',
+                        labelbottom='off', labelleft='off')
         # Label segments by sensor bay and segment number.
         for slot in self.fits_files:
             seg_coords = self._amp_coords[slot].values()[-1]
