@@ -3,6 +3,7 @@ Function to generate mask files given a set of pixels and columns to mask.
 """
 from __future__ import absolute_import, print_function
 import os
+import tempfile
 import astropy.io.fits as fits
 import lsst.afw.detection as afwDetect
 import lsst.afw.image as afwImage
@@ -14,7 +15,7 @@ from .MaskedCCD import MaskedCCD
 from .sim_tools import CCD
 
 def generate_mask(infile, outfile, mask_plane, pixels=None, columns=None,
-                  temp_mask_image='temp_mask_image.fits'):
+                  temp_mask_image=None):
     """
     Generate a mask file for the specified pixels and columns.
     The amplifier geometry will be taken from infile.
@@ -44,6 +45,8 @@ def generate_mask(infile, outfile, mask_plane, pixels=None, columns=None,
         for ix in columns[amp]:
             imarr[:, ix + prescan] = signal
 
+    if temp_mask_image is None:
+        temp_mask_image = tempfile.mkstemp(suffix='.fits', dir='.')[-1]
     fitsWriteto(ccd, temp_mask_image)
 
     # Use the afw code to create a mask file.
