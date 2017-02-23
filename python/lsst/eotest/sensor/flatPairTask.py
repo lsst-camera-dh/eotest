@@ -89,14 +89,18 @@ class FlatPairTask(pipeBase.Task):
         for amp in all_amps:
             try:
                 full_well, fp = detresp.full_well(amp)
-            except (ValueError, RuntimeError, TypeError):
+            except StandardError as eobj:
+                self.log.info("Exception caught in full well calculation:")
+                self.log.info(str(eobj))
                 full_well = None
             self.log.info('linearity analysis range: %s, %s' %
                           linearity_spec_range)
             try:
                 maxdev, fit_pars, Ne, flux = \
                     detresp.linearity(amp, spec_range=linearity_spec_range)
-            except (ValueError, RuntimeError, TypeError):
+            except StandardError as eobj:
+                self.log.info("Exception caught in linearity calculation:")
+                self.log.info(str(eobj))
                 maxdev = None
             if self.config.verbose:
                 self.log.info('%2i            %s             %s'
