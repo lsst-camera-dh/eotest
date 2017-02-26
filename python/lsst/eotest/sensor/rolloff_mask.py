@@ -9,6 +9,7 @@ https://confluence.slac.stanford.edu/x/DQvNBw
 @author J. Chiang <jchiang@slac.stanford.edu>
 """
 import os
+import tempfile
 import numpy as np
 import astropy.io.fits as fits
 from lsst.eotest.fitsTools import fitsWriteto
@@ -25,7 +26,7 @@ from .generate_mask import generate_mask
 
 def rolloff_mask(infile, outfile,
                  mask_plane='ROLLOFF_DEFECTS',
-                 tmp_mask_image='temp_rolloff_mask_image.fits',
+                 tmp_mask_image=None,
                  outer_edge_width=10,
                  bloom_stop_width=5,
                  signal=10,
@@ -114,6 +115,8 @@ def rolloff_mask(infile, outfile,
     #
     # Write the images of the mask regions to the FITS file.
     #
+    if tmp_mask_image is None:
+        tmp_mask_image = tempfile.mkstemp(suffix='.fits', dir='.')[-1]
     fitsWriteto(ccd, tmp_mask_image)
     #
     # Use BrightPixels code to detect the mask regions and write the mask file.

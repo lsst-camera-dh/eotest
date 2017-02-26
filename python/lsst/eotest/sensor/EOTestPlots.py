@@ -757,6 +757,7 @@ class EOTestPlots(object):
                 win = plot_flat(flats[target], nsig=nsig, cmap=cmap, wl=wl,
                                 gains=gains)
                 pylab.savefig('%s_%04inm_flat.png' % (self.sensor_id, wl))
+                pylab.clf()
             except IndexError:
                 pass
     def confluence_tables(self, outfile=False):
