@@ -51,6 +51,12 @@ class BiasHandlingTestCase(unittest.TestCase):
             for y in range(2022):
                 self.assertEqual(bf_i(y), bf_m(y))
                 self.assertAlmostEqual(bias_func(y), bf_m(y))
+            # Test that row-by-row median operates.
+            row_bias = imutils.bias_func(ccd[amp],
+                                         self.amp_geom.serial_overscan,
+                                         fit_order=-1)
+            for y in range(2022):
+                self.assertAlmostEqual(bf_i(y), row_bias(y), places=6)
     def test_bias_image(self):
         ccd = MaskedCCD(self.image_file)
         for amp in ccd:
