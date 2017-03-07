@@ -114,14 +114,14 @@ class PsfGaussFit(object):
         bg = afwMath.makeBackground(ccd[amp], bg_ctrl)
         return bg.getImageF()
     def process_image(self, ccd, amp, sigma0=0.36, dn0=1590./5.,
-                      bg_reg=(10, 10), logger=None):
+                      bg_reg=(10, 10), logger=None, oscan_fit_order=1):
         """
         Process a segment and accumulate the fit results for each
         charge cluster.  The dn0 and sigma0 parameters are the
         starting values used for each fit.
         """
         try:
-            image = ccd.bias_subtracted_image(amp)
+            image = ccd.bias_subtracted_image(amp, fit_order=oscan_fit_order)
         except MaskedCCDBiasImageException:
             print "DM stack error encountered when generating bias image "
             print "from inferred overscan region."
