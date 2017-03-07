@@ -72,7 +72,7 @@ class Fe55Task(pipeBase.Task):
     @pipeBase.timeMethod
     def run(self, sensor_id, infiles, mask_files, bias_frame=None,
             fe55_catalog=None, minClustersPerAmp=None, chiprob_min=0.1,
-            accuracy_req=0):
+            accuracy_req=0, oscan_fit_order=1):
         imutils.check_temperatures(infiles, self.config.temp_set_point_tol,
                                    setpoint=self.config.temp_set_point,
                                    warn_only=True)
@@ -105,7 +105,8 @@ class Fe55Task(pipeBase.Task):
                             # Requested accuracy already obtained, so
                             # skip cluster fitting.
                             continue
-                    fitter.process_image(ccd, amp, logger=self.log)
+                    fitter.process_image(ccd, amp, logger=self.log,
+                                         oscan_fit_order=oscan_fit_order)
                     gains, gain_errors, sigma_modes = \
                         self.fit_gains(fitter, gains, gain_errors, sigma_modes,
                                        amps=ccd.keys())
