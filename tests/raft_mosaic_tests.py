@@ -13,11 +13,12 @@ import matplotlib.pyplot as plt
 import astropy.io.fits as fits
 import lsst.eotest.raft as raftTest
 
+_root_dir = '/nfs/farm/g/lsst/u1/jobHarness/jh_archive-test/LCA-10753_RSA/LCA-10753_RSA-003_ETU1-Dev/4578D/qe_raft_acq_sim/v0/25597'
+
 class RaftMosaicTestCase(unittest.TestCase):
     "Test case class for raft_image_mosaic module."
     def setUp(self):
         self.outfile = 'raft_test_pattern.png'
-
     def tearDown(self):
         try:
             os.remove(self.outfile)
@@ -27,12 +28,13 @@ class RaftMosaicTestCase(unittest.TestCase):
         for item in fits_files:
             os.remove(item)
 
+    @unittest.skipUnless(os.path.isdir(_root_dir),
+                         'Simulated raft data files not available.')
     def test_raft_image_mosaic(self):
         """
         Test of raft-level mosaicking code.
         """
-        root_dir = '/nfs/farm/g/lsst/u1/jobHarness/jh_archive-test/LCA-10753_RSA/LCA-10753_RSA-003_ETU1-Dev/4578D/qe_raft_acq_sim/v0/25597'
-        infiles = sorted(glob.glob(os.path.join(root_dir, 'S??',
+        infiles = sorted(glob.glob(os.path.join(_root_dir, 'S??',
                                                 '*_lambda_flat_1000_*.fits')))
         infiles = OrderedDict([(filename.split('/')[-2], filename)
                                for filename in infiles])
