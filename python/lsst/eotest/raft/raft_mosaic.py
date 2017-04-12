@@ -136,7 +136,8 @@ class RaftMosaic(object):
         plt.rcParams['figure.figsize'] = figsize
         fig = plt.figure()
         ax = fig.add_subplot(1, 1, 1)
-        output_array = imutils.rebin_array(self.image_array, binsize)
+        output_array = imutils.rebin_array(self.image_array, binsize,
+                                           use_mean=True)
         if flipx:
             output_array = output_array[:,::-1]
         image = ax.imshow(output_array, interpolation='nearest', cmap=cmap)
