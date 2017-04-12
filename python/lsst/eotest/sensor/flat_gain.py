@@ -5,10 +5,7 @@ mean/variance thing.
 """
 import numpy as np
 import numpy.random as random
-
 import lsst.eotest.image_utils as imutils
-import lsst.eotest.utilLib as testUtils
-
 import lsst.afw.geom as afwGeom
 import lsst.afw.image as afwImage
 import lsst.pex.exceptions as pexExcept
@@ -33,8 +30,8 @@ def flat_gain(image1, image2, count=1000, dx=100, dy=100, binsize=1,
     image2 = imutils.trim(image2)
 
     # Rebin into binsize x binsize pixels.
-    im1 = testUtils.ImageTools_rebin(image1, binsize)
-    im2 = testUtils.ImageTools_rebin(image2, binsize)
+    im1 = imutils.rebin(image1, binsize)
+    im2 = imutils.rebin(image2, binsize)
 
     if dx > im1.getWidth():
         dx = im1.getWidth()
@@ -77,7 +74,7 @@ def flat_gain(image1, image2, count=1000, dx=100, dy=100, binsize=1,
 if __name__ == '__main__':
     import os
     from sim_tools import simulateFlat
-    
+
     file1 = 'test_flat1.fits'
     file2 = 'test_flat2.fits'
 
