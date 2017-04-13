@@ -52,6 +52,7 @@ class DarkCurrentTask(pipeBase.Task):
         if self.config.verbose:
             self.log.info("Amp        95 percentile    median")
         dark_curr_pixels = []
+        dark_curr_pixels_per_amp = {}
         for amp in ccd:
             imaging_region = ccd.amp_geom.imaging
             overscan = ccd.amp_geom.serial_overscan
@@ -65,6 +66,7 @@ class DarkCurrentTask(pipeBase.Task):
             unmasked = [pixels[i] for i in range(len(pixels)) if masked[i] == 0]
             unmasked.sort()
             unmasked = np.array(unmasked)*gains[amp]/exptime
+            dark_curr_pixels_per_amp[amp] = unmasked
             dark_curr_pixels.extend(unmasked)
             try:
                 dark95s[amp] = unmasked[int(len(unmasked)*0.95)]
@@ -105,3 +107,4 @@ class DarkCurrentTask(pipeBase.Task):
             results.add_seg_result(amp, 'DARK_CURRENT_95', dark95s[amp])
         fitsWriteto(output, medfile, clobber=True, checksum=True)
         results.write(clobber=True)
+        return dark_curr_pixels_per_amp, dark95s
