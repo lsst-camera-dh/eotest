@@ -230,6 +230,24 @@ def bad_column(column_indices, threshold):
         return True
     return False
 
+def rebin_array(arr, binsize, use_mean=False):
+    "See http://scipython.com/blog/binning-a-2d-array-in-numpy/"
+    if binsize == 1:
+        return arr
+    shape = (arr.shape[0]//binsize, binsize, arr.shape[1]//binsize, binsize)
+    if use_mean:
+        result = arr.reshape(shape).mean(-1).mean(1)
+    else:
+        result = arr.reshape(shape).sum(-1).sum(1)
+    return result
+
+def rebin(image, binsize, use_mean=False):
+    rebinned_array = rebin_array(image.getArray(), binsize, use_mean=use_mean)
+    output_image = image.Factory(*rebinned_array.shape)
+    out_array = output_image.getArray()
+    out_array += rebinned_array
+    return output_image
+
 if __name__ == '__main__':
     import glob
 

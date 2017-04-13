@@ -10,17 +10,11 @@ import numpy as np
 import astropy.io.fits as fits
 import matplotlib
 import matplotlib.pyplot as plt
+import lsst.eotest.image_utils as imutils
 import lsst.eotest.sensor as sensorTest
 from lsst.eotest.sensor.EOTestPlots import cmap_range
 
 __all__ = ['RaftMosaic']
-
-def rebin(arr, binsize):
-    "See http://scipython.com/blog/binning-a-2d-array-in-numpy/"
-    if binsize == 1:
-        return arr
-    shape = (arr.shape[0]//binsize, binsize, arr.shape[1]//binsize, binsize)
-    return arr.reshape(shape).mean(-1).mean(1)
 
 class RaftMosaic(object):
     """
@@ -142,7 +136,8 @@ class RaftMosaic(object):
         plt.rcParams['figure.figsize'] = figsize
         fig = plt.figure()
         ax = fig.add_subplot(1, 1, 1)
-        output_array = rebin(self.image_array, binsize)
+        output_array = imutils.rebin_array(self.image_array, binsize,
+                                           use_mean=True)
         if flipx:
             output_array = output_array[:,::-1]
         image = ax.imshow(output_array, interpolation='nearest', cmap=cmap)

@@ -1,3 +1,0 @@
-# -*- python -*-
-import glob, os
-from lsst.sconsUtils import env, scripts
