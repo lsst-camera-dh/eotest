@@ -20,12 +20,9 @@ class RaftMosaic(object):
     """
     Raft level mosaic of individual CCDs.
     """
-    _segment_mapping = dict([(1, '10'), (2, '11'), (3, '12'), (4, '13'),
-                             (5, '14'), (6, '15'), (7, '16'), (8, '17'),
-                             (9, '07'), (10, '06'), (11, '05'), (12, '04'),
-                             (13, '03'), (14, '02'), (15, '01'), (16, '00')])
     def __init__(self, fits_files, gains=None, bias_subtract=True,
-                 nx=12700, ny=12700, nx_segments=8, ny_segments=2):
+                 nx=12700, ny=12700, nx_segments=8, ny_segments=2,
+                 segment_processor=None):
         """
         Constructor.
 
@@ -49,6 +46,9 @@ class RaftMosaic(object):
             Number of segments in the x (serial) direction.  Default: 8
         ny_segments : int, optional
             Number of pixels in the y (parallel) direction.  Default: 2
+        segment_processor : function, optional
+            Function to apply to pixel data in each segment. If None (default),
+            then set do the standard bias subtraction and gain correction.
         """
         self.fits_files = fits_files
         self.raft_name = fits.open(fits_files.values()[0])[0].header['RAFTNAME']
@@ -58,6 +58,7 @@ class RaftMosaic(object):
         self.ny = ny
         self.nx_segments = nx_segments
         self.ny_segments = ny_segments
+        self.segment_processor = segment_processor
         self._amp_coords = defaultdict(dict)
         if gains is None:
             # Assume unit gain for all amplifiers.
@@ -103,8 +104,14 @@ class RaftMosaic(object):
             ymax = ymin + ccd.amp_geom.ny
         # Save coordinates of segment for later use.
         self._amp_coords[slot][amp] = xmin, xmax, ymin, ymax
+
         # Write the segment pixel values into the full raft image mosaic.
-        self.image_array[ymin:ymax, xmin:xmax] = seg_array
+        if self.segment_processor is None:
+            self.image_array[ymin:ymax, xmin:xmax] = seg_array
+        else:
+            xy_bounds = (xmin, xmax, ymin, ymax)
+            self.image_array[ymin:ymax, xmin:xmax] = \
+                self.segment_processor(slot, ccd, amp, xy_bounds=xy_bounds)
 
     def plot(self, title=None, cmap=plt.cm.hot, nsig=5, figsize=(10, 10),
              binsize=10, flipx=True, textcolor='c'):
@@ -175,7 +182,7 @@ class RaftMosaic(object):
                     yy = 1. - (float(ymax - ymin)*0.85 + ymin)/float(self.ny)
                 else:
                     yy = 1. - (float(ymax - ymin)*0.15 + ymin)/float(self.ny)
-                plt.annotate('%s' % self._segment_mapping[amp],
+                plt.annotate('%s' % imutils.channelIds[amp],
                              (xx, yy), xycoords='axes fraction',
                              size='x-small', horizontalalignment='center',
                              verticalalignment='center', color=textcolor)

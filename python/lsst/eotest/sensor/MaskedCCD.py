@@ -95,9 +95,10 @@ class MaskedCCD(dict):
         try:
             return imutils.bias_image(self[amp], overscan=overscan,
                                       fit_order=fit_order)
-        except pexExcept.LsstCppException:
+        except pexExcept.LSST_RUNTIME_EXCEPTION as eobj:
             raise MaskedCCDBiasImageException("DM stack error generating bias "
-                                              + "image from overscan region.")
+                                              + "image from overscan region:\n"
+                                              + str(eobj))
 
     def bias_image(self, amp, overscan=None, fit_order=1):
         """
