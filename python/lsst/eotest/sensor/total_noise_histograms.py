@@ -3,10 +3,12 @@ A function to make histograms of total noise, particularly including
 the dark current contribution, for specified exposure times.
 """
 from __future__ import absolute_import
-__all__ == ['total_noise_histogram']
 import numpy as np
 import matplotlib.pyplot as plt
+import lsst.afw.math as afwMath
 import lsst.eotest.image_utils as imutils
+
+__all__ = ['total_noise_histograms']
 
 def total_noise_histograms(dark_curr_pixels, read_noise, dark95s, exptime=16,
                            title=None, figsize=(10, 10)):
@@ -41,7 +43,7 @@ def total_noise_histograms(dark_curr_pixels, read_noise, dark95s, exptime=16,
     matplotlib.figure.Figure
         The figure with the histograms of total noise for each amp.
     """
-    plt.pcParams['figure.figsize'] = figsize
+    plt.rcParams['figure.figsize'] = figsize
     fig = plt.figure()
     frame_axes = fig.add_subplot(111, frameon=False)
     if title is not None:
@@ -51,12 +53,18 @@ def total_noise_histograms(dark_curr_pixels, read_noise, dark95s, exptime=16,
     frame_axes.get_yaxis().set_ticks([])
     for amp in dark_curr_pixels:
         subplot = (4, 4, amp)
-        ax = fig.add_subplot(*subplot)
+        fig.add_subplot(*subplot)
         noise_values \
             = np.sqrt(dark_curr_pixels[amp]*exptime + read_noise[amp]**2)
+        stats = afwMath.makeStatistics(np.array(noise_values, dtype=np.float),
+                                       afwMath.MEDIAN | afwMath.STDEVCLIP)
+        median = stats.getValue(afwMath.MEDIAN)
+        stdev = stats.getValue(afwMath.STDEVCLIP)
+        x_range = (median - 5.*stdev, median + 5.*stdev)
         noise_dc95 = np.sqrt(dark95s[amp]*exptime + read_noise[amp]**2)
-        plt.hist(noise_values, bins=100, histtype='step', color='blue')
-        xmin, xmax, ymin, ymax = plt.axis()
+        plt.hist(noise_values, bins=100, histtype='step', color='blue',
+                 range=x_range)
+        ymin, ymax = plt.axis()[2:]
         plt.plot([noise_dc95, noise_dc95], [ymin, ymax], ':k',
                  markersize=3, linewidth=1)
         plt.annotate('Segment %s' % imutils.channelIds[amp], (0.5, 0.9),
