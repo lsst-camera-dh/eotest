@@ -11,7 +11,7 @@ import lsst.eotest.image_utils as imutils
 __all__ = ['total_noise_histograms']
 
 def total_noise_histograms(dark_curr_pixels, read_noise, dark95s, exptime=16,
-                           title=None, figsize=(10, 10)):
+                           title=None, bins=50, figsize=(10, 10)):
     """
     Make histograms of total noise per pixel. Total noise is defined
     as the device read and system noise for each amp combined in
@@ -48,12 +48,13 @@ def total_noise_histograms(dark_curr_pixels, read_noise, dark95s, exptime=16,
     frame_axes = fig.add_subplot(111, frameon=False)
     if title is not None:
         frame_axes.set_title(title)
-    frame_axes.set_xlabel('total noise (rms e-/pixel)')
+    frame_axes.set_xlabel('\ntotal noise (rms e-/pixel)')
+    frame_axes.set_ylabel('normalized histogram\n')
     frame_axes.get_xaxis().set_ticks([])
     frame_axes.get_yaxis().set_ticks([])
     for amp in dark_curr_pixels:
-        subplot = (4, 4, amp)
-        fig.add_subplot(*subplot)
+        subplot = fig.add_subplot(4, 4, amp)
+        subplot.tick_params(axis='both', labelsize='x-small')
         noise_values \
             = np.sqrt(dark_curr_pixels[amp]*exptime + read_noise[amp]**2)
         stats = afwMath.makeStatistics(np.array(noise_values, dtype=np.float),
@@ -62,11 +63,12 @@ def total_noise_histograms(dark_curr_pixels, read_noise, dark95s, exptime=16,
         stdev = stats.getValue(afwMath.STDEVCLIP)
         x_range = (median - 5.*stdev, median + 5.*stdev)
         noise_dc95 = np.sqrt(dark95s[amp]*exptime + read_noise[amp]**2)
-        plt.hist(noise_values, bins=100, histtype='step', color='blue',
-                 range=x_range)
+        plt.hist(noise_values, bins=bins, histtype='step', color='blue',
+                 range=x_range, normed=True)
         ymin, ymax = plt.axis()[2:]
         plt.plot([noise_dc95, noise_dc95], [ymin, ymax], ':k',
                  markersize=3, linewidth=1)
         plt.annotate('Segment %s' % imutils.channelIds[amp], (0.5, 0.9),
                      xycoords='axes fraction', size='x-small')
-    return fig
+    plt.tight_layout()
+    return fig, frame_axes
