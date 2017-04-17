@@ -57,6 +57,10 @@ def total_noise_histograms(dark_curr_pixels, read_noise, dark95s, exptime=16,
         subplot.tick_params(axis='both', labelsize='x-small')
         noise_values \
             = np.sqrt(dark_curr_pixels[amp]*exptime + read_noise[amp]**2)
+        plt.annotate('Segment %s' % imutils.channelIds[amp], (0.5, 0.9),
+                     xycoords='axes fraction', size='x-small')
+        if len(noise_values) == 0:
+            continue
         stats = afwMath.makeStatistics(np.array(noise_values, dtype=np.float),
                                        afwMath.MEDIAN | afwMath.STDEVCLIP)
         median = stats.getValue(afwMath.MEDIAN)
@@ -68,7 +72,5 @@ def total_noise_histograms(dark_curr_pixels, read_noise, dark95s, exptime=16,
         ymin, ymax = plt.axis()[2:]
         plt.plot([noise_dc95, noise_dc95], [ymin, ymax], ':k',
                  markersize=3, linewidth=1)
-        plt.annotate('Segment %s' % imutils.channelIds[amp], (0.5, 0.9),
-                     xycoords='axes fraction', size='x-small')
     plt.tight_layout()
     return fig, frame_axes
