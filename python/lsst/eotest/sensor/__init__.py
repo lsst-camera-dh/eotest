@@ -26,6 +26,7 @@ from TrapFinder import TrapFinder
 from rolloff_mask import rolloff_mask, pixel_counts
 from generate_mask import generate_mask
 from cte_matrix import cte_matrix
+from total_noise_histograms import *
 #
 # Pipe tasks
 #
@@ -46,7 +47,7 @@ from persistenceTask import PersistenceTask
 from fe55CteTask import Fe55CteTask
 
 #
-# Turn off debug messages emitted by LSST Stack v12_1
+# Turn off debug messages emitted by LSST Stack
 #
 try:
     import lsst.log
