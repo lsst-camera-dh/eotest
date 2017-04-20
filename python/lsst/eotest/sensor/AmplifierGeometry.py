@@ -4,6 +4,9 @@ section keywords DETSEC, DATASEC, DETSIZE.
 """
 import astropy.io.fits as fits
 
+__all__ = ['AmplifierGeometry', 'makeAmplifierGeometry', 'amp_loc',
+           'parse_geom_kwd']
+
 amp_loc = {}
 amp_loc['E2V'] = dict([(amp, -1) for amp in range(1, 9)] +
                       [(amp, 1) for amp in range(9, 17)])
