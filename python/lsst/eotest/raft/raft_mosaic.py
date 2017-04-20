@@ -87,7 +87,7 @@ class RaftMosaic(object):
         # Determine flip in serial direction based on 1, 1 element of
         # transformation matrix.
         if hdu.header['PC1_1Q'] < 0:
-            seg_array = seg_array[::-1, :]
+            seg_array = seg_array[:, ::-1]
             xmax = int(hdu.header['CRVAL1Q'])
             xmin = xmax - ccd.amp_geom.nx
         else:
@@ -96,7 +96,7 @@ class RaftMosaic(object):
         # Determine flip in parallel direction based on 2, 2 element
         # of transformation matrix.
         if hdu.header['PC2_2Q'] < 0:
-            seg_array = seg_array[:, ::-1]
+            seg_array = seg_array[::-1, :]
             ymax = int(hdu.header['CRVAL2Q'])
             ymin = ymax - ccd.amp_geom.ny
         else:
@@ -146,7 +146,7 @@ class RaftMosaic(object):
         output_array = imutils.rebin_array(self.image_array, binsize,
                                            use_mean=True)
         if flipx:
-            output_array = output_array[:,::-1]
+            output_array = output_array[:, ::-1]
         image = ax.imshow(output_array, interpolation='nearest', cmap=cmap)
         # Set range and normalization of color map based on sigma-clip
         # of pixel values.
