@@ -48,7 +48,7 @@ class Fe55GainFitter(object):
         #
         p0 = (ntot*0.88, self.median, self.stdev/2., ntot*0.12)
         self.pars, pcov = scipy.optimize.curve_fit(fe55_lines, x, y, p0=p0)
-        
+
         kalpha_peak, kalpha_sigma = self.pars[1], self.pars[2]
         kalpha_peak_error = np.sqrt(pcov[1][1])
         fe55_yield = Fe55Yield(self.ccdtemp)
@@ -57,7 +57,7 @@ class Fe55GainFitter(object):
 #        self.gain_error = float(self.gain*np.sqrt((Ne_error/Ne)**2 +
 #                                                  (kalpha_peak_error/kalpha_peak)**2))
         self.gain_error = float(self.gain*kalpha_peak_error/kalpha_peak)
-            
+
         return kalpha_peak, kalpha_sigma
     def _compute_stats(self):
         try:
@@ -73,8 +73,8 @@ class Fe55GainFitter(object):
         Kalpha and Kbeta peak locations by +/-dADU"""
         # Set range of histogram to include both Kalpha and Kbeta
         # peaks.
-        xmin = max(self.median - hist_nsig*self.stdev, 200)
-        xmax = min(self.median*1785./1620. + hist_nsig*self.stdev, 2000)
+        xmin = self.median - hist_nsig*self.stdev
+        xmax = self.median*1785./1620. + hist_nsig*self.stdev
         xrange = xmin, xmax
         # Determine distribution mode and take that as the initial
         # estimate of the location of the Kalpha peak.
@@ -146,5 +146,3 @@ if __name__ == '__main__':
                            figsize=(11, 8.5))
         else:
             foo.plot(interactive=True, subplot=(4, 4, hdu), win=win)
- 
-            
