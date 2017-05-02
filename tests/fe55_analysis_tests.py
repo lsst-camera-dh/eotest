@@ -31,7 +31,6 @@ class Fe55GainFitterTestCase(unittest.TestCase):
             self.assertLess(fitter.xrange[0], mode)
             self.assertLess(mode, fitter.xrange[1])
             fitter.fit()
-            print(gain, fitter.gain, fitter.gain_error)
 
 if __name__ == '__main__':
     unittest.main()
