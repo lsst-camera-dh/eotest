@@ -30,7 +30,6 @@ class RaftSpecPlots(object):
         self.results = dict()
         self.sensor_ids = dict()
         for slot, filename in results_files.items():
-#            print('processing', os.path.basename(filename))
             self.sensor_ids[slot] = filename.split('_')[0]
             self.results[slot] = sensorTest.EOTestResults(filename)
 
@@ -40,7 +39,8 @@ class RaftSpecPlots(object):
         plt.plot([xbound, xbound], [ymin, ymax], marker)
 
     def make_plot(self, column, ylabel=None, spec=None, step=20, yscaling=1,
-                  marker='r--', title=None, ylog=False, figsize=(8, 6)):
+                  marker='r--', title=None, ylog=False, figsize=(8, 6),
+                  ymax=None):
         """
         Make a plot for the specified column for all 9 sensors
         in a raft.
@@ -52,8 +52,8 @@ class RaftSpecPlots(object):
             e.g., 'READ_NOISE'.
         ylabel : str, optional
             The y-axis label.  If None (default), then use the column name.
-        spec : float, optional
-            The value of the acceptance specification, which will be
+        spec : float or sequence, optional
+            The value(s) of the acceptance specification(s), which will be
             plotted as a line using the marker option.  If None, then
             no spec line will be plotted.
         step : float, optional
@@ -69,6 +69,10 @@ class RaftSpecPlots(object):
             If True, make the y-axis log scale. Default: False
         figsize : tuple(float, float), optional
             Figure size in inches. Default: (8, 6)
+        ymax : float, optional
+            Upper bound of plot in data coordinates.  If not None (default),
+            then use the max(plt.axis()[-1], ymax) as the upper bound
+            of the plotting area.
 
         Returns
         ------
@@ -87,12 +91,20 @@ class RaftSpecPlots(object):
             ylabel = column
         plt.ylabel(ylabel)
         if spec is not None:
-            xmin, xmax = plt.axis()[:2]
-            plt.plot([xmin, xmax], [yscaling*spec, yscaling*spec], marker)
+            if not hasattr(spec, '__iter__'):
+                spec = (spec,)
+            for spec_value in spec:
+                xmin, xmax = plt.axis()[:2]
+                yval = yscaling*spec_value
+                plt.plot([xmin, xmax], [yval, yval], marker)
         if title is not None:
             plt.title(title)
         if ylog:
             ax.set_yscale('log', nonposy='clip')
+        if ymax is not None:
+            axis = list(plt.axis())
+            axis[-1] = max(axis[-1], yscaling*ymax)
+            plt.axis(axis)
         for slot in self.results:
             self._draw_slot_boundary(slot, step=step)
         return fig
@@ -100,7 +112,7 @@ class RaftSpecPlots(object):
     def make_multi_column_plot(self, columns, ylabel=None, spec=None, step=20,
                                yscaling=1, yerrors=False, marker='r--',
                                title=None, add_legend=True, ylog=False,
-                               colors=None, figsize=(8, 6)):
+                               colors=None, figsize=(8, 6), ymax=None):
         """
         Make a plot for the specified columns for all 9 sensors
         in a raft.
@@ -112,8 +124,8 @@ class RaftSpecPlots(object):
             e.g., ('GAIN', 'PTC_GAIN')
         ylabel : str, optional
             The y-axis label.  If None (default), then use the column name.
-        spec : float, optional
-            The value of the acceptance specification, which will be
+        spec : float or sequence, optional
+            The value(s) of the acceptance specification(s), which will be
             plotted as a line using the marker option.  If None, then
             no spec line will be plotted.
         step : float, optional
@@ -137,6 +149,10 @@ class RaftSpecPlots(object):
             then use the default color cycle.
         figsize : tuple(float, float), optional
             Figure size in inches. Default: (8, 6)
+        ymax : float, optional
+            Upper bound of plot in data coordinates.  If not None (default),
+            then use the max(plt.axis()[-1], ymax) as the upper bound
+            of the plotting area.
 
         Returns
         ------
@@ -171,14 +187,22 @@ class RaftSpecPlots(object):
             ylabel = column
         plt.ylabel(ylabel)
         if spec is not None:
-            xmin, xmax = plt.axis()[:2]
-            plt.plot([xmin, xmax], [yscaling*spec, yscaling*spec], 'r--')
+            if not hasattr(spec, '__iter__'):
+                spec = (spec,)
+            for spec_value in spec:
+                xmin, xmax = plt.axis()[:2]
+                yval = yscaling*spec_value
+                plt.plot([xmin, xmax], [yval, yval], marker)
         if title is not None:
             plt.title(title)
         if add_legend:
             plt.legend(loc=0)
         if ylog:
             ax.set_yscale('log', nonposy='clip')
+        if ymax is not None:
+            axis = list(plt.axis())
+            axis[-1] = max(axis[-1], yscaling*ymax)
+            plt.axis(axis)
         for slot in self.results:
             self._draw_slot_boundary(slot, step=step)
         self._draw_slot_boundary('S00', step=step)
