@@ -176,7 +176,7 @@ class RaftSpecPlots(object):
         if title is not None:
             plt.title(title)
         if add_legend:
-            plt.legend()
+            plt.legend(loc=0)
         if ylog:
             ax.set_yscale('log', nonposy='clip')
         for slot in self.results:
