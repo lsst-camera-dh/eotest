@@ -505,7 +505,8 @@ class EOTestPlots(object):
                 print "  ", eObj
         return self._linearity_results
     def linearity(self, gain_range=(1, 6), max_dev=0.02, figsize=(11, 8.5),
-                  ptc_file=None, detresp_file=None, use_exptime=False):
+                  ptc_file=None, detresp_file=None, use_exptime=False,
+                  Ne_bounds=(1e3, 9e4)):
         self._gain_range = gain_range
         self._ptc_file = ptc_file
         self._detresp_file = detresp_file
@@ -564,8 +565,10 @@ class EOTestPlots(object):
             # Plot horizontal lines showing the range of the linearity
             # spec in e-/pixel.
             xmin, xmax, ymin, ymax = pylab.axis()
-            win.axes[-1].loglog([xmin, xmax], [1e3, 1e3], 'k:')
-            win.axes[-1].loglog([xmin, xmax], [9e4, 9e4], 'k:')
+            win.axes[-1].loglog([xmin, xmax], [Ne_bounds[0], Ne_bounds[0]],
+                                'k:')
+            win.axes[-1].loglog([xmin, xmax], [Ne_bounds[1], Ne_bounds[1]],
+                                'k:')
 
             # Label plots by amplifier number.
             pylab.annotate('Amp %i' % amp, (0.2, 0.8),
