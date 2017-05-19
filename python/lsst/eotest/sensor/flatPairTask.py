@@ -61,7 +61,7 @@ class FlatPairTask(pipeBase.Task):
     @pipeBase.timeMethod
     def run(self, sensor_id, infiles, mask_files, gains, detrespfile=None,
             bias_frame=None, max_pd_frac_dev=0.05,
-            linearity_spec_range=(1e3, 9e4)):
+            linearity_spec_range=(1e3, 9e4), use_exptime=False):
         self.sensor_id = sensor_id
         self.infiles = infiles
         self.mask_files = mask_files
@@ -72,7 +72,7 @@ class FlatPairTask(pipeBase.Task):
             #
             # Compute detector response from flat pair files.
             #
-            detrespfile = self.extract_det_response()
+            detrespfile = self.extract_det_response(use_exptime)
         #
         # Perform full well and linearity analyses.
         #
@@ -124,7 +124,7 @@ class FlatPairTask(pipeBase.Task):
         hdu = fitsTableFactory(fits_cols)
         hdu.name = 'DETECTOR_RESPONSE'
         self.output.append(hdu)
-    def extract_det_response(self):
+    def extract_det_response(self, use_exptime):
         max_pd_frac_dev = self.max_pd_frac_dev
         outfile = os.path.join(self.config.output_dir,
                                '%s_det_response.fits' % self.sensor_id)
@@ -158,8 +158,9 @@ class FlatPairTask(pipeBase.Task):
             if exptime1 != exptime2:
                 raise RuntimeError("Exposure times do not match for:\n%s\n%s\n"
                                    % (file1, file2))
-            if ((type(pd1) != str and type(pd2) != str) and
-                (pd1 != 0 and pd2 != 0)):
+            if (not use_exptime or
+                ((type(pd1) != str and type(pd2) != str) and
+                 (pd1 != 0 and pd2 != 0))):
                 flux = abs(pd1*exptime1 + pd2*exptime2)/2.
                 if np.abs((pd1 - pd2)/((pd1 + pd2)/2.)) > max_pd_frac_dev:
                     self.log.info("Skipping %s and %s since MONDIODE values do not agree to %.1f%%" % (file1, file2, max_pd_frac_dev*100.))

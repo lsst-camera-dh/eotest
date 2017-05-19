@@ -505,7 +505,8 @@ class EOTestPlots(object):
                 print "  ", eObj
         return self._linearity_results
     def linearity(self, gain_range=(1, 6), max_dev=0.02, figsize=(11, 8.5),
-                  ptc_file=None, detresp_file=None):
+                  ptc_file=None, detresp_file=None, use_exptime=False,
+                  Ne_bounds=(1e3, 9e4)):
         self._gain_range = gain_range
         self._ptc_file = ptc_file
         self._detresp_file = detresp_file
@@ -513,10 +514,13 @@ class EOTestPlots(object):
             #
             # Set up the plotting subwindow.
             subplot = self.subplot(amp)
+            if use_exptime:
+                xlabel = 'exposure time (s)'
+            else:
+                xlabel = r'pd current $\times$ exposure'
             if amp == 1:
                 win = plot.Window(subplot=subplot, figsize=figsize,
-                                  xlabel=r'pd current $\times$ exposure',
-                                  ylabel='', size='large')
+                                  xlabel=xlabel, ylabel='', size='large')
                 win.frameAxes.text(0.5, 1.08, 'Linearity, %s' % self.sensor_id,
                                    horizontalalignment='center',
                                    verticalalignment='top',
@@ -561,8 +565,10 @@ class EOTestPlots(object):
             # Plot horizontal lines showing the range of the linearity
             # spec in e-/pixel.
             xmin, xmax, ymin, ymax = pylab.axis()
-            win.axes[-1].loglog([xmin, xmax], [1e3, 1e3], 'k:')
-            win.axes[-1].loglog([xmin, xmax], [9e4, 9e4], 'k:')
+            win.axes[-1].loglog([xmin, xmax], [Ne_bounds[0], Ne_bounds[0]],
+                                'k:')
+            win.axes[-1].loglog([xmin, xmax], [Ne_bounds[1], Ne_bounds[1]],
+                                'k:')
 
             # Label plots by amplifier number.
             pylab.annotate('Amp %i' % amp, (0.2, 0.8),
@@ -582,16 +588,19 @@ class EOTestPlots(object):
             plot.setAxis(yrange=(-1.5*max_dev, 1.5*max_dev))
     def linearity_resids(self, gain_range=(1, 6), max_dev=0.02,
                          figsize=(11, 8.5), ptc_file=None, detresp_file=None,
-                         Ne_bounds=(1e3, 9e4)):
+                         Ne_bounds=(1e3, 9e4), use_exptime=False):
         self._gain_range = gain_range
         self._ptc_file = ptc_file
         self._detresp_file = detresp_file
         for amp in imutils.allAmps(detresp_file):
             subplot = self.subplot(amp)
+            if use_exptime:
+                xlabel = 'exposure time (s)'
+            else:
+                xlabel = r'pd current $\times$ exposure'
             if amp == 1:
                 win = plot.Window(subplot=subplot, figsize=figsize,
-                                  xlabel=r'pd current $\times$ exposure',
-                                  ylabel='', size='large')
+                                  xlabel=xlabel, ylabel='', size='large')
                 win.frameAxes.text(0.5, 1.08,
                                    'Linearity residuals, %s' % self.sensor_id,
                                    horizontalalignment='center',

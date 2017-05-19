@@ -114,7 +114,7 @@ class RaftMosaic(object):
                 self.segment_processor(slot, ccd, amp, xy_bounds=xy_bounds)
 
     def plot(self, title=None, cmap=plt.cm.hot, nsig=5, figsize=(10, 10),
-             binsize=10, flipx=True, textcolor='c'):
+             binsize=10, flipx=True, textcolor='c', annotation=''):
         """
         Render the raft mosaic.
 
@@ -139,6 +139,9 @@ class RaftMosaic(object):
         textcolor : str, optional
             Color of the text for the segment and sensor labeling.
             Default: 'c' (cyan)
+        annotation : str, optional
+            Description of the plot, e.g., pixel units (ADU or e-),
+            gain-corrected, bias-subtracted.  Default: ''
         """
         plt.rcParams['figure.figsize'] = figsize
         fig = plt.figure()
@@ -186,4 +189,6 @@ class RaftMosaic(object):
                              (xx, yy), xycoords='axes fraction',
                              size='x-small', horizontalalignment='center',
                              verticalalignment='center', color=textcolor)
+        plt.annotate(annotation, (1, -0.1), xycoords='axes fraction',
+                     horizontalalignment='right', verticalalignment='bottom')
         return fig

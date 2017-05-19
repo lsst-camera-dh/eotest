@@ -177,12 +177,15 @@ class PtcTask(pipeBase.Task):
                 results = scipy.optimize.leastsq(residuals, p0, full_output=1,
                                                  args=(mean[index], var[index]))
                 pars, cov = results[:2]
-                # Write gain and error to EO test results file.
-                output.add_seg_result(amp, 'PTC_GAIN', pars[1])
-                output.add_seg_result(amp, 'PTC_GAIN_ERROR', np.sqrt(cov[1][1]))
+                ptc_gain = pars[1]
+                ptc_error = np.sqrt(cov[1][1])
             except Exception as eobj:
                 print "Exception caught while fitting PTC:"
                 print str(eobj)
-                output.add_seg_result(amp, 'PTC_GAIN', 0)
-                output.add_seg_result(amp, 'PTC_GAIN_ERROR', -1)
+                ptc_gain = 0
+                ptc_error = -1
+            # Write gain and error to EO test results file.
+            output.add_seg_result(amp, 'PTC_GAIN', ptc_gain)
+            output.add_seg_result(amp, 'PTC_GAIN_ERROR', ptc_error)
+            self.log.info("%i  %f  %f" % (amp, ptc_gain, ptc_error))
         output.write()
