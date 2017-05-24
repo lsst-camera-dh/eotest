@@ -158,15 +158,17 @@ class FlatPairTask(pipeBase.Task):
             if exptime1 != exptime2:
                 raise RuntimeError("Exposure times do not match for:\n%s\n%s\n"
                                    % (file1, file2))
-            if (not use_exptime or
-                ((type(pd1) != str and type(pd2) != str) and
-                 (pd1 != 0 and pd2 != 0))):
+            if (use_exptime
+                or isinstance(pd1, str)
+                or isinstance(pd2, str)
+                or pd1 == 0
+                or pd2 == 0):
+                flux = exptime1
+            else:
                 flux = abs(pd1*exptime1 + pd2*exptime2)/2.
                 if np.abs((pd1 - pd2)/((pd1 + pd2)/2.)) > max_pd_frac_dev:
                     self.log.info("Skipping %s and %s since MONDIODE values do not agree to %.1f%%" % (file1, file2, max_pd_frac_dev*100.))
                     continue
-            else:
-                flux = exptime1
             if self.config.verbose:
                 self.log.info('   row = %s' % row)
                 self.log.info('   pd1, pd2 = %s, %s' % (pd1, pd2))
