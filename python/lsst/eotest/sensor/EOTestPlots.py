@@ -18,7 +18,7 @@ import lsst.afw.math as afwMath
 import lsst.afw.display.ds9 as ds9
 import lsst.eotest.image_utils as imutils
 from lsst.eotest.Estimator import Estimator
-import lsst.eotest.sensor.pylab_plotter as plot
+import pylab_plotter as plot
 from .MaskedCCD import MaskedCCD
 from .EOTestResults import EOTestResults
 from .Fe55GainFitter import Fe55GainFitter
@@ -458,27 +458,36 @@ class EOTestPlots(object):
         plot.hline(8)
         win.set_title("Read Noise, %s" % self.sensor_id)
 
-    def total_noise(self, exptime=16, spec=9):
+    def total_noise(self, exptime=16, spec=9, dark95s=None):
         """
         Plot the total noise (electronic + 95th percentile dark current
         shot noise).
         """
         amp = self.results['AMP']
         total_noise = self.results['TOTAL_NOISE']
-        shot_noise = self.results['DARK_CURRENT_95']*exptime
+        if dark95s is None:
+            shot_noise = self.results['DARK_CURRENT_95']*exptime
+        else:
+            shot_noise = np.array([dark95s[x] for x in amp])*exptime
         electronic_noise = np.sqrt(total_noise**2 + shot_noise**2)
         color_cycler = plt.rcParams['axes.prop_cycle']()
-        for noise, label in zip((total_noise, shot_noise, electronic_noise),
-                                ('READ_NOISE', 'DC95_SHOT_NOISE',
-                                 'TOTAL_NOISE')):
+        npts = len(total_noise)
+        dx = 0.075
+        for noise, label, xoffset \
+                in zip((total_noise, shot_noise, electronic_noise),
+                       ('READ_NOISE', 'DC95_SHOT_NOISE', 'TOTAL_NOISE'),
+                       (-dx*np.ones(npts), np.zeros(npts), dx*np.ones(npts))):
             color = next(color_cycler)['color']
-            plt.plot(amp, noise, '.', color=color, label=label)
+            plt.plot(amp + xoffset, noise, '.', color=color, label=label)
         plt.xlabel('Amp')
         plt.ylabel('Noise (rms e-)')
         plt.title('Noise, %s' % self.sensor_id)
         plt.legend()
-        xmin, xmax = plt.axis()
-        plt.plot([xmin, xmax], [spec, spec], 'k:')
+        plt.plot([0, 17], [spec, spec], 'k:')
+        axis = list(plt.axis())
+        axis[1] = 17
+        axis[-1] = max(10, axis[-1])
+        plt.axis(axis)
 
     def full_well(self, gain_range=(1, 6), figsize=(11, 8.5),
                   ptc_file=None, detresp_file=None):
