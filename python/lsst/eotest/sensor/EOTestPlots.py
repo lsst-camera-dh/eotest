@@ -667,6 +667,7 @@ class EOTestPlots(object):
             # Plot max_dev range as horizontal lines.
             win.axes[-1].semilogx([xmin, xmax], [max_dev, max_dev], 'k--')
             win.axes[-1].semilogx([xmin, xmax], [-max_dev, -max_dev], 'k--')
+            pylab.yticks([-max_dev, 0, max_dev])
             # Plot flux bounds corresponding to range of Ne values over which
             # the linearity spec is written
             flux_min = (Ne_bounds[0] - fit_pars[1])/fit_pars[0]
