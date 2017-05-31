@@ -1,3 +1,6 @@
+"""
+Module to manage plots for single sensor EO test reports.
+"""
 import os
 import sys
 import glob
@@ -9,6 +12,7 @@ import numpy as np
 import astropy.io.fits as fits
 import pylab
 import matplotlib as mpl
+import matplotlib.pyplot as plt
 import lsst.afw.image as afwImage
 import lsst.afw.math as afwMath
 import lsst.afw.display.ds9 as ds9
@@ -16,7 +20,6 @@ import lsst.eotest.image_utils as imutils
 from lsst.eotest.Estimator import Estimator
 import pylab_plotter as plot
 from .MaskedCCD import MaskedCCD
-from .rolloff_mask import rolloff_mask
 from .EOTestResults import EOTestResults
 from .Fe55GainFitter import Fe55GainFitter
 from .fe55_psf import psf_sigma_statistics
@@ -24,7 +27,6 @@ from .DetectorResponse import DetectorResponse
 from .crosstalk import CrosstalkMatrix
 from .QE import QE_Data
 from .AmplifierGeometry import parse_geom_kwd
-from .cteTask import superflat
 from .cte_profile import *
 
 class Subplot(object):
@@ -76,10 +78,10 @@ def cmap_range(image_array, nsig=5):
 
 def plot_flat(infile, nsig=3, cmap=pylab.cm.hot, win=None, subplot=(1, 1, 1),
               figsize=None, wl=None, gains=None, use_ds9=False, outfile=None,
-              title=None):
+              title=None, annotation=''):
     ccd = MaskedCCD(infile)
     foo = fits.open(infile)
-    datasec =  parse_geom_kwd(foo[1].header['DATASEC'])
+    datasec = parse_geom_kwd(foo[1].header['DATASEC'])
     # Specialize to science sensor or wavefront sensor geometries.
     nx_segments = 8
     ny_segments = len(ccd)/nx_segments
@@ -110,9 +112,9 @@ def plot_flat(infile, nsig=3, cmap=pylab.cm.hot, win=None, subplot=(1, 1, 1),
             # Determine flips in x- and y-directions in order to
             # get the (1, 1) pixel in the lower right corner.
             if detsec['xmax'] > detsec['xmin']:  # flip in x-direction
-                subarr = subarr[:,::-1]
+                subarr = subarr[:, ::-1]
             if detsec['ymax'] > detsec['ymin']:  # flip in y-direction
-                subarr = subarr[::-1,:]
+                subarr = subarr[::-1, :]
             #
             # Convert from ADU to e-
             if gains is not None:
@@ -127,7 +129,7 @@ def plot_flat(infile, nsig=3, cmap=pylab.cm.hot, win=None, subplot=(1, 1, 1),
         imarr = image.getArray()
         # This needs a flip in y to display properly in ds9 so that
         # amp 1 is in the lower right corner.
-        imarr[:] = mosaic[::-1,:]
+        imarr[:] = mosaic[::-1, :]
         ds9.mtv(image)
         ds9.ds9Cmd('zoom to fit')
         return
@@ -136,7 +138,7 @@ def plot_flat(infile, nsig=3, cmap=pylab.cm.hot, win=None, subplot=(1, 1, 1),
     if outfile is not None:
         hdulist = fits.HDUList()
         hdulist.append(fits.PrimaryHDU())
-        hdulist[0].data = mosaic[::-1,:]
+        hdulist[0].data = mosaic[::-1, :]
         hdulist.writeto(outfile, clobber=True)
     #
     # Set the color map to extend over the range median +/- stdev(clipped)
@@ -160,7 +162,7 @@ def plot_flat(infile, nsig=3, cmap=pylab.cm.hot, win=None, subplot=(1, 1, 1),
     # Turn off tick labels for x- and y-axes
     pylab.setp(win.axes[-1].get_xticklabels(), visible=False)
     pylab.setp(win.axes[-1].get_yticklabels(), visible=False)
-    # Label each segment by amplifier number
+    # Label each segment by segment id.
     for ypos in range(ny_segments):
         for xpos in range(nx_segments):
             amp = ypos*nx_segments + xpos + 1
@@ -169,13 +171,16 @@ def plot_flat(infile, nsig=3, cmap=pylab.cm.hot, win=None, subplot=(1, 1, 1),
             yy = 1. - (float(ymax)/float(ny) - 0.05)
             if yy > 0.5:
                 yy = 1 - (yy - 0.5)
-            pylab.annotate('%i' % amp, (xx, yy), xycoords='axes fraction',
+            seg_id = imutils.channelIds[amp]
+            pylab.annotate('%s' % seg_id, (xx, yy), xycoords='axes fraction',
                            size='x-small', horizontalalignment='center')
+    plt.annotate(annotation, (1, -0.1), xycoords='axes fraction',
+                 horizontalalignment='right', verticalalignment='bottom')
     return win
 
 def fe55_zoom(infile, size=250, amp=1, cmap=pylab.cm.hot, nsig=10,
               subplot=(1, 1, 1), win=None, figsize=None, title=None,
-              axisRange=None):
+              axisRange=None, annotation=''):
     ccd = MaskedCCD(infile)
     image = ccd[amp].getImage()
     nymax, nxmax = image.getArray().shape
@@ -199,6 +204,8 @@ def fe55_zoom(infile, size=250, amp=1, cmap=pylab.cm.hot, nsig=10,
         title = os.path.basename(infile)
     win.axes[-1].set_title(title)
     win.fig.colorbar(image)
+    plt.annotate(annotation, (1, -0.1), xycoords='axes fraction',
+                 horizontalalignment='right', verticalalignment='bottom')
     return win
 
 class EOTestPlots(object):
@@ -276,7 +283,7 @@ class EOTestPlots(object):
                 print "Exception raised in generating image persistence plot for amp", amp
                 print eobj
                 # Continue with remaining amps
-                pass
+
     def psf_dists(self, chiprob_min=0.1, fe55_file=None, figsize=(11, 8.5),
                   xrange=(2, 6), bins=50):
         if fe55_file is None:
@@ -409,11 +416,11 @@ class EOTestPlots(object):
                        max(min(ptc_gain - ptc_error), min(ptc_gain - 1)))
             ymax = max(min(max(gain + error), max(gain + 1)),
                        min(max(ptc_gain + ptc_error), max(ptc_gain + 1)))
-            yname='gain (e-/DN) (Fe55: black; PTC: red)'
+            yname = 'gain (e-/DN) (Fe55: black; PTC: red)'
         except KeyError:
             ymin = max(min(gain - error), min(gain - 1))
             ymax = min(max(gain + error), max(gain + 1))
-            yname='gain (e-/DN)'
+            yname = 'gain (e-/DN)'
         if xrange is not None:
             xrange = (0, len(gain) + 0.5)
         win = plot.xyplot(results['AMP'], results['GAIN'],
@@ -433,7 +440,7 @@ class EOTestPlots(object):
             total_noise = results['TOTAL_NOISE']
         except KeyError:
             system_noise = np.zeros(len(read_noise))
-            total_noise= read_noise
+            total_noise = read_noise
         ymax = max(1.2*max(np.concatenate((read_noise,
                                            system_noise,
                                            total_noise))), 10)
@@ -450,6 +457,38 @@ class EOTestPlots(object):
         plot.legend('bgc', ('Read Noise', 'System Noise', 'Total Noise'))
         plot.hline(8)
         win.set_title("Read Noise, %s" % self.sensor_id)
+
+    def total_noise(self, exptime=16, spec=9, dark95s=None):
+        """
+        Plot the total noise (electronic + 95th percentile dark current
+        shot noise).
+        """
+        amp = self.results['AMP']
+        total_noise = self.results['TOTAL_NOISE']
+        if dark95s is None:
+            shot_noise = self.results['DARK_CURRENT_95']*exptime
+        else:
+            shot_noise = np.array([dark95s[x] for x in amp])*exptime
+        electronic_noise = np.sqrt(total_noise**2 + shot_noise**2)
+        color_cycler = plt.rcParams['axes.prop_cycle']()
+        npts = len(total_noise)
+        dx = 0.075
+        for noise, label, xoffset \
+                in zip((total_noise, shot_noise, electronic_noise),
+                       ('READ_NOISE', 'DC95_SHOT_NOISE', 'TOTAL_NOISE'),
+                       (-dx*np.ones(npts), np.zeros(npts), dx*np.ones(npts))):
+            color = next(color_cycler)['color']
+            plt.plot(amp + xoffset, noise, '.', color=color, label=label)
+        plt.xlabel('Amp')
+        plt.ylabel('Noise (rms e-)')
+        plt.title('Noise, %s' % self.sensor_id)
+        plt.legend()
+        plt.plot([0, 17], [spec, spec], 'k:')
+        axis = list(plt.axis())
+        axis[1] = 17
+        axis[-1] = max(10, axis[-1])
+        plt.axis(axis)
+
     def full_well(self, gain_range=(1, 6), figsize=(11, 8.5),
                   ptc_file=None, detresp_file=None):
         if detresp_file is None:
@@ -628,6 +667,7 @@ class EOTestPlots(object):
             # Plot max_dev range as horizontal lines.
             win.axes[-1].semilogx([xmin, xmax], [max_dev, max_dev], 'k--')
             win.axes[-1].semilogx([xmin, xmax], [-max_dev, -max_dev], 'k--')
+            pylab.yticks([-max_dev, 0, max_dev])
             # Plot flux bounds corresponding to range of Ne values over which
             # the linearity spec is written
             flux_min = (Ne_bounds[0] - fit_pars[1])/fit_pars[0]
@@ -743,7 +783,7 @@ class EOTestPlots(object):
             plot.xyplot(band_wls, qe_band, xerr=band_wls_errs,
                         oplot=1, color='g')
         plot.hline(100)
-    def flat_fields(self, lambda_dir, nsig=3, cmap=pylab.cm.hot):
+    def flat_fields(self, lambda_dir, nsig=3, cmap=pylab.cm.hot, annotation=''):
         glob_string = os.path.join(lambda_dir, '*_lambda_*.fits')
         #print glob_string
         flats = sorted(glob.glob(glob_string))
@@ -765,13 +805,16 @@ class EOTestPlots(object):
                 target = np.where(wls == wl)[0][0]
                 win = plot_flat(flats[target], nsig=nsig, cmap=cmap, wl=wl,
                                 gains=gains)
+                plt.annotate(annotation, (1, -0.1), xycoords='axes fraction',
+                             horizontalalignment='right',
+                             verticalalignment='bottom')
                 pylab.savefig('%s_%04inm_flat.png' % (self.sensor_id, wl))
                 pylab.clf()
             except IndexError:
                 pass
     def confluence_tables(self, outfile=False):
         if outfile:
-            output = open(self._outputpath('%s_results.txt' 
+            output = open(self._outputpath('%s_results.txt'
                                            % self.sensor_id), 'w')
         else:
             output = sys.stdout
@@ -782,7 +825,7 @@ class EOTestPlots(object):
 #        format = '| %i | %.2f | %.2f | %i | %.1e | %.1e | %.1e | %i | %i | %.1e | %.2f |\n'
         format = '| %i |' + (len(self.results.colnames)-1)*' %.2e |' + '\n'
         for i, amp in enumerate(self.results['AMP']):
-            output.write(format % tuple([self.results[x][i] 
+            output.write(format % tuple([self.results[x][i]
                                          for x in self.results.colnames]))
         output.write('\n')
         # Write the CCD-wide results.
@@ -792,7 +835,7 @@ class EOTestPlots(object):
         for wl, stdev, mean in zip(prnu_results['WAVELENGTH'],
                                    prnu_results['STDEV'], prnu_results['MEAN']):
             if stdev > 0:
-                output.write("| %i | %12.4e | %12.4e | %12.4e |\n" 
+                output.write("| %i | %12.4e | %12.4e | %12.4e |\n"
                              % (wl, stdev, mean, stdev/mean))
             else:
                 output.write("| %i | ... | ... | ... |\n" % wl)
@@ -953,7 +996,7 @@ class CcdSpecs(OrderedDict):
         try:
             num_pixels = (self.results['TOTAL_NUM_PIXELS']
                           - self.results['ROLLOFF_MASK_PIXELS'])
-        except:
+        except StandardError:
             num_pixels = 16129000
         col_size = 2002 - 9 # exclude masked edge rolloff.
         num_defects = (num_bright_pixels + num_dark_pixels + num_traps
@@ -962,10 +1005,10 @@ class CcdSpecs(OrderedDict):
             % (num_defects, 100.*float(num_defects)/float(num_pixels))
         self['CCD-012'].ok = (float(num_defects)/float(num_pixels) < 5e-3)
         if xtalk_file is not None:
-            foo = CrosstalkMatrix(xtalk_file)
-            for i in range(len(foo.matrix)):
-                foo.matrix[i][i] = 0
-            crosstalk = max(np.abs(foo.matrix.flatten()))
+            ctm = CrosstalkMatrix(xtalk_file)
+            for i in range(len(ctm.matrix)):
+                ctm.matrix[i][i] = 0
+            crosstalk = max(np.abs(ctm.matrix.flatten()))
             self['CCD-013'].measurement = 'max. value: $\\num{%.2e}$\\%%' % (crosstalk*100.)
             self['CCD-013'].ok = (crosstalk < 1.9e-3)
         try:
