@@ -35,12 +35,14 @@ class RaftSpecPlots(object):
 
     def _draw_slot_boundary(self, slot, step=20, namps=16, marker='k:'):
         xbound = (step - namps)/2. + step*self._raft_slots[slot] + namps + 1
-        ymin, ymax = plt.axis()[2:]
+        axis = plt.axis()
+        ymin, ymax = axis[2:]
         plt.plot([xbound, xbound], [ymin, ymax], marker)
+        plt.axis(axis)
 
     def make_plot(self, column, ylabel=None, spec=None, step=20, yscaling=1,
                   marker='r--', title=None, ylog=False, figsize=(8, 6),
-                  ymax=None):
+                  ymax=None, yerrors=False):
         """
         Make a plot for the specified column for all 9 sensors
         in a raft.
@@ -73,6 +75,9 @@ class RaftSpecPlots(object):
             Upper bound of plot in data coordinates.  If not None (default),
             then use the max(plt.axis()[-1], ymax) as the upper bound
             of the plotting area.
+        yerrors : bool, optional
+            Flag to plot errors, assuming the column name is of the form
+            <column>'_ERROR', e.g., 'GAIN_ERROR'.  Default: False
 
         Returns
         ------
@@ -84,7 +89,12 @@ class RaftSpecPlots(object):
         ax = fig.add_subplot(1, 1, 1)
         for slot, results in self.results.items():
             xoffset = self._raft_slots[slot]*step
-            plt.plot(results['AMP'] + xoffset, yscaling*results[column], 'b.')
+            x = results['AMP'] + xoffset
+            y = yscaling*results[column]
+            plt.plot(x, y, 'b.')
+            if yerrors:
+                yerr = yscaling*results[column+'_ERROR']
+                plt.errorbar(x, y, fmt='.', yerr=yerr, color='blue')
         xtick_values = [step*i + step/2 for i in range(len(self._raft_slots))]
         plt.xticks(xtick_values, self._raft_slots.keys())
         if ylabel is None:
