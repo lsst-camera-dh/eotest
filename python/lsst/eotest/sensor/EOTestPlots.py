@@ -499,7 +499,8 @@ class EOTestPlots(object):
         detresp = DetectorResponse(detresp_file, ptc=ptc, gain_range=gain_range)
         for amp in imutils.allAmps(detresp_file):
             try:
-                self._linearity_results[amp] = detresp.linearity(amp)
+                self._linearity_results[amp] \
+                    = detresp.linearity(amp, fit_range=self._Ne_bounds)
             except Exception as eObj:
                 print "EOTestPlots.linearity: amp %i" % amp
                 print "  ", eObj
@@ -510,6 +511,7 @@ class EOTestPlots(object):
         self._gain_range = gain_range
         self._ptc_file = ptc_file
         self._detresp_file = detresp_file
+        self._Ne_bounds = Ne_bounds
         for amp in imutils.allAmps(detresp_file):
             #
             # Set up the plotting subwindow.
@@ -592,6 +594,7 @@ class EOTestPlots(object):
         self._gain_range = gain_range
         self._ptc_file = ptc_file
         self._detresp_file = detresp_file
+        self._Ne_bounds = Ne_bounds
         for amp in imutils.allAmps(detresp_file):
             subplot = self.subplot(amp)
             if use_exptime:
