@@ -92,6 +92,7 @@ class CteTask(pipeBase.Task):
         outfile = '%(sensor_id)s_superflat_%(flux_level)s.fits' % locals()
         superflat_file = superflat(superflat_files, bias_frame=bias_frame,
                                    outfile=outfile, bias_subtract=False)
+        nframes = len(superflat_files)
         all_amps = imutils.allAmps(superflat_file)
         #
         # Compute serial CTE.
@@ -100,7 +101,7 @@ class CteTask(pipeBase.Task):
         s_task.config.direction = 's'
         s_task.config.verbose = self.config.verbose
         s_task.config.cti = True
-        scti, bias_ests = s_task.run(superflat_file, all_amps,
+        scti, bias_ests = s_task.run(superflat_file, nframes, all_amps,
                                      self.config.overscans, gains=gains,
                                      mask_files=mask_files)
         #
@@ -110,7 +111,7 @@ class CteTask(pipeBase.Task):
         p_task.config.direction = 'p'
         p_task.config.verbose = self.config.verbose
         p_task.config.cti = True
-        pcti, bias_ests = p_task.run(superflat_file, all_amps,
+        pcti, bias_ests = p_task.run(superflat_file, nframes, all_amps,
                                      self.config.overscans, gains=gains,
                                      mask_files=mask_files)
         #
