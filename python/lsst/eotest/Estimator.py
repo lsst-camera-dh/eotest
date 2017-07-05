@@ -56,7 +56,7 @@ class Estimator(object):
             return
         npix = pixel_sum/stats.getValue(afwMath.MEAN)
         self.value = stats.getValue(self.statistic)
-        self.error = np.sqrt(pixel_sum/npix/self.var_wt)
+        self.error = np.sqrt(pixel_sum/self.var_wt)/npix
     def __add__(self, other):
         result = Estimator()
         if type(other) == Estimator:
