@@ -13,14 +13,14 @@ import lsst.afw.math as afwMath
 import lsst.pex.exceptions as pexExcept
 
 class Metadata(object):
-    def __init__(self, infile, hdu):
+    def __init__(self, infile, hdu=0):
         self.header = None
         try:
             self.md = afwImage.readMetadata(infile, hdu)
         except:
             # This exception occurs when DM stack encounters a "." in
             # a FITS header keyword.
-            self.header = fits.open(infile)[hdu-1].header
+            self.header = fits.open(infile)[hdu].header
     def get(self, key):
         return self(key)
     def __call__(self, key):
@@ -55,7 +55,7 @@ stdev = lambda x : afwMath.makeStatistics(x, afwMath.STDEV).getValue()
 
 def dm_hdu(hdu):
     """ Compute DM HDU from the actual FITS file HDU."""
-    return hdu + 1
+    return hdu
 
 def bias(im, overscan):
     """Compute the bias from the mean of the pixels in the serial
@@ -150,10 +150,10 @@ def fits_mean_file(files, outfile, bitpix=16, clobber=True):
             set_bitpix(output[amp], bitpix)
     fitsWriteto(output, outfile, clobber=clobber)
 
-def fits_median(files, hdu=2, fix=True):
+def fits_median(files, hdu=1, fix=True):
     """Compute the median image from a set of image FITS files."""
     ims = [afwImage.ImageF(f, hdu) for f in files]
-    exptimes = [Metadata(f, 1).get('EXPTIME') for f in files]
+    exptimes = [Metadata(f).get('EXPTIME') for f in files]
 
     if min(exptimes) != max(exptimes):
         raise RuntimeError("Error: unequal exposure times")
@@ -165,10 +165,7 @@ def fits_median(files, hdu=2, fix=True):
         for im, err in zip(ims, errs):
             im -= err
 
-    images = afwImage.vectorImageF()
-    for image in ims:
-        images.push_back(image)
-    median_image = afwMath.statisticsStack(images, afwMath.MEDIAN)
+    median_image = afwMath.statisticsStack(ims, afwMath.MEDIAN)
 
     return median_image
 
@@ -182,7 +179,7 @@ def writeFits(images, outfile, template_file, bitpix=-32):
 
 def check_temperatures(files, tol, setpoint=None, warn_only=False):
     for infile in files:
-        md = Metadata(infile, 1)  # Read PHDU keywords
+        md = Metadata(infile)  # Read PHDU keywords
         if setpoint is not None:
             ref_temp = setpoint
         else:

@@ -84,7 +84,7 @@ def system_crosstalk(ccd, aggressor_amp, dnthresh=None, nsig=5):
 
 def get_footprint(fp_set, min_fp_size, threshold):
     footprints = [fp for fp in fp_set.getFootprints()
-                  if fp.getNpix() >= min_fp_size]
+                  if fp.getArea() >= min_fp_size]
     if len(footprints) > 1:
         message = "More than one spot image found in aggressor amplifier.\n"
         message += "      x     y     peak value  # pixels\n"
@@ -92,7 +92,7 @@ def get_footprint(fp_set, min_fp_size, threshold):
             peak = [x for x in fp.getPeaks()][0]
             message += ('%2i  %4i  %4i     %6i       %4i\n' 
                         % (i, peak.getIx(), peak.getIy(), peak.getPeakValue(),
-                           fp.getNpix()))
+                           fp.getArea()))
         message += "Threshold: %i\n" % threshold
         raise RuntimeError(message)
     fp = footprints[0]

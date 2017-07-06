@@ -63,7 +63,7 @@ class Xrays(object):
         total = 0
         for span in spans:
             total += sum(self.imarr[span.getY()][span.getX0():span.getX1()+1])
-        return total - footprint.getNpix()*self.mean
+        return total - footprint.getArea()*self.mean
     def _footprint_signal_bbox(self, footprint, buff=1):
         imaging = self.ccd.amp_geom.imaging
         bbox = footprint.getBBox()
@@ -83,7 +83,7 @@ class Xrays(object):
         threshold = afwDetect.Threshold(self.mean + nsig*self.stdev)
         fpset = afwDetect.FootprintSet(self.image, threshold)
         signals = np.array([self.footprint_signal(fp) for fp in
-                            fpset.getFootprints() if fp.getNpix() < max_npix])
+                            fpset.getFootprints() if fp.getArea() < max_npix])
         indx = np.where(signals > sigmin)
         return signals[indx]
     def gain(self, nsig=2, max_npix=9, gain_max=10., make_plot=False,

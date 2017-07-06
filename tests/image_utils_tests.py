@@ -94,7 +94,7 @@ class FitsMedianTestCase(unittest.TestCase):
         for item in self.files:
             os.remove(item)
     def test_fits_median(self):
-        median_image = imutils.fits_median(self.files, hdu=2, fix=True)
+        median_image = imutils.fits_median(self.files, hdu=1, fix=True)
         imarr = median_image.getArray()
         for x in imarr.flat:
             self.assertEqual(self.values[len(self.values)/2], x)

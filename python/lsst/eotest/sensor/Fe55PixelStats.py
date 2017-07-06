@@ -105,7 +105,7 @@ def get_fp_pixels(ccd, amp, nsig=4, bg_reg=(10, 10), npix_range=(5, 20)):
     imarr = image.getImage().getArray()
     data = []
     for fp in afwDetect.FootprintSet(image, threshold).getFootprints():
-        if fp.getNpix() < npix_range[0] or npix_range[1] < fp.getNpix():
+        if fp.getArea() < npix_range[0] or npix_range[1] < fp.getArea():
             continue
         # Get peak coordinates and p0-p8 values
         peaks = [pk for pk in fp.getPeaks()]

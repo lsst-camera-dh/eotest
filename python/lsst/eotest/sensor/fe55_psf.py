@@ -149,7 +149,7 @@ class PsfGaussFit(object):
         failed_curve_fits = 0
         num_fp = 0
         for fp in fpset.getFootprints():
-            if fp.getNpix() < self.min_npix or fp.getNpix() > self.max_npix:
+            if fp.getArea() < self.min_npix or fp.getArea() > self.max_npix:
                 continue
             num_fp += 1
             spans = fp.getSpans()
@@ -187,7 +187,7 @@ class PsfGaussFit(object):
                 dn_fp.append(dn_sum)
                 chi2 = chisq(positions, zvals, x0[-1], y0[-1],
                              sigmax[-1], sigmay[-1], dn[-1], dn_errors)
-                dof = fp.getNpix() - self.npars
+                dof = fp.getArea() - self.npars
                 chiprob.append(gammaincc(dof/2., chi2/2.))
                 chi2s.append(chi2)
                 dofs.append(dof)
