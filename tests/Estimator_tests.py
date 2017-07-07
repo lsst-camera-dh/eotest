@@ -43,7 +43,7 @@ class EstimatorTestCase(unittest.TestCase):
     def test_addition(self):
         result = self.est1 + self.est2
         self.assertEquals(result.value, self.est1.value + self.est2.value)
-        self.assertEquals(result.error, np.sqrt(self.est1.error**2 + 
+        self.assertEquals(result.error, np.sqrt(self.est1.error**2 +
                                                 self.est2.error**2))
         foo = sum([self.est1, self.est2])
         self.assertEquals(foo.value, result.value)
@@ -51,7 +51,7 @@ class EstimatorTestCase(unittest.TestCase):
     def test_subtraction(self):
         result = self.est1 - self.est2
         self.assertEquals(result.value, self.est1.value - self.est2.value)
-        self.assertEquals(result.error, np.sqrt(self.est1.error**2 + 
+        self.assertEquals(result.error, np.sqrt(self.est1.error**2 +
                                                 self.est2.error**2))
     def test_rsubtraction(self):
         my_term = 10.

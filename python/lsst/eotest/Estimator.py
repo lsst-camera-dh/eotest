@@ -16,7 +16,8 @@ class Estimator(object):
         self._format_str = None
         if args:
             self.set_properties(*args, **kwds)
-    def set_properties(self, image, stat_ctrl, gain=1, statistic=afwMath.MEAN):
+    def set_properties(self, image, stat_ctrl, gain=1, statistic=afwMath.MEAN,
+                       var_wt=1):
         # Make a deep copy of the input image so that we can convert to
         # e- and have Poisson statistics apply.
         self.image = image.clone()
@@ -24,6 +25,7 @@ class Estimator(object):
         self.stat_ctrl = stat_ctrl
         self.gain = gain
         self.statistic = statistic
+        self.var_wt = var_wt
         self._compute_stats()
     def _compute_stats(self):
         if self.stat_ctrl is None:
@@ -47,14 +49,14 @@ class Estimator(object):
         pixel_sum = stats.getValue(afwMath.SUM)
         # Infer the number of pixels taking into account masking.
         if pixel_sum == 0:
-            # Handle case where no pixel_sum is zero (and hence the
+            # Handle case where pixel_sum is zero (and hence the
             # mean is zero).
             self.value = 0
             self.error = 0
             return
         npix = pixel_sum/stats.getValue(afwMath.MEAN)
         self.value = stats.getValue(self.statistic)
-        self.error = np.sqrt(pixel_sum)/npix
+        self.error = np.sqrt(pixel_sum/self.var_wt)/npix
     def __add__(self, other):
         result = Estimator()
         if type(other) == Estimator:
