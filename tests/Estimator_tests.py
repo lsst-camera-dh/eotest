@@ -31,19 +31,19 @@ class EstimatorTestCase(unittest.TestCase):
     def test_stats(self):
         arr1 = self.image1.getArray()*self.gain
         value1 = np.mean(arr1)
-        error1 = np.sqrt(sum(arr1.flat)/np.prod(arr1.shape))
+        error1 = np.sqrt(sum(arr1.flat))/np.prod(arr1.shape)
         self.assertAlmostEqual(value1, self.est1.value, places=6)
         self.assertAlmostEqual(error1, self.est1.error, places=6)
 
         arr2 = self.image2.getImage().getArray()*self.gain
         value2 = np.median(arr2)
-        error2 = np.sqrt(sum(arr2.flat)/np.prod(arr2.shape))
+        error2 = np.sqrt(sum(arr2.flat))/np.prod(arr2.shape)
         self.assertAlmostEqual(value2, self.est2.value, places=6)
         self.assertAlmostEqual(error2, self.est2.error, places=6)
     def test_addition(self):
         result = self.est1 + self.est2
         self.assertEquals(result.value, self.est1.value + self.est2.value)
-        self.assertEquals(result.error, np.sqrt(self.est1.error**2 + 
+        self.assertEquals(result.error, np.sqrt(self.est1.error**2 +
                                                 self.est2.error**2))
         foo = sum([self.est1, self.est2])
         self.assertEquals(foo.value, result.value)
@@ -51,7 +51,7 @@ class EstimatorTestCase(unittest.TestCase):
     def test_subtraction(self):
         result = self.est1 - self.est2
         self.assertEquals(result.value, self.est1.value - self.est2.value)
-        self.assertEquals(result.error, np.sqrt(self.est1.error**2 + 
+        self.assertEquals(result.error, np.sqrt(self.est1.error**2 +
                                                 self.est2.error**2))
     def test_rsubtraction(self):
         my_term = 10.
