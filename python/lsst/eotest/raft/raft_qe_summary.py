@@ -65,8 +65,35 @@ def parse_summary_lims(summary_lims):
 
     return qe
 
-def qe_summary_plot(qe, figsize=(6, 8), title='', qe_spec=None):
-    """Function to make a summary plot of QE values in each band for each
+def qe_summary_plot(summary_lims, figsize=(6, 8), title='', qe_spec=None):
+    """
+    Make summary plot of QE values in each band for each sensor in a raft.
+    This function provides backwards compatibility.
+
+    Parameters
+    ----------
+    summary_lims : str
+        summary.lims file containing the raft-level QE results for
+        each sensor.
+    figsize : tuple, optional
+        Figure size in inches.  Default: (6, 8)
+    title : str, optional
+        Overall figure title.  Default: ''
+    qe_spec : dict, optional
+        Dictionary of throughput specification values, keyed by 'ugrizy'.
+        By default the LCA-57 values are used.
+
+    Returns
+    -------
+    matplotlib.figure.Figure : object containing the figure.
+    """
+    qe = parse_summary_lims(summary_lims)
+    return make_qe_summary_plot(qe, figsize=figsize, title=title,
+                                qe_spec=qe_spec)
+
+def make_qe_summary_plot(qe, figsize=(6, 8), title='', qe_spec=None):
+    """
+    Function to make a summary plot of QE values in each band for each
     of sensors in a raft.
 
     Parameters
@@ -82,6 +109,9 @@ def qe_summary_plot(qe, figsize=(6, 8), title='', qe_spec=None):
         Dictionary of throughput specification values, keyed by 'ugrizy'.
         By default the LCA-57 values are used.
 
+    Returns
+    -------
+    matplotlib.figure.Figure : object containing the figure.
     """
     if qe_spec is None:
         # Set spec values to LCA-57 values.
