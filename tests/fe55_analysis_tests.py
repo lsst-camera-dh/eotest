@@ -30,7 +30,7 @@ class Fe55GainFitterTestCase(unittest.TestCase):
             fitter._set_hist_range(dADU, bins, hist_nsig)
             self.assertLess(fitter.xrange[0], mode)
             self.assertLess(mode, fitter.xrange[1])
-            fitter.fit()
+            #fitter.fit()
 
 if __name__ == '__main__':
     unittest.main()
