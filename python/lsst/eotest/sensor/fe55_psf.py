@@ -152,6 +152,7 @@ class PsfGaussFit(object):
         sigmax, sigmay, dn, dn_fp, chiprob = [], [], [], [], []
         chi2s, dofs = [], []
         maxDNs = []
+        xpeak, ypeak = [], []
         p9_data = []
         p9_model = []
         failed_curve_fits = 0
@@ -206,6 +207,8 @@ class PsfGaussFit(object):
                                     sigmay[-1], dn[-1])
                     p9_data.append(p9_data_row)
                     p9_model.append(p9_model_row)
+                    xpeak.append(peak.getIx())
+                    ypeak.append(peak.getIy())
                 except IndexError:
                     [item.pop() for item in (x0, y0, sigmax, sigmay,
                                              dn, dn_fp, chiprob,
@@ -219,8 +222,8 @@ class PsfGaussFit(object):
                 logger.info("Failed scipy.optimize.leastsq calls: %s"
                             % failed_curve_fits)
         self._save_ext_data(amp, x0, y0, sigmax, sigmay, dn, dn_fp, chiprob,
-                            chi2s, dofs, maxDNs, np.array(p9_data),
-                            np.array(p9_model))
+                            chi2s, dofs, maxDNs, xpeak, ypeak,
+                            np.array(p9_data), np.array(p9_model))
         self.amp_set.add(amp)
         self.sigmax.extend(sigmax)
         self.sigmay.extend(sigmay)
@@ -237,7 +240,7 @@ class PsfGaussFit(object):
             my_numGoodFits[amp] = len(indx[0])
         return my_numGoodFits
     def _save_ext_data(self, amp, x0, y0, sigmax, sigmay, dn, dn_fp, chiprob,
-                       chi2s, dofs, maxDNs, p9_data, p9_model):
+                       chi2s, dofs, maxDNs, xpeak, ypeak, p9_data, p9_model):
         """
         Write results from the source detection and Gaussian fitting
         to the FITS extension corresponding to the specified
@@ -265,6 +268,8 @@ class PsfGaussFit(object):
                 table_hdu.data[row]['CHI2'] = chi2s[i]
                 table_hdu.data[row]['DOF'] = dofs[i]
                 table_hdu.data[row]['MAXDN'] = maxDNs[i]
+                table_hdu.data[row]['XPEAK'] = xpeak[i]
+                table_hdu.data[row]['YPEAK'] = ypeak[i]
                 table_hdu.data[row]['P9_DATA'] = p9_data[i]
                 table_hdu.data[row]['P9_MODEL'] = p9_model[i]
             table_hdu.name = extname
@@ -275,15 +280,17 @@ class PsfGaussFit(object):
             #
             colnames = ['AMPLIFIER', 'XPOS', 'YPOS', 'SIGMAX', 'SIGMAY', 'DN',
                         'DN_FP_SUM', 'CHIPROB', 'CHI2', 'DOF', 'MAXDN',
-                        'P9_DATA', 'P9_MODEL']
+                        'XPEAK', 'YPEAK', 'P9_DATA', 'P9_MODEL']
             columns = [np.ones(len(x0))*amp, np.array(x0), np.array(y0),
                        np.array(sigmax), np.array(sigmay),
                        np.array(dn), np.array(dn_fp),
                        np.array(chiprob), np.array(chi2s), np.array(dofs),
-                       np.array(maxDNs), np.array(p9_data), np.array(p9_model)]
-            formats = ['I'] + ['E']*(len(columns)-3) + ['9E']*2
+                       np.array(maxDNs), np.array(xpeak), np.array(ypeak),
+                       np.array(p9_data), np.array(p9_model)]
+            formats = ['I'] + ['E']*(len(columns)-5) + ['I']*2 + ['9E']*2
             units = ['None', 'pixel', 'pixel', 'pixel', 'pixel',
-                     'ADU', 'ADU', 'None', 'None', 'None', 'ADU', 'ADU', 'ADU']
+                     'ADU', 'ADU', 'None', 'None', 'None', 'ADU',
+                     'pixel', 'pixel', 'ADU', 'ADU']
             fits_cols = lambda coldata: [fits.Column(name=colname,
                                                      format=format,
                                                      unit=unit,
