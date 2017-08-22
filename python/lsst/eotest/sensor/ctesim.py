@@ -33,6 +33,10 @@ def ctesim(infile, pcti=0, scti=0, verbose=False):
     input = fits.open(infile)
     amps = [i for i in range(1, len(input))
             if input[i].name.upper().startswith('SEGMENT')]
+    if not isinstance(pcti, dict):
+        pcti = {amp: pcti for amp in amps}
+    if not isinstance(scti, dict):
+        scti = {amp: scti for amp in amps}
     segments = {}
     for amp in amps:
         if verbose:
@@ -50,14 +54,14 @@ def ctesim(infile, pcti=0, scti=0, verbose=False):
 
         outimage = afwImage.ImageF(image, True)
         outarr = outimage.getArray()
-        if pcti != 0:
-            pcte_matrix = cte_matrix(imarr.shape[0], pcti)
-        for col in range(0, imarr.shape[1]):
-            outarr[:, col] = np.dot(pcte_matrix, imarr[:, col])
-        if scti != 0:
-            scte_matrix = cte_matrix(imarr.shape[1], scti)
-        for row in range(0, imarr.shape[0]):
-            outarr[row, :] = np.dot(scte_matrix, outarr[row, :])
+        if pcti[amp] != 0:
+            pcte_matrix = cte_matrix(imarr.shape[0], pcti[amp])
+            for col in range(0, imarr.shape[1]):
+                outarr[:, col] = np.dot(pcte_matrix, imarr[:, col])
+        if scti[amp] != 0:
+            scte_matrix = cte_matrix(imarr.shape[1], scti[amp])
+            for row in range(0, imarr.shape[0]):
+                outarr[row, :] = np.dot(scte_matrix, outarr[row, :])
         #
         # Restore readout bias
         #
