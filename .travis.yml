@@ -13,7 +13,7 @@ before_install:
   - echo 'DOCKER_OPTS="-H tcp://127.0.0.1:2375 -H unix:///var/run/docker.sock -s devicemapper"' | sudo tee /etc/default/docker > /dev/null
   - sudo service docker restart
   - sleep 5
-  - sudo docker pull lsstsqre/centos
+  - sudo docker pull lsstsqre/centos:7-stack-lsst_distrib-v13_0
 
 install:
   - docker run -ti lsstsqre/centos:7-stack-lsst_distrib-v13_0
