@@ -43,7 +43,7 @@ def superflat(files, bias_frame=None, outfile='superflat.fits', bitpix=-32,
     # Use the first file as a template for the fits output.
     output = fits.open(files[0])
     for amp in imutils.allAmps(files[0]):
-        images = afwImage.vectorImageF()
+        images = []
         for infile in files:
             image = afwImage.ImageF(infile, imutils.dm_hdu(amp))
             if bias_subtract:
@@ -54,7 +54,7 @@ def superflat(files, bias_frame=None, outfile='superflat.fits', bitpix=-32,
                 else:
                     image -= imutils.bias_image(image, overscan,
                                                 statistic=np.median)
-            images.push_back(image)
+            images.append(image)
         median_image = afwMath.statisticsStack(images, afwMath.MEDIAN)
         output[amp].data = median_image.getArray()
         if bitpix is not None:
