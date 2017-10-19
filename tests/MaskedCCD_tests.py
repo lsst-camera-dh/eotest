@@ -26,7 +26,7 @@ class MaskedCCDTestCase(unittest.TestCase):
     xmin, xmax = 200, 250
     ymin, ymax = 1000, 1050
     mask_image = 'mask_image.fits'
-    mpd = dict(afwImage.MaskU().getMaskPlaneDict().items())
+    mpd = dict(afwImage.Mask().getMaskPlaneDict().items())
     @classmethod
     def setUpClass(cls):
         ccd = sim_tools.CCD(exptime=cls.exptime, gain=cls.gain)

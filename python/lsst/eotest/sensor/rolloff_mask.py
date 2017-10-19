@@ -121,7 +121,7 @@ def rolloff_mask(infile, outfile,
     #
     # Use BrightPixels code to detect the mask regions and write the mask file.
     #
-    mask = afwImage.MaskU(image.getDimensions())
+    mask = afwImage.Mask(image.getDimensions())
     mask.addMaskPlane(mask_plane)
     maskedCCD = MaskedCCD(tmp_mask_image)
     pixels, columns = {}, {}
