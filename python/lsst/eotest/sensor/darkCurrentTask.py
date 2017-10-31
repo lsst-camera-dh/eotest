@@ -37,7 +37,7 @@ class DarkCurrentTask(pipeBase.Task):
                                    setpoint=self.config.temp_set_point,
                                    warn_only=True)
         median_images = {}
-        md = imutils.Metadata(dark_files[0], 1)
+        md = imutils.Metadata(dark_files[0])
         for amp in imutils.allAmps(dark_files[0]):
             median_images[amp] = imutils.fits_median(dark_files,
                                                      imutils.dm_hdu(amp))

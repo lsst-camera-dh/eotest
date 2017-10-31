@@ -6,6 +6,7 @@ photon transfer curve and compute and write out the full well.
 """
 import os
 import glob
+import operator
 import numpy as np
 import scipy.optimize
 import astropy.io.fits as fits
@@ -27,7 +28,7 @@ def find_flat2(flat1):
     except IndexError:
         return flat1
 
-exptime = lambda x: imutils.Metadata(x, 1).get('EXPTIME')
+exptime = lambda x: imutils.Metadata(x).get('EXPTIME')
 
 def glob_flats(full_path, outfile='ptc_flats.txt'):
     flats = glob.glob(os.path.join(full_path, '*_flat?.fits'))
@@ -87,7 +88,7 @@ def flat_pair_stats(ccd1, ccd2, amp, mask_files=(), bias_frame=None):
         # would be altered in the ratio calculation.
         #
         fratio_im = afwImage.MaskedImageF(image1, True)
-        fratio_im /= image2
+        operator.itruediv(fratio_im, image2)
         fratio = mean(fratio_im)
         image2 *= fratio
         fmean = (mean(image1) + mean(image2))/2.

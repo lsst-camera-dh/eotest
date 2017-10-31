@@ -45,7 +45,7 @@ class DarkPixelsTask(pipeBase.Task):
         superflat(sflat_files, outfile=medfile)
 
         ccd = MaskedCCD(medfile, mask_files=mask_files, bias_frame=bias_frame)
-        md = imutils.Metadata(sflat_files[0], 1)
+        md = imutils.Metadata(sflat_files[0])
         outfile = os.path.join(self.config.output_dir,
                                '%s_dark_pixel_mask.fits' % sensor_id)
         if os.path.isfile(outfile):

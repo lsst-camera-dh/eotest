@@ -70,10 +70,10 @@ class PersistenceTask(pipeBase.Task):
                                    setpoint=self.config.temp_set_point,
                                    warn_only=True)
         # Check that pre-flat dark frames all have the same exposure time
-        md = imutils.Metadata(pre_flat_darks[0], 1)
+        md = imutils.Metadata(pre_flat_darks[0])
         exptime = md.get('EXPTIME')
         for item in pre_flat_darks[1:]:
-            md = imutils.Metadata(item, 1)
+            md = imutils.Metadata(item)
             if exptime != md.get('EXPTIME'):
                 raise RuntimeError("Exposure times of pre-flat darks differ.")
 

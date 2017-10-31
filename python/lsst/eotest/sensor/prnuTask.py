@@ -35,7 +35,7 @@ class PrnuTask(pipeBase.Task):
             self.log.info(line)
         wl_index = {}
         for infile in prnu_files:
-            md = imutils.Metadata(infile, 1)
+            md = imutils.Metadata(infile)
             wl = int(np.round(md.get('MONOWL')))
             wl_index[wl] = infile
         for wl in (350, 450, 500, 620, 750, 870, 1000):
