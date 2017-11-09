@@ -6,6 +6,8 @@ taken as a function of wavelength.
 """
 from __future__ import print_function
 from __future__ import absolute_import
+from builtins import zip
+from builtins import object
 import os
 import sys
 import glob
@@ -38,7 +40,7 @@ class QE_Data(object):
     band_pass['i'] = (691, 818)
     band_pass['z'] = (818, 922)
     band_pass['y'] = (930, 1070)
-    band_wls = np.array([sum(band_pass[b])/2. for b in band_pass.keys()])
+    band_wls = np.array([sum(band_pass[b])/2. for b in list(band_pass.keys())])
 
     def __init__(self, verbose=True, pd_scaling=1e-9, logger=None):
         self.verbose = verbose
@@ -196,7 +198,7 @@ class QE_Data(object):
         for amp in self.qe:
             self.qe_band[amp] = self.compute_band_qe(self.wlarrs[amp],
                                                      self.qe[amp])
-        self.ccd_qe = sum(self.qe.values())/len(self.qe.values())
+        self.ccd_qe = sum(self.qe.values())/len(list(self.qe.values()))
         self.ccd_qe_band = self.compute_band_qe(self.wlarrs[1], self.ccd_qe)
 
     def _index(self, wl, band_pass):
@@ -213,7 +215,7 @@ class QE_Data(object):
         return band_qe
 
     def write_fits_tables(self, outfile, clobber=True):
-        amps = self.qe.keys()
+        amps = list(self.qe.keys())
         colnames = ['WAVELENGTH']
         colnames.extend(['AMP%02i' % i for i in amps])
         colnames.append('DEVICE_MEAN')
@@ -234,20 +236,20 @@ class QE_Data(object):
 
         HDUList = fits.HDUList()
         HDUList.append(fits.PrimaryHDU())
-        HDUList.append(fitsTableFactory(fits_cols(zip(colnames, formats,
-                                                      units, columns))))
+        HDUList.append(fitsTableFactory(fits_cols(list(zip(colnames, formats,
+                                                      units, columns)))))
         HDUList[-1].name = 'QE_CURVES'
 
-        columns = [self.ccd_qe_band.keys()]
-        columns.extend([np.array(self.qe_band[amp].values()) for amp in amps])
-        columns.append(np.array(self.ccd_qe_band.values()))
+        columns = [list(self.ccd_qe_band.keys())]
+        columns.extend([np.array(list(self.qe_band[amp].values())) for amp in amps])
+        columns.append(np.array(list(self.ccd_qe_band.values())))
 
         colnames[0] = 'BAND'
         formats[0] = '2A'
         units[0] = None
 
-        HDUList.append(fitsTableFactory(fits_cols(zip(colnames, formats,
-                                                      units, columns))))
+        HDUList.append(fitsTableFactory(fits_cols(list(zip(colnames, formats,
+                                                      units, columns)))))
         HDUList[-1].name = 'QE_BANDS'
         HDUList[0].header['NAMPS'] = len(amps)
         fitsWriteto(HDUList, outfile, clobber=clobber)
@@ -264,10 +266,10 @@ class QE_Data(object):
                        xrange=(350, 1100))
             plot.xyplot(self.wlarrs[amp][indx], self.qe[amp][indx], oplot=1)
             wl = [sum(self.band_pass[band])/2. for band in self.qe_band[amp]]
-            plot.xyplot(wl, self.qe_band[amp].values(), oplot=1, color='r')
+            plot.xyplot(wl, list(self.qe_band[amp].values()), oplot=1, color='r')
         plot.curve(self.wlarrs[1][indx], self.ccd_qe[indx], oplot=1,
                    color='g')
-        plot.xyplot(wl, self.ccd_qe_band.values(), oplot=1, color='b')
+        plot.xyplot(wl, list(self.ccd_qe_band.values()), oplot=1, color='b')
         if outfile is not None:
             plot.save(outfile)
 

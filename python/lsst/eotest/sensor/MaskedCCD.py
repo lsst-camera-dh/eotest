@@ -7,6 +7,7 @@ afwMath.makeStatistics object.
 """
 from __future__ import print_function
 from __future__ import absolute_import
+from builtins import str
 import astropy.io.fits as fits
 from lsst.eotest.fitsTools import fitsWriteto
 from .AmplifierGeometry import makeAmplifierGeometry
@@ -64,8 +65,8 @@ class MaskedCCD(dict):
                 pass
 
     def mask_plane_dict(self):
-        amp = self.keys()[0]
-        return dict(self[amp].getMask().getMaskPlaneDict().items())
+        amp = list(self.keys())[0]
+        return dict(list(self[amp].getMask().getMaskPlaneDict().items()))
 
     def add_masks(self, mask_file):
         """

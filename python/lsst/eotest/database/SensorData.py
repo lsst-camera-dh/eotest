@@ -4,6 +4,9 @@ Properties may be plotted versus segment id.
 
 @author J. Chiang <jchiang@slac.stanford.edu>
 """
+from builtins import zip
+from builtins import range
+from builtins import object
 import numpy as np
 import pylab
 from image_utils import allAmps, channelIds
@@ -49,8 +52,8 @@ class SensorData(object):
         if title is None:
             title = '%s %s' % (vendor, sensor_id)
         fig.suptitle(title, y=0.95)
-        pylab.plot(range(self.nchan), self[property], 'k.')
-        pylab.xticks(range(self.nchan), self['channelId'])
+        pylab.plot(list(range(self.nchan)), self[property], 'k.')
+        pylab.xticks(list(range(self.nchan)), self['channelId'])
         pylab.xlabel('Segment')
         if ylabel is not None:
             pylab.ylabel(ylabel)

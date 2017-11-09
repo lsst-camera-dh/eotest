@@ -5,6 +5,7 @@
 """
 from __future__ import print_function
 from __future__ import absolute_import
+from builtins import object
 import os
 import glob
 import argparse
@@ -88,7 +89,7 @@ class TaskNamespace(object):
         have_rolloff_mask = False
         for mask_file in my_mask_files:
             hdr = fits.open(mask_file)[0].header
-            if ('MASKTYPE' in hdr.keys() and
+            if ('MASKTYPE' in list(hdr.keys()) and
                     hdr['MASKTYPE'] == 'ROLLOFF_DEFECTS'):
                 have_rolloff_mask = True
         if infile is not None and not have_rolloff_mask:

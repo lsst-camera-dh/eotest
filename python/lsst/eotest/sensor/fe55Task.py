@@ -114,7 +114,7 @@ class Fe55Task(pipeBase.Task):
                                          oscan_fit_order=oscan_fit_order)
                     gains, gain_errors, sigma_modes = \
                         self.fit_gains(fitter, gains, gain_errors, sigma_modes,
-                                       amps=ccd.keys())
+                                       amps=list(ccd.keys()))
             if self.config.output_file is None:
                 psf_results = os.path.join(self.config.output_dir,
                                            '%s_psf_results_nsig%i.fits'

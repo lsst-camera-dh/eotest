@@ -4,6 +4,8 @@ according to section 5.4 of the E/O document (Dec 19, 2012 version).
 
 @author J. Chiang <jchiang@slac.stanford.edu>
 """
+from builtins import zip
+from builtins import range
 import os
 import numpy as np
 from sim_inputs import *
@@ -14,7 +16,7 @@ def generate_Fe55_images(exptimes, nxrays, outdir, sensorid, gain=gain,
                          bias_level=bias_level, sys_noise=sys_noise,
                          dark_current=dark_current):
     nexp = len(exptimes)
-    for i, exptime, nxray in zip(range(nexp), exptimes, nxrays):
+    for i, exptime, nxray in zip(list(range(nexp)), exptimes, nxrays):
         #
         # Bias images
         #

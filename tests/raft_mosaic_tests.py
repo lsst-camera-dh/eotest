@@ -44,7 +44,7 @@ class RaftMosaicTestCase(unittest.TestCase):
         test_files = dict()
         step = 100
         level = step
-        for slot, infile in infiles.items():
+        for slot, infile in list(infiles.items()):
             outfile = '%s_test_image_%05i.fits' % (slot, level)
             hdu_list = fits.open(infile)
             for hdu in hdu_list[1:17]:

@@ -8,6 +8,7 @@ with mean ratios fixed to the Mn Kalpha/Kbeta line energy ratio.
 """
 from __future__ import print_function
 from __future__ import absolute_import
+from builtins import object
 import os
 import numpy as np
 import scipy.stats
@@ -172,7 +173,7 @@ if __name__ == '__main__':
     ccd = MaskedCCD(infile)
 
     print('AMP   gain    noise')
-    for amp in ccd.keys()[:1]:
+    for amp in list(ccd.keys())[:1]:
         xrays = Xrays(ccd, amp)
         gain, noise = xrays.gain(make_plot=make_plot)
         print('%s    %.2f    %.2f' % (imutils.channelIds[amp], gain, noise))

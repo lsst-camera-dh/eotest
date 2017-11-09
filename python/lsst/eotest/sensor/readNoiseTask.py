@@ -6,6 +6,9 @@ noise contribution from the electronics, must be provided.
 @author J. Chiang <jchiang@slac.stanford.edu>
 """
 from __future__ import absolute_import
+from builtins import str
+from builtins import zip
+from builtins import range
 import os
 import numpy as np
 import astropy.io.fits as fits
@@ -76,7 +79,7 @@ class ReadNoiseTask(pipeBase.Task):
         Nsys = NoiseDistributions(amps=all_amps)
         if system_noise_files is None:
             system_noise_files = [None]*len(bias_files)
-        for i, bias, sysnoise in zip(range(len(bias_files)), bias_files,
+        for i, bias, sysnoise in zip(list(range(len(bias_files))), bias_files,
                                      system_noise_files):
             outfile = "%s_read_noise_%03i.fits" % (sensor_id, i)
             outfile = os.path.join(self.config.output_dir, outfile)

@@ -10,11 +10,16 @@ times are saved in the xml reports for TestCases that have multiple
 test methods.
 """
 
+from future import standard_library
+standard_library.install_aliases()
+from builtins import str
+from builtins import range
+from builtins import object
 import os
 import sys
 import time
 from unittest import TestResult, _TextTestResult, TextTestRunner
-from cStringIO import StringIO
+from io import StringIO
 
 _test_timing_info = dict()
 
@@ -25,7 +30,7 @@ class _TestInfo(object):
     """
 
     # Possible test outcomes
-    (SUCCESS, FAILURE, ERROR) = range(3)
+    (SUCCESS, FAILURE, ERROR) = list(range(3))
 
     def __init__(self, test_result, test_method, outcome=SUCCESS, err=None):
         "Create a new instance of _TestInfo."
@@ -168,12 +173,12 @@ class _XMLTestResult(_TextTestResult):
 
         testsuite.setAttribute('time', '%.3f' % \
                                #sum(map(lambda e: e.get_elapsed_time(), tests)))
-                               sum(map(lambda e: _test_timing_info[e.test_method], tests)))
+                               sum([_test_timing_info[e.test_method] for e in tests]))
 
-        failures = filter(lambda e: e.outcome == _TestInfo.FAILURE, tests)
+        failures = [e for e in tests if e.outcome == _TestInfo.FAILURE]
         testsuite.setAttribute('failures', str(len(failures)))
 
-        errors = filter(lambda e: e.outcome == _TestInfo.ERROR, tests)
+        errors = [e for e in tests if e.outcome == _TestInfo.ERROR]
         testsuite.setAttribute('errors', str(len(errors)))
 
         return testsuite
@@ -238,7 +243,7 @@ class _XMLTestResult(_TextTestResult):
                 os.path.exists(test_runner.output):
             os.makedirs(test_runner.output)
 
-        for suite, tests in all_results.items():
+        for suite, tests in list(all_results.items()):
             doc = Document()
 
             # Build the XML file

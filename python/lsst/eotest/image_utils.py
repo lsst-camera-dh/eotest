@@ -5,6 +5,9 @@ trimming, etc..
 """
 from __future__ import print_function
 from __future__ import absolute_import
+from builtins import zip
+from builtins import range
+from builtins import object
 import numpy as np
 import numpy.random as random
 import astropy.io.fits as fits
@@ -36,12 +39,12 @@ class Metadata(object):
 
 
 def allAmps(fits_file=None):
-    all_amps = range(1, 17)
+    all_amps = list(range(1, 17))
     if fits_file is None:
         return all_amps
     try:
         namps = fits.open(fits_file)[0].header['NAMPS']
-        return range(1, namps+1)
+        return list(range(1, namps+1))
     except KeyError:
         return all_amps
 
@@ -128,7 +131,7 @@ def unbias_and_trim(im, overscan, imaging,
 def set_bitpix(hdu, bitpix):
     dtypes = {16: np.int16, -32: np.float32}
     for keyword in 'BSCALE BZERO'.split():
-        if keyword in hdu.header.keys():
+        if keyword in list(hdu.header.keys()):
             del hdu.header[keyword]
     if bitpix > 0:
         my_round = np.round

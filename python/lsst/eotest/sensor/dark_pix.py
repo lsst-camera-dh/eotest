@@ -1,4 +1,6 @@
 from __future__ import print_function
+from builtins import range
+from builtins import object
 import sys
 import traceback
 import numpy as np
@@ -83,7 +85,7 @@ if __name__ == '__main__':
                         type=float, default=80.0)
     parser.add_argument('-a', '--amps',
                         help="amps to be analyzed, separated by a space",
-                        type=int, nargs='+', default=range(1, 17))
+                        type=int, nargs='+', default=list(range(1, 17)))
     parser.add_argument('-v', '--verbose', help="turn verbosity on",
                         action='store_true', default=False)
     args = parser.parse_args()

@@ -5,6 +5,8 @@ structured configuration file in the future.
 @author J. Chiang <jchiang@slac.stanford.edu>
 """
 from __future__ import absolute_import
+from builtins import range
+from builtins import object
 import os
 import numpy as np
 from .PhotodiodeResponse import Interpolator
@@ -118,7 +120,7 @@ def qe_path(x): return os.path.join(_qe_dir, x)
 qe_curve = np.recfromtxt(qe_path('sim/qe_curve.txt')).transpose()
 qe = Interpolator(*qe_curve)
 wavelength_scan = Params(test_type='lambda',
-                         wavelengths=range(320, 1110, 10),
+                         wavelengths=list(range(320, 1110, 10)),
                          exptime=1,
                          ccdtemp=ccdtemp,
                          pd_ratio_file=qe_path('BNL/pd_Cal_mar2013_v1.txt'),

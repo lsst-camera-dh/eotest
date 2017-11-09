@@ -5,6 +5,8 @@ sensor gain from Fe55 data.
 @author J. Chiang <jchiang@slac.stanford.edu>
 """
 from __future__ import print_function
+from builtins import range
+from builtins import object
 import numpy as np
 import lsst.afw.math as afwMath
 import lsst.afw.image as afwImage
@@ -63,7 +65,7 @@ class Fe55Gain(object):
 
     def gain(self, amp, jmargin=None, max_npix=9, buff=1):
         if jmargin is None:
-            jmargins = range(10)
+            jmargins = list(range(10))
         else:
             jmargins = (jmargin,)
         self._generate_stats(amp)
@@ -111,5 +113,5 @@ if __name__ == '__main__':
 
     gains = hdu_gains(test_file, mask_files=(mask_file,))
 
-    for key, value in gains.items():
+    for key, value in list(gains.items()):
         print(key, value)

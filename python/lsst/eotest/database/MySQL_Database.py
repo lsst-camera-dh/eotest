@@ -4,6 +4,8 @@
 @author J. Chiang
 """
 from __future__ import absolute_import
+from builtins import zip
+from builtins import object
 import os
 import MySQLdb
 from .Parfile import Parfile
@@ -51,7 +53,7 @@ def getDbObjects(tablename, dbdata=mysql_db_data):
         cols = [column[0] for column in cursor.description]
         entries = []
         for item in cursor:
-            entries.append(dict(zip(cols, item)))
+            entries.append(dict(list(zip(cols, item))))
         return entries
     return db.apply(sql, cursorFunc=cursorFunc)
 

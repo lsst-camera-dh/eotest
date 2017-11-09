@@ -6,6 +6,8 @@ noise contribution from the electronics, must be provided.
 @author J. Chiang <jchiang@slac.stanford.edu>
 """
 from __future__ import print_function
+from builtins import zip
+from builtins import range
 import os
 import sys
 import traceback
@@ -100,7 +102,7 @@ if __name__ == '__main__':
 
     outfiles = []
     Nread_dists = dict([(amp, []) for amp in imUtils.allAmps])
-    for i, bias in zip(range(len(bias_files)), bias_files):
+    for i, bias in zip(list(range(len(bias_files))), bias_files):
         outfile = "%s_read_noise_%03i.fits" % (sensor_id.replace('-', '_'), i)
         outfile = os.path.join(outdir, outfile)
         outfiles.append(outfile)

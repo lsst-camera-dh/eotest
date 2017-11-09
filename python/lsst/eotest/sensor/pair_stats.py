@@ -7,6 +7,7 @@ handling of masks when computing the various statistical quantities.
 """
 from __future__ import print_function
 from __future__ import absolute_import
+from builtins import object
 import os
 import numpy as np
 import lsst.afw.image as afwImage

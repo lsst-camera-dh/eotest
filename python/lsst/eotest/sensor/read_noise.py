@@ -6,6 +6,8 @@ segment.
 """
 from __future__ import print_function
 from __future__ import absolute_import
+from builtins import zip
+from builtins import range
 import numpy as np
 
 import lsst.afw.image as afwImage
@@ -15,7 +17,7 @@ import lsst.eotest.image_utils as imutils
 
 
 class NoiseDistributions(dict):
-    def __init__(self, amps=range(1, 17)):
+    def __init__(self, amps=list(range(1, 17))):
         super(NoiseDistributions, self).__init__()
         for amp in amps:
             self[amp] = np.array((), dtype=np.float)
@@ -44,7 +46,7 @@ def noise_dists(imfile, gains, sampler, mask_files=()):
         return dict([(amp, np.zeros(len(sampler.xarr), dtype=np.float))
                      for amp in imutils.allAmps()])
     ccd = MaskedCCD(imfile, mask_files=mask_files)
-    my_noise_dists = NoiseDistributions(amps=ccd.keys())
+    my_noise_dists = NoiseDistributions(amps=list(ccd.keys()))
     for amp in ccd:
         my_noise_dists[amp] = noise_samples(ccd[amp], gains[amp], sampler,
                                             ccd.stat_ctrl)

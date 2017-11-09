@@ -3,6 +3,9 @@
 threshold = mean + nsig*sigma
 """
 from __future__ import print_function
+from builtins import zip
+from builtins import range
+from builtins import object
 import argparse
 import numpy as np
 import lsst.afw.image as afwImage
@@ -63,7 +66,7 @@ class BrightPix(object):
                 if pixels[1][i] not in columns[0]]
 
         pixels = (pixels[0][indx], pixels[1][indx])
-        tup = zip(pixels[1], pixels[0])
+        tup = list(zip(pixels[1], pixels[0]))
         sorted_tup = sorted(tup)
         return len(sorted_tup), sorted_tup, columns
 
@@ -116,7 +119,7 @@ if __name__ == '__main__':
                         help="image file to be used for analysis", type=str)
     parser.add_argument('-a', '--amps',
                         help="amps to be analyzed, separated by a space",
-                        type=int, nargs='+', default=range(1, 17))
+                        type=int, nargs='+', default=list(range(1, 17)))
     parser.add_argument('-t', '--test', help="run test only",
                         action='store_true', default=False)
     parser.add_argument('-v', '--verbose', help="turn verbosity on",

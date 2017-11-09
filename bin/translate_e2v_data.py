@@ -3,6 +3,7 @@ Script to translate vendor data from e2v to operationally compliant
 FITS files for analysis with eotest.
 """
 from __future__ import print_function
+from builtins import range
 import os
 import glob
 import subprocess

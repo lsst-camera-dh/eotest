@@ -1,5 +1,8 @@
 from __future__ import print_function
 from __future__ import absolute_import
+from builtins import zip
+from builtins import range
+from builtins import object
 import numpy as np
 import lsst.afw.math as afwMath
 import lsst.pex.exceptions as pexExcept
@@ -118,7 +121,7 @@ image
     def _plot_stats(self, icol, C2, C3, oplot):
         plot.pylab.ion()
         if oplot == 0:
-            rows = range(self.edge_rolloff+1, self.edge_rolloff + len(C2) + 1)
+            rows = list(range(self.edge_rolloff+1, self.edge_rolloff + len(C2) + 1))
             win0 = plot.curve(rows, C2, xname='row', yname='C2')
             win0.set_title('Column %i' % icol)
             plot.hline(-self.C2_thresh)

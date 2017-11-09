@@ -1,5 +1,7 @@
 #QE Calibration
 
+from builtins import str
+from builtins import range
 import numpy as np
 import pylab as p
 import matplotlib as mpl
@@ -11,7 +13,7 @@ import glob
 ########User Editable Parameters
 
 #which amps to measure
-amps = range(1, 16)
+amps = list(range(1, 16))
 
 #list of gain measured for each amp, from Fe55 measurement (just a placeholder here)
 gain = np.ones(16)*5.2

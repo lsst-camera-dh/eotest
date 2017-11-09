@@ -5,6 +5,8 @@
 """
 from __future__ import print_function
 from __future__ import absolute_import
+from builtins import range
+from builtins import object
 import os
 import time
 import numpy as np
@@ -29,9 +31,9 @@ def get_stats(image, stat_ctrl):
 def aggressor(ccd):
     """Guess the aggressor amp based on the maximum pixel value."""
     def max_pix(amp): return max(ccd[amp].getImage().getArray().flat)
-    candidate = ccd.keys()[0]
+    candidate = list(ccd.keys())[0]
     max_pix_val = max_pix(candidate)
-    for amp in ccd.keys()[1:]:
+    for amp in list(ccd.keys())[1:]:
         val = max_pix(amp)
         if val > max_pix_val:
             candidate = amp
@@ -259,8 +261,8 @@ class CrosstalkMatrix(object):
                              aspect='auto', cmap=cmap)
         pylab.xlabel('victim')
         pylab.ylabel('aggressor')
-        axes.set_xticks(range(self.namps))
-        axes.set_yticks(range(self.namps))
+        axes.set_xticks(list(range(self.namps)))
+        axes.set_yticks(list(range(self.namps)))
         axes.set_xticklabels(['%i' % i for i in range(1, self.namps+1)])
         axes.set_yticklabels(['%i' % i for i in range(1, self.namps+1)])
         if title is not None:
@@ -285,8 +287,8 @@ class CrosstalkMatrix(object):
         foo = axes.imshow(my_matrix, interpolation='nearest', cmap=cmap)
         pylab.xlabel('victim')
         pylab.ylabel('aggressor')
-        axes.set_xticks(range(self.namps))
-        axes.set_yticks(range(self.namps))
+        axes.set_xticks(list(range(self.namps)))
+        axes.set_yticks(list(range(self.namps)))
         axes.set_xticklabels(['%i' % i for i in range(1, self.namps+1)])
         axes.set_yticklabels(['%i' % i for i in range(1, self.namps+1)])
         cbar = fig.colorbar(foo)

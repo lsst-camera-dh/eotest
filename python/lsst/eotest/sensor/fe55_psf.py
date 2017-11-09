@@ -7,6 +7,9 @@ compute the probability of the chi-square fit.
 """
 from __future__ import print_function
 from __future__ import absolute_import
+from builtins import zip
+from builtins import range
+from builtins import object
 import numpy as np
 import warnings
 import astropy.io.fits as fits
@@ -283,10 +286,10 @@ class PsfGaussFit(object):
                                                         array=column)
                                             for colname, format, unit, column
                                             in coldata]
-            self.output.append(fitsTableFactory(fits_cols(zip(colnames,
+            self.output.append(fitsTableFactory(fits_cols(list(zip(colnames,
                                                               formats,
                                                               units,
-                                                              columns))))
+                                                              columns)))))
             self.output[-1].name = extname
 
     def read_fe55_catalog(self, psf_catalog, chiprob_min=0.1):
@@ -346,13 +349,13 @@ if __name__ == '__main__':
     ccd = MaskedCCD(infile)
 
     fitter = PsfGaussFit(nsig=nsig, fit_xy=fit_xy)
-    for amp in ccd.keys()[:2]:
+    for amp in list(ccd.keys())[:2]:
         print('processing amp:', amp)
         fitter.process_image(ccd, amp)
     fitter.write_results(outfile)
 
     fitter = PsfGaussFit(nsig=nsig, outfile=outfile, fit_xy=fit_xy)
-    for amp in ccd.keys()[2:]:
+    for amp in list(ccd.keys())[2:]:
         print("processing amp:", amp)
         fitter.process_image(ccd, amp)
     fitter.write_results(outfile)

@@ -4,6 +4,7 @@
 conforming FITS files for analysis by the eotest package.
 """
 from __future__ import print_function
+from builtins import object
 import os
 import sys
 import numpy as np
@@ -87,7 +88,7 @@ class RTS2_FITS_translator(object):
 
     def _update_keywords(self, ext):
         unresolved_keywords = []
-        for key, source in self.luts[ext].items():
+        for key, source in list(self.luts[ext].items()):
             try:
                 value = self.input[0].header[source]
             except KeyError:
@@ -117,7 +118,7 @@ class RTS2_FITS_translator(object):
         self.output[0].header.set('DETSIZE', self.geom.DETSIZE)
         for amp in imutils.allAmps:
             self.output[amp].header.set('EXTNAME', imutils.hdu_dict[amp])
-            for key in self.geom[amp].keys():
+            for key in list(self.geom[amp].keys()):
                 self.output[amp].header.set(key, self.geom[amp][key])
 
     def _set_bnl_mondiode_keyword_value(self):

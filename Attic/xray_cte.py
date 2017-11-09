@@ -7,6 +7,7 @@ fits also give estimates of the system gain.
 @author J. Chiang <jchiang@slac.stanford.edu>
 """
 from __future__ import print_function
+from builtins import object
 import sys
 import glob
 import numpy as np

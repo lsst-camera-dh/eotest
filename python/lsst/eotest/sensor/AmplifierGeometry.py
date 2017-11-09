@@ -3,6 +3,7 @@ Code to encapsulate amplifier geometry as expressed in NOAO image
 section keywords DETSEC, DATASEC, DETSIZE.
 """
 from __future__ import print_function
+from builtins import range
 import astropy.io.fits as fits
 
 __all__ = ['AmplifierGeometry', 'makeAmplifierGeometry', 'amp_loc',
@@ -148,7 +149,7 @@ class AmplifierGeometry(dict):
         return '[%i:%i,%i:%i]' % (x1, x2, y1, y2)
 
     def __eq__(self, other):
-        for key in self.__dict__.keys():
+        for key in list(self.__dict__.keys()):
             if getattr(self, key) != getattr(other, key):
                 return False
         return True

@@ -3,6 +3,9 @@ Find the footprints of Fe55 clusters and do statistics on the pixel
 values.
 """
 from __future__ import absolute_import, print_function, division
+from builtins import zip
+from builtins import range
+from builtins import object
 import pickle
 import numpy as np
 import numpy.lib.recfunctions as nlr

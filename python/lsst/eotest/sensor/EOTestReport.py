@@ -1,5 +1,8 @@
 from __future__ import print_function
 from __future__ import absolute_import
+from builtins import str
+from builtins import range
+from builtins import object
 import os
 import sys
 import subprocess
@@ -414,8 +417,8 @@ specification given the mean signal in the last imaging row.
 \hline
 \\textbf{Job Name} & \\textbf{activityId} \\\\ \hline
 """)
-            values = np.array([int(x) for x in self.job_ids.values()])
-            keys = self.job_ids.keys()
+            values = np.array([int(x) for x in list(self.job_ids.values())])
+            keys = list(self.job_ids.keys())
             index = np.argsort(values)
             print("sorted job id indexes:", index)
             for i in index:
@@ -430,7 +433,7 @@ specification given the mean signal in the last imaging row.
         if self.software_versions is not None:
             self.output.write('\section{Software Versions}\n')
             self.output.write('\\begin{description}\n')
-            for key, value in self.software_versions.items():
+            for key, value in list(self.software_versions.items()):
                 self.output.write('\\item[%s] %s\n' % (key.replace('_', '\_'),
                                                        value.replace('_', '\_')))
             self.output.write('\end{description}\n')
@@ -440,7 +443,7 @@ specification given the mean signal in the last imaging row.
         if self.teststand_config is not None:
             self.output.write('\section{Test Stand Configuration}\n')
             self.output.write('\\begin{description}\n')
-            for key, value in self.teststand_config.items():
+            for key, value in list(self.teststand_config.items()):
                 self.output.write('\\item[%s] %s\n' %
                                   (key.replace('_', '\_'),
                                    str(value).replace('_', '\_')))

@@ -2,6 +2,7 @@
 Characterize CTE using Fe55 cluster asymmetries.
 """
 from __future__ import absolute_import, print_function
+from builtins import str
 import matplotlib.pyplot as plt
 import lsst.pex.config as pexConfig
 import lsst.pipe.base as pipeBase

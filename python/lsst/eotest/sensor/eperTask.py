@@ -3,6 +3,9 @@ from __future__ import absolute_import
 
 # Charge transfer efficiency by EPER, now as a pipe task!
 
+from builtins import str
+from builtins import range
+from builtins import object
 import lsst.pex.config as pexConfig
 import lsst.pipe.base as pipeBase
 
@@ -167,7 +170,7 @@ if __name__ == '__main__':
     parser.add_argument('-d', '--direction',
                         help="specify either parallel ('p') or serial ('s') direction", default='p')
     parser.add_argument('-a', '--amps', help="amps to be analyzed, separated by a space",
-                        type=int, nargs='+', default=range(1, 17))
+                        type=int, nargs='+', default=list(range(1, 17)))
     parser.add_argument('-v', '--verbose', help="turn verbosity on", action='store_true', default=False)
     parser.add_argument('-i', '--cti', help='return CTI (not CTE)',
                         action='store_true', default=False)

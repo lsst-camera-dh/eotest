@@ -4,6 +4,9 @@ conditions.  Darks, flats, Fe55, etc..
 """
 from __future__ import print_function
 from __future__ import absolute_import
+from builtins import zip
+from builtins import range
+from builtins import object
 import os
 from collections import OrderedDict
 import datetime
@@ -147,7 +150,7 @@ class CCD(object):
             output[0].header['CCDNOISE'] = pars.bias_sigma
             output[0].header['RDNOISE'] = pars.read_noise
             output[0].header['DARKCURR'] = pars.dark_current
-        for key, value in self.md.items():
+        for key, value in list(self.md.items()):
             output[0].header[key] = value
         if bitpix > 0:
             my_round = np.round
@@ -320,7 +323,7 @@ def fitsFile(ccd_segments):
     output[0].header["CCDTEMP"] = ccd_segments[0].ccdtemp
     for amp, segment in zip(imutils.allAmps(), ccd_segments):
         output.append(fits.ImageHDU(data=segment.image.getArray()))
-        output[amp].header = headers[headers.keys()[amp]].copy()
+        output[amp].header = headers[list(headers.keys())[amp]].copy()
         output[amp].header['BZERO'] = 0
         output[amp].name = 'Segment%s' % imutils.channelIds[amp]
         output[amp].header['DETSIZE'] = segment.geometry[amp]['DETSIZE']
@@ -330,11 +333,11 @@ def fitsFile(ccd_segments):
     # Add Test Condition and CCD Operating Condition headers with dummy info.
     output.append(fits.ImageHDU())
     for keyword in headers['TEST_COND']:
-        if keyword not in output[-1].header.keys():
+        if keyword not in list(output[-1].header.keys()):
             output[-1].header.set(keyword, headers['TEST_COND'][keyword])
     output.append(fits.ImageHDU())
     for keyword in headers['CCD_COND']:
-        if keyword not in output[-1].header.keys():
+        if keyword not in list(output[-1].header.keys()):
             output[-1].header.set(keyword, headers['CCD_COND'][keyword])
     return output
 

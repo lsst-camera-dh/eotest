@@ -1,11 +1,13 @@
 from __future__ import print_function
+from builtins import str
+from builtins import range
 import lsst.afw.image as afwImage
 import lsst.afw.geom as afwGeom
 import image_utils as iu
 import lsst.afw.math as afwMath
 import glob
 
-amps = range(1, 17)
+amps = list(range(1, 17))
 filepath = "/Volumes/Datadrive/CCDTesting/112-01/qe/qe/*.fits"
 outfilepath = "qe_medians.txt"
 

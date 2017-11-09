@@ -1,4 +1,5 @@
 from __future__ import division
+from builtins import object
 import numpy as np
 import lsst.afw.geom as afwGeom
 import lsst.afw.image as afwImage

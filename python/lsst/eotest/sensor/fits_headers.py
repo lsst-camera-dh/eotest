@@ -101,8 +101,8 @@ def check_keywords(infile, template=template_file, verbose=True):
                 missing_headers.append(extname)
                 continue
         # Check for required keywords.
-        missing_keys[extname] = [keyword for keyword in prototype.keys()
-                                 if keyword not in input_hdu.header.keys()]
+        missing_keys[extname] = [keyword for keyword in list(prototype.keys())
+                                 if keyword not in list(input_hdu.header.keys())]
         if missing_keys[extname]:
             report.append("Checking HDU #%i, '%s'. Missing keywords:"
                           % (i, input_hdu.name))

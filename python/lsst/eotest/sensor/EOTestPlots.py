@@ -3,6 +3,11 @@ Module to manage plots for single sensor EO test reports.
 """
 from __future__ import print_function
 from __future__ import absolute_import
+from builtins import next
+from builtins import zip
+from builtins import str
+from builtins import range
+from builtins import object
 import os
 import sys
 import glob
@@ -337,7 +342,7 @@ class EOTestPlots(object):
                 plot.histogram(sigmay, oplot=1, color='red', xrange=xrange,
                                bins=bins)
                 plot.histogram(sigma, oplot=1, xrange=xrange, bins=bins)
-                pylab.xticks(range(xrange[0], xrange[1]+1))
+                pylab.xticks(list(range(xrange[0], xrange[1]+1)))
                 # Find mode from histogram data
                 mode, median, mean = psf_sigma_statistics(sigma, bins=bins,
                                                           range=xrange)
@@ -797,9 +802,9 @@ class EOTestPlots(object):
         qe_data = self.qe_data
         bands = qe_data[2].data.field('BAND')
         band_wls = np.array([sum(self.band_pass[b])/2. for b in
-                             self.band_pass.keys() if b in bands])
+                             list(self.band_pass.keys()) if b in bands])
         band_wls_errs = np.array([(self.band_pass[b][1]-self.band_pass[b][0])/2.
-                                  for b in self.band_pass.keys() if b in bands])
+                                  for b in list(self.band_pass.keys()) if b in bands])
         wl = qe_data[1].data.field('WAVELENGTH')
         qe = {}
         for amp in imutils.allAmps(self._qe_file):
@@ -939,7 +944,7 @@ class CcdSpecs(OrderedDict):
                         for specid in specids:
                             self[specid].job_id = result['job_id']
                             if specid == 'CCD-027':
-                                for prnu_spec in self.prnu_specs.values():
+                                for prnu_spec in list(self.prnu_specs.values()):
                                     prnu_spec.job_id = result['job_id']
                     except KeyError:
                         pass
@@ -990,7 +995,7 @@ class CcdSpecs(OrderedDict):
     def latex_table(self, hspace=None):
         output = []
         output.append(self.latex_header(hspace=hspace))
-        for name, spec in self.items():
+        for name, spec in list(self.items()):
             output.append(spec.latex_entry())
         output.append(self.latex_footer())
         return '\n'.join(output) + '\n'
@@ -1072,7 +1077,7 @@ class CcdSpecs(OrderedDict):
                     bands[band].append(value)
             except KeyError:
                 pass
-        for band, specnum, minQE in zip('ugrizy', range(21, 27),
+        for band, specnum, minQE in zip('ugrizy', list(range(21, 27)),
                                         (41, 78, 83, 82, 75, 21)):
             try:
                 qe_mean = np.mean(bands[band])
@@ -1097,7 +1102,7 @@ class CcdSpecs(OrderedDict):
                             "%.2f\\%%" % (ratios[wl]*100)
                     self.prnu_specs[wl].ok = (ratios[wl] < 5e-2)
         max_ratio = max(ratios.values())
-        max_wl = ratios.keys()[np.where(ratios.values() == max_ratio)[0][0]]
+        max_wl = list(ratios.keys())[np.where(list(ratios.values()) == max_ratio)[0][0]]
         if max_ratio < 0.01:
             self['CCD-027'].measurement = 'max. variation = \\num{%.1e}\\%% at %i\\,nm' % (
                 max_ratio*100, max_wl)

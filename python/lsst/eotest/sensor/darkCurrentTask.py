@@ -6,6 +6,8 @@ units of e-/sec/pixel.
 """
 from __future__ import print_function
 from __future__ import absolute_import
+from builtins import str
+from builtins import range
 import os
 import numpy as np
 import astropy.io.fits as fits
@@ -87,7 +89,7 @@ class DarkCurrentTask(pipeBase.Task):
         #
         dark_curr_pixels = sorted(dark_curr_pixels)
         darkcurr95 = dark_curr_pixels[int(len(dark_curr_pixels)*0.95)]
-        dark95mean = np.mean(dark95s.values())
+        dark95mean = np.mean(list(dark95s.values()))
         if self.config.verbose:
             #self.log.info("CCD: mean 95 percentile value = %s" % dark95mean)
             self.log.info("CCD-wide 95 percentile value = %s" % darkcurr95)

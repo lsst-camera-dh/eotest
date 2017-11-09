@@ -1,4 +1,5 @@
 from __future__ import print_function
+from builtins import str
 import glob
 import lsst.afw.image as afwImage
 import pair_stats as ps

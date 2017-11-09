@@ -6,6 +6,8 @@ system gain.
 @author J. Chiang <jchiang@slac.stanford.edu>
 """
 from __future__ import absolute_import
+from builtins import range
+from builtins import object
 import numpy as np
 import scipy.stats
 import scipy.optimize

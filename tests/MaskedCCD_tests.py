@@ -3,6 +3,8 @@
 
 @author J. Chiang <jchiang@slac.stanford.edu>
 """
+from builtins import range
+from builtins import object
 import os
 import unittest
 import numpy as np
@@ -29,7 +31,7 @@ class MaskedCCDTestCase(unittest.TestCase):
     xmin, xmax = 200, 250
     ymin, ymax = 1000, 1050
     mask_image = 'mask_image.fits'
-    mpd = dict(afwImage.Mask().getMaskPlaneDict().items())
+    mpd = dict(list(afwImage.Mask().getMaskPlaneDict().items()))
 
     @classmethod
     def setUpClass(cls):
@@ -39,7 +41,7 @@ class MaskedCCDTestCase(unittest.TestCase):
             imarr[cls.ymin:cls.ymax, cls.xmin:cls.xmax] += cls.signal
         ccd.writeto(cls.mask_image)
         cls.mask_files = []
-        for mask_plane, bit in cls.mpd.items():
+        for mask_plane, bit in list(cls.mpd.items()):
             mask_file = 'mask_file_%s.fits' % mask_plane
             cls.mask_files.append(mask_file)
             masked_ccd = MaskedCCD(cls.mask_image)
@@ -67,7 +69,7 @@ class MaskedCCDTestCase(unittest.TestCase):
         ccd.add_masks(self.summed_mask_file)
         total_signal = (self.signal*(self.ymax - self.ymin)
                         * (self.xmax - self.xmin))
-        ny, nx = ccd[ccd.keys()[0]].getImage().getArray().shape
+        ny, nx = ccd[list(ccd.keys())[0]].getImage().getArray().shape
         for amp in ccd:
             self.assertEqual(sum(ccd[amp].getImage().getArray().flat),
                              total_signal)
@@ -84,7 +86,7 @@ class MaskedCCDTestCase(unittest.TestCase):
 
     def test_setMask(self):
         ccd = MaskedCCD(self.mask_image)
-        for mp, bit in self.mpd.items():
+        for mp, bit in list(self.mpd.items()):
             sctrl = ccd.setMask(mask_name=mp, clear=True)
             self.assertEqual(sctrl.getAndMask(), 2**bit)
 

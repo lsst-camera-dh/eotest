@@ -4,6 +4,7 @@
 @author J. Chiang <jchiang@slac.stanford.edu>
 """
 from __future__ import absolute_import
+from builtins import zip
 import os
 import numpy as np
 import astropy.io.fits as fits
@@ -29,7 +30,7 @@ class Traps(dict):
                  edge_rolloff=10, amps=None):
         super(Traps, self).__init__()
         if amps is None:
-            amps = ccd.keys()
+            amps = list(ccd.keys())
         for amp in amps:
             self[amp] = []
             finder = TrapFinder(ccd, amp, C2_thresh=C2_thresh,

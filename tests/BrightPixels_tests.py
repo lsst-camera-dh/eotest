@@ -27,7 +27,7 @@ class BrightPixelsTestCase(unittest.TestCase):
         self.ccd.add_bias(self.bias_level, self.bias_sigma)
         self.ccd.add_dark_current(level=self.dark_curr)
         self.nsig = ((self.emin*self.exptime/self.gain)
-                     / self.ccd.segments[self.ccd.segments.keys()[0]].sigma())
+                     / self.ccd.segments[list(self.ccd.segments.keys())[0]].sigma())
         self.npix = 100
         self.pixels = self.ccd.generate_bright_pix(self.npix)
         self.ccd.add_bright_pix(self.pixels, nsig=self.nsig)
@@ -66,7 +66,7 @@ class BrightColumnsTestCase(unittest.TestCase):
         self.ccd.add_bias(self.bias_level, self.bias_sigma)
         self.ccd.add_dark_current(level=self.dark_curr)
         self.nsig = ((self.emin*self.exptime/self.gain)
-                     / self.ccd.segments[self.ccd.segments.keys()[0]].sigma())
+                     / self.ccd.segments[list(self.ccd.segments.keys())[0]].sigma())
         self.ncols = 10
         self.columns = self.ccd.generate_bright_cols(self.ncols)
         self.ccd.add_bright_cols(self.columns, nsig=self.nsig)

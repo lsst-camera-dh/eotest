@@ -4,6 +4,7 @@
 @author J. Chiang <jchiang@slac.stanford.edu>
 """
 from __future__ import print_function
+from builtins import zip
 import os
 import sys
 import numpy as np

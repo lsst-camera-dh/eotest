@@ -1,6 +1,7 @@
 """
 Code to make a summary of QE performance at the raft-level.
 """
+from builtins import range
 from collections import OrderedDict
 import json
 import itertools
@@ -33,7 +34,7 @@ def qe_summary_plot(summary_lims, figsize=(6, 8), title='', qe_spec=None):
 
     qe_results = json.load(open(summary_lims))
 
-    slots = ['S%i%i' % pair for pair in itertools.product(range(3), range(3))]
+    slots = ['S%i%i' % pair for pair in itertools.product(list(range(3)), list(range(3)))]
 
     qe = OrderedDict()
     for band in 'ugrizy':
@@ -53,11 +54,11 @@ def qe_summary_plot(summary_lims, figsize=(6, 8), title='', qe_spec=None):
     frame_axes.get_yaxis().set_ticks([])
 
     bounds = -1, 9, 0, 100
-    xtick_values = range(len(slots))
+    xtick_values = list(range(len(slots)))
     for i, qe_vals in enumerate(qe.items()):
         band = qe_vals[0]
         fig.add_subplot(6, 1, i+1)
-        plt.errorbar(xtick_values, qe_vals[1].values(), fmt='.')
+        plt.errorbar(xtick_values, list(qe_vals[1].values()), fmt='.')
         plt.xticks(xtick_values, len(slots)*[''])
         plt.axis(bounds)
         plt.ylabel('%s QE' % band)

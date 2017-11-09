@@ -4,6 +4,8 @@ in units of e- per second per pixel.
 """
 from __future__ import print_function
 from __future__ import absolute_import
+from builtins import range
+from builtins import object
 import os
 import numpy as np
 import astropy.io.fits as fits

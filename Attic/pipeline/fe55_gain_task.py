@@ -60,7 +60,7 @@ else:
 output = pyfits.HDUList()
 output.append(pyfits.PrimaryHDU())
 
-gain_median = imutils.median(seg_gains.values())
+gain_median = imutils.median(list(seg_gains.values()))
 sensor.add_ccd_result('gainMedian', gain_median)
 print("Median gain among segments:", gain_median)
 print("Segment    gain")

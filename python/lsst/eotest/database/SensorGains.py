@@ -6,6 +6,7 @@ from user input or by querying the Sensor Test database.
 """
 from __future__ import print_function
 from __future__ import absolute_import
+from builtins import zip
 import os
 import lsst.eotest.image_utils as imutils
 from .SensorDb import SensorDb

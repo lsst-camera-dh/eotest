@@ -1,3 +1,4 @@
+from builtins import range
 import unittest
 import fractions
 import numpy as np
@@ -14,7 +15,7 @@ class RebinTestCase(unittest.TestCase):
     """Test case for image_utils.rebin function."""
 
     def setUp(self):
-        self.binsizes = range(1, 10)
+        self.binsizes = list(range(1, 10))
         imsize = lcm(*self.binsizes)
         self.input_image = afwImage.ImageF(imsize, imsize)
         self.input_image += 1

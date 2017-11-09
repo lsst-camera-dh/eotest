@@ -3,6 +3,7 @@
 
 @author J. Chiang <jchiang@slac.stanford.edu>
 """
+from builtins import range
 import os
 import unittest
 import numpy.random as ra

@@ -1,6 +1,8 @@
 from __future__ import print_function
 #script to check all FITS headers in a directory
 
+from builtins import str
+from builtins import range
 import re
 import sys
 import traceback
@@ -38,7 +40,7 @@ def update_version(hdr):
     # Check to see if HeaderVersion keyword already exists
     # If so, and version is sufficiently updated, exit
     # Otherwise, update the header version number
-    if 'HDRVER' in hdr.keys():
+    if 'HDRVER' in list(hdr.keys()):
         ver = hdr['HDRVER']
         if ver >= headerVersion:
             print('Skipping file, Header at Version: ', ver)
@@ -155,7 +157,7 @@ def extendHeader(files):
             continue
 
         # Assuming this is an env var
-        if 'CCD_MANU' not in hdr.keys():
+        if 'CCD_MANU' not in list(hdr.keys()):
             try:
                 vendor = os.environ['CCD_MANU']
                 hdr['CCD_MANU'] = vendor
@@ -165,19 +167,19 @@ def extendHeader(files):
         try:
             sensor_id, imgType, testType, seqNum = get_id_and_type(filename)
 
-            if 'LSST_NUM' not in hdr.keys():
+            if 'LSST_NUM' not in list(hdr.keys()):
                 hdr['LSST_NUM'] = sensor_id
                 print("setting LSST_NUM ", sensor_id)
 
-            if 'IMGTYPE' not in hdr.keys():
+            if 'IMGTYPE' not in list(hdr.keys()):
                 hdr['IMGTYPE'] = imgType
                 print("setting IMGTYPE: ", imgType)
 
-            if 'TESTTYPE' not in hdr.keys():
+            if 'TESTTYPE' not in list(hdr.keys()):
                 hdr['TESTTYPE'] = testType
                 print("setting TESTTYPE: ", testType)
 
-            if 'SEQNUM' not in hdr.keys():
+            if 'SEQNUM' not in list(hdr.keys()):
                 hdr['SEQNUM'] = seqNum
                 print("setting SEQNUM: ", seqNum)
         except:
@@ -207,10 +209,10 @@ def fixHeader(files):
             update_version(hdr)
 
             #truncate keithley idn because HIERARCH isn't compatible with CONTINUE
-            if 'K_PHOT.IDN' in hdr.keys():
+            if 'K_PHOT.IDN' in list(hdr.keys()):
                 idn1 = hdr['K_PHOT.IDN']
                 hdr['K_PHOT.IDN'] = idn1[0:50]
-            if 'K_BIAS.IDN' in hdr.keys():
+            if 'K_BIAS.IDN' in list(hdr.keys()):
                 idn1 = hdr['K_BIAS.IDN']
                 hdr['K_BIAS.IDN'] = idn1[0:50]
 
@@ -218,11 +220,11 @@ def fixHeader(files):
             newhdr = hdr.copy()
             newhdr.clear()
             #print hdr
-            newkeys = hdr.keys()
+            newkeys = list(hdr.keys())
             #Generate new keywords
-            for i in range(len(hdr.keys())):
+            for i in range(len(list(hdr.keys()))):
                 #if keyword contains ., replace it with _
-                if '.' in hdr.keys()[i]:
+                if '.' in list(hdr.keys())[i]:
                     newkwddot = newkeys[i].replace('.', '_')
                     #print newkwddot
                 else:
@@ -236,16 +238,16 @@ def fixHeader(files):
                 newkeys[i] = newkwd
                 #print newkeys[i]
                 # write new keywords to new header
-                if len(str(hdr.values()[i])) < 80:
+                if len(str(list(hdr.values())[i])) < 80:
                     warnings.resetwarnings()
                     warnings.filterwarnings('ignore', category=UserWarning, append=True)
-                    newhdr.append((newkeys[i], hdr.values()[i], hdr.comments[i]))
+                    newhdr.append((newkeys[i], list(hdr.values())[i], hdr.comments[i]))
                     warnings.resetwarnings()
                     warnings.filterwarnings('always', category=UserWarning, append=True)
                 else:
                     warnings.resetwarnings()
                     warnings.filterwarnings('ignore', category=UserWarning, append=True)
-                    newhdr.append((newkeys[i], str(hdr.values()[i])[0:79], hdr.comments[i]))
+                    newhdr.append((newkeys[i], str(list(hdr.values())[i])[0:79], hdr.comments[i]))
                     warnings.resetwarnings()
                     warnings.filterwarnings('always', category=UserWarning, append=True)
         except:

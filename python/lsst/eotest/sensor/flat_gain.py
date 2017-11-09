@@ -5,6 +5,8 @@ mean/variance thing.
 """
 from __future__ import print_function
 from __future__ import absolute_import
+from builtins import zip
+from builtins import range
 import numpy as np
 import numpy.random as random
 import lsst.eotest.image_utils as imutils

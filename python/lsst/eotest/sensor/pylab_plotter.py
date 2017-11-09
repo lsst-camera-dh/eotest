@@ -3,6 +3,8 @@
 
 @author J. Chiang <jchiang@slac.stanford.edu>
 """
+from builtins import zip
+from builtins import object
 import sys
 import numpy as np
 import pylab
@@ -232,7 +234,7 @@ def clear(win_id=None):
     if win_id is not None:
         ids = (win_id,)
     else:
-        ids = _windows.keys()
+        ids = list(_windows.keys())
     for id in ids:
         Window(id)
         pylab.clf()

@@ -1,4 +1,6 @@
 from __future__ import print_function
+from builtins import str
+from builtins import range
 import argparse
 import glob
 import lsst.afw.image as afwImage
@@ -105,7 +107,7 @@ if __name__ == '__main__':
                         help="y0 pixel position for region of interest; default 900")
     parser.add_argument('-s', '--size', type=int, default=100, help="box size in pixels; default 100")
     parser.add_argument('-a', '--amps', help="amps to be analyzed, separated by a space",
-                        type=int, nargs='+', default=range(1, 17))
+                        type=int, nargs='+', default=list(range(1, 17)))
     parser.add_argument('-g', '--gain', help="system gain", type=float, default=5)
     args = parser.parse_args()
 
