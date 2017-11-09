@@ -13,7 +13,6 @@ import sys
 import glob
 import copy
 from collections import OrderedDict
-from sets import Set
 import json
 import numpy as np
 import astropy.io.fits as fits
@@ -1086,7 +1085,7 @@ class CcdSpecs(OrderedDict):
             except KeyError:
                 self['CCD-0%i' % specnum].measurement = 'No data'
         prnu_results = self.plotter.prnu_results
-        target_wls = Set(EOTestPlots.prnu_wls)
+        target_wls = set(EOTestPlots.prnu_wls)
         ratios = {}
         for wl, stdev, mean in zip(prnu_results['WAVELENGTH'],
                                    prnu_results['STDEV'], prnu_results['MEAN']):
