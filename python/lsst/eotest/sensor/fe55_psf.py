@@ -5,6 +5,8 @@ compute the probability of the chi-square fit.
 
 @author J. Chiang <jchiang@slac.stanford.edu>
 """
+from __future__ import print_function
+from __future__ import absolute_import
 import numpy as np
 import warnings
 import astropy.io.fits as fits
@@ -133,9 +135,9 @@ class PsfGaussFit(object):
         try:
             image = ccd.bias_subtracted_image(amp, fit_order=oscan_fit_order)
         except MaskedCCDBiasImageException:
-            print "DM stack error encountered when generating bias image "
-            print "from inferred overscan region."
-            print "Skipping bias subtraction."
+            print("DM stack error encountered when generating bias image ")
+            print("from inferred overscan region.")
+            print("Skipping bias subtraction.")
             image = ccd[amp]
 
         image -= self._bg_image(ccd, amp, *bg_reg)
@@ -330,7 +332,7 @@ class PsfGaussFit(object):
 
 if __name__ == '__main__':
     import os
-    import pylab_plotter as plot
+    from . import pylab_plotter as plot
     plot.pylab.ion()
 
     infile = os.path.join(os.environ['EOTESTDIR'],
@@ -345,13 +347,13 @@ if __name__ == '__main__':
 
     fitter = PsfGaussFit(nsig=nsig, fit_xy=fit_xy)
     for amp in ccd.keys()[:2]:
-        print 'processing amp:', amp
+        print('processing amp:', amp)
         fitter.process_image(ccd, amp)
     fitter.write_results(outfile)
 
     fitter = PsfGaussFit(nsig=nsig, outfile=outfile, fit_xy=fit_xy)
     for amp in ccd.keys()[2:]:
-        print "processing amp:", amp
+        print("processing amp:", amp)
         fitter.process_image(ccd, amp)
     fitter.write_results(outfile)
 

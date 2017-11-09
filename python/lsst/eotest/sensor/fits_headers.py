@@ -3,13 +3,15 @@
 
 @author J. Chiang <jchiang@slac.stanford.edu>
 """
+from __future__ import print_function
+from __future__ import absolute_import
 import os
 import sys
 import numpy as np
 import astropy.io.fits as fits
 from collections import OrderedDict
 import lsst.eotest.image_utils as imutils
-from AmplifierGeometry import parse_geom_kwd
+from .AmplifierGeometry import parse_geom_kwd
 
 _module_path = os.environ['EOTEST_DIR']
 template_file = os.path.join(_module_path, 'policy', 'fits_header_template.txt')
@@ -113,9 +115,9 @@ def check_keywords(infile, template=template_file, verbose=True):
     if verbose:
         if report:
             for line in report:
-                print line
+                print(line)
         else:
-            print "No missing keywords or extensions"
+            print("No missing keywords or extensions")
     return missing_keys
 
 
@@ -160,5 +162,5 @@ def check_noao_keywords(infile, verbose=True):
                               input[extnum].header['DATASEC']))
     if verbose and defects:
         for item in defects:
-            print item
+            print(item)
     return defects

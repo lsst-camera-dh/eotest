@@ -5,6 +5,7 @@ noise contribution from the electronics, must be provided.
 
 @author J. Chiang <jchiang@slac.stanford.edu>
 """
+from __future__ import print_function
 import os
 import sys
 import traceback
@@ -71,7 +72,7 @@ if __name__ == '__main__':
             outdir = os.environ['OUTPUTDIR']
             pipeline_task = True
         except KeyError:
-            print "usage: python read_noise_task.py <bias file pattern> <sysnoise file pattern> <sensor id> <output dir> [<gain>=5.5]"
+            print("usage: python read_noise_task.py <bias file pattern> <sysnoise file pattern> <sensor id> <output dir> [<gain>=5.5]")
             sys.exit(1)
 
     if pipeline_task:
@@ -85,9 +86,9 @@ if __name__ == '__main__':
             for amp in imUtils.allAmps:
                 g.append(hdr["GAIN%s" % imUtils.channelIds[amp]])
             gains = SensorGains(g)
-            print "Gains: ", gains
+            print("Gains: ", gains)
         except:
-            print 'Failed to access gains from: ', gain_file
+            print('Failed to access gains from: ', gain_file)
             traceback.print_exc(file=sys.stdout)
             sys.exit()
 
@@ -104,7 +105,7 @@ if __name__ == '__main__':
         outfile = os.path.join(outdir, outfile)
         outfiles.append(outfile)
 
-        print "Processing", bias, "->", outfile
+        print("Processing", bias, "->", outfile)
         noise_dists = NoiseDists(gains)
 
         Ntot = noise_dists(bias)
@@ -114,7 +115,7 @@ if __name__ == '__main__':
 
         write_read_noise_dists(outfile, Ntot, Nsys, gains, bias, sysnoise)
 
-    print "Segment    read noise"
+    print("Segment    read noise")
     for amp in imUtils.allAmps:
         var = median(Ntot[amp-1])**2 - median(Nsys[amp-1])**2
         if var >= 0:
@@ -122,4 +123,4 @@ if __name__ == '__main__':
         else:
             Nread = -1
         sensor.add_seg_result(amp, 'readNoise', Nread)
-        print "%s         %.4f" % (imUtils.channelIds[amp], Nread)
+        print("%s         %.4f" % (imUtils.channelIds[amp], Nread))

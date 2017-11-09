@@ -2,6 +2,8 @@
 @brief Tools to create simulated CCD segment exposures under ideal
 conditions.  Darks, flats, Fe55, etc..
 """
+from __future__ import print_function
+from __future__ import absolute_import
 import os
 from collections import OrderedDict
 import datetime
@@ -17,10 +19,10 @@ import lsst.afw.image as afwImage
 import lsst.afw.display.ds9 as ds9
 
 import lsst.eotest.image_utils as imutils
-from fe55_yield import Fe55Yield
-from fits_headers import fits_headers
-from AmplifierGeometry import AmplifierGeometry
-from crosstalk import CrosstalkMatrix
+from .fe55_yield import Fe55Yield
+from .fits_headers import fits_headers
+from .AmplifierGeometry import AmplifierGeometry
+from .crosstalk import CrosstalkMatrix
 
 _sqrt2 = np.sqrt(2.)
 
@@ -33,7 +35,7 @@ def utcnow(dt=0):
 class CrosstalkPattern(object):
     def __init__(self, infile=None):
         if infile is not None:
-            print "Using %s for the crosstalk pattern" % infile
+            print("Using %s for the crosstalk pattern" % infile)
             xtalk_matrix = CrosstalkMatrix(infile)
             self.matrix = xtalk_matrix.matrix
         else:
@@ -350,11 +352,11 @@ def writeFits(ccd_segments, outfile, clobber=True):
 
 def simulateDark(outfile, dark_curr, exptime=1, hdus=16, verbose=True):
     if verbose:
-        print "simulating dark:", outfile
+        print("simulating dark:", outfile)
     segments = []
     for i in range(hdus):
         if verbose:
-            print "HDU", i
+            print("HDU", i)
         seg = SegmentExposure(exptime=exptime)
         seg.add_bias()
         seg.add_dark_current(dark_curr)
@@ -365,11 +367,11 @@ def simulateDark(outfile, dark_curr, exptime=1, hdus=16, verbose=True):
 def simulateFlat(outfile, level, gain, dark_curr=1, exptime=1, hdus=16,
                  verbose=True):
     if verbose:
-        print "simulating flat:", outfile
+        print("simulating flat:", outfile)
     segments = []
     for i in range(hdus):
         if verbose:
-            print "HDU", i
+            print("HDU", i)
         seg = SegmentExposure(exptime=exptime, gain=gain)
         seg.add_bias()
         seg.add_dark_current(dark_curr)

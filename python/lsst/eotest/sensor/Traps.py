@@ -3,6 +3,7 @@
 
 @author J. Chiang <jchiang@slac.stanford.edu>
 """
+from __future__ import absolute_import
 import os
 import numpy as np
 import astropy.io.fits as fits
@@ -12,8 +13,8 @@ import lsst.afw.geom as afwGeom
 import lsst.afw.image as afwImage
 import lsst.afw.math as afwMath
 import lsst.eotest.image_utils as imutils
-from MaskedCCD import MaskedCCD
-from TrapFinder import TrapFinder
+from .MaskedCCD import MaskedCCD
+from .TrapFinder import TrapFinder
 
 
 class Traps(dict):

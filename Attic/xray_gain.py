@@ -4,6 +4,7 @@ sensor gain from Fe55 data.
 
 @author J. Chiang <jchiang@slac.stanford.edu>
 """
+from __future__ import print_function
 import numpy as np
 import lsst.afw.math as afwMath
 import lsst.afw.image as afwImage
@@ -111,4 +112,4 @@ if __name__ == '__main__':
     gains = hdu_gains(test_file, mask_files=(mask_file,))
 
     for key, value in gains.items():
-        print key, value
+        print(key, value)

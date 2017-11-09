@@ -1,7 +1,9 @@
+from __future__ import print_function
+from __future__ import absolute_import
 import numpy as np
 import lsst.afw.math as afwMath
 import lsst.pex.exceptions as pexExcept
-import pylab_plotter as plot
+from . import pylab_plotter as plot
 
 
 def getProcessedImageArray(ccd, amp, nx=10, ny=10):
@@ -16,12 +18,12 @@ def getProcessedImageArray(ccd, amp, nx=10, ny=10):
         bg = afwMath.makeBackground(image, bg_ctrl)
         bg_image = bg.getImageF()
         image -= bg.getImageF()
-    except pexExcept.OutOfRangeError, eObj:
+    except pexExcept.OutOfRangeError as eObj:
         # Stack fails to derive a local background image so rely on
         # bias subtraction. This produces less reliable results on
         # real and simulated data.
-        print "TrapFinder.getProcessedImageArray:", eObj
-        print "Skipping local background subtraction for amp", amp
+        print("TrapFinder.getProcessedImageArray:", eObj)
+        print("Skipping local background subtraction for amp", amp)
     return image.getImage().getArray()
 
 
@@ -127,7 +129,7 @@ image
 
 
 if __name__ == '__main__':
-    from MaskedCCD import MaskedCCD
+    from .MaskedCCD import MaskedCCD
     trap_file = '../20141118-184914/114-03_trap_000.fits'
     ccd = MaskedCCD(trap_file)
     amp = 4
@@ -135,7 +137,7 @@ if __name__ == '__main__':
     finder = TrapFinder(ccd, amp)
     results = finder.find()
     for row in zip(*results):
-        print row
+        print(row)
 
     index = np.where(results[2] == min(results[2]))
     finder.process_column(results[0][index[0][0]]-4, True)

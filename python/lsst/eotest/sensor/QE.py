@@ -4,6 +4,8 @@ taken as a function of wavelength.
 
 @author J. Chiang <jchiang@slac.stanford.edu>
 """
+from __future__ import print_function
+from __future__ import absolute_import
 import os
 import sys
 import glob
@@ -12,9 +14,9 @@ import numpy as np
 import astropy.io.fits as fits
 from lsst.eotest.fitsTools import fitsTableFactory, fitsWriteto
 import lsst.eotest.image_utils as imutils
-import pylab_plotter as plot
-from MaskedCCD import MaskedCCD
-from PhotodiodeResponse import PhotodiodeResponse, CcdIllumination, \
+from . import pylab_plotter as plot
+from .MaskedCCD import MaskedCCD
+from .PhotodiodeResponse import PhotodiodeResponse, CcdIllumination, \
     Interpolator
 
 import lsst.afw.image as afwImage
@@ -83,7 +85,7 @@ class QE_Data(object):
                 if self.logger is not None:
                     self.logger.info('processing %s' % item)
                 else:
-                    print 'processing', item
+                    print('processing', item)
             ccd = MaskedCCD(item, mask_files=mask_files, bias_frame=bias_frame)
             md = imutils.Metadata(item, 1)
             wl = md.get('MONOWL')
@@ -93,7 +95,7 @@ class QE_Data(object):
                 if self.logger is not None:
                     self.logger.info(line + '\n')
                 else:
-                    print line
+                    print(line)
                 continue
             self.wl.append(wl)
             self.exptime.append(exptime)
@@ -101,7 +103,7 @@ class QE_Data(object):
                 raise RuntimeError("Zero exposure time in ", item)
             try:
                 self.pd.append(np.abs(md.get('MONDIODE')*self.pd_scaling))
-            except TypeError, e:
+            except TypeError as e:
                 if self.logger is not None:
                     self.logger.info('%s\n' % e)
                 continue

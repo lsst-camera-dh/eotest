@@ -1,9 +1,11 @@
+from __future__ import print_function
+from __future__ import absolute_import
 import os
 import sys
 import subprocess
 import numpy as np
 import pylab
-from EOTestPlots import op_str
+from .EOTestPlots import op_str
 
 
 def latex_minus_value(value, error=None, format='%.2e'):
@@ -63,7 +65,7 @@ class EOTestReport(object):
         self.job_ids = job_ids
 
     def make_figures(self):
-        print "Creating eotest report figures..."
+        print("Creating eotest report figures...")
         funcs = ('fe55_dists',
                  'ptcs',
                  'gains',
@@ -76,13 +78,13 @@ class EOTestReport(object):
                  'psf_dists',
                  'persistence')
         for func in funcs:
-            print "  %s" % func
+            print("  %s" % func)
             try:
                 exec('self.plots.%s()' % func)
                 pylab.savefig('%s_%s.png' % (self.plots.sensor_id, func))
-            except Exception, eobj:
-                print "Error running %s():" % func
-                print "  ", eobj
+            except Exception as eobj:
+                print("Error running %s():" % func)
+                print("  ", eobj)
         self.plots.flat_fields(self.wl_dir)
 
     def _write_tex_preamble(self):
@@ -415,7 +417,7 @@ specification given the mean signal in the last imaging row.
             values = np.array([int(x) for x in self.job_ids.values()])
             keys = self.job_ids.keys()
             index = np.argsort(values)
-            print "sorted job id indexes:", index
+            print("sorted job id indexes:", index)
             for i in index:
                 job_name = keys[i].replace('_', '\_')
                 self.output.write("%s & %i \\\\ \hline\n"
@@ -468,7 +470,7 @@ specification given the mean signal in the last imaging row.
 
 
 if __name__ == '__main__':
-    from EOTestPlots import EOTestPlots
+    from .EOTestPlots import EOTestPlots
     plots = EOTestPlots('000-00', 'results', output_dir='plots')
     report = EOTestReport(plots, './sensorData/000-00/lambda/debug')
     report.make_figures()

@@ -1,3 +1,4 @@
+from __future__ import print_function
 import sys
 import traceback
 import numpy as np
@@ -25,8 +26,8 @@ class DarkPix(object):
                 tot_dark_per_amp.append(tot)
                 pix_per_amp.append(pixels)
             except:
-                print "Failed dark pixels for hdu ", amp, " ", \
-                    imutils.dm_hdu(amp)
+                print("Failed dark pixels for hdu ", amp, " ", \
+                    imutils.dm_hdu(amp))
                 traceback.print_exc(file=sys.stdout)
                 continue
 
@@ -65,9 +66,9 @@ def run_dark_pix(fitsfile, percent=80, amps=None, verbose=False):
 
     if verbose:
         for ind, amp in enumerate(amps):
-            print "Amp: ", amp, " ", tot_per_amp[ind], " Dark Pixels"
-            print pix_per_amp[ind]
-        print 'Total CCD Dark Pixels: ', tot_dark_pixels
+            print("Amp: ", amp, " ", tot_per_amp[ind], " Dark Pixels")
+            print(pix_per_amp[ind])
+        print('Total CCD Dark Pixels: ', tot_dark_pixels)
 
     return tot_dark_pixels, tot_per_amp, pix_per_amp, col_per_amp
 

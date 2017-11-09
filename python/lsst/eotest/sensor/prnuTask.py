@@ -3,13 +3,14 @@
 
 @author J. Chiang <jchiang@slac.stanford.edu>
 """
+from __future__ import absolute_import
 import os
 from collections import OrderedDict
 import numpy as np
 import astropy.io.fits as fits
 from lsst.eotest.fitsTools import fitsTableFactory, fitsWriteto
 import lsst.eotest.image_utils as imutils
-from prnu import prnu
+from .prnu import prnu
 import lsst.afw.image as afwImage
 import lsst.pex.config as pexConfig
 import lsst.pipe.base as pipeBase
@@ -41,7 +42,7 @@ class PrnuTask(pipeBase.Task):
             wl = int(np.round(md.get('MONOWL')))
             wl_index[wl] = infile
         for wl in (350, 450, 500, 620, 750, 870, 1000):
-            if wl_index.has_key(wl):
+            if wl in wl_index:
                 self.log.info("Processing: wl = %i nm, %s" % (wl, wl_index[wl]))
                 pix_stdev, pix_mean = prnu(wl_index[wl], mask_files, gains,
                                            bias_frame=bias_frame,

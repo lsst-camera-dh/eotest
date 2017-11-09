@@ -49,7 +49,7 @@ class Parfile(dict):
 
     def __setitem__(self, key, value):
         if self.fixed_keys and self.keylist.count(key) == 0:
-            raise KeyError, "Invalid parameter key: " + key
+            raise KeyError("Invalid parameter key: " + key)
         self._addkey(key)
         dict.__setitem__(self, key, value)
 
@@ -66,7 +66,7 @@ class Parfile(dict):
             try:
                 output.write('%s = %s\n' % (key, self[key]))
             except TypeError:
-                output.write('%s = %s\n' % (key, `self[key]`))
+                output.write('%s = %s\n' % (key, repr(self[key])))
         output.close()
 
     def update(self, pars):

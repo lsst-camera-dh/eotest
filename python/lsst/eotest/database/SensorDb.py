@@ -3,8 +3,10 @@
 
 @author J. Chiang <jchiang@slac.stanford.edu>
 """
+from __future__ import print_function
+from __future__ import absolute_import
 import lsst.eotest.image_utils as imutils
-from MySQL_Database import Database
+from .MySQL_Database import Database
 
 
 def _default_callback(curs): return [x[0] for x in curs][0]
@@ -93,7 +95,7 @@ class SensorDb(Database):
             sql = """insert into Segment (channelId, ccdId) values
                      ('%(channelId)s', %(ccdId)i)""" % locals()
             self.apply(sql)
-        print "Adding new sensor entry for", vendor, vendorId
+        print("Adding new sensor entry for", vendor, vendorId)
         return Sensor(ccdId, self)
 
 

@@ -1,3 +1,4 @@
+from __future__ import print_function
 import lsst.afw.image as afwImage
 import lsst.afw.geom as afwGeom
 import image_utils as iu
@@ -50,7 +51,7 @@ for agg in range(1, 17):
 
     #mean of detected counts
     agg_mean = np.mean(detectedcts)
-    print agg_mean
+    print(agg_mean)
 
     #get victim counts and ratio
     ratio = []

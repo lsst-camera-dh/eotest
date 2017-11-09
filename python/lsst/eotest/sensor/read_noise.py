@@ -4,11 +4,13 @@ segment.
 
 @author J. Chiang <jchiang@slac.stanford.edu>
 """
+from __future__ import print_function
+from __future__ import absolute_import
 import numpy as np
 
 import lsst.afw.image as afwImage
 import lsst.afw.math as afwMath
-from MaskedCCD import MaskedCCD
+from .MaskedCCD import MaskedCCD
 import lsst.eotest.image_utils as imutils
 
 
@@ -90,4 +92,4 @@ if __name__ == '__main__':
     #
     for amp in Ntot:
         Nread = np.sqrt(Ntot[amp]*Ntot[amp] - Nsys[amp]*Nsys[amp])
-        print imutils.median(Nread), imutils.stdev(Nread)
+        print(imutils.median(Nread), imutils.stdev(Nread))

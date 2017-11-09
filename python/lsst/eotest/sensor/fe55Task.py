@@ -4,14 +4,16 @@ Gaussian fit parameters to Fe55 data.
 
 @author J. Chiang <jchiang@slac.stanford.edu>
 """
+from __future__ import print_function
+from __future__ import absolute_import
 import os
 import numpy as np
 import astropy.io.fits as fits
 import lsst.eotest.image_utils as imutils
-from fe55_psf import PsfGaussFit, psf_sigma_statistics
-from MaskedCCD import MaskedCCD
-from EOTestResults import EOTestResults
-from Fe55GainFitter import Fe55GainFitter
+from .fe55_psf import PsfGaussFit, psf_sigma_statistics
+from .MaskedCCD import MaskedCCD
+from .EOTestResults import EOTestResults
+from .Fe55GainFitter import Fe55GainFitter
 
 import lsst.pex.config as pexConfig
 import lsst.pipe.base as pipeBase
@@ -98,7 +100,7 @@ class Fe55Task(pipeBase.Task):
                 for amp in ccd:
                     if self.config.verbose:
                         self.log.info("  amp %i" % amp)
-                    if gain_errors.has_key(amp):
+                    if amp in gain_errors:
                         gain_accuracy = np.abs(gain_errors[amp]/gains[amp])
                         if self.config.verbose:
                             message = "  Relative gain accuracy, dgain/gain " \

@@ -3,6 +3,7 @@ import fractions
 import numpy as np
 import lsst.eotest.image_utils as imutils
 import lsst.afw.image as afwImage
+from functools import reduce
 
 
 def lcm(*numbers):

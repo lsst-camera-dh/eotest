@@ -7,12 +7,14 @@ specified in LCA-128.
 
 @author J. Chiang <jchiang@slac.stanford.edu>
 """
+from __future__ import print_function
+from __future__ import absolute_import
 import numpy as np
 import numpy.linalg as linalg
 from image_utils import allAmps, channelIds
 
 try:
-    import pylab_plotter as plot
+    from . import pylab_plotter as plot
 except ImportError:
     plot = None
 
@@ -123,11 +125,11 @@ def full_well(ptcfile, amp, gain=None, fracdevmax=0.10,
 if __name__ == '__main__':
     ptcfile = 'ptc_results.txt'
     amp = 1
-    print full_well(ptcfile, amp, make_plot=True,
-                    outfile_prefix='amp%02i' % amp)
+    print(full_well(ptcfile, amp, make_plot=True,
+                    outfile_prefix='amp%02i' % amp))
     for amp in allAmps():
         try:
             result = '%2i  %i' % (amp, full_well(ptcfile, amp))
-            print result
+            print(result)
         except:
             pass

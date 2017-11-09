@@ -6,6 +6,7 @@ tables.
 
 @author J. Chiang <jchiang@slac.stanford.edu>
 """
+from __future__ import print_function
 import os
 import glob
 import pyfits
@@ -28,7 +29,7 @@ args = parser.parse_args()
 Fe55_files = args.files(args.fe55_files, args.fe55_file_list)
 
 if args.verbose:
-    print "processing files: ", Fe55_files
+    print("processing files: ", Fe55_files)
 
 sensor_id = args.sensor_id
 sensor = args.sensor()
@@ -40,7 +41,7 @@ mask_files = args.mask_files()
 gain_dists = dict([(amp, []) for amp in imutils.allAmps])
 for fe55 in Fe55_files:
     if args.verbose:
-        print "processing", fe55
+        print("processing", fe55)
     gains = hdu_gains(fe55, mask_files=mask_files)
     for amp in imutils.allAmps:
         gain_dists[amp].append(gains[amp])
@@ -61,11 +62,11 @@ output.append(pyfits.PrimaryHDU())
 
 gain_median = imutils.median(seg_gains.values())
 sensor.add_ccd_result('gainMedian', gain_median)
-print "Median gain among segments:", gain_median
-print "Segment    gain"
+print("Median gain among segments:", gain_median)
+print("Segment    gain")
 for amp in imutils.allAmps:
     sensor.add_seg_result(amp, 'gain', seg_gains[amp])
-    print "%s         %.4f" % (imutils.channelIds[amp], seg_gains[amp])
+    print("%s         %.4f" % (imutils.channelIds[amp], seg_gains[amp]))
     output[0].header.update("GAIN%s" % imutils.channelIds[amp],
                             seg_gains[amp])
 output.writeto(outfile, clobber=True)

@@ -5,10 +5,12 @@ the pixel mean, pixel mean, and pixel standard deviation.
 
 @author J. Chiang <jchiang@slac.stanford.edu>
 """
+from __future__ import print_function
+from __future__ import absolute_import
 import os
 import numpy as np
 import lsst.eotest.image_utils as imutils
-from MaskedCCD import MaskedCCD
+from .MaskedCCD import MaskedCCD
 import lsst.afw.image as afwImage
 import lsst.afw.math as afwMath
 
@@ -52,7 +54,7 @@ if __name__ == '__main__':
     pix_stdev, pix_mean = prnu(infile, mask_files, gains)
 
     excess_variance = pix_stdev**2 - pix_mean
-    print "Excess pixel variance/pixel mean:", excess_variance/pix_mean
+    print("Excess pixel variance/pixel mean:", excess_variance/pix_mean)
     if excess_variance > 0:
-        print "Fractional excess noise: %.2f" \
-            % (np.sqrt(excess_variance)/pix_mean*100, )
+        print("Fractional excess noise: %.2f" \
+            % (np.sqrt(excess_variance)/pix_mean*100, ))

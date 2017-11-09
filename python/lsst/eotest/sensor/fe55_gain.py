@@ -6,6 +6,8 @@ with mean ratios fixed to the Mn Kalpha/Kbeta line energy ratio.
 
 @author J. Chiang <jchiang@slac.stanford.edu>
 """
+from __future__ import print_function
+from __future__ import absolute_import
 import os
 import numpy as np
 import scipy.stats
@@ -15,8 +17,8 @@ import lsst.afw.detection as afwDetect
 import lsst.afw.image as afwImage
 import lsst.afw.math as afwMath
 import lsst.eotest.image_utils as imutils
-from MaskedCCD import MaskedCCD
-from fe55_yield import Fe55Yield
+from .MaskedCCD import MaskedCCD
+from .fe55_yield import Fe55Yield
 
 
 def fe55_lines(x, *args):
@@ -158,7 +160,7 @@ def hdu_gains(fe55_file, mask_files=()):
 
 
 if __name__ == '__main__':
-    from MaskedCCD import MaskedCCD
+    from .MaskedCCD import MaskedCCD
 
     data_dir = '/nfs/farm/g/lsst/u1/testData/eotestData/000_00/xray/data'
     infile = os.path.join(data_dir, '000_00_fe55_0600s_000.fits')
@@ -169,8 +171,8 @@ if __name__ == '__main__':
 
     ccd = MaskedCCD(infile)
 
-    print 'AMP   gain    noise'
+    print('AMP   gain    noise')
     for amp in ccd.keys()[:1]:
         xrays = Xrays(ccd, amp)
         gain, noise = xrays.gain(make_plot=make_plot)
-        print '%s    %.2f    %.2f' % (imutils.channelIds[amp], gain, noise)
+        print('%s    %.2f    %.2f' % (imutils.channelIds[amp], gain, noise))

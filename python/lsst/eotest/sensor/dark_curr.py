@@ -2,6 +2,7 @@
 @brief Re-implementation of P. Doherty's IDL function to compute
 dark current.
 """
+from __future__ import print_function
 import numpy as np
 import numpy.random as random
 
@@ -45,4 +46,4 @@ if __name__ == '__main__':
         files.append(outfile)
 
     for hdu in range(hdus):
-        print hdu, dark_curr(files, hdu=hdu+2, count=100)
+        print(hdu, dark_curr(files, hdu=hdu+2, count=100))

@@ -1,3 +1,4 @@
+from __future__ import absolute_import
 #/usr/bin/env python
 
 # Charge transfer efficiency by EPER, now as a pipe task!
@@ -8,14 +9,14 @@ import lsst.pipe.base as pipeBase
 import sys
 import numpy as np
 import argparse
-from MaskedCCD import MaskedCCD
+from .MaskedCCD import MaskedCCD
 import lsst.afw.geom as afwGeom
 import lsst.afw.image as afwImage
 import lsst.afw.math as afwMath
 
 import lsst.eotest.image_utils as imutils
 from lsst.eotest.Estimator import Estimator
-from AmplifierGeometry import makeAmplifierGeometry
+from .AmplifierGeometry import makeAmplifierGeometry
 
 
 class SubImage(object):

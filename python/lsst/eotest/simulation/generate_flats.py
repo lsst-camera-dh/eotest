@@ -1,3 +1,4 @@
+from __future__ import print_function
 import os
 import numpy as np
 from sim_tools import SegmentExposure, fitsFile
@@ -33,5 +34,5 @@ if __name__ == '__main__':
         for j in range(2):  # simulate flats in pairs in order to subtract FPN
             filename = 'flat_%s_%02i_%i.fits' % (sensor_id, i, j)
             outfile = os.path.join(outdir, filename)
-            print "generating", outfile
+            print("generating", outfile)
             simulateFlat(outfile, rate, gain, dark_current, exptime)

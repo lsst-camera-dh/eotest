@@ -4,13 +4,15 @@ linearity) from flat pairs data.
 
 @author J. Chiang <jchiang@slac.stanford.edu>
 """
+from __future__ import print_function
+from __future__ import absolute_import
 import sys
 import numpy as np
 import astropy.io.fits as fits
 import scipy.optimize
 import lsst.eotest.image_utils as imutils
 import pylab
-import pylab_plotter as plot
+from . import pylab_plotter as plot
 
 
 def _fwc_solve(f1_pars, f2_pars, g=0.1):
@@ -237,14 +239,14 @@ if __name__ == '__main__':
     infile = '000-00_det_response.txt'
     detResp = DetectorResponse(infile)
     make_plot = False
-    print "Amp       max. dev.   full well"
+    print("Amp       max. dev.   full well")
     for amp in imutils.allAmps():
         max_dev, fit_pars = detResp.linearity(amp, make_plot=make_plot)
         sys.stdout.write("%2i         %.3f       " % (amp, max_dev))
         try:
             full_well = detResp.full_well(amp, make_plot=make_plot)
-            print "%i" % full_well
+            print("%i" % full_well)
         except RuntimeError:
             full_well = detResp.full_well(amp, frac_offset=0.05,
                                           make_plot=make_plot)
-            print "%i (5%% dev)" % full_well
+            print("%i (5%% dev)" % full_well)

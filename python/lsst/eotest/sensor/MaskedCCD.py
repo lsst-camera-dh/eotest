@@ -5,9 +5,11 @@ afwMath.makeStatistics object.
 
 @author J. Chiang <jchiang@slac.stanford.edu>
 """
+from __future__ import print_function
+from __future__ import absolute_import
 import astropy.io.fits as fits
 from lsst.eotest.fitsTools import fitsWriteto
-from AmplifierGeometry import makeAmplifierGeometry
+from .AmplifierGeometry import makeAmplifierGeometry
 import lsst.daf.base as dafBase
 import lsst.afw.geom as afwGeom
 import lsst.afw.image as afwImage
@@ -185,24 +187,24 @@ if __name__ == '__main__':
 
     ccd = MaskedCCD(image_file)
     for mask_file in mask_files:
-        print "adding masks from", mask_file
+        print("adding masks from", mask_file)
         ccd.add_masks(mask_file)
-        print "mask plane dict:", ccd.mask_plane_dict()
-        print
+        print("mask plane dict:", ccd.mask_plane_dict())
+        print()
 
     amp = imutils.allAmps()[0]
 
     sctrl = ccd.stat_ctrl
-    print sctrl.getAndMask(), compute_stats(ccd[amp], sctrl)
+    print(sctrl.getAndMask(), compute_stats(ccd[amp], sctrl))
 
     sctrl = ccd.setMask('BAD')
-    print sctrl.getAndMask(), compute_stats(ccd[amp], sctrl)
+    print(sctrl.getAndMask(), compute_stats(ccd[amp], sctrl))
 
     sctrl = ccd.setMask('CCD250_DEFECTS')
-    print sctrl.getAndMask(), compute_stats(ccd[amp], sctrl)
+    print(sctrl.getAndMask(), compute_stats(ccd[amp], sctrl))
 
     sctrl = ccd.setMask(clear=True)
-    print sctrl.getAndMask(), compute_stats(ccd[amp], sctrl)
+    print(sctrl.getAndMask(), compute_stats(ccd[amp], sctrl))
 
     sctrl = ccd.setAllMasks()
-    print sctrl.getAndMask(), compute_stats(ccd[amp], sctrl)
+    print(sctrl.getAndMask(), compute_stats(ccd[amp], sctrl))

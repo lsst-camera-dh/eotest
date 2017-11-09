@@ -4,9 +4,11 @@ from user input or by querying the Sensor Test database.
 
 @author J. Chiang <jchiang@.slac.stanford.edu>
 """
+from __future__ import print_function
+from __future__ import absolute_import
 import os
 import lsst.eotest.image_utils as imutils
-from SensorDb import SensorDb
+from .SensorDb import SensorDb
 
 
 class SensorGains(dict):
@@ -42,7 +44,7 @@ if __name__ == '__main__':
     # Check for failure.
     try:
         g2 = SensorGains()
-    except KeyError, message:
+    except KeyError as message:
         assert(("%s" % message) == "'DB_CREDENTIALS'")
         pass
 
@@ -50,4 +52,4 @@ if __name__ == '__main__':
     os.environ['DB_CREDENTIALS'] = '/nfs/farm/g/lsst/u1/testData/SIMData/pipeline/db_test_ro.par'
     g3 = SensorGains(vendorId='000-00', vendor='e2v')
     for amp in imutils.allAmps:
-        print g3[amp]
+        print(g3[amp])

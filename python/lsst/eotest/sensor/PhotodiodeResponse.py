@@ -5,6 +5,7 @@ location.
 
 @author J. Chiang <jchiang@slac.stanford.edu>
 """
+from __future__ import absolute_import
 import bisect
 import numpy as np
 
@@ -72,7 +73,7 @@ class CcdIllumination(Interpolator):
 
 
 if __name__ == '__main__':
-    import pylab_plotter as plot
+    from . import pylab_plotter as plot
 
     pd1 = PhotodiodeResponse('OD142.csv')
     pd2 = PhotodiodeResponse('OD143.csv')

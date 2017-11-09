@@ -3,6 +3,7 @@
 @brief Translator application to convert RTS2 sensor FITS image files to 
 conforming FITS files for analysis by the eotest package.
 """
+from __future__ import print_function
 import os
 import sys
 import numpy as np
@@ -25,7 +26,7 @@ class RTS2_FITS_translator(object):
 
     def __call__(self, infile, outfile, clobber=True):
         if self.verbose:
-            print "processing", infile
+            print("processing", infile)
 
         # Recompute the amplifier geometry using NAXIS[12] from
         # first image extension of input file.
@@ -95,9 +96,9 @@ class RTS2_FITS_translator(object):
             self.output[ext].header.set(key, value)
         if unresolved_keywords and self.verbose:
             sys.stdout.write("HDU %s: " % ext)
-            print "unresolved keywords in source primary hdu:"
+            print("unresolved keywords in source primary hdu:")
             for item in unresolved_keywords:
-                print "  %s" % item
+                print("  %s" % item)
 
     def _update_extension(self, extname, prototype):
         try:
@@ -140,7 +141,7 @@ class RTS2_FITS_translator(object):
             # use this value in a calculation.
             mean = ''
         if self.verbose:
-            print "Setting MONDIODE to", mean
+            print("Setting MONDIODE to", mean)
         self.output[0].header.set('MONDIODE', mean)
 
     def _bnl_mondiode_current(self):

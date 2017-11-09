@@ -3,8 +3,9 @@
 
 @author J. Chiang <jchiang@slac.stanford.edu>
 """
+from __future__ import absolute_import
 import os
-import QE
+from . import QE
 import lsst.eotest.image_utils as imutils
 import lsst.pex.config as pexConfig
 import lsst.pipe.base as pipeBase

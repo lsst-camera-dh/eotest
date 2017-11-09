@@ -1,6 +1,8 @@
 """
 Module to manage plots for single sensor EO test reports.
 """
+from __future__ import print_function
+from __future__ import absolute_import
 import os
 import sys
 import glob
@@ -18,7 +20,7 @@ import lsst.afw.math as afwMath
 import lsst.afw.display.ds9 as ds9
 import lsst.eotest.image_utils as imutils
 from lsst.eotest.Estimator import Estimator
-import pylab_plotter as plot
+from . import pylab_plotter as plot
 from .MaskedCCD import MaskedCCD
 from .EOTestResults import EOTestResults
 from .Fe55GainFitter import Fe55GainFitter
@@ -297,8 +299,8 @@ class EOTestPlots(object):
                 pylab.annotate('Amp %i' % amp, (0.5, 0.8),
                                xycoords='axes fraction', size='x-small')
             except Exception as eobj:
-                print "Exception raised in generating image persistence plot for amp", amp
-                print eobj
+                print("Exception raised in generating image persistence plot for amp", amp)
+                print(eobj)
                 # Continue with remaining amps
 
     def psf_dists(self, chiprob_min=0.1, fe55_file=None, figsize=(11, 8.5),
@@ -346,8 +348,8 @@ class EOTestPlots(object):
             except Exception as eobj:
                 # Skip this plot so that the rest of the plots can be
                 # generated.
-                print "Exception raised in generating PSF sigma plot for amp", amp
-                print eobj
+                print("Exception raised in generating PSF sigma plot for amp", amp)
+                print(eobj)
 
     def fe55_dists(self, chiprob_min=0.1, fe55_file=None, figsize=(11, 8.5)):
         if fe55_file is None:
@@ -563,8 +565,8 @@ class EOTestPlots(object):
                 self._linearity_results[amp] \
                     = detresp.linearity(amp, fit_range=self._Ne_bounds)
             except Exception as eObj:
-                print "EOTestPlots.linearity: amp %i" % amp
-                print "  ", eObj
+                print("EOTestPlots.linearity: amp %i" % amp)
+                print("  ", eObj)
         return self._linearity_results
 
     def linearity(self, gain_range=(1, 6), max_dev=0.02, figsize=(11, 8.5),
@@ -616,14 +618,14 @@ class EOTestPlots(object):
             # Plot Ne vs flux
             try:
                 win.axes[-1].loglog(flux, Ne, 'ko', markersize=3)
-            except Exception, eObj:
-                print "EOTestPlots.linearity: amp %i" % amp
-                print "  ", eObj
+            except Exception as eObj:
+                print("EOTestPlots.linearity: amp %i" % amp)
+                print("  ", eObj)
             try:
                 win.axes[-1].loglog(flux, f1(flux), 'r-')
-            except Exception, eObj:
-                print "EOTestPlots.linearity: amp %i" % amp
-                print "  ", eObj
+            except Exception as eObj:
+                print("EOTestPlots.linearity: amp %i" % amp)
+                print("  ", eObj)
             sys.stdout.flush()
 
             # Plot horizontal lines showing the range of the linearity
@@ -699,8 +701,8 @@ class EOTestPlots(object):
             # the linearity spec is written
             flux_min = (Ne_bounds[0] - fit_pars[1])/fit_pars[0]
             flux_max = (Ne_bounds[1] - fit_pars[1])/fit_pars[0]
-            print 'amp, flux bounds, fit_pars:', amp, flux_min, flux_max, \
-                fit_pars
+            print('amp, flux bounds, fit_pars:', amp, flux_min, flux_max, \
+                fit_pars)
             win.axes[-1].semilogx([flux_min, flux_min], [ymin, ymax], 'k--')
             win.axes[-1].semilogx([flux_max, flux_max], [ymin, ymax], 'k--')
             # Label plots by amplifier number.
@@ -769,7 +771,7 @@ class EOTestPlots(object):
         else:
             amps = (amp,)
         for amp in amps:
-            print "Amp", amp
+            print("Amp", amp)
             wls = []
             ref_wls = ref.qe_data[1].data.field('WAVELENGTH')
             fluxes, ref_fluxes = [], []
@@ -924,14 +926,14 @@ class CcdSpecs(OrderedDict):
         try:
             self._ingestResults(results_file, xtalk_file=xtalk_file)
         except Exception as eobj:
-            print "EOTestPlots.CcdSpecs: exception:"
-            print "  ", str(eobj)
+            print("EOTestPlots.CcdSpecs: exception:")
+            print("  ", str(eobj))
 
     def add_job_ids(self, summary_files):
         for summary_lims_file in summary_files:
             foo = json.loads(open(summary_lims_file).read())
             for result in foo:
-                if result.has_key('job_id'):
+                if 'job_id' in result:
                     try:
                         specids = self._job_name_map[result['job_name']]
                         for specid in specids:
@@ -1039,7 +1041,7 @@ class CcdSpecs(OrderedDict):
         try:
             num_pixels = (self.results['TOTAL_NUM_PIXELS']
                           - self.results['ROLLOFF_MASK_PIXELS'])
-        except StandardError:
+        except Exception:
             num_pixels = 16129000
         col_size = 2002 - 9 # exclude masked edge rolloff.
         num_defects = (num_bright_pixels + num_dark_pixels + num_traps
@@ -1086,7 +1088,7 @@ class CcdSpecs(OrderedDict):
             if stdev > 0:
                 target_wls.remove(int(wl))
                 ratios[wl] = stdev/mean
-                if self.prnu_specs.has_key(wl):
+                if wl in self.prnu_specs:
                     if ratios[wl] < 0.01:
                         self.prnu_specs[wl].measurement = \
                             "\\num{%.1e}\\%%" % (ratios[wl]*100)

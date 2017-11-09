@@ -1,3 +1,4 @@
+from __future__ import print_function
 import argparse
 import glob
 import lsst.afw.image as afwImage
@@ -61,7 +62,7 @@ def linearfit(infile, gain, amps):
 
         #select points from 100 e-/pixel to 90000e-/pixel with exptimes below saturation
         maxpoint = np.where(linmedian == max(linmedian))[0][0]
-        print maxpoint
+        print(maxpoint)
 
         selected = np.where((linmedian[:maxpoint] > 100) & (linmedian[:maxpoint] < 90000))
         selectedpoints = linmedian[selected]
@@ -83,11 +84,11 @@ def linearfit(infile, gain, amps):
         deviations = []
         for i in range(len(selectedpoints)):
             deviation = abs((fitpoints[i] - selectedpoints[i])/float(fitpoints[i])*100)
-            print deviation
+            print(deviation)
             deviations.append(deviation)
 
         #find maximum deviation
-        print max(deviations)
+        print(max(deviations))
 
 
 if __name__ == '__main__':

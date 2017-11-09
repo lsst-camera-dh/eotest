@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+from __future__ import print_function
 import os
 import sys
 import numpy as np
@@ -33,15 +34,15 @@ for amp in imutils.allAmps:
                 sensorTest.fe55_gain_fitter(dn, make_plot=args.plot,
                                             title='Amp %i' % amp,
                                             plot_filename=plot_filename)
-        except RuntimeError, e:
-            print e
+        except RuntimeError as e:
+            print(e)
             continue
 
     if args.verbose:
         try:
-            print "gain = %.2f" % (gains[amp],)
+            print("gain = %.2f" % (gains[amp],))
         except KeyError:
-            print
+            print()
 
 results_file = args.results_file
 if results_file is None:
@@ -49,7 +50,7 @@ if results_file is None:
                                 '%s_eotest_results.fits' % args.sensor_id)
 
 if args.verbose:
-    print "Writing to %s" % results_file
+    print("Writing to %s" % results_file)
 
 results = sensorTest.EOTestResults(results_file)
 for amp in gains:

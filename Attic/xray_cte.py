@@ -6,6 +6,7 @@ fits also give estimates of the system gain.
 
 @author J. Chiang <jchiang@slac.stanford.edu>
 """
+from __future__ import print_function
 import sys
 import glob
 import numpy as np
@@ -155,7 +156,7 @@ if __name__ == '__main__':
 #    fe55_files = glob.glob('/nfs/farm/g/lsst/u1/testData/BNLData/www.cosmo.bnl.gov/Private/LSST/e2v/CCD250/112-01/20130117-140801/Fe55/*.fits')
 #    fe55_files.sort()
     fe55_files = ('simulation/fe55_test_cti.fits',)
-    print "Segment   serial CTI   parallel CTI   gain ests."
+    print("Segment   serial CTI   parallel CTI   gain ests.")
 #    make_plots = False
     make_plots = True
     for fe55 in fe55_files:
@@ -169,6 +170,6 @@ if __name__ == '__main__':
             cte.find_hits(nsig=5, gain_range=(0.5, 10), make_plots=make_plots)
             sys.stdout.write("%s       " % imUtils.channelIds[amp])
             results = cte.fit_1d(200, make_plots=make_plots)
-            print "%11.4e   %11.4e    %.3f  %.3f" % results
+            print("%11.4e   %11.4e    %.3f  %.3f" % results)
             results = cte.fit_2d(200)
-            print "         %11.4e   %11.4e    %.3f" % results
+            print("         %11.4e   %11.4e    %.3f" % results)

@@ -40,7 +40,7 @@ def qe_summary_plot(summary_lims, figsize=(6, 8), title='', qe_spec=None):
         qe[band] = OrderedDict([(slot, 0) for slot in slots])
 
     for item in qe_results:
-        if item.has_key('QE'):
+        if 'QE' in item:
             qe[item['band']][item['slot']] = item['QE']
 
     plt.rcParams['figure.figsize'] = figsize

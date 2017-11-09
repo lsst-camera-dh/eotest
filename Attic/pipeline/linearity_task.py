@@ -3,6 +3,7 @@
 
 @author J. Chiang <jchiang@slac.stanford.edu>
 """
+from __future__ import print_function
 import os
 import sys
 import numpy as np
@@ -50,7 +51,7 @@ def compute_mean_signal(flat_list, outfile='linearity_results.txt',
         if infile[-11:] != '_flat1.fits':
             continue
         if verbose:
-            print "processing", infile
+            print("processing", infile)
         md = afwImage.readMetadata(infile, 1)
         exptime = md.get('EXPTIME')
         kphot = np.abs(md.get('MONDIODE'))
@@ -73,10 +74,10 @@ if __name__ == '__main__':
         try:
             sensor_id = os.environ['SENSOR_ID']
             flat_list = '%s_FLAT.txt' % sensor_id
-            print flat_list
+            print(flat_list)
             outputdir = os.environ['OUTPUTDIR']
         except KeyError:
-            print "usage: python linearity_task.py <flats pattern> <output directory> [<gains>=5.5]"
+            print("usage: python linearity_task.py <flats pattern> <output directory> [<gains>=5.5]")
             sys.exit(1)
 
     gains, sensor = pipeUtils.setup(sys.argv, 3)
@@ -96,7 +97,7 @@ if __name__ == '__main__':
     data = np.recfromtxt(linearity_file).transpose()
     exposure = data[0]
     lamp_current = data[1]
-    print "Segment    max. frac. deviation"
+    print("Segment    max. frac. deviation")
     maxdevs = []
     for amp in imUtils.allAmps:
         indx = np.where((data[amp+1] > 100.) & (data[amp+1] < 9e4))
@@ -109,5 +110,5 @@ if __name__ == '__main__':
         maxDeviation = max(np.abs(fvals - signal[indx])/fvals)
         maxdevs.append(maxDeviation)
         sensor.add_seg_result(amp, 'maxDeviation', maxDeviation)
-        print "%s         %.4f" % (imUtils.channelIds[amp], maxDeviation)
+        print("%s         %.4f" % (imUtils.channelIds[amp], maxDeviation))
     sensor.add_ccd_result('maxDeviation', max(maxdevs))

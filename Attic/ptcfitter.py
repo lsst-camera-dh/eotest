@@ -1,3 +1,4 @@
+from __future__ import print_function
 import glob
 import lsst.afw.image as afwImage
 import pair_stats as ps
@@ -27,8 +28,8 @@ for amp in amps:
 #generate linear fit to first n points
 #NOTE: I'm not sure what n should be -- maybe it will have to be changed to flux level or something similar
 fit = np.polyfit(fmean[:n], fvar[:n], 1)
-print fit
+print(fit)
 
 #figure out gain
 fitgain = 1/fit[0]
-print 'gain = ' + str(fitgain)
+print('gain = ' + str(fitgain))

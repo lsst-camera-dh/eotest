@@ -1,3 +1,4 @@
+from __future__ import print_function
 import lsst.afw.image as afwImage
 import lsst.afw.geom as afwGeom
 import image_utils as iu
@@ -35,4 +36,4 @@ for i, fname in enumerate(files):
 
         o.write('\t'.join([fname, str(exptime), str(amp), str(wl), str(ampmedian), str(photodiode), '\n']))
 
-    print "%i of %i done " % (i, len(files))
+    print("%i of %i done " % (i, len(files)))

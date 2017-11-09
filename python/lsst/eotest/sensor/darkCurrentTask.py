@@ -4,13 +4,15 @@ units of e-/sec/pixel.
 
 @author J. Chiang <jchiang@slac.stanford.edu>
 """
+from __future__ import print_function
+from __future__ import absolute_import
 import os
 import numpy as np
 import astropy.io.fits as fits
 from lsst.eotest.fitsTools import fitsWriteto
 import lsst.eotest.image_utils as imutils
-from MaskedCCD import MaskedCCD
-from EOTestResults import EOTestResults
+from .MaskedCCD import MaskedCCD
+from .EOTestResults import EOTestResults
 import lsst.afw.image as afwImage
 import lsst.pex.config as pexConfig
 import lsst.pipe.base as pipeBase
@@ -74,7 +76,7 @@ class DarkCurrentTask(pipeBase.Task):
                 dark95s[amp] = unmasked[int(len(unmasked)*0.95)]
                 median = unmasked[len(unmasked)/2]
             except IndexError as eobj:
-                print str(eobj)
+                print(str(eobj))
                 dark95s[amp] = -1.
                 median = -1.
             if self.config.verbose:

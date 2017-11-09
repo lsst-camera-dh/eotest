@@ -1,3 +1,4 @@
+from __future__ import print_function
 import glob
 import lsst.afw.image as afwImage
 import pair_stats as ps
@@ -35,5 +36,5 @@ for i in range(len(files1)):
 
         f.write('\t'.join([str(amp), str(exptime), str(flat_mean),
                            str(flat_var), str(gain), str(noise), '\n']))
-    print str(i) + ' of ' + str(len(files1)) + ' file pairs done\n'
+    print(str(i) + ' of ' + str(len(files1)) + ' file pairs done\n')
 f.close()

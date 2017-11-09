@@ -1,3 +1,4 @@
+from __future__ import print_function
 #script to check all FITS headers in a directory
 
 import re
@@ -40,7 +41,7 @@ def update_version(hdr):
     if 'HDRVER' in hdr.keys():
         ver = hdr['HDRVER']
         if ver >= headerVersion:
-            print 'Skipping file, Header at Version: ', ver
+            print('Skipping file, Header at Version: ', ver)
             return
         else:
             hdr['HDRVER'] = headerVersion
@@ -63,8 +64,8 @@ def extract_path(filename):
     upperSubDirs = [subStr.upper() for subStr in subdirs]
     rplSubDirs = [subStr.replace('SUPERFLAT', 'SFLAT') for subStr in upperSubDirs]
 
-    print upperSubDirs
-    print rplSubDirs
+    print(upperSubDirs)
+    print(rplSubDirs)
 
     for dir in rplSubDirs:
         for type in testTypeList:
@@ -75,7 +76,7 @@ def extract_path(filename):
         if idMatch:
             sensor_id = idMatch.group()
 
-    print fname, ret_type, sensor_id
+    print(fname, ret_type, sensor_id)
     return fname, ret_type, sensor_id
 
 
@@ -101,7 +102,7 @@ def get_id_and_type(filename):
         subList = fname.split('_')
         upperCaseList = [subStr.upper() for subStr in subList]
 
-        print upperCaseList
+        print(upperCaseList)
 
         imgMatch = []
         endOfFile = '.FITS'
@@ -129,7 +130,7 @@ def get_id_and_type(filename):
             imgType = imgMatch[0]
 
     except:
-        print "failed to extract id and type from filename for file: ", filename
+        print("failed to extract id and type from filename for file: ", filename)
         traceback.print_exc(file=sys.stdout)
 
     return sensor_id, imgType, testType, seqNum
@@ -140,7 +141,7 @@ def extendHeader(files):
 
     for filename in files:
         try:
-            print filename
+            print(filename)
             #open file in update mode
             f = pyf.open(filename, memmap=True, ignore_missing_end=True, mode='update')
             #grab primary header
@@ -149,7 +150,7 @@ def extendHeader(files):
             update_version(hdr)
 
         except:
-            print 'Failed to open file: ', filename
+            print('Failed to open file: ', filename)
             traceback.print_exc(file=sys.stdout)
             continue
 
@@ -159,32 +160,32 @@ def extendHeader(files):
                 vendor = os.environ['CCD_MANU']
                 hdr['CCD_MANU'] = vendor
             except:
-                print 'Failed to update CCD_MANU for file: ', filename
+                print('Failed to update CCD_MANU for file: ', filename)
 
         try:
             sensor_id, imgType, testType, seqNum = get_id_and_type(filename)
 
             if 'LSST_NUM' not in hdr.keys():
                 hdr['LSST_NUM'] = sensor_id
-                print "setting LSST_NUM ", sensor_id
+                print("setting LSST_NUM ", sensor_id)
 
             if 'IMGTYPE' not in hdr.keys():
                 hdr['IMGTYPE'] = imgType
-                print "setting IMGTYPE: ", imgType
+                print("setting IMGTYPE: ", imgType)
 
             if 'TESTTYPE' not in hdr.keys():
                 hdr['TESTTYPE'] = testType
-                print "setting TESTTYPE: ", testType
+                print("setting TESTTYPE: ", testType)
 
             if 'SEQNUM' not in hdr.keys():
                 hdr['SEQNUM'] = seqNum
-                print "setting SEQNUM: ", seqNum
+                print("setting SEQNUM: ", seqNum)
         except:
             traceback.print_exc(file=sys.stdout)
             continue
 
         f.close()
-        print filename + " done."
+        print(filename + " done.")
 
 
 def fixHeader(files):
@@ -248,7 +249,7 @@ def fixHeader(files):
                     warnings.resetwarnings()
                     warnings.filterwarnings('always', category=UserWarning, append=True)
         except:
-            print "Failed to update file: ", filename
+            print("Failed to update file: ", filename)
             f.close()
             traceback.print_exc(file=sys.stdout)
             continue
@@ -256,7 +257,7 @@ def fixHeader(files):
         #update file's actual header
         f[0].header = newhdr
         f.close()
-        print filename + " done."
+        print(filename + " done.")
 
 
 if __name__ == '__main__':

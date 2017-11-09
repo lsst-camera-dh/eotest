@@ -3,9 +3,10 @@
 
 @author J. Chiang
 """
+from __future__ import absolute_import
 import os
 import MySQLdb
-from Parfile import Parfile
+from .Parfile import Parfile
 
 db2_imp = MySQLdb
 
@@ -30,10 +31,10 @@ class Database(object):
             else:
                 cursor.execute(sql, args)
             results = cursorFunc(cursor)
-        except db2_imp.DatabaseError, message:
+        except db2_imp.DatabaseError as message:
             cursor.close()
             my_connection.close()
-            raise db2_imp.DatabaseError, message
+            raise db2_imp.DatabaseError(message)
         cursor.close()
         if cursorFunc is nullFunc:
             my_connection.commit()

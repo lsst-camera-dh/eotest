@@ -2,6 +2,8 @@
 @brief Find dark pixels and dark columns above a threshold specified
 in units of e- per second per pixel.
 """
+from __future__ import print_function
+from __future__ import absolute_import
 import os
 import numpy as np
 import astropy.io.fits as fits
@@ -102,7 +104,7 @@ class DarkPixels(object):
 
 
 if __name__ == '__main__':
-    import sim_tools
+    from . import sim_tools
 
     def write_test_image(outfile, emin=10, dark_curr=2e-3, exptime=10,
                          gain=5, ccdtemp=-100, bias_level=1e2,
@@ -140,4 +142,4 @@ if __name__ == '__main__':
     for amp in ccd:
         dark_pixels = DarkPixels(ccd, amp, ccd.md.get('EXPTIME'), gain)
         pixels, columns = dark_pixels.find()
-        print imutils.channelIds[amp], len(pixels), columns
+        print(imutils.channelIds[amp], len(pixels), columns)

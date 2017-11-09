@@ -2,6 +2,7 @@
 Code to encapsulate amplifier geometry as expressed in NOAO image
 section keywords DETSEC, DATASEC, DETSIZE.
 """
+from __future__ import print_function
 import astropy.io.fits as fits
 
 __all__ = ['AmplifierGeometry', 'makeAmplifierGeometry', 'amp_loc',
@@ -69,7 +70,7 @@ class AmplifierGeometry(dict):
         self.compute_geometry(detxsize=detxsize, detysize=detysize)
 
     def compute_geometry(self, **kwds):
-        if kwds.has_key('fitsfile'):
+        if 'fitsfile' in kwds:
             # Compute geometry by inferring DETSIZE from NAXIS[12] in
             # first image extension of specified FITS file.
             foo = fits.open(kwds['fitsfile'])
@@ -157,21 +158,21 @@ if __name__ == '__main__':
     e2v = AmplifierGeometry()
     itl = AmplifierGeometry(prescan=3, nx=509, ny=2000, amp_loc=amp_loc['ITL'])
 
-    print e2v.full_segment
-    print e2v.prescan
-    print e2v.imaging
-    print e2v.serial_overscan
-    print e2v.parallel_overscan
+    print(e2v.full_segment)
+    print(e2v.prescan)
+    print(e2v.imaging)
+    print(e2v.serial_overscan)
+    print(e2v.parallel_overscan)
 
     for amp in range(1, 17):
-        print amp, e2v[amp]['DETSEC'], itl[amp]['DETSEC']
-        print amp, e2v[amp]['DATASEC'], itl[amp]['DATASEC']
-        print
+        print(amp, e2v[amp]['DETSEC'], itl[amp]['DETSEC'])
+        print(amp, e2v[amp]['DATASEC'], itl[amp]['DATASEC'])
+        print()
     infile = '/u/gl/jchiang/ki18/LSST/SensorTests/eotest/0.0.0.6/work/sensorData/000-00/fe55/debug/000-00_fe55_bias_00_debug.fits'
     geom = makeAmplifierGeometry(infile)
 
-    print geom == e2v
-    print geom == itl
+    print(geom == e2v)
+    print(geom == itl)
 
-    print geom != e2v
-    print geom != itl
+    print(geom != e2v)
+    print(geom != itl)

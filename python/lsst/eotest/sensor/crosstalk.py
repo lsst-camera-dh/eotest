@@ -3,19 +3,21 @@
 
 @author J. Chiang <jchiang@slac.stanford.edu>
 """
+from __future__ import print_function
+from __future__ import absolute_import
 import os
 import time
 import numpy as np
 import astropy.io.fits as fits
 from lsst.eotest.fitsTools import fitsWriteto
 import pylab
-import pylab_plotter as plot
+from . import pylab_plotter as plot
 import lsst.afw.detection as afwDetect
 import lsst.afw.geom as afwGeom
 import lsst.afw.math as afwMath
 import lsst.eotest.image_utils as imutils
-from MaskedCCD import MaskedCCD
-from BrightPixels import BrightPixels
+from .MaskedCCD import MaskedCCD
+from .BrightPixels import BrightPixels
 
 
 def get_stats(image, stat_ctrl):
@@ -310,28 +312,28 @@ def make_crosstalk_matrix(file_list, mask_files=(),
         ccd = MaskedCCD(file_list, mask_files=mask_files)
         for agg_amp in ccd:
             if verbose:
-                print "processing aggressor amp", agg_amp
+                print("processing aggressor amp", agg_amp)
             try:
                 det_ratios = extractor(ccd, agg_amp)
                 det_xtalk.set_row(agg_amp, det_ratios)
-            except RuntimeError, message:
-                print "Error extracting victim/aggressor ratios."
-                print message
-                print "Skipping."
+            except RuntimeError as message:
+                print("Error extracting victim/aggressor ratios.")
+                print(message)
+                print("Skipping.")
     except TypeError:
         # Presumably, we have a 16 amplifier dataset.
         for infile in file_list:
             if verbose:
-                print "processing", infile
+                print("processing", infile)
             ccd = MaskedCCD(infile, mask_files=mask_files)
             agg_amp, max_dn = aggressor(ccd)
             try:
                 ratios = extractor(ccd, agg_amp)
                 det_xtalk.set_row(agg_amp, ratios)
-            except RuntimeError, message:
-                print "Error extracting victim/aggressor ratios:"
-                print message
-                print "Skipping."
+            except RuntimeError as message:
+                print("Error extracting victim/aggressor ratios:")
+                print(message)
+                print("Skipping.")
     return det_xtalk
 
 
@@ -349,7 +351,7 @@ if __name__ == '__main__':
         ccd = MaskedCCD(sys_xtfile(agg_amp), mask_files=mask_files)
         ratios = system_crosstalk(ccd, agg_amp)
         sys_xtalk.set_row(agg_amp, ratios)
-    print time.time() - tstart
+    print(time.time() - tstart)
     sys_xtalk.write('sys_xtalk.txt')
     sys_xtalk.write_fits('sys_xtalk.fits')
     #
@@ -369,7 +371,7 @@ if __name__ == '__main__':
         ccd = MaskedCCD(sys_xtfile(agg_amp), mask_files=mask_files)
         det_ratios = detector_crosstalk(ccd, agg_amp)
         det_xtalk.set_row(agg_amp, det_ratios)
-    print time.time() - tstart
+    print(time.time() - tstart)
 
     tstart = time.time()
     det_xtalk_2 = CrosstalkMatrix()
@@ -378,16 +380,16 @@ if __name__ == '__main__':
         det_ratios = detector_crosstalk(ccd, agg_amp,
                                         signal_extractor=extract_mean_signal_2)
         det_xtalk_2.set_row(agg_amp, det_ratios)
-    print time.time() - tstart
+    print(time.time() - tstart)
 
     sys_diff = sys_xtalk - det_xtalk
-    print max(sys_diff.matrix.flat)
-    print min(sys_diff.matrix.flat)
+    print(max(sys_diff.matrix.flat))
+    print(min(sys_diff.matrix.flat))
 
     sys_diff_2 = sys_xtalk - det_xtalk_2
-    print max(sys_diff_2.matrix.flat)
-    print min(sys_diff_2.matrix.flat)
+    print(max(sys_diff_2.matrix.flat))
+    print(min(sys_diff_2.matrix.flat))
 
     det_diff = det_xtalk - det_xtalk_2
-    print max(det_diff.matrix.flat)
-    print min(det_diff.matrix.flat)
+    print(max(det_diff.matrix.flat))
+    print(min(det_diff.matrix.flat))

@@ -5,14 +5,16 @@ system gain.
 
 @author J. Chiang <jchiang@slac.stanford.edu>
 """
+from __future__ import print_function
+from __future__ import absolute_import
 import numpy as np
 import scipy.stats
 import scipy.optimize
 import astropy.io.fits as fits
 import pylab
-import pylab_plotter as plot
+from . import pylab_plotter as plot
 import lsst.afw.math as afwMath
-from fe55_yield import Fe55Yield
+from .fe55_yield import Fe55Yield
 
 
 def fe55_lines(x, *args):
@@ -56,7 +58,7 @@ def fe55_gain_fitter(signals, ccdtemp=-95, make_plot=False, xrange=None,
     try:
         stats = afwMath.makeStatistics(signals.tolist(), flags)
     except:
-        print signals
+        print(signals)
         raise
     median = stats.getValue(afwMath.MEDIAN)
     stdev = stats.getValue(afwMath.STDEVCLIP)
@@ -158,7 +160,7 @@ if __name__ == '__main__':
     gain, kalpha_peak, kalpha_sigma = fe55_gain_fitter(dn[indx],
                                                        make_plot=args.plot,
                                                        title=plot_title)
-    print "gain for amplifier %i: %s" % (args.amplifier, gain)
+    print("gain for amplifier %i: %s" % (args.amplifier, gain))
 
     if args.plot:
         pylab.savefig(args.outfile)

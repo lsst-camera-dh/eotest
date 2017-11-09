@@ -5,14 +5,15 @@ noise contribution from the electronics, must be provided.
 
 @author J. Chiang <jchiang@slac.stanford.edu>
 """
+from __future__ import absolute_import
 import os
 import numpy as np
 import astropy.io.fits as fits
 from lsst.eotest.fitsTools import fitsTableFactory, fitsWriteto
 import lsst.eotest.image_utils as imutils
-from MaskedCCD import MaskedCCD
-from EOTestResults import EOTestResults
-from read_noise import noise_dists, NoiseDistributions
+from .MaskedCCD import MaskedCCD
+from .EOTestResults import EOTestResults
+from .read_noise import noise_dists, NoiseDistributions
 import lsst.afw.geom as afwGeom
 
 import lsst.pex.config as pexConfig

@@ -3,10 +3,12 @@
 computing median images, unbiasing using the serial overscan region,
 trimming, etc..
 """
+from __future__ import print_function
+from __future__ import absolute_import
 import numpy as np
 import numpy.random as random
 import astropy.io.fits as fits
-from fitsTools import fitsWriteto
+from .fitsTools import fitsWriteto
 import lsst.afw.geom as afwGeom
 import lsst.afw.image as afwImage
 import lsst.afw.math as afwMath
@@ -211,7 +213,7 @@ def check_temperatures(files, tol, setpoint=None, warn_only=False):
             what = "Measured operating temperature %(ccd_temp)s departs from expected temperature %(ref_temp)s by more than the %(tol)s tolerance for file %(infile)s" % locals(
             )
             if warn_only:
-                print what
+                print(what)
             else:
                 raise RuntimeError(what)
 

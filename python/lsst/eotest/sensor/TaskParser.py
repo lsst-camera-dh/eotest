@@ -3,14 +3,16 @@
 
 @author J. Chiang <jchiang@slac.stanford.edu>
 """
+from __future__ import print_function
+from __future__ import absolute_import
 import os
 import glob
 import argparse
 import astropy.io.fits as fits
 import lsst.afw.image as afwImage
 import lsst.eotest.image_utils as imutils
-from rolloff_mask import rolloff_mask
-from EOTestResults import EOTestResults
+from .rolloff_mask import rolloff_mask
+from .EOTestResults import EOTestResults
 from lsst.eotest.database.SensorDb import SensorDb, NullDbObject
 from lsst.eotest.database.SensorGains import SensorGains
 
@@ -76,7 +78,7 @@ class TaskNamespace(object):
         geometry.
         """
         if self.args.verbose:
-            print "mask file pattern:", self.args.mask_file_pattern
+            print("mask file pattern:", self.args.mask_file_pattern)
         if self.args.mask_file_pattern is not None:
             my_mask_files = glob.glob(self.args.mask_file_pattern)
         else:
@@ -94,9 +96,9 @@ class TaskNamespace(object):
             if not os.path.isfile(my_mask_files[-1]):
                 rolloff_mask(infile, my_mask_files[-1])
         if self.args.verbose:
-            print "Using mask files:"
+            print("Using mask files:")
             for item in my_mask_files:
-                print "  ", item
+                print("  ", item)
         return my_mask_files
 
     def __getattr__(self, attrname):

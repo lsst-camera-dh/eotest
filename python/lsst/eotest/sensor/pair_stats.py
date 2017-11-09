@@ -5,11 +5,13 @@ handling of masks when computing the various statistical quantities.
 
 @author J. Chiang <jchiang@slac.stanford.edu>
 """
+from __future__ import print_function
+from __future__ import absolute_import
 import os
 import numpy as np
 import lsst.afw.image as afwImage
 import lsst.afw.math as afwMath
-from MaskedCCD import MaskedCCD
+from .MaskedCCD import MaskedCCD
 import lsst.eotest.image_utils as imutils
 
 
@@ -106,5 +108,5 @@ if __name__ == '__main__':
     for i, amp in enumerate(ccd1.keys()):
         my_pair_stats = pair_stats(ccd1, ccd2, amp)
         if i == 0:
-            print my_pair_stats.header()
-        print my_pair_stats.summary()
+            print(my_pair_stats.header())
+        print(my_pair_stats.summary())

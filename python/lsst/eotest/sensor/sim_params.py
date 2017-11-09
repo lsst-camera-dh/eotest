@@ -4,11 +4,12 @@ structured configuration file in the future.
 
 @author J. Chiang <jchiang@slac.stanford.edu>
 """
+from __future__ import absolute_import
 import os
 import numpy as np
-from PhotodiodeResponse import Interpolator
-from multiaggressor_tools import multiaggressor_amplifier_coords
-from sim_tools import CrosstalkPattern
+from .PhotodiodeResponse import Interpolator
+from .multiaggressor_tools import multiaggressor_amplifier_coords
+from .sim_tools import CrosstalkPattern
 
 
 class Params(object):

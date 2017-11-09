@@ -2,6 +2,7 @@
 @brief Find bright pixels and bright columns above a 
 threshold = mean + nsig*sigma
 """
+from __future__ import print_function
 import argparse
 import numpy as np
 import lsst.afw.image as afwImage
@@ -34,8 +35,8 @@ class BrightPix(object):
                 pix_per_amp.append(pixels)
                 col_per_amp.append(cols)
             except:
-                print "Failed bright pixel for hdu ", amp, " ", \
-                      image_utils.dm_hdu(amp)
+                print("Failed bright pixel for hdu ", amp, " ", \
+                      image_utils.dm_hdu(amp))
                 traceback.print_exc(file=sys.stdout)
                 continue
 
@@ -78,16 +79,16 @@ def run_bright_pix(fitsfile, amps=image_utils.allAmps, verbose=False):
 
     if verbose:
         for ind, amp in enumerate(amps):
-            print "Amp: ", amp, " ", tot_per_amp[ind], " Bright Pixels"
-            print pix_per_amp[ind]
-        print 'Total CCD Bright Pixels: ', tot_bright_pixels
+            print("Amp: ", amp, " ", tot_per_amp[ind], " Bright Pixels")
+            print(pix_per_amp[ind])
+        print('Total CCD Bright Pixels: ', tot_bright_pixels)
 
     return tot_bright_pixels, tot_per_amp, pix_per_amp, col_per_amp
 
 
 def write_test_image(outfile, nhdus=16, verbose=True):
     if verbose:
-        print "simulating bright pixels:", outfile
+        print("simulating bright pixels:", outfile)
     segments = []
     for hdu in range(nhdus):
         seg = SegmentExposure()

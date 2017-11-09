@@ -4,6 +4,7 @@ as a binary table.
 
 @author J. Chiang <jchiang@slac.stanford.edu>
 """
+from __future__ import print_function
 import os
 import numpy as np
 import astropy.io.fits as fits
@@ -96,7 +97,7 @@ class EOTestResults(object):
 if __name__ == '__main__':
     outfile = 'foo.fits'
     foo = EOTestResults(outfile)
-    print foo.colnames
+    print(foo.colnames)
     for amp in range(1, 17):
         foo.add_seg_result(amp, 'GAIN', 5)
         foo.add_seg_result(amp, 'NEW_INT_COLUMN', 2)
@@ -104,6 +105,6 @@ if __name__ == '__main__':
     foo.write()
 
     bar = EOTestResults(outfile)
-    print bar['GAIN']
-    print bar['NEW_INT_COLUMN']
-    print bar['NEW_FLOAT_COLUMN']
+    print(bar['GAIN'])
+    print(bar['NEW_INT_COLUMN'])
+    print(bar['NEW_FLOAT_COLUMN'])

@@ -4,6 +4,7 @@ photon transfer curve and compute and write out the full well.
 
 @author J. Chiang <jchiang@slac.stanford.edu>
 """
+from __future__ import print_function
 import os
 import glob
 import operator
@@ -194,8 +195,8 @@ class PtcTask(pipeBase.Task):
                 ptc_gain = pars[1]
                 ptc_error = np.sqrt(cov[1][1])
             except Exception as eobj:
-                print "Exception caught while fitting PTC:"
-                print str(eobj)
+                print("Exception caught while fitting PTC:")
+                print(str(eobj))
                 ptc_gain = 0
                 ptc_error = -1
             # Write gain and error to EO test results file.

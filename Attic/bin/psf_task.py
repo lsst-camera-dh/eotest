@@ -4,6 +4,7 @@ parameters to Fe55 data.
 
 @author J. Chiang <jchiang@slac.stanford.edu>
 """
+from __future__ import print_function
 import os
 from MaskedCCD import MaskedCCD
 from pipeline.TaskParser import TaskParser
@@ -24,10 +25,10 @@ if __name__ == '__main__':
 
     fitter = PsfGaussFit()
     for infile in files:
-        print os.path.basename(infile)
+        print(os.path.basename(infile))
         ccd = MaskedCCD(infile, mask_files=args.mask_files())
         for amp in ccd:
-            print "   amp", amp
+            print("   amp", amp)
             fitter.process_image(ccd, amp)
     outfile = os.path.join(args.output_dir, '%s_psf_params.fits' % sensor_id)
     fitter.write_results(outfile=outfile)
