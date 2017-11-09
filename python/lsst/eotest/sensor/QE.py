@@ -40,7 +40,7 @@ class QE_Data(object):
     band_pass['i'] = (691, 818)
     band_pass['z'] = (818, 922)
     band_pass['y'] = (930, 1070)
-    band_wls = np.array([sum(band_pass[b])/2. for b in list(band_pass.keys())])
+    band_wls = np.array([sum(b)/2. for b in band_pass.values()])
 
     def __init__(self, verbose=True, pd_scaling=1e-9, logger=None):
         self.verbose = verbose
