@@ -91,7 +91,7 @@ class EOTestReport(object):
         self.plots.flat_fields(self.wl_dir)
 
     def _write_tex_preamble(self):
-        self.output.write("""\documentclass{article}
+        self.output.write(str(b"""\documentclass{article}
 \usepackage{graphicx}
 \usepackage{amssymb}
 \usepackage{siunitx}
@@ -109,7 +109,7 @@ class EOTestReport(object):
 
 \\begin{document}
 
-""")
+""", encoding='ascii'))
 
     def make_pdf(self):
         self._write_tex_preamble()
