@@ -8,6 +8,7 @@ location.
 import bisect
 import numpy as np
 
+
 class Interpolator(object):
     def __init__(self, xx, yy):
         self.xx = xx
@@ -17,11 +18,13 @@ class Interpolator(object):
             self.dx = dx[0]
         else:
             self.dx = None
+
     def __call__(self, x):
         try:
             return np.array([self._value(xval) for xval in x])
         except TypeError:
             return self._value(x)
+
     def _value(self, x):
         if x < self.xx[0] or x > self.xx[-1]:
             raise RuntimeError("Requested x-value, %s, is out-of-range." % x)
@@ -29,16 +32,17 @@ class Interpolator(object):
             return self.yy[0]
         elif x == self.xx[-1]:
             return self.yy[-1]
-        
+
         if self.dx is not None:
             indx = int((x - self.xx[0])/self.dx)
         else:
             indx = bisect.bisect(self.xx, x) - 1
         indx = max(0, min(len(self.xx)-2, indx))
-        value = ( (x - self.xx[indx])/
-                  (self.xx[indx+1] - self.xx[indx])*
-                  (self.yy[indx+1] - self.yy[indx]) + self.yy[indx] )
+        value = ((x - self.xx[indx]) /
+                 (self.xx[indx+1] - self.xx[indx]) *
+                 (self.yy[indx+1] - self.yy[indx]) + self.yy[indx])
         return value
+
 
 class PhotodiodeResponse(Interpolator):
     def __init__(self, calfile, skip_header=5,):
@@ -48,12 +52,14 @@ class PhotodiodeResponse(Interpolator):
         self.resp = data['resp']
         Interpolator.__init__(self, self.wavelength, self.resp)
 
+
 class CcdIllumination(Interpolator):
     """
     This functor returns the ratio of the intensity at the photodiode
     at the CCD position to the intensity at the photodiode located on
     the integrating sphere as a function of wavelength.
     """
+
     def __init__(self, scan_file, ccd_cal_file, sph_cal_file):
         data = np.recfromtxt(scan_file, names=True)
         self.wavelengths = data['wl']
@@ -63,6 +69,7 @@ class CcdIllumination(Interpolator):
         ccdpos = data['ccdpos']/pd_ccd(self.wavelengths)
         self.ccdfrac = ccdpos/intsphere
         Interpolator.__init__(self, self.wavelengths, self.ccdfrac)
+
 
 if __name__ == '__main__':
     import pylab_plotter as plot

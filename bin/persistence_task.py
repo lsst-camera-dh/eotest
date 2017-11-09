@@ -34,5 +34,5 @@ if args.verbose:
     print 'processing flat file:', args.flat
 
 task.run(args.sensor_id, pre_flat_darks, args.flat,
-         post_flat_darks, args.mask_files(pre_flat_darks[0]), 
+         post_flat_darks, args.mask_files(pre_flat_darks[0]),
          args.system_gains())

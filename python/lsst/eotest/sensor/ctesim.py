@@ -11,12 +11,14 @@ import sim_tools
 
 _dtypes = dict([(-32, np.float32), (16, np.int16)])
 
+
 def convert(imarr, bitpix):
     if bitpix > 0:
         my_round = np.round
     else:
-        my_round = lambda x : x
+        def my_round(x): return x
     return np.array(my_round(imarr), dtype=_dtypes[bitpix])
+
 
 def fitsFile(segments, input):
     output = fits.HDUList()
@@ -28,6 +30,7 @@ def fitsFile(segments, input):
         output.append(fits.ImageHDU(data=imarr))
         output[amp].header = input[amp].header
     return output
+
 
 def ctesim(infile, pcti=0, scti=0, verbose=False):
     input = fits.open(infile)

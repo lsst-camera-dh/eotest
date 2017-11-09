@@ -1,6 +1,7 @@
 import numpy as np
 from lsst.eotest.sensor.PhotodiodeResponse import PhotodiodeResponse
 
+
 def convert_Harvard_files(wlscan_file, ccd_cal_file, sph_cal_file,
                           outfile):
     ccd_pd = PhotodiodeResponse(ccd_cal_file)
@@ -16,8 +17,10 @@ def convert_Harvard_files(wlscan_file, ccd_cal_file, sph_cal_file,
         cal_qe = 0
         mon_pd_charge = pd_ratio
         cal_pd_charge = 1
-        output.write('%(wl).1f      %(pd_sens).5f        %(cal_qe).3f   %(pd_ratio).6f   %(mon_pd_charge)12.4e     %(cal_pd_charge)12.4e\n' % locals())
+        output.write(
+            '%(wl).1f      %(pd_sens).5f        %(cal_qe).3f   %(pd_ratio).6f   %(mon_pd_charge)12.4e     %(cal_pd_charge)12.4e\n' % locals())
     output.close()
+
 
 if __name__ == '__main__':
     wlscan_file = 'WLscan.txt'

@@ -21,10 +21,11 @@ try:
 except ImportError:
     plot = None
 
+
 class XrayCte(object):
     def __init__(self, image, ccdtemp=None):
         if (image.getWidth() == imUtils.full_segment.getWidth() and
-            image.getHeight() == imUtils.full_segment.getHeight()):
+                image.getHeight() == imUtils.full_segment.getHeight()):
             # Trim to imaging area.
             self.image = image.Factory(image, imUtils.imaging)
         else:
@@ -37,6 +38,7 @@ class XrayCte(object):
         self.stdev = stats.getValue(afwMath.STDEVCLIP)
 #        self.stdev = stats.getValue(afwMath.STDEV)
         self.fe55_yield = Fe55Yield(ccdtemp).alpha()
+
     def find_hits(self, nsig=2, gain_range=(2, 10), buff=1, make_plots=True):
         DN_range = (self.fe55_yield/gain_range[1],
                     self.fe55_yield/gain_range[0])
@@ -46,9 +48,9 @@ class XrayCte(object):
         for fp in fpset.getFootprints():
             if fp.getNpix() < 9:
                 f, ix, iy, peak_value = self._footprint_info(fp, buff)
-                if ( (DN_range[0] < f < DN_range[1]) and
-                     not (fp.contains(afwGeom.Point2I(ix-1, iy)) or
-                          fp.contains(afwGeom.Point2I(ix, iy-1))) ):
+                if ((DN_range[0] < f < DN_range[1]) and
+                    not (fp.contains(afwGeom.Point2I(ix-1, iy)) or
+                         fp.contains(afwGeom.Point2I(ix, iy-1)))):
                     zarr.append(f)
                     xarr.append(ix)
                     yarr.append(iy)
@@ -74,6 +76,7 @@ class XrayCte(object):
                         xname='x pixel', yname='DN')
             plot.hline(self.sigrange[0], color='g')
             plot.hline(self.sigrange[1], color='g')
+
     def _footprint_info(self, fp, buff=1):
         # Estimate total signal.
         bbox = fp.getBBox()
@@ -81,7 +84,7 @@ class XrayCte(object):
         xmax = min(imUtils.imaging.getMaxX(), bbox.getMaxX() + buff)
         ymin = max(imUtils.imaging.getMinY(), bbox.getMinY() - buff)
         ymax = min(imUtils.imaging.getMaxY(), bbox.getMaxY() + buff)
-        subarr = self.imarr[ymin:ymax+1, xmin:xmax+1] 
+        subarr = self.imarr[ymin:ymax+1, xmin:xmax+1]
         signal = sum(subarr.flat) - self.mean*len(subarr.flat)
 
         peakvalues = np.array([x.getPeakValue() for x in fp.getPeaks()])
@@ -93,6 +96,7 @@ class XrayCte(object):
             ii = 0
         ix, iy = peaks[ii].getIx(), peaks[ii].getIy()
         return signal, ix, iy, peaks[ii].getPeakValue() - self.mean
+
     def fit_1d(self, xmin=100, make_plots=True):
         # Omit pixels affected by edge roll-off and that are outside
         # the nominal signal range.
@@ -114,6 +118,7 @@ class XrayCte(object):
             self._plot1d(ay, by, 'y pixel', yarr, zarr)
 
         return CTIx, CTIy, self.fe55_yield/bx, self.fe55_yield/by
+
     def _plot1d(self, a, b, xlabel, xarr, zarr):
         f = np.poly1d((a, b))
         xx = np.linspace(0, 2500, 5)
@@ -123,6 +128,7 @@ class XrayCte(object):
         plot.hline(self.sigrange[0], color='g')
         plot.hline(self.sigrange[1], color='g')
         return win
+
     def fit_2d(self, xmin=100):
         # Omit pixels affected by edge roll-off and that are outside
         # the nominal signal range.
@@ -132,14 +138,15 @@ class XrayCte(object):
         yarr = self.yarr[indx]
         #zarr = self.zarr[indx]
         zarr = self.peaks[indx]
-        
+
         A = np.matrix([[sum(xarr**2), sum(xarr*yarr), -sum(xarr)],
                        [sum(xarr*yarr), sum(yarr**2), -sum(yarr)],
                        [-sum(xarr), -sum(yarr), len(xarr)]])
         B = [-sum(xarr*zarr), -sum(yarr*zarr), sum(zarr)]
-    
+
         CTIx, CTIy, sig0 = linalg.solve(A, B)
         return CTIx/sig0, CTIy/sig0, self.fe55_yield/sig0
+
 
 if __name__ == '__main__':
     import glob
@@ -162,7 +169,6 @@ if __name__ == '__main__':
             cte.find_hits(nsig=5, gain_range=(0.5, 10), make_plots=make_plots)
             sys.stdout.write("%s       " % imUtils.channelIds[amp])
             results = cte.fit_1d(200, make_plots=make_plots)
-            print "%11.4e   %11.4e    %.3f  %.3f"  % results
+            print "%11.4e   %11.4e    %.3f  %.3f" % results
             results = cte.fit_2d(200)
             print "         %11.4e   %11.4e    %.3f" % results
-        

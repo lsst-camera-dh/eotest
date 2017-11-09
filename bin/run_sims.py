@@ -16,6 +16,7 @@ from lsst.eotest.sensor.QE import planck, clight
 from lsst.eotest.sensor.sim_tools import *
 from lsst.eotest.sensor.ctesim import ctesim
 
+
 class CcdFactory(object):
     """
     Factory class for creating CCD objects with a common geometry.
@@ -23,10 +24,12 @@ class CcdFactory(object):
     configuration outside of the calling functions.
     """
     _shared_state = {}
+
     def __init__(self, geometry=None):
         self.__dict__ = self._shared_state
         if geometry is not None:
             self.geometry = geometry
+
     def create(self, *args, **kwds):
         my_kwds = copy.deepcopy(kwds)
         try:
@@ -35,18 +38,22 @@ class CcdFactory(object):
             pass
         return CCD(*args, **my_kwds)
 
+
 def ccd(*args, **kwds):
     user_factory = CcdFactory()
     return user_factory.create(*args, **kwds)
 
+
 class AmpIndexDecorator(object):
     def __init__(self, var):
         self.var = var
+
     def __getitem__(self, i):
         try:
             return self.var[i]
         except TypeError:
             return self.var
+
 
 def time_stamp(gmtime=False, debug=False):
     if debug:
@@ -60,6 +67,7 @@ def time_stamp(gmtime=False, debug=False):
                      now.tm_hour, now.tm_min, now.tm_sec))
     return time_stamp
 
+
 def date_stamp(gmtime=False, debug=False):
     if debug:
         return "debug"
@@ -72,11 +80,13 @@ def date_stamp(gmtime=False, debug=False):
                      now.tm_hour, now.tm_min, now.tm_sec))
     return date_stamp
 
+
 def mkdir(path):
     try:
         os.makedirs(path)
     except OSError:
         pass
+
 
 def system_dir(pars, testtype):
     outputdir = os.path.join(pars.rootdir, 'system', testtype,
@@ -84,12 +94,14 @@ def system_dir(pars, testtype):
     mkdir(outputdir)
     return outputdir
 
+
 def setup(pars, testtype):
     outputdir = os.path.join(pars.rootdir, 'sensorData', pars.sensor_id,
                              testtype, date_stamp(debug=pars.debug))
     mkdir(outputdir)
     sensor_id = pars.sensor_id
     return outputdir, sensor_id
+
 
 def simulate_frame(exptime, pars, ccdtemp=-95, set_full_well=True):
     if set_full_well:
@@ -105,6 +117,7 @@ def simulate_frame(exptime, pars, ccdtemp=-95, set_full_well=True):
     sensor.add_bias(level=0, sigma=pars.read_noise)
     sensor.add_dark_current(pars.dark_current)
     return sensor
+
 
 def generate_flats(pars):
     print "Generating flats dataset..."
@@ -141,6 +154,7 @@ def generate_flats(pars):
                            time_stamp(debug=pars.debug)))
             sensor.writeto(os.path.join(outputdir, filename),
                            bitpix=pars.bitpix)
+
 
 def generate_traps(pars):
     print "Generating trap frames..."
@@ -194,6 +208,7 @@ def generate_traps(pars):
         frame.writeto(os.path.join(outputdir, filename),
                       bitpix=pars.bitpix)
 
+
 def generate_darks(pars):
     print "Generating darks dataset..."
     darks = pars.darks
@@ -242,6 +257,7 @@ def generate_darks(pars):
         sensor.writeto(os.path.join(outputdir, filename),
                        bitpix=pars.bitpix)
 
+
 def generate_Fe55(pars):
     print "Generating Fe55 dataset..."
     fe55 = pars.fe55
@@ -260,7 +276,7 @@ def generate_Fe55(pars):
                     % (sensor_id, fe55.test_type, frame,
                        time_stamp(debug=pars.debug)))
         sensor.writeto(os.path.join(outputdir, filename),
-                           bitpix=pars.bitpix)
+                       bitpix=pars.bitpix)
         #
         # Bias frame
         #
@@ -275,13 +291,15 @@ def generate_Fe55(pars):
         sensor.writeto(os.path.join(outputdir, filename),
                        bitpix=pars.bitpix)
 
+
 class SpherePhotodiodeCurrent(object):
     def __init__(self, pd_ratio_file, pixel_area=1e-10, pd_area=1e-4):
         data = np.recfromtxt(pd_ratio_file, skip_header=1,
                              names='monowl, sens, qe, ccdfrac, foo, bar')
         self.response = Interpolator(data['monowl'],
                                      data['sens']*data['ccdfrac']
-                                     *pd_area/pixel_area)
+                                     * pd_area/pixel_area)
+
     def __call__(self, incident_power, wl):
         """
         @return Photodiode current (nA)
@@ -290,6 +308,7 @@ class SpherePhotodiodeCurrent(object):
         """
         pd_current = incident_power*self.response(wl)*1e9
         return pd_current
+
 
 def generate_qe_dataset(pars):
     print "Generating wavelength scan dataset..."
@@ -326,6 +345,7 @@ def generate_qe_dataset(pars):
                        time_stamp(debug=pars.debug)))
         sensor.writeto(os.path.join(outputdir, filename),
                        bitpix=pars.bitpix)
+
 
 def generate_superflat(pars):
     print "Generating superflat dataset..."
@@ -377,12 +397,14 @@ def generate_superflat(pars):
     sensor.writeto(os.path.join(outputdir, filename),
                    bitpix=pars.bitpix)
 
+
 def dark_frame(exptime, ccdtemp, pars):
     frame = ccd(exptime=exptime, gain=pars.system_gain, ccdtemp=ccdtemp)
     frame.add_bias(level=pars.bias_level, sigma=pars.bias_sigma)
     frame.add_bias(level=0, sigma=pars.read_noise)
     frame.add_dark_current(pars.dark_current)
     return frame
+
 
 def generate_crosstalk_dataset(pars):
     print "Generating spot dataset..."
@@ -422,6 +444,7 @@ def generate_crosstalk_dataset(pars):
             sensors[aggressor].writeto(os.path.join(outputdir, filename),
                                        bitpix=pars.bitpix)
 
+
 def generate_system_read_noise(pars):
     print "Generating system read noise..."
     sysnoise = pars.sysnoise
@@ -435,6 +458,7 @@ def generate_system_read_noise(pars):
                        time_stamp(debug=pars.debug)))
         sensor.writeto(os.path.join(outputdir, filename),
                        bitpix=pars.bitpix)
+
 
 def generate_system_crosstalk_dataset(pars):
     print "Generating system crosstalk dataset..."
@@ -452,6 +476,7 @@ def generate_system_crosstalk_dataset(pars):
                        time_stamp(debug=pars.debug)))
         sensor.writeto(os.path.join(outputdir, filename),
                        bitpix=pars.bitpix)
+
 
 def generate_persistence_dataset(pars):
     print "Generating persistence dataset..."
@@ -514,7 +539,7 @@ def generate_persistence_dataset(pars):
         time.sleep(exptime)
         # Add deferred charge to darks.
         decay_factor = np.exp(-((obs_time - t0).sec + exptime)
-                              /persistence.decay_time)
+                              / persistence.decay_time)
         for amp in sensor.segments:
             sensor.segments[amp].imarr += \
                 persistence.deferred_charge/pars.system_gain*decay_factor
@@ -523,6 +548,7 @@ def generate_persistence_dataset(pars):
                      time_stamp(debug=pars.debug)))
         sensor.writeto(os.path.join(outputdir, filename),
                        bitpix=pars.bitpix, obs_time=obs_time)
+
 
 if __name__ == '__main__':
     import sys

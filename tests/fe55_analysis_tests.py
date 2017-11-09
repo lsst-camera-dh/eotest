@@ -7,6 +7,7 @@ import unittest
 import numpy as np
 import lsst.eotest.sensor as sensorTest
 
+
 class Fe55GainFitterTestCase(unittest.TestCase):
     def setUp(self):
         pass
@@ -31,6 +32,7 @@ class Fe55GainFitterTestCase(unittest.TestCase):
             self.assertLess(fitter.xrange[0], mode)
             self.assertLess(mode, fitter.xrange[1])
             fitter.fit()
+
 
 if __name__ == '__main__':
     unittest.main()

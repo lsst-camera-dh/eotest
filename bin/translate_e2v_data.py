@@ -14,6 +14,7 @@ import lsst.eotest.sensor as sensorTest
 # filenames: <sensor_id>_<test_type>_<image_type>_<seqno>_<time_stamp>.fits
 #
 
+
 def translate(infile, test_type, image_type, seqno, time_stamp='000'):
     pass
     foo = fits.open(infile)
@@ -41,7 +42,10 @@ def translate(infile, test_type, image_type, seqno, time_stamp='000'):
     outfile = os.path.join(outdir, outfile)
     foo.writeto(outfile, clobber=True, checksum=True)
 
-trr_files = lambda x : sorted(glob.glob(os.path.join('Final_TRR_Data_Set', x)))
+
+def trr_files(x): return sorted(glob.glob(os.path.join('Final_TRR_Data_Set', x)))
+
+
 #
 # Fe55
 #
@@ -73,7 +77,11 @@ for iframe, infile in enumerate(infiles):
 # flat
 #
 infiles = trr_files('satlin - multi/11093*.fits')
-exptime = lambda x : fits.open(x)[0].header['EXPOSURE']
+
+
+def exptime(x): return fits.open(x)[0].header['EXPOSURE']
+
+
 for iframe, infile in enumerate(infiles):
     print "processing", os.path.basename(infile)
     seqno = '%03i_flat1' % exptime(infile)
@@ -83,7 +91,11 @@ for iframe, infile in enumerate(infiles):
 # lambda
 #
 infiles = trr_files('QE and PRNU/11093*qe*.fits')
-wl = lambda x: fits.open(x)[0].header['WAVELEN']
+
+
+def wl(x): return fits.open(x)[0].header['WAVELEN']
+
+
 for infile in infiles:
     print "processing", os.path.basename(infile)
     seqno = "%04i" % wl(infile)

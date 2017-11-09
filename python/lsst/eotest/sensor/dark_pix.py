@@ -1,20 +1,22 @@
-import sys, traceback
+import sys
+import traceback
 import numpy as np
 import argparse
 import lsst.afw.image as afwImage
 import lsst.afw.math as afwMath
 import lsst.eotest.image_utils as imutils
 
+
 class DarkPix(object):
     def __init__(self, percent):
         self.percent = percent
-    
+
     def __call__(self, fitsfile, amps):
 
         tot_dark_ccd = 0
         tot_dark_per_amp = []
         pix_per_amp = []
-        col_per_amp  = []
+        col_per_amp = []
 
         for amp in amps:
             try:
@@ -50,6 +52,7 @@ class DarkPix(object):
 
         return len(pixlist), pixlist
 
+
 def run_dark_pix(fitsfile, percent=80, amps=None, verbose=False):
     """ Given an input FITS file, find bright pixels."""
     if amps is None:
@@ -68,23 +71,21 @@ def run_dark_pix(fitsfile, percent=80, amps=None, verbose=False):
 
     return tot_dark_pixels, tot_per_amp, pix_per_amp, col_per_amp
 
+
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(\
-                      description='Find the locations of dark pixels.')
-    parser.add_argument('-i', '--infile', help="path to input image file", \
+    parser = argparse.ArgumentParser(
+        description='Find the locations of dark pixels.')
+    parser.add_argument('-i', '--infile', help="path to input image file",
                         type=str)
-    parser.add_argument('-p', '--percent', \
-                        help="Percentage of median to use as threshold", \
-                        type=float, default = 80.0)
-    parser.add_argument('-a', '--amps', \
-                        help="amps to be analyzed, separated by a space", \
-                        type=int, nargs = '+', default = range(1,17))
-    parser.add_argument('-v', '--verbose', help="turn verbosity on",\
+    parser.add_argument('-p', '--percent',
+                        help="Percentage of median to use as threshold",
+                        type=float, default=80.0)
+    parser.add_argument('-a', '--amps',
+                        help="amps to be analyzed, separated by a space",
+                        type=int, nargs='+', default=range(1, 17))
+    parser.add_argument('-v', '--verbose', help="turn verbosity on",
                         action='store_true', default=False)
     args = parser.parse_args()
 
-    
     tot, tot_per_amp, pix_per_amp, col_per_amp = \
         run_dark_pix(args.infile, args.percent, args.amps, args.verbose)
-
-

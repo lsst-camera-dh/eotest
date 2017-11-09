@@ -16,11 +16,13 @@ from Fe55GainFitter import Fe55GainFitter
 import lsst.pex.config as pexConfig
 import lsst.pipe.base as pipeBase
 
+
 class Fe55Config(pexConfig.Config):
     """Configuration for Fe55 analysis task"""
     chiprob_min = pexConfig.Field("Minimum chi-square probability for cluster fit",
                                   float, default=0.1)
-    nsig = pexConfig.Field("Charge cluster footprint threshold in number of standard deviations of noise in bias section", float, default=4)
+    nsig = pexConfig.Field(
+        "Charge cluster footprint threshold in number of standard deviations of noise in bias section", float, default=4)
     temp_set_point = pexConfig.Field("Required temperature (C) set point",
                                      float, default=-95.)
     temp_set_point_tol = pexConfig.Field("Required temperature set point tolerance (degrees C)",
@@ -33,6 +35,7 @@ class Fe55Config(pexConfig.Config):
     fit_xy = pexConfig.Field("Fit sigmas in x- and y-directions separately",
                              bool, default=False)
     verbose = pexConfig.Field("Turn verbosity on", bool, default=True)
+
 
 class Fe55Task(pipeBase.Task):
     """Task to estimate PSF size and system gain from the distribution of
@@ -99,7 +102,7 @@ class Fe55Task(pipeBase.Task):
                         gain_accuracy = np.abs(gain_errors[amp]/gains[amp])
                         if self.config.verbose:
                             message = "  Relative gain accuracy, dgain/gain " \
-                                 + "= %.2e" % gain_accuracy
+                                + "= %.2e" % gain_accuracy
                             self.log.info(message)
                         if gain_accuracy < accuracy_req:
                             # Requested accuracy already obtained, so

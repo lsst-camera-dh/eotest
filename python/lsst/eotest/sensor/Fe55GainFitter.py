@@ -13,6 +13,7 @@ import pylab_plotter as plot
 import lsst.afw.math as afwMath
 from fe55_yield import Fe55Yield
 
+
 def fe55_lines(x, *args):
     """
     Two Gaussian model of Mn K-alpha and K-beta lines for Fe55 tests.
@@ -26,11 +27,13 @@ def fe55_lines(x, *args):
     value += k2*scipy.stats.norm.pdf(x, loc=m2, scale=s2)
     return value
 
+
 class Fe55GainFitter(object):
     def __init__(self, signals, ccdtemp=-95):
         self.signals = signals
         self.ccdtemp = ccdtemp
         self._compute_stats()
+
     def fit(self, xrange=None, bins=100, hist_nsig=10, dADU=50):
         if xrange is None:
             self._set_hist_range(dADU, bins, hist_nsig)
@@ -59,6 +62,7 @@ class Fe55GainFitter(object):
         self.gain_error = float(self.gain*kalpha_peak_error/kalpha_peak)
 
         return kalpha_peak, kalpha_sigma
+
     def _compute_stats(self):
         try:
             flags = afwMath.MEDIAN | afwMath.STDEVCLIP
@@ -68,6 +72,7 @@ class Fe55GainFitter(object):
         except:
             self.median = 0
             self.stdev = 0
+
     def _set_hist_range(self, dADU, bins, hist_nsig):
         """Set the histogram range for the fit to bracket the estimated
         Kalpha and Kbeta peak locations by +/-dADU"""
@@ -82,6 +87,7 @@ class Fe55GainFitter(object):
         xpeak = hist[1][np.where(hist[0] == max(hist[0]))][0]
         # Set final xrange.
         self.xrange = max(0, xpeak - dADU), xpeak*1785./1620. + dADU
+
     def plot(self, xrange=None, interactive=False, bins=100,
              win=None, subplot=(1, 1, 1), figsize=None, add_labels=False,
              frameLabels=False, amp=1, title=''):
@@ -128,6 +134,7 @@ class Fe55GainFitter(object):
                        size='x-small')
         pylab.interactive(pylab_interactive_state)
         return win
+
 
 if __name__ == '__main__':
     import astropy.io.fits as fits

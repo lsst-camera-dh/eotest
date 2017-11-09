@@ -9,6 +9,7 @@ from lsst.eotest.sensor.crosstalk import make_crosstalk_matrix, CrosstalkMatrix
 import lsst.pex.config as pexConfig
 import lsst.pipe.base as pipeBase
 
+
 class CrosstalkConfig(pexConfig.Config):
     """Configuration for CrosstalkTask"""
     temp_set_point = pexConfig.Field("Required temperature (C) set point",
@@ -17,6 +18,7 @@ class CrosstalkConfig(pexConfig.Config):
                                          float, default=1.)
     output_dir = pexConfig.Field("Output directory", str, default=".")
     verbose = pexConfig.Field("Turn verbosity on", bool, default=True)
+
 
 class CrosstalkTask(pipeBase.Task):
     """Task to evaluate crosstalk within a single CCD."""

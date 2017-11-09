@@ -13,6 +13,7 @@ amp_loc['E2V'] = dict([(amp, -1) for amp in range(1, 9)] +
 amp_loc['ITL'] = dict([(amp, -1) for amp in range(1, 9)] +
                       [(amp, -1) for amp in range(9, 17)])
 
+
 def parse_geom_kwd(value):
     geom = {}
     data = value[1:-1].split(',')
@@ -23,6 +24,7 @@ def parse_geom_kwd(value):
     geom['ymin'] = ymin
     geom['ymax'] = ymax
     return geom
+
 
 def makeAmplifierGeometry(infile):
     """
@@ -53,8 +55,10 @@ def makeAmplifierGeometry(infile):
     myAmpGeom.compute_geometry(fitsfile=infile)
     return myAmpGeom
 
+
 class AmplifierGeometry(dict):
     nsegx, nsegy = 8, 2
+
     def __init__(self, prescan=10, nx=512, ny=2002,
                  detxsize=4336, detysize=4044, amp_loc=amp_loc['E2V']):
         super(AmplifierGeometry, self).__init__()
@@ -63,6 +67,7 @@ class AmplifierGeometry(dict):
         self.ny = ny
         self.amp_loc = amp_loc
         self.compute_geometry(detxsize=detxsize, detysize=detysize)
+
     def compute_geometry(self, **kwds):
         if kwds.has_key('fitsfile'):
             # Compute geometry by inferring DETSIZE from NAXIS[12] in
@@ -86,6 +91,7 @@ class AmplifierGeometry(dict):
             pass
         for amp in range(1, self.nsegx*self.nsegy + 1):
             self[amp] = self._segment_geometry(amp)
+
     def _make_bboxes(self):
         import lsst.afw.geom as afwGeom
         self.full_segment = \
@@ -98,7 +104,7 @@ class AmplifierGeometry(dict):
         self.imaging = \
             afwGeom.Box2I(afwGeom.Point2I(self.prescan_width, 0),
                           afwGeom.Point2I(self.nx + self.prescan_width - 1,
-                                          self.ny - 1 ))
+                                          self.ny - 1))
         self.serial_overscan = \
             afwGeom.Box2I(afwGeom.Point2I(self.nx + self.prescan_width, 0),
                           afwGeom.Point2I(self.naxis1 - 1, self.naxis2 - 1))
@@ -106,9 +112,10 @@ class AmplifierGeometry(dict):
             afwGeom.Box2I(afwGeom.Point2I(self.prescan_width, self.ny),
                           afwGeom.Point2I(self.prescan_width + self.nx,
                                           self.naxis2 - 1))
+
     def _segment_geometry(self, amp):
         results = dict()
-        results['DETSIZE'] = '[1:%i,1:%i]' % (self.nx*self.nsegx, 
+        results['DETSIZE'] = '[1:%i,1:%i]' % (self.nx*self.nsegx,
                                               self.ny*self.nsegy)
         results['DATASEC'] = \
             '[%i:%i,%i:%i]' % (self.prescan_width + 1,
@@ -120,6 +127,7 @@ class AmplifierGeometry(dict):
                                self.naxis1,
                                1, self.ny)
         return results
+
     def _detsec(self, amp):
         namps = self.nsegx*self.nsegy
         if amp <= self.nsegx:
@@ -137,11 +145,13 @@ class AmplifierGeometry(dict):
             # Flip since the output node is on the right side of segment.
             x1, x2 = x2, x1
         return '[%i:%i,%i:%i]' % (x1, x2, y1, y2)
+
     def __eq__(self, other):
         for key in self.__dict__.keys():
             if getattr(self, key) != getattr(other, key):
                 return False
         return True
+
 
 if __name__ == '__main__':
     e2v = AmplifierGeometry()

@@ -16,10 +16,12 @@ from lsst.eotest.sensor.EOTestPlots import cmap_range
 
 __all__ = ['RaftMosaic']
 
+
 class RaftMosaic(object):
     """
     Raft level mosaic of individual CCDs.
     """
+
     def __init__(self, fits_files, gains=None, bias_subtract=True,
                  nx=12700, ny=12700, nx_segments=8, ny_segments=2,
                  segment_processor=None):

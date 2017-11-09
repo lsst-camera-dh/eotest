@@ -11,12 +11,15 @@ db2_imp = MySQLdb
 
 mysql_db_data = 'mysql_db_data.par'
 
+
 def nullFunc(*args):
     return None
+
 
 class Database(object):
     def __init__(self, dbdata=mysql_db_data):
         self.pars = Parfile(dbdata)
+
     def apply(self, sql, args=None, cursorFunc=nullFunc):
         sql = sql.replace('?', '%s')
         my_connection = MySQLdb.connect(**self.pars)
@@ -37,10 +40,12 @@ class Database(object):
         my_connection.close()
         return results
 
+
 def getDbObjects(tablename, dbdata=mysql_db_data):
     """Return a list of entries for the specified db table"""
     sql = "SELECT * from %s" % tablename
     db = Database(dbdata)
+
     def cursorFunc(cursor):
         cols = [column[0] for column in cursor.description]
         entries = []
@@ -48,6 +53,7 @@ def getDbObjects(tablename, dbdata=mysql_db_data):
             entries.append(dict(zip(cols, item)))
         return entries
     return db.apply(sql, cursorFunc=cursorFunc)
+
 
 if __name__ == '__main__':
     pass

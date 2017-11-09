@@ -6,6 +6,7 @@ import numpy as np
 import astropy.io.fits as fits
 import lsst.eotest.image_utils as imutils
 
+
 def eotest_check_input_data(rootdir='.', use_baselined=True):
     """
     Check electro-optical datasets according to relevant specs in
@@ -15,8 +16,9 @@ def eotest_check_input_data(rootdir='.', use_baselined=True):
     ID, i.e., it is of the form "<...>/NNN-MM".  Checks are performed
     only for files and directories below rootdir.
     """
-    errors = {'dirs' : [], 'temperature' : [], 'lambda' : []}
-    full_path = lambda x : os.path.join(rootdir, x)
+    errors = {'dirs': [], 'temperature': [], 'lambda': []}
+
+    def full_path(x): return os.path.join(rootdir, x)
     if use_baselined:  # Use the baselined version in docushare
         print "Assuming baselined version of LCA-10140-A (from docushare)"
         test_types = ('dark', 'fe55', 'flat', 'lambda', 'spot',
@@ -24,7 +26,7 @@ def eotest_check_input_data(rootdir='.', use_baselined=True):
         file_pattern = os.path.join('*', '*.fits')
     else:           # Use the version in the most recent revision (2014-04-11)
         print "Assuming 2014-04-11 revision of LCA-10140-A"
-        test_types = ('dark', 'fe55', 'flat', 'lambda', 'spot', 
+        test_types = ('dark', 'fe55', 'flat', 'lambda', 'spot',
                       'sflat_500', 'trap')
         file_pattern = os.path.join('*', '*', '*.fits')
     files = {}
@@ -78,11 +80,13 @@ def eotest_check_input_data(rootdir='.', use_baselined=True):
                 print "  ", message
             print
 
+
 if __name__ == '__main__':
     import argparse
     parser = argparse.ArgumentParser(description='Check EO Test dataset compliance')
-    parser.add_argument('sensor_dir', help='Root directory for data from a specific sensor.  Should point to a directory of the form <...>/NNN-MM')
-    parser.add_argument('-b', '--use_baselined', action='store_true', 
+    parser.add_argument(
+        'sensor_dir', help='Root directory for data from a specific sensor.  Should point to a directory of the form <...>/NNN-MM')
+    parser.add_argument('-b', '--use_baselined', action='store_true',
                         help='Flag to use baselined version of LCA-10140 (in docushare)')
     args = parser.parse_args()
     eotest_check_input_data(args.sensor_dir, args.use_baselined)

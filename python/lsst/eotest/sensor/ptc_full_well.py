@@ -16,11 +16,13 @@ try:
 except ImportError:
     plot = None
 
+
 def linear_fit_fixedpt(x, y, x0, y0):
     dx = x - x0
     dy = y - y0
     slope = sum(dx*dy)/sum(dx*dx)
     return slope
+
 
 def quadratic_fit_fixedpt(x, y, x0, y0):
     A = np.matrix([[sum((x**2 - x0**2)**2), sum((x-x0)*(x**2 - x0**2))],
@@ -28,12 +30,14 @@ def quadratic_fit_fixedpt(x, y, x0, y0):
     B = [sum((y - y0)*(x**2 - x0**2)), sum((y - y0)*(x - x0))]
     return linalg.solve(A, B)
 
+
 def gain_est(meanDN, varDN, nmin=10, nmax=100):
     results = np.polyfit(meanDN[nmin:nmax], varDN[nmin:nmax], 1)
     gain = 1./results[0]
     return gain
 
-def full_well(ptcfile, amp, gain=None, fracdevmax=0.10, 
+
+def full_well(ptcfile, amp, gain=None, fracdevmax=0.10,
               make_plot=False, outfile_prefix=None):
     data = np.recfromtxt(ptcfile)
     data = data.transpose()
@@ -41,7 +45,7 @@ def full_well(ptcfile, amp, gain=None, fracdevmax=0.10,
     exptime = data[0]
     meanDN = data[(amp-1)*2 + 1]
     varDN = data[(amp-1)*2 + 2]
-    
+
     if gain is None:
         gain = gain_est(meanDN, varDN)
     #
@@ -75,10 +79,12 @@ def full_well(ptcfile, amp, gain=None, fracdevmax=0.10,
         ff = varNe[indx:imax]
 
         slope = linear_fit_fixedpt(xx, ff, xref, fref)
-        f1 = lambda x : slope*(x - xref) + fref
+
+        def f1(x): return slope*(x - xref) + fref
 
         quadfit = quadratic_fit_fixedpt(xx, ff, xref, fref)
-        f2 = lambda x : quadfit[0]*(x**2-xref**2) + quadfit[1]*(x-xref) + fref
+
+        def f2(x): return quadfit[0]*(x**2-xref**2) + quadfit[1]*(x-xref) + fref
         #
         # Here the fractional deviation is computed at the current
         # end-point for the data that are fit.  May need to check the
@@ -86,11 +92,12 @@ def full_well(ptcfile, amp, gain=None, fracdevmax=0.10,
         # is the criterion, then the current implementation is ok.
         #
         #fracdev = lambda x : np.abs(f1(x) - f2(x))/f1(x)
-        fracdev = lambda x : (f1(x) - f2(x))/f1(x)
+
+        def fracdev(x): return (f1(x) - f2(x))/f1(x)
         full_well_est = meanNe[imax]
         dvarmax = fracdev(full_well_est)
         imax += 1
-    
+
     if make_plot and plot is not None:
         win0 = plot.xyplot(meanNe, varNe, xname='mean(e-)', yname='var(e-)')
         plot.xyplot(xx, ff, oplot=1, color='r')
@@ -111,6 +118,7 @@ def full_well(ptcfile, amp, gain=None, fracdevmax=0.10,
             plot.save(outfile_prefix + '_fracdev.png')
 
     return full_well_est
+
 
 if __name__ == '__main__':
     ptcfile = 'ptc_results.txt'

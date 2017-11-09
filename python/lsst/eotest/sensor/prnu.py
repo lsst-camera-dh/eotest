@@ -12,6 +12,7 @@ from MaskedCCD import MaskedCCD
 import lsst.afw.image as afwImage
 import lsst.afw.math as afwMath
 
+
 def extract_unmasked_pixels(ccd, amp, gain, correction_image=None):
     subimage = ccd.unbiased_and_trimmed_image(amp)
     imarr = subimage.getImage().getArray()
@@ -25,6 +26,7 @@ def extract_unmasked_pixels(ccd, amp, gain, correction_image=None):
     indx = np.where(maskarr == 0)
     return [x*gain for x in imarr[indx].flat]
 
+
 def prnu(infile, mask_files, gains, bias_frame=None, correction_image=None):
     ccd = MaskedCCD(infile, mask_files=mask_files, bias_frame=bias_frame)
     active_pixels = []
@@ -37,6 +39,7 @@ def prnu(infile, mask_files, gains, bias_frame=None, correction_image=None):
     pix_mean = stats.getValue(afwMath.MEAN)
     pix_stdev = stats.getValue(afwMath.STDEV)
     return pix_stdev, pix_mean
+
 
 if __name__ == '__main__':
     infile = 'work/sensorData/000-00/lambda/debug/000-00_lambda_0450.0_debug.fits'

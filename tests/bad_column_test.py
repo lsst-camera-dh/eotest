@@ -5,6 +5,7 @@ import unittest
 import numpy as np
 from lsst.eotest.image_utils import bad_column
 
+
 def make_column(pixel_counts):
     """
     Concatenate alternating sequences of 0's and 1's with lengths
@@ -17,10 +18,12 @@ def make_column(pixel_counts):
     column = np.array(column)
     return list(np.where(column != 0)[0])
 
+
 class BadColumnTestCase(unittest.TestCase):
     """
     TestCase class for bad_column function.
     """
+
     def setUp(self):
         "Create bad and ok columns of masked pixels."
         bad_pixel_counts = ((40, 30, 500),
@@ -48,6 +51,7 @@ class BadColumnTestCase(unittest.TestCase):
 
         for column in self.ok_columns:
             self.assertFalse(bad_column(column, threshold))
+
 
 if __name__ == '__main__':
     unittest.main()

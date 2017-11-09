@@ -11,6 +11,7 @@ import lsst.eotest.sensor as sensorTest
 
 __all__ = ['RaftSpecPlots']
 
+
 class RaftSpecPlots(object):
     """
     Class to produce plots of measured specifications in eotest
@@ -19,6 +20,7 @@ class RaftSpecPlots(object):
     _raft_slots = \
         OrderedDict([(slot, i) for i, slot in
                      enumerate('S00 S01 S02 S10 S11 S12 S20 S21 S22'.split())])
+
     def __init__(self, results_files):
         """
         Constructor.

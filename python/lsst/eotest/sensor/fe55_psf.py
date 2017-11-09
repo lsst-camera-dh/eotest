@@ -21,6 +21,7 @@ from .MaskedCCD import MaskedCCD, MaskedCCDBiasImageException
 
 _sqrt2 = np.sqrt(2)
 
+
 def psf_sigma_statistics(sigma, bins=50, range=(2, 6), frac=0.5):
     hist = np.histogram(sigma, bins=bins, range=range)
     y = hist[0]
@@ -30,6 +31,7 @@ def psf_sigma_statistics(sigma, bins=50, range=(2, 6), frac=0.5):
     median = my_sigma[int(frac*len(my_sigma))]
     mean = np.mean(sigma)
     return mode, median, mean
+
 
 def pixel_integral(x, y, x0, y0, sigmax, sigmay):
     """
@@ -44,16 +46,20 @@ def pixel_integral(x, y, x0, y0, sigmax, sigmay):
 
     return Fx*Fy
 
+
 def residuals_single(pars, pos, dn, errors):
     x0, y0, sigma, DN_tot = pars
     return (dn - psf_func(pos, x0, y0, sigma, sigma, DN_tot))/errors
+
 
 def residuals(pars, pos, dn, errors):
     x0, y0, sigmax, sigmay, DN_tot = pars
     return (dn - psf_func(pos, x0, y0, sigmax, sigmay, DN_tot))/errors
 
+
 def psf_func_single_sigma(pos, x0, y0, sigma, DN_tot):
     return psf_func(pos, x0, y0, sigma, sigma, DN_tot)
+
 
 def psf_func(pos, x0, y0, sigmax, sigmay, DN_tot):
     """
@@ -67,10 +73,12 @@ def psf_func(pos, x0, y0, sigmax, sigmay, DN_tot):
     return DN_tot*np.array([pixel_integral(x[0], x[1], x0, y0,
                                            sigmax, sigmay) for x in pos])
 
+
 def chisq(pos, dn, x0, y0, sigmax, sigmay, dn_fit, dn_errors):
     "The chi-square of the fit of the data to psf_func."
     return sum((psf_func(pos, x0, y0, sigmax, sigmay, dn_fit)
                 - np.array(dn))**2/dn_errors**2)
+
 
 class PsfGaussFit(object):
     def __init__(self, nsig=3, min_npix=None, max_npix=20, gain_est=2,
@@ -108,11 +116,13 @@ class PsfGaussFit(object):
         else:
             # Append new data to existing file.
             self.output = fits.open(self.outfile)
+
     def _bg_image(self, ccd, amp, nx, ny):
         "Compute background image based on clipped local mean."
         bg_ctrl = afwMath.BackgroundControl(nx, ny, ccd.stat_ctrl)
         bg = afwMath.makeBackground(ccd[amp], bg_ctrl)
         return bg.getImageF()
+
     def process_image(self, ccd, amp, sigma0=0.36, dn0=1590./5.,
                       bg_reg=(10, 10), logger=None, oscan_fit_order=1):
         """
@@ -209,6 +219,7 @@ class PsfGaussFit(object):
         self.dn_fp.extend(dn_fp)
         self.chiprob.extend(chiprob)
         self.amp.extend(np.ones(len(sigmax))*amp)
+
     def numGoodFits(self, chiprob_min=0.1):
         chiprob = np.array(self.chiprob)
         amps = np.sort(np.unique(np.array(self.amp)))
@@ -217,6 +228,7 @@ class PsfGaussFit(object):
             indx = np.where((self.chiprob > chiprob_min) & (self.amp == amp))
             my_numGoodFits[amp] = len(indx[0])
         return my_numGoodFits
+
     def _save_ext_data(self, amp, x0, y0, sigmax, sigmay, dn, dn_fp, chiprob,
                        chi2s, dofs, maxDNs):
         """
@@ -262,17 +274,19 @@ class PsfGaussFit(object):
             formats = ['I'] + ['E']*(len(columns)-1)
             units = ['None', 'pixel', 'pixel', 'pixel', 'pixel',
                      'ADU', 'ADU', 'None', 'None', 'None', 'ADU']
-            fits_cols = lambda coldata: [fits.Column(name=colname,
-                                                     format=format,
-                                                     unit=unit,
-                                                     array=column)
-                                         for colname, format, unit, column
-                                         in coldata]
+
+            def fits_cols(coldata): return [fits.Column(name=colname,
+                                                        format=format,
+                                                        unit=unit,
+                                                        array=column)
+                                            for colname, format, unit, column
+                                            in coldata]
             self.output.append(fitsTableFactory(fits_cols(zip(colnames,
                                                               formats,
                                                               units,
                                                               columns))))
             self.output[-1].name = extname
+
     def read_fe55_catalog(self, psf_catalog, chiprob_min=0.1):
         catalog = fits.open(psf_catalog)
         for attr in 'sigmax sigmay dn dn_fp_sum chiprob amp'.split():
@@ -284,9 +298,11 @@ class PsfGaussFit(object):
             self.chiprob = np.concatenate((self.chiprob, chiprob[index]))
             self.amp = np.concatenate((self.amp, np.ones(len(index[0]))*amp))
             for attr in 'sigmax sigmay dn dn_fp_sum'.split():
-                command = 'self.%(attr)s = np.concatenate((self.%(attr)s, catalog["%(extname)s"].data.field("%(attr)s")[index]))' % locals()
+                command = 'self.%(attr)s = np.concatenate((self.%(attr)s, catalog["%(extname)s"].data.field("%(attr)s")[index]))' % locals(
+                )
                 exec(command)
             self.dn_fp = self.dn_fp_sum
+
     def results(self, min_prob=0.1, amp=None):
         """
         Return sigmax, sigmay, dn, chiprob for chiprob > min_prob for
@@ -306,9 +322,11 @@ class PsfGaussFit(object):
         my_results['chiprob'] = chiprob[indx]
         my_results['amps'] = amps[indx]
         return my_results
+
     def write_results(self, outfile='fe55_psf_params.fits'):
         self.output[0].header['NAMPS'] = len(self.amp_set)
         fitsWriteto(self.output, outfile, clobber=True, checksum=True)
+
 
 if __name__ == '__main__':
     import os
@@ -353,7 +371,7 @@ if __name__ == '__main__':
 
     plot.xyplot(results['chiprob'], results['sigmax'],
                 xname='chi-square prob.', yname='sigma', ylog=1)
-                
+
     plot.xyplot(results['chiprob'], results['sigmay'], oplot=1, color='r')
 
     plot.xyplot(results['dn'], results['dn_fp'], xname='DN (fitted value)',

@@ -7,7 +7,8 @@
 """
 import lsst.eotest.sensor as sensorTest
 
-parser = sensorTest.TaskParser('Compute charge transfer efficiency in parallel and serial directions using extended pixel edge response technique')
+parser = sensorTest.TaskParser(
+    'Compute charge transfer efficiency in parallel and serial directions using extended pixel edge response technique')
 parser.add_argument('-f', '--superflat_pattern', type=str,
                     help='superflat dataset file pattern')
 parser.add_argument('-F', '--superflat_file_list', type=str,

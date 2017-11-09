@@ -12,8 +12,9 @@ import lsst.afw.math as afwMath
 from MaskedCCD import MaskedCCD
 import lsst.eotest.image_utils as imutils
 
+
 class PairStats(object):
-    def __init__(self, bias_mean, bias_stddev, flat_mean, flat_var, 
+    def __init__(self, bias_mean, bias_stddev, flat_mean, flat_var,
                  gain, noise):
         self.bias_mean = bias_mean
         self.bias_stddev = bias_stddev
@@ -21,16 +22,20 @@ class PairStats(object):
         self.flat_var = flat_var
         self.gain = gain
         self.noise = noise
+
     def header(self):
         return """  Exp    Bias Mean   Bias RMS    Flat Mean   Flat Var   Gain e-/DN   Noise e-  
  ------ ----------- ----------- ----------- ----------- ----------- -----------"""
+
     def summary(self, i=0):
-        return ("%5i" % i)  + self.__repr__()
+        return ("%5i" % i) + self.__repr__()
+
     def __repr__(self):
         format = 6*"%12.3F"
-        return format % (self.bias_mean, self.bias_stddev, 
+        return format % (self.bias_mean, self.bias_stddev,
                          self.flat_mean, self.flat_var,
                          self.gain, self.noise)
+
 
 def pair_stats(ccd1, ccd2, amp, mask_files=(), binsize=1, bias_frame=None):
     if ccd1.md.get('EXPTIME') != ccd2.md.get('EXPTIME'):
@@ -40,10 +45,12 @@ def pair_stats(ccd1, ccd2, amp, mask_files=(), binsize=1, bias_frame=None):
     # Mean and variance calculations that account for masks (via
     # ccd1.stat_ctrl, which is the same for both MaskedImages).
     #
-    mean = lambda im : afwMath.makeStatistics(im, afwMath.MEAN,
-                                              ccd1.stat_ctrl).getValue()
-    var = lambda im : afwMath.makeStatistics(im, afwMath.VARIANCE,
-                                             ccd1.stat_ctrl).getValue()
+
+    def mean(im): return afwMath.makeStatistics(im, afwMath.MEAN,
+                                                ccd1.stat_ctrl).getValue()
+
+    def var(im): return afwMath.makeStatistics(im, afwMath.VARIANCE,
+                                               ccd1.stat_ctrl).getValue()
     #
     # Extract imaging region for segments of both CCDs.
     #
@@ -86,11 +93,13 @@ def pair_stats(ccd1, ccd2, amp, mask_files=(), binsize=1, bias_frame=None):
     noise = gain*bias_rms
     return PairStats(bmean, bias_rms, fmean, fvar, gain, noise)
 
+
 if __name__ == '__main__':
     from lsst.eotest.sensor.sim_tools import simulateFlat
 
     datadir = '/nfs/slac/g/ki/ki18/jchiang/LSST/SensorTests/test_scripts/work/sensorData/000-00/flat/debug'
-    datapath = lambda x : os.path.join(datadir, x)
+
+    def datapath(x): return os.path.join(datadir, x)
     ccd1 = MaskedCCD(datapath('000-00_flat_005.09s_flat1_debug.fits'))
     ccd2 = MaskedCCD(datapath('000-00_flat_005.09s_flat2_debug.fits'))
 

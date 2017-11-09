@@ -18,6 +18,7 @@ import lsst.afw.geom as afwGeom
 import lsst.pex.config as pexConfig
 import lsst.pipe.base as pipeBase
 
+
 def _write_read_noise_dists(outfile, Ntot, Nsys, gains, bias, sysnoise):
     output = fits.HDUList()
     output.append(fits.PrimaryHDU())
@@ -38,6 +39,7 @@ def _write_read_noise_dists(outfile, Ntot, Nsys, gains, bias, sysnoise):
             imutils.median(sigsys)
     fitsWriteto(output, outfile, clobber=True)
 
+
 class ReadNoiseConfig(pexConfig.Config):
     """Configuration for read noise task"""
     dx = pexConfig.Field("Subregion size in pixels along x-direction",
@@ -54,6 +56,7 @@ class ReadNoiseConfig(pexConfig.Config):
     eotest_results_file = pexConfig.Field("EO test results filename",
                                           str, default=None)
     verbose = pexConfig.Field("Turn verbosity on", bool, default=True)
+
 
 class ReadNoiseTask(pipeBase.Task):
     """Task to estimate sensor read noise."""

@@ -16,11 +16,13 @@ from .fe55_gain_fitter import fe55_lines
 
 __all__ = ['Fe55PixelStats']
 
+
 class RecArray(object):
     """
     Wrapper class to give numpy.recarray custom formatted __repr__ output.
     """
     _formats = dict((('<i4', '%12i'), ('<i8', '%12i'), ('<f8', '%12.3e')))
+
     def __init__(self, recarray):
         "Constructor"
         self.recarray = recarray
@@ -50,6 +52,7 @@ class RecArray(object):
         "Factory method wrapping numpy.rec.array"
         return RecArray(np.rec.array(data, names=names))
 
+
 def profile_plot(ax, xarg, yarg, bins=20, xbounds=None, color='black',
                  plot_points=True):
     """
@@ -77,6 +80,7 @@ def profile_plot(ax, xarg, yarg, bins=20, xbounds=None, color='black',
                     yerr=my_recarr['yerr'], xerr=(xmax-xmin)/float(bins)/2.,
                     fmt="none", ecolor=color)
     return my_recarr
+
 
 def get_fp_pixels(ccd, amp, nsig=4, bg_reg=(10, 10), npix_range=(5, 20)):
     """
@@ -130,10 +134,12 @@ def get_fp_pixels(ccd, amp, nsig=4, bg_reg=(10, 10), npix_range=(5, 20)):
 
     return np.rec.array(data, names=names)
 
+
 class Fe55PixelStats(object):
     "Statistics of pixel values around an Fe55 cluster peak."
     _selections = dict(amp='self._amp_selection',
                        kalpha='self._kalpha_selection')
+
     def __init__(self, input_files, mask_files=(), sensor_id=None,
                  logger=None, selection='amp'):
         """

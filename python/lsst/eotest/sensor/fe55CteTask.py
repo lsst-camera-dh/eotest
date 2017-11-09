@@ -7,6 +7,7 @@ import lsst.pex.config as pexConfig
 import lsst.pipe.base as pipeBase
 from .Fe55PixelStats import Fe55PixelStats
 
+
 class Fe55CteConfig(pexConfig.Config):
     "Configuration for Fe55CteTask"
     output_dir = pexConfig.Field("Output directory", str, default=".")
@@ -14,6 +15,7 @@ class Fe55CteConfig(pexConfig.Config):
     selection = pexConfig.Field("Pixel selection function", str,
                                 default="kalpha")
     verbose = pexConfig.Field("Verbosity flag", bool, default=True)
+
 
 class Fe55CteTask(pipeBase.Task):
     "Task for characterizing CTE using Fe55 cluster asymmetries."

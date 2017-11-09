@@ -14,6 +14,7 @@ import pylab_plotter as plot
 import lsst.afw.math as afwMath
 from fe55_yield import Fe55Yield
 
+
 def fe55_lines(x, *args):
     """
     Two Gaussian model of Mn K-alpha and K-beta lines for Fe55 tests.
@@ -26,6 +27,7 @@ def fe55_lines(x, *args):
     value = k1*scipy.stats.norm.pdf(x, loc=m1, scale=s1)
     value += k2*scipy.stats.norm.pdf(x, loc=m2, scale=s2)
     return value
+
 
 def fe55_gain_fitter(signals, ccdtemp=-95, make_plot=False, xrange=None,
                      bins=100, hist_nsig=10, title='', plot_filename=None,
@@ -98,7 +100,7 @@ def fe55_gain_fitter(signals, ccdtemp=-95, make_plot=False, xrange=None,
     #
     p0 = (ntot*0.88, median, stdev/2., ntot*0.12)
     pars, _ = scipy.optimize.curve_fit(fe55_lines, x, y, p0=p0)
-        
+
     kalpha_peak, kalpha_sigma = pars[1], pars[2]
     fe55_yield = Fe55Yield(ccdtemp)
     gain = fe55_yield.alpha()[0]/kalpha_peak
@@ -109,7 +111,7 @@ def fe55_gain_fitter(signals, ccdtemp=-95, make_plot=False, xrange=None,
         xx = np.linspace(x[0], x[-1], 1000)
         pylab.plot(xx, fe55_lines(xx, *pars), 'r--', markersize=3,
                    linewidth=1)
-        pylab.annotate(("K-alpha peak = %i DN\n\n" + 
+        pylab.annotate(("K-alpha peak = %i DN\n\n" +
                         "Gain = %.2f e-/DN\n\n")
                        % (kalpha_peak, gain),
                        (0.5, 0.7), xycoords='axes fraction')
@@ -120,10 +122,11 @@ def fe55_gain_fitter(signals, ccdtemp=-95, make_plot=False, xrange=None,
     pylab.interactive(pylab_interactive_state)
     return gain, kalpha_peak, kalpha_sigma
 
+
 if __name__ == '__main__':
     import os
     import argparse
-    parser= argparse.ArgumentParser(description='System gain from Fe55 data')
+    parser = argparse.ArgumentParser(description='System gain from Fe55 data')
     parser.add_argument('psf_par_file',
                         help='Fitted parameters from analysis of Fe55 images')
     parser.add_argument('-a', '--amplifier', type=int, default=1,

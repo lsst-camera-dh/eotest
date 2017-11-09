@@ -9,11 +9,13 @@ import numpy as np
 import astropy.io.fits as fits
 from lsst.eotest.fitsTools import fitsTableFactory, fitsWriteto
 
+
 class EOTestResults(object):
     """
     This class saves EO test results per segment/amplifier in a FITS
     binary table.  The data to be collected are specified in LCA-10301-A.
     """
+
     def __init__(self, infile, namps=16):
         self.infile = infile
         self.namps = namps
@@ -23,6 +25,7 @@ class EOTestResults(object):
         else:
             self.output = fits.open(infile)
             self.colnames = self.output[self.extname].data.names
+
     def _createFitsObject(self):
         self.output = fits.HDUList()
         self.output.append(fits.PrimaryHDU())
@@ -42,11 +45,13 @@ class EOTestResults(object):
         self.output[-1].name = self.extname
         for amp in range(1, self.namps+1):
             self.add_seg_result(amp, 'AMP', amp)
+
     def __getitem__(self, column):
         try:
             return self.output[self.extname].data.field(column)
         except:
             return self.output[column]
+
     def append_column(self, colname, dtype=np.float, unit='None', column=None):
         """
         Append a new column of amplifier data to the AMPLIFIER_RESULTS table.
@@ -64,6 +69,7 @@ class EOTestResults(object):
         new_hdu.name = self.extname
         self.output[self.extname] = new_hdu
         self.colnames.append(colname)
+
     def add_seg_result(self, amp, column, value):
         """
         Add the results for a given amplifier segment and column.
@@ -71,11 +77,13 @@ class EOTestResults(object):
         if column not in self.colnames:
             self.append_column(column, type(value))
         self.output[self.extname].data.field(column)[amp-1] = value
+
     def add_ccd_result(self, keyword, value):
         """
         Add CCD-wide key/value pair to the primary HDU of the output.
         """
         self.output[0].header[keyword] = value
+
     def write(self, outfile=None, clobber=True):
         """
         Write or update the output file.
@@ -83,6 +91,7 @@ class EOTestResults(object):
         if outfile is None:
             outfile = self.infile
         fitsWriteto(self.output, outfile, clobber=clobber)
+
 
 if __name__ == '__main__':
     outfile = 'foo.fits'

@@ -17,11 +17,11 @@ if __name__ == '__main__':
     parser.add_argument('-F', '--Fe55_file_list', type=str,
                         help='file name of list of Fe55 files')
     args = parser.parse_args()
-    
+
     sensor_id = args.sensor_id
-    
+
     files = args.files(args.file_pattern, args.Fe55_file_list)
-    
+
     fitter = PsfGaussFit()
     for infile in files:
         print os.path.basename(infile)

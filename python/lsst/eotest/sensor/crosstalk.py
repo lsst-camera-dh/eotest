@@ -17,14 +17,16 @@ import lsst.eotest.image_utils as imutils
 from MaskedCCD import MaskedCCD
 from BrightPixels import BrightPixels
 
+
 def get_stats(image, stat_ctrl):
     flags = afwMath.MEDIAN | afwMath.STDEVCLIP
     stats = afwMath.makeStatistics(image, flags, stat_ctrl)
     return stats.getValue(afwMath.MEDIAN), stats.getValue(afwMath.STDEVCLIP)
 
+
 def aggressor(ccd):
     """Guess the aggressor amp based on the maximum pixel value."""
-    max_pix = lambda amp : max(ccd[amp].getImage().getArray().flat)
+    def max_pix(amp): return max(ccd[amp].getImage().getArray().flat)
     candidate = ccd.keys()[0]
     max_pix_val = max_pix(candidate)
     for amp in ccd.keys()[1:]:
@@ -33,6 +35,7 @@ def aggressor(ccd):
             candidate = amp
             max_pix_val = val
     return candidate, max_pix_val
+
 
 def column_mean(ccd, amp, col):
     imaging = ccd.amp_geom.imaging
@@ -46,6 +49,7 @@ def column_mean(ccd, amp, col):
     npts = stats.getValue(afwMath.NPOINT)
     sigma = stats.getValue(afwMath.STDEV)/np.sqrt(npts)
     return np.array((mean, sigma))
+
 
 def system_crosstalk(ccd, aggressor_amp, dnthresh=None, nsig=5):
     """
@@ -82,6 +86,7 @@ def system_crosstalk(ccd, aggressor_amp, dnthresh=None, nsig=5):
                    for amp in ccd])
     return ratios
 
+
 def get_footprint(fp_set, min_fp_size, threshold):
     footprints = [fp for fp in fp_set.getFootprints()
                   if fp.getArea() >= min_fp_size]
@@ -90,7 +95,7 @@ def get_footprint(fp_set, min_fp_size, threshold):
         message += "      x     y     peak value  # pixels\n"
         for i, fp in enumerate(footprints):
             peak = [x for x in fp.getPeaks()][0]
-            message += ('%2i  %4i  %4i     %6i       %4i\n' 
+            message += ('%2i  %4i  %4i     %6i       %4i\n'
                         % (i, peak.getIx(), peak.getIy(), peak.getPeakValue(),
                            fp.getArea()))
         message += "Threshold: %i\n" % threshold
@@ -98,6 +103,7 @@ def get_footprint(fp_set, min_fp_size, threshold):
     fp = footprints[0]
     peak_value = max([x.getPeakValue() for x in fp.getPeaks()])
     return fp, peak_value
+
 
 def extract_mean_signal_2(ccd, amp, footprint):
     masked_image = ccd.bias_subtracted_image(amp)
@@ -116,6 +122,7 @@ def extract_mean_signal_2(ccd, amp, footprint):
         npix += stats.getValue(afwMath.NPOINT)
     return np.array((signal/npix, stdev))
 
+
 def extract_mean_signal(ccd, amp, footprint):
     maskarr = ccd[amp].getMask().getArray()
     image = ccd.bias_subtracted_image(amp)
@@ -131,6 +138,7 @@ def extract_mean_signal(ccd, amp, footprint):
             if maskarr[y][x] == 0:
                 signal += imarr[y][x]
     return np.array((signal/float(npix), stdev))
+
 
 def detector_crosstalk(ccd, aggressor_amp, dnthresh=None, nsig=5,
                        signal_extractor=extract_mean_signal,
@@ -161,11 +169,12 @@ def detector_crosstalk(ccd, aggressor_amp, dnthresh=None, nsig=5,
 
     agg_mean = signal_extractor(ccd, aggressor_amp, footprint)[0]
     ratios = dict([(amp, signal_extractor(ccd, amp, footprint)
-                    /agg_mean) for amp in ccd])
+                    / agg_mean) for amp in ccd])
 #    for amp in ratios:
 #        if ratios[amp][0] > 0.1:
 #            ratios[amp] = (0, 0)
     return ratios
+
 
 class CrosstalkMatrix(object):
     def __init__(self, filename=None, namps=16):
@@ -174,18 +183,23 @@ class CrosstalkMatrix(object):
         self._set_matrix()
         if self.filename is not None:
             self._read_matrix()
+
     def set_row(self, agg, ratios):
         self.matrix[agg-1] = np.array([ratios[amp][0] for amp
                                        in imutils.allAmps()])
+
     def _set_matrix(self):
         self.matrix = np.zeros((self.namps, self.namps), dtype=np.float)
+
     def _read_matrix(self):
         if self.filename[-5:] == '.fits':
             self._read_fits_matrix()
         else:
             self._read_text_matrix()
+
     def _read_fits_matrix(self):
         self.matrix = fits.open(self.filename)[0].data
+
     def _read_text_matrix(self):
         input = open(self.filename, 'r')
         amp = 0
@@ -195,6 +209,7 @@ class CrosstalkMatrix(object):
             self.matrix[amp] = np.array([float(x) for x
                                          in line.strip().split()])
             amp += 1
+
     def write_fits(self, outfile=None, clobber=True):
         if outfile is None:
             outfile = self.filename
@@ -203,6 +218,7 @@ class CrosstalkMatrix(object):
         output = fits.HDUList()
         output.append(fits.PrimaryHDU(data=self.matrix))
         fitsWriteto(output, outfile, clobber=clobber)
+
     def write(self, outfile=None):
         if outfile is None:
             outfile = self.filename
@@ -218,6 +234,7 @@ class CrosstalkMatrix(object):
                 output.write('%12.4e  ' % self.matrix[agg][victim])
             output.write('\n')
         output.close()
+
     def plot_matrix(self, title=None, cmap_range=(0.6, 0.4), precision=3,
                     scale_factor=1e2, fontsize=10, figsize=(12, 6),
                     cmap=None):
@@ -256,6 +273,7 @@ class CrosstalkMatrix(object):
                 pylab.text(x, y, label, horizontalalignment='center',
                            fontsize=fontsize)
         pylab.colorbar(image)
+
     def plot(self, cmap=pylab.cm.hot, title=''):
         my_matrix = np.copy(self.matrix)
         for i in range(self.namps):
@@ -271,14 +289,17 @@ class CrosstalkMatrix(object):
         axes.set_yticklabels(['%i' % i for i in range(1, self.namps+1)])
         cbar = fig.colorbar(foo)
         axes.set_title(title)
+
     def __sub__(self, other):
         result = CrosstalkMatrix()
         result.matrix = self.matrix - other.matrix
         return result
+
     def __add__(self, other):
         result = CrosstalkMatrix()
         result.matrix = self.matrix + other.matrix
         return result
+
 
 def make_crosstalk_matrix(file_list, mask_files=(),
                           extractor=detector_crosstalk, verbose=True):
@@ -313,8 +334,10 @@ def make_crosstalk_matrix(file_list, mask_files=(),
                 print "Skipping."
     return det_xtalk
 
+
 if __name__ == '__main__':
-    sys_xtfile = lambda amp : '/u/gl/jchiang/ki18/LSST/SensorTests/eotest/0.0.0.6/work/system/xtalk/debug/xtalk_%02i_debug.fits' % amp
+    def sys_xtfile(
+        amp): return '/u/gl/jchiang/ki18/LSST/SensorTests/eotest/0.0.0.6/work/system/xtalk/debug/xtalk_%02i_debug.fits' % amp
 #    mask_files = ('CCD250_DEFECTS_mask.fits', )
     mask_files = ()
     #

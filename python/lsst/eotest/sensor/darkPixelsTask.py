@@ -20,6 +20,7 @@ import lsst.afw.image as afwImage
 import lsst.pex.config as pexConfig
 import lsst.pipe.base as pipeBase
 
+
 class DarkPixelsConfig(pexConfig.Config):
     """Configuration for bright pixels task"""
     thresh = pexConfig.Field("Fractional threshold of segment mean for identifying dark pixels",
@@ -32,6 +33,7 @@ class DarkPixelsConfig(pexConfig.Config):
     eotest_results_file = pexConfig.Field("EO test results filename",
                                           str, default=None)
     verbose = pexConfig.Field("Turn verbosity on", bool, default=True)
+
 
 class DarkPixelsTask(pipeBase.Task):
     """Task to find dark pixels and columns."""

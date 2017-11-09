@@ -7,9 +7,11 @@ import numpy as np
 import lsst.afw.image as afwImage
 import lsst.daf.base as dafBase
 import image_utils
-import sys, traceback
+import sys
+import traceback
 #from image_utils import unbias_and_trim
 from simulation.sim_tools import SegmentExposure, writeFits
+
 
 class BrightPix(object):
     def __init__(self, nsig=5):
@@ -25,7 +27,7 @@ class BrightPix(object):
 
         for amp in amps:
             try:
-                tot, pixels, cols = self.bright_pix(fitsfile, \
+                tot, pixels, cols = self.bright_pix(fitsfile,
                                                     image_utils.dm_hdu(amp))
                 tot_bright_ccd += tot
                 tot_bright_per_amp.append(tot)
@@ -56,7 +58,7 @@ class BrightPix(object):
         columns = np.where(col_means > threshold)
 
         # Weed out bright pixels that are already in bright columns or rows.
-        indx = [i for i in range(len(pixels[1])) 
+        indx = [i for i in range(len(pixels[1]))
                 if pixels[1][i] not in columns[0]]
 
         pixels = (pixels[0][indx], pixels[1][indx])
@@ -97,6 +99,7 @@ def write_test_image(outfile, nhdus=16, verbose=True):
         segments.append(seg)
     writeFits(segments, outfile)
 
+
 def run_test():
     """ Generate a test file and find bright pixels. """
 
@@ -105,16 +108,17 @@ def run_test():
     tot_bright_pix, tot_per_amp, tup_per_amp, col_per_amp = \
         run_bright_pix(fitsfile, verbose=True)
 
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Find bright pixels.')
-    parser.add_argument('-i', '--infile', \
+    parser.add_argument('-i', '--infile',
                         help="image file to be used for analysis", type=str)
-    parser.add_argument('-a', '--amps', \
-                        help="amps to be analyzed, separated by a space", \
-                        type=int, nargs = '+', default=range(1, 17))
-    parser.add_argument('-t', '--test', help="run test only", \
+    parser.add_argument('-a', '--amps',
+                        help="amps to be analyzed, separated by a space",
+                        type=int, nargs='+', default=range(1, 17))
+    parser.add_argument('-t', '--test', help="run test only",
                         action='store_true', default=False)
-    parser.add_argument('-v', '--verbose', help="turn verbosity on", \
+    parser.add_argument('-v', '--verbose', help="turn verbosity on",
                         action='store_true', default=False)
     args = parser.parse_args()
 
@@ -123,5 +127,3 @@ if __name__ == '__main__':
     else:
         tot, tot_per_amp, pix_per_amp, col_per_amp = \
             run_bright_pix(args.infile, args.amps, args.verbose)
-
-

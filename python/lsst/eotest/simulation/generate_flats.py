@@ -3,6 +3,7 @@ import numpy as np
 from sim_tools import SegmentExposure, fitsFile
 from sim_inputs import gain, bias_level, sys_noise, read_noise, dark_current
 
+
 def simulateFlat(outfile, rate, gain, dark_curr, exptime, hdus=16):
     segments = []
     for i in range(hdus):
@@ -18,6 +19,7 @@ def simulateFlat(outfile, rate, gain, dark_curr, exptime, hdus=16):
     output[0].header.update("READNOIS", read_noise)
     output[0].header.update("DARKCURR", dark_curr)
     output[0].header.update("COUNTRTE", rate)
+
 
 if __name__ == '__main__':
     sensor_id = '000-00'

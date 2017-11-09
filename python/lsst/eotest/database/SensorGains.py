@@ -8,6 +8,7 @@ import os
 import lsst.eotest.image_utils as imutils
 from SensorDb import SensorDb
 
+
 class SensorGains(dict):
     def __init__(self, gains=None, vendorId=None, vendor='e2v',
                  db_credentials=None):
@@ -19,10 +20,11 @@ class SensorGains(dict):
              for amp in imutils.allAmps]
         else:
             try:
-                [self.__setitem__(amp, gain) 
+                [self.__setitem__(amp, gain)
                  for amp, gain in zip(imutils.allAmps, gains)]
             except TypeError:
                 [self.__setitem__(amp, gains) for amp in imutils.allAmps]
+
 
 if __name__ == '__main__':
     import numpy.random as random

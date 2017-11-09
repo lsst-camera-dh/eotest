@@ -15,13 +15,14 @@ import lsst.eotest.image_utils as imutils
 import pylab_plotter as plot
 from MaskedCCD import MaskedCCD
 from PhotodiodeResponse import PhotodiodeResponse, CcdIllumination, \
-     Interpolator
+    Interpolator
 
 import lsst.afw.image as afwImage
 import lsst.afw.math as afwMath
 
 planck = 6.626e-34      # Planck constant in SI
 clight = 2.99792458e8   # speed of light in m/s
+
 
 class QE_Data(object):
     """Class to contain sequences of image medians (in DN) indexed by
@@ -36,10 +37,12 @@ class QE_Data(object):
     band_pass['z'] = (818, 922)
     band_pass['y'] = (930, 1070)
     band_wls = np.array([sum(band_pass[b])/2. for b in band_pass.keys()])
+
     def __init__(self, verbose=True, pd_scaling=1e-9, logger=None):
         self.verbose = verbose
         self.pd_scaling = pd_scaling
         self.logger = logger
+
     def read_medians(self, medians_file):
         data = np.recfromtxt(medians_file)
         data = data.transpose()
@@ -48,12 +51,14 @@ class QE_Data(object):
         self.pd = data[2]
         self.medians = dict([(amp, col) for amp, col
                              in zip(imutils.allAmps(), data[3:])])
+
     def _correction_images(self, ccd, correction_image):
         images = OrderedDict()
         for amp in ccd:
             correction = afwImage.ImageF(correction_image, imutils.dm_hdu(amp))
             images[amp] = correction.Factory(correction, ccd.amp_geom.imaging)
         return images
+
     def calculate_medians(self, infiles, outfile, mask_files=(),
                           bias_frame=None, clobber=False,
                           correction_image=None):
@@ -116,6 +121,7 @@ class QE_Data(object):
         self.wl = np.array(self.wl)
         self.exptime = np.array(self.exptime)
         self.pd = np.abs(np.array(self.pd))
+
     def incidentPower_e2v(self):
         # For e2v data MONDIODE = incident power/area = nW/cm**2 so
         # just need to multiply by times nominal pixel area in
@@ -125,6 +131,7 @@ class QE_Data(object):
         for pd_current in self.pd:
             power.append(pd_current*pixel_area)
         self.power = np.array(power, dtype=np.float)
+
     def incidentPower(self, pd_ratio_file, pixel_area=1e-10):
         # Calibration diode collecting area.
         pd_area = float(open(pd_ratio_file).readline().split('=')[1])
@@ -139,8 +146,9 @@ class QE_Data(object):
         power = []
         for pd_current, wl_nm in zip(self.pd, self.wl):
             power.append(pd_current/(ccd_frac(wl_nm)*sensitivity(wl_nm))
-                         *pixel_area/pd_area)
+                         * pixel_area/pd_area)
         self.power = np.array(power, dtype=np.float)
+
     def calculate_QE(self, gains, amps=None):
         if amps is None:
             amps = imutils.allAmps()
@@ -188,9 +196,11 @@ class QE_Data(object):
                                                      self.qe[amp])
         self.ccd_qe = sum(self.qe.values())/len(self.qe.values())
         self.ccd_qe_band = self.compute_band_qe(self.wlarrs[1], self.ccd_qe)
+
     def _index(self, wl, band_pass):
         indx = np.where((wl >= band_pass[0]) & (wl <= band_pass[1]))
         return indx
+
     def compute_band_qe(self, wl, qe):
         band_qe = OrderedDict()
         for band in self.band_pass:
@@ -199,6 +209,7 @@ class QE_Data(object):
                 mean_value = sum(qe[indx])/len(indx[0])
                 band_qe[band] = mean_value
         return band_qe
+
     def write_fits_tables(self, outfile, clobber=True):
         amps = self.qe.keys()
         colnames = ['WAVELENGTH']
@@ -213,11 +224,11 @@ class QE_Data(object):
         units = ["nm"]
         units.extend(["e-/photon %"]*(len(columns)-1))
 
-        fits_cols = lambda coldata: [fits.Column(name=colname,
-                                                 format=format,
-                                                 unit=unit, array=column)
-                                     for colname, format, unit, column
-                                     in coldata]
+        def fits_cols(coldata): return [fits.Column(name=colname,
+                                                    format=format,
+                                                    unit=unit, array=column)
+                                        for colname, format, unit, column
+                                        in coldata]
 
         HDUList = fits.HDUList()
         HDUList.append(fits.PrimaryHDU())
@@ -238,6 +249,7 @@ class QE_Data(object):
         HDUList[-1].name = 'QE_BANDS'
         HDUList[0].header['NAMPS'] = len(amps)
         fitsWriteto(HDUList, outfile, clobber=clobber)
+
     def plot_curves(self, outfile=None, interactive=False):
         if interactive:
             plot.pylab.ion()
@@ -257,13 +269,15 @@ class QE_Data(object):
         if outfile is not None:
             plot.save(outfile)
 
+
 if __name__ == '__main__':
     ccd_cal_file = 'OD142.csv'
     sph_cal_file = 'OD143.csv'
     wlscan_file = 'WLscan.txt'
 
     gains = dict([(amp, 2.5) for amp in imutils.allAmps()])
-    infiles = glob.glob('/nfs/farm/g/lsst/u1/testData/HarvardData/112-01/final/bss70/qe/112_01_qe_[0-9]*.fits.gz')
+    infiles = glob.glob(
+        '/nfs/farm/g/lsst/u1/testData/HarvardData/112-01/final/bss70/qe/112_01_qe_[0-9]*.fits.gz')
 #    medians_file = 'med_vs_wl.txt'
     medians_file = 'med_vs_wl_bss70.txt'
 

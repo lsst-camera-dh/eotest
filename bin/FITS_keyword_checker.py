@@ -28,7 +28,7 @@ if args.policy is None:
         template = sensorTest.fits_headers.template_file
 else:
     template = args.policy
-    
+
 missing = sensorTest.fits_headers.check_keywords(args.infile,
                                                  template=template,
                                                  verbose=args.verbose)

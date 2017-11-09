@@ -8,6 +8,7 @@ import matplotlib.pyplot as plt
 
 __all__ = ['qe_summary_plot']
 
+
 def qe_summary_plot(summary_lims, figsize=(6, 8), title='', qe_spec=None):
     """
     Function to make a summary plot of QE values in each band for each

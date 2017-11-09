@@ -14,12 +14,14 @@ import lsst.afw.image as afwImage
 import lsst.pex.config as pexConfig
 import lsst.pipe.base as pipeBase
 
+
 class PrnuConfig(pexConfig.Config):
     """Configuration for pixel response non-uniformity task"""
     output_dir = pexConfig.Field("Output directory", str, default=".")
-    eotest_results_file = pexConfig.Field("EO test results filename", 
+    eotest_results_file = pexConfig.Field("EO test results filename",
                                           str, default=None)
     verbose = pexConfig.Field("Turn verbosity on", bool, default=True)
+
 
 class PrnuTask(pipeBase.Task):
     """Task for computing pixel response non-uniformity"""
@@ -62,24 +64,25 @@ class PrnuTask(pipeBase.Task):
                                    '%s_eotest_results.fits' % sensor_id)
         self.write(results, outfile)
         return results
+
     @pipeBase.timeMethod
     def write(self, results, outfile, clobber=True):
         colnames = ['WAVELENGTH', 'STDEV', 'MEAN']
         formats = 'IEE'
         my_types = dict((("I", np.int), ("E", np.float)))
         columns = [np.zeros(len(results), dtype=my_types[fmt])
-                            for fmt in formats]
+                   for fmt in formats]
         units = ['nm', 'rms e-', 'e-']
         hdu = fitsTableFactory([fits.Column(name=colnames[i],
                                             format=formats[i],
                                             unit=units[i],
                                             array=columns[i])
-                                  for i in range(len(colnames))])
+                                for i in range(len(colnames))])
         hdu.name = 'PRNU_RESULTS'
         for i, wl in enumerate(results.keys()):
             hdu.data.field('WAVELENGTH')[i] = wl
             hdu.data.field('STDEV')[i] = results[wl][0]
-            hdu.data.field('MEAN')[i] =results[wl][1]
+            hdu.data.field('MEAN')[i] = results[wl][1]
         if os.path.isfile(outfile):
             output = fits.open(outfile)
         else:

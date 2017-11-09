@@ -19,6 +19,7 @@ import lsst.afw.image as afwImage
 import lsst.pex.config as pexConfig
 import lsst.pipe.base as pipeBase
 
+
 class BrightPixelsConfig(pexConfig.Config):
     """Configuration for bright pixels task"""
     ethresh = pexConfig.Field("Bright pixel threshold in e- per pixel per second",
@@ -35,6 +36,7 @@ class BrightPixelsConfig(pexConfig.Config):
     eotest_results_file = pexConfig.Field("EO test results filename",
                                           str, default=None)
     verbose = pexConfig.Field("Turn verbosity on", bool, default=True)
+
 
 class BrightPixelsTask(pipeBase.Task):
     """Task to find bright pixels and columns."""

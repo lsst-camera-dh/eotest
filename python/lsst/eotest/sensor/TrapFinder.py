@@ -3,6 +3,7 @@ import lsst.afw.math as afwMath
 import lsst.pex.exceptions as pexExcept
 import pylab_plotter as plot
 
+
 def getProcessedImageArray(ccd, amp, nx=10, ny=10):
     """
     Subtract afwMath local background model from an de-biased and
@@ -23,12 +24,14 @@ def getProcessedImageArray(ccd, amp, nx=10, ny=10):
         print "Skipping local background subtraction for amp", amp
     return image.getImage().getArray()
 
+
 class TrapFinder(object):
     """
     Class to find traps using pixel dipole "correlator" description in
     Kotov et al. 2014, NIMA 
     (http://www.sciencedirect.com/science/article/pii/S0168900214012066).
     """
+
     def __init__(self, ccd, amp, C2_thresh=10, C3_thresh=1,
                  nx=10, ny=10, edge_rolloff=10):
         """
@@ -51,6 +54,7 @@ class TrapFinder(object):
         self.edge_rolloff = edge_rolloff
         self.prescan = ccd.amp_geom.prescan_width
         self.row_max = ccd.amp_geom.imaging.getHeight()+1
+
     def find(self, regfile=None):
         nx, ny = self.imarr.shape
         my_arrays = 'ix iy c2 c3 a0 a1'.split()
@@ -65,6 +69,7 @@ class TrapFinder(object):
         if regfile is not None:
             self._write_reg_file(regfile, ix, iy)
         return ix, iy, c2, c3, a0, a1
+
     def _write_reg_file(self, regfile, ix, iy):
         reg_output = open(regfile, 'w')
         reg_output.write("""# Region file format: DS9 version 4.1
@@ -74,6 +79,7 @@ image
         for coord in zip(ix, iy):
             reg_output.write("point(%i,%i) # point=circle\n" % coord)
         reg_output.close()
+
     def process_column(self, icol, plot_stats=False, oplot=0):
         """
         Process a single column and return a tuple of
@@ -106,6 +112,7 @@ image
         if plot_stats:
             self._plot_stats(icol, C2, C3, oplot)
         return ix, iy, c2, c3, a0, a1
+
     def _plot_stats(self, icol, C2, C3, oplot):
         plot.pylab.ion()
         if oplot == 0:
@@ -117,6 +124,7 @@ image
         win1.set_title('Column %i' % icol)
         plot.hline(self.C3_thresh)
         plot.vline(-self.C2_thresh)
+
 
 if __name__ == '__main__':
     from MaskedCCD import MaskedCCD

@@ -6,7 +6,8 @@ noise contribution from the electronics, must be provided.
 @author J. Chiang <jchiang@slac.stanford.edu>
 """
 import os
-import sys, traceback
+import sys
+import traceback
 import glob
 import argparse
 import numpy as np
@@ -17,6 +18,7 @@ from database.SensorDb import NullDbObject
 from database.SensorGains import SensorGains
 
 from read_noise import NoiseDists, median, stdev
+
 
 def write_read_noise_dists(outfile, Ntot, Nsys, gains, bias, sysnoise):
     output = pyfits.HDUList()
@@ -37,16 +39,17 @@ def write_read_noise_dists(outfile, Ntot, Nsys, gains, bias, sysnoise):
                                 median(sigsys))
     output.writeto(outfile, clobber=True)
 
+
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(\
-                      description='Compute Read Noise')
+    parser = argparse.ArgumentParser(
+        description='Compute Read Noise')
     parser.add_argument('-b', '--bias', help="input bias file pattern", type=str)
 #    parser.add_argument('-n', '--noise', help="input noise file pattern", type=str)
     parser.add_argument('-g', '--gain', help="input gain file", type=str)
     parser.add_argument('-i', '--id', help="sensor id", type=str)
     parser.add_argument('-o', '--outdir', help="output directory", type=str)
-    parser.add_argument('-v', '--verbose', help="turn verbosity on", \
-             action='store_true', default=False)
+    parser.add_argument('-v', '--verbose', help="turn verbosity on",
+                        action='store_true', default=False)
     args = parser.parse_args()
 
     if len(sys.argv) >= 4:
@@ -74,7 +77,7 @@ if __name__ == '__main__':
     if pipeline_task:
         gains, sensor = pipeUtils.setup(sys.argv, 4)
     else:
-        g=[]
+        g = []
         sensor = NullDbObject()
         try:
             f = pyfits.open(gain_file)
@@ -100,15 +103,15 @@ if __name__ == '__main__':
         outfile = "%s_read_noise_%03i.fits" % (sensor_id.replace('-', '_'), i)
         outfile = os.path.join(outdir, outfile)
         outfiles.append(outfile)
-        
-        print "Processing", bias, "->", outfile 
+
+        print "Processing", bias, "->", outfile
         noise_dists = NoiseDists(gains)
-        
+
         Ntot = noise_dists(bias)
 #        #Nsys = noise_dists(sysnoise)
         Nsys = np.zeros(Ntot.shape)
         sysnoise = 0
-        
+
         write_read_noise_dists(outfile, Ntot, Nsys, gains, bias, sysnoise)
 
     print "Segment    read noise"

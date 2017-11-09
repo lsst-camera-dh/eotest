@@ -10,6 +10,7 @@ import lsst.afw.geom as afwGeom
 
 from image_utils import fits_median, unbias_and_trim
 
+
 def dark_curr(files, hdu=2, gain=1, count=1000, dx=100, dy=100, seed=None):
     random.seed(seed)
     exptime = afwImage.readMetadata(files[0], 1).get('EXPTIME')
@@ -18,17 +19,18 @@ def dark_curr(files, hdu=2, gain=1, count=1000, dx=100, dy=100, seed=None):
     # Generate dx by dy boxes at random locations to perform
     # estimates, then take the median.  This avoids bright defects.
     xarr = random.randint(im.getWidth() - dx - 1, size=count)
-    yarr = random.randint(im.getHeight() - dy - 1, size=count) 
+    yarr = random.randint(im.getHeight() - dy - 1, size=count)
 
     signal = []
     for x, y in zip(xarr, yarr):
-        bbox = afwGeom.Box2I(afwGeom.Point2I(int(x), int(y)), 
+        bbox = afwGeom.Box2I(afwGeom.Point2I(int(x), int(y)),
                              afwGeom.Extent2I(dx, dy))
         subim = im.Factory(im, bbox)
         signal.append(np.mean(subim.getArray()))
     dark_current = np.median(signal)*gain/exptime
 
     return dark_current
+
 
 if __name__ == '__main__':
     from simulation.sim_tools import simulateDark

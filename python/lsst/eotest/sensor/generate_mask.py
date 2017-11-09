@@ -14,6 +14,7 @@ from .AmplifierGeometry import makeAmplifierGeometry
 from .MaskedCCD import MaskedCCD
 from .sim_tools import CCD
 
+
 def generate_mask(infile, outfile, mask_plane, pixels=None, columns=None,
                   temp_mask_image=None):
     """
@@ -72,4 +73,3 @@ def generate_mask(infile, outfile, mask_plane, pixels=None, columns=None,
         md.set('DATASEC', geometry[amp]['DATASEC'])
         mask.writeFits(outfile, md, 'a')
     os.remove(temp_mask_image)
-

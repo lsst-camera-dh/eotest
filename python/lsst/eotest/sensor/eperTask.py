@@ -17,8 +17,10 @@ import lsst.eotest.image_utils as imutils
 from lsst.eotest.Estimator import Estimator
 from AmplifierGeometry import makeAmplifierGeometry
 
+
 class SubImage(object):
     """Functor to produce sub-images depending on scan direction."""
+
     def __init__(self, ccd, amp, overscans, task):
         geom = ccd.amp_geom
         self.ccd = ccd
@@ -46,6 +48,7 @@ class SubImage(object):
         else:
             task.log.error("Unknown scan direction: " + str(direction))
             sys.exit(1)
+
     def bias_est(self, statistic=afwMath.MEAN, gain=1):
         subim = self.image.Factory(self.image, self._bias_reg)
         bias_estimate = Estimator()
@@ -55,19 +58,23 @@ class SubImage(object):
         bias_estimate.error = \
             gain*afwMath.makeStatistics(subim, afwMath.STDEV).getValue()/np.sqrt(float(num_pix))
         return bias_estimate
+
     def __call__(self, start, end=None):
         if end is None:
             end = start
         my_exp = self.image.Factory(self.image, self._bbox(start, end))
         return my_exp
+
     def _parallel_box(self, start, end):
         llc = afwGeom.PointI(self.imaging.getMinX(), start)
         urc = afwGeom.PointI(self.imaging.getMaxX(), end)
         return afwGeom.BoxI(llc, urc)
+
     def _serial_box(self, start, end):
         llc = afwGeom.PointI(start, self.imaging.getMinY())
         urc = afwGeom.PointI(end, self.imaging.getMaxY())
         return afwGeom.BoxI(llc, urc)
+
 
 class EPERConfig(pexConfig.Config):
     """Configuration for the EPERTask."""
@@ -75,6 +82,7 @@ class EPERConfig(pexConfig.Config):
                                 str, default="p")
     verbose = pexConfig.Field("Turn verbosity on", bool, default=True)
     cti = pexConfig.Field('Return CTI instead of CTE', bool, default=False)
+
 
 class EPERTask(pipeBase.Task):
     """Task to calculate either parallel or serial charge transfer
@@ -148,13 +156,17 @@ class EPERTask(pipeBase.Task):
                                   + str(cte[amp]) + '\n')
         return cte, bias_estimates
 
+
 if __name__ == '__main__':
     #import pdb; pdb.set_trace()
     parser = argparse.ArgumentParser(description='Calculate either parallel or serial CTE via EPER.')
     parser.add_argument('infilename', help="image file to be used for analysis")
-    parser.add_argument('-o', '--overscans', help = "number of overscan rows/columns to use", type=int, default=3)
-    parser.add_argument('-d', '--direction', help="specify either parallel ('p') or serial ('s') direction", default='p')
-    parser.add_argument('-a', '--amps', help="amps to be analyzed, separated by a space", type=int, nargs = '+', default=range(1, 17))
+    parser.add_argument('-o', '--overscans',
+                        help="number of overscan rows/columns to use", type=int, default=3)
+    parser.add_argument('-d', '--direction',
+                        help="specify either parallel ('p') or serial ('s') direction", default='p')
+    parser.add_argument('-a', '--amps', help="amps to be analyzed, separated by a space",
+                        type=int, nargs='+', default=range(1, 17))
     parser.add_argument('-v', '--verbose', help="turn verbosity on", action='store_true', default=False)
     parser.add_argument('-i', '--cti', help='return CTI (not CTE)',
                         action='store_true', default=False)

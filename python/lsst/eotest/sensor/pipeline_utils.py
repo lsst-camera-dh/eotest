@@ -8,14 +8,17 @@ import subprocess
 from database.SensorDb import SensorDb, NullDbObject
 from database.SensorGains import SensorGains
 
+
 def setVariable(key, value):
     subprocess.call('pipelineSet %s %s' % (key, value), shell=True)
+
 
 def get_file_list(prefix, sensor_id):
     infile = '%s_%s.txt' % (sensor_id, prefix)
     print "Reading filenames from %s" % infile
     my_files = [x.strip() for x in open(infile) if x[0] != '#']
     return my_files
+
 
 def export_file_list(files, prefix, sensor_id):
     outfile = '%s_%s.txt' % (sensor_id, prefix)
@@ -24,6 +27,7 @@ def export_file_list(files, prefix, sensor_id):
     for item in files:
         output.write('%s\n' % item)
     output.close()
+
 
 def setup(argv, indx):
     try:

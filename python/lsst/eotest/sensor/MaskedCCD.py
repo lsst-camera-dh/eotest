@@ -16,9 +16,11 @@ import lsst.ip.isr as ipIsr
 import lsst.pex.exceptions as pexExcept
 import lsst.eotest.image_utils as imutils
 
+
 class MaskedCCDBiasImageException(RuntimeError):
     def __init__(self, *args):
         super(MaskedCCDBiasImageException, self).__init__(*args)
+
 
 class MaskedCCD(dict):
     """
@@ -28,6 +30,7 @@ class MaskedCCD(dict):
     amplifier number.  Masks can be added and manipulated separately
     by various methods.
     """
+
     def __init__(self, imfile, mask_files=(), bias_frame=None, applyMasks=True):
         super(MaskedCCD, self).__init__()
         self.imfile = imfile
@@ -49,6 +52,7 @@ class MaskedCCD(dict):
         else:
             self.bias_frame = None
         self._applyMasks = applyMasks
+
     def applyInterpolateFromMask(self, maskedImage, fwhm=0.001):
         for maskName in self._added_mask_types:
             try:
@@ -56,9 +60,11 @@ class MaskedCCD(dict):
                                           maskName=maskName)
             except pexExcept.InvalidParameterError:
                 pass
+
     def mask_plane_dict(self):
         amp = self.keys()[0]
         return dict(self[amp].getMask().getMaskPlaneDict().items())
+
     def add_masks(self, mask_file):
         """
         Add a masks from a mask file by or-ing with existing masks.
@@ -68,6 +74,7 @@ class MaskedCCD(dict):
         for amp in self:
             curr_mask = self[amp].getMask()
             curr_mask |= afwImage.Mask(mask_file, imutils.dm_hdu(amp))
+
     def setMask(self, mask_name=None, clear=False):
         """
         Enable a mask and return the afwMath.StatisticsControl object
@@ -82,6 +89,7 @@ class MaskedCCD(dict):
                         | afwImage.Mask.getPlaneBitMask(mask_name))
             self.stat_ctrl.setAndMask(new_mask)
         return self.stat_ctrl
+
     def setAllMasks(self):
         "Enable all masks."
         mpd = self.mask_plane_dict()
@@ -143,6 +151,7 @@ class MaskedCCD(dict):
             self.applyInterpolateFromMask(mi)
         return mi
 
+
 def add_mask_files(mask_files, outfile, clobber=True):
     amp_list = imutils.allAmps(mask_files[0])
     masks = dict([(amp, afwImage.Mask(mask_files[0], imutils.dm_hdu(amp)))
@@ -160,6 +169,7 @@ def add_mask_files(mask_files, outfile, clobber=True):
         masks[amp].writeFits(outfile, md, 'a')
     return masks
 
+
 def compute_stats(image, sctrl, weights=None):
     flags = afwMath.MEAN | afwMath.STDEV
     if weights is None:
@@ -167,6 +177,7 @@ def compute_stats(image, sctrl, weights=None):
     else:
         stats = afwMath.makeStatistics(image, weights, flags, sctrl)
     return stats.getValue(afwMath.MEAN), stats.getValue(afwMath.STDEV)
+
 
 if __name__ == '__main__':
     image_file = 'bright_pix_test.fits'

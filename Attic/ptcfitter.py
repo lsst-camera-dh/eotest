@@ -6,7 +6,7 @@ import numpy as np
 datafile = 'ptctest.txt'
 outfile = 'ptcfit.txt'
 amps = [2]
-n=50
+n = 50
 
 
 data = np.recfromtxt(datafile, names=True)
@@ -20,8 +20,8 @@ fmean = []
 fvar = []
 #read in data for specified amp
 for amp in amps:
-	fmean = data['flat_mean'][np.where(data['amp']==amp)]
-	fvar = data['flat_var'][np.where(data['amp']==amp)]
+    fmean = data['flat_mean'][np.where(data['amp'] == amp)]
+    fvar = data['flat_var'][np.where(data['amp'] == amp)]
 
 
 #generate linear fit to first n points

@@ -15,6 +15,7 @@ import lsst.afw.image as afwImage
 import lsst.pex.config as pexConfig
 import lsst.pipe.base as pipeBase
 
+
 class DarkCurrentConfig(pexConfig.Config):
     """Configuration for DarkCurrentTask"""
     temp_set_point = pexConfig.Field("Required temperature (C) set point",
@@ -25,6 +26,7 @@ class DarkCurrentConfig(pexConfig.Config):
     eotest_results_file = pexConfig.Field('EO test results filename',
                                           str, default=None)
     verbose = pexConfig.Field("Turn verbosity on", bool, default=True)
+
 
 class DarkCurrentTask(pipeBase.Task):
     """Task to evaluate dark current quantiles."""

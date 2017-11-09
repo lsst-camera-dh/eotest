@@ -16,6 +16,7 @@ from .MaskedCCD import MaskedCCD
 from .AmplifierGeometry import makeAmplifierGeometry
 from .fits_headers import fits_headers
 
+
 class BrightPixels(object):
     """
     Find bright pixels and bright columns based on a threshold of
@@ -24,6 +25,7 @@ class BrightPixels(object):
     exclusive of the bright columns.  The mask that is generated will
     be identified as mask_plane.
     """
+
     def __init__(self, ccd, amp, exptime, gain,
                  ethresh=5, colthresh=20, mask_plane='BAD'):
         self.ccd = ccd
@@ -36,6 +38,7 @@ class BrightPixels(object):
         self.mask_plane = mask_plane
         self.bright_pixels = None
         self.bright_columns = None
+
     def find(self):
         """
         Find and return the bright pixels and bright columns.
@@ -80,8 +83,11 @@ class BrightPixels(object):
         self.bright_pixels = bright_pixs
         self.bright_columns = bright_cols
         return bright_pixs, bright_cols
+
+
 if __name__ == '__main__':
     import sim_tools
+
     def write_test_image(outfile, emin=10, dark_curr=2e-3, exptime=10,
                          gain=5, ccdtemp=-100, bias_level=1e2,
                          bias_sigma=4, ncols=2, npix=100):

@@ -26,5 +26,5 @@ if args.verbose:
         print '  ', item
 
 bias_frame = args.bias_frame('%s_dark_bias_frame.fits' % args.sensor_id)
-task.run(args.sensor_id, dark_files, args.mask_files(dark_files[0]), 
+task.run(args.sensor_id, dark_files, args.mask_files(dark_files[0]),
          args.system_gains(), bias_frame=bias_frame)

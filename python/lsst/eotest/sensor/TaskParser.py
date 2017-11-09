@@ -14,6 +14,7 @@ from EOTestResults import EOTestResults
 from lsst.eotest.database.SensorDb import SensorDb, NullDbObject
 from lsst.eotest.database.SensorGains import SensorGains
 
+
 class TaskNamespace(object):
     """
     Decorator class for argparse.Namespace.  This class provides
@@ -21,8 +22,10 @@ class TaskNamespace(object):
     as lists of input files based on a file pattern or file_list file,
     a SensorDb object, system gains, etc..
     """
+
     def __init__(self, args):
         self.args = args
+
     def files(self, file_pattern, file_list):
         if file_list is not None:
             my_files = [x.strip() for x in open(file_list)
@@ -34,9 +37,10 @@ class TaskNamespace(object):
         else:
             raise RuntimeError('You must specify a file pattern or file list.')
         return my_files
+
     def bias_frame(self, outfile, clobber=True):
-        if (self.args.bias_frame_pattern is None and 
-            self.args.bias_frame_list is None):
+        if (self.args.bias_frame_pattern is None and
+                self.args.bias_frame_list is None):
             return None
         else:
             bias_files = self.files(self.args.bias_frame_pattern,
@@ -45,13 +49,15 @@ class TaskNamespace(object):
                 return None
             imutils.fits_median_file(bias_files, outfile, clobber=True)
             return outfile
+
     def sensor(self):
         if self.args.db_credentials is not None:
             sensorDb = SensorDb(self.args.db_credentials)
-            return sensorDb.getSensor(self.args.Vendor, self.args.sensor_id, 
+            return sensorDb.getSensor(self.args.Vendor, self.args.sensor_id,
                                       add=True)
         else:
             return NullDbObject()
+
     def system_gains(self):
         if self.args.db_credentials is not None:
             return SensorGains(vendor=self.args.Vendor,
@@ -61,6 +67,7 @@ class TaskNamespace(object):
             results = EOTestResults(self.args.gains)
             gains = results['GAIN']
             return dict([(amp, gains[amp-1]) for amp in imutils.allAmps()])
+
     def mask_files(self, infile=None):
         """
         Tuple of mask files to be used.  If infile is given and a
@@ -80,7 +87,7 @@ class TaskNamespace(object):
         for mask_file in my_mask_files:
             hdr = fits.open(mask_file)[0].header
             if ('MASKTYPE' in hdr.keys() and
-                hdr['MASKTYPE'] == 'ROLLOFF_DEFECTS'):
+                    hdr['MASKTYPE'] == 'ROLLOFF_DEFECTS'):
                 have_rolloff_mask = True
         if infile is not None and not have_rolloff_mask:
             my_mask_files.append('edge_rollover_defect_mask.fits')
@@ -91,14 +98,17 @@ class TaskNamespace(object):
             for item in my_mask_files:
                 print "  ", item
         return my_mask_files
+
     def __getattr__(self, attrname):
         return getattr(self.args, attrname)
+
 
 class TaskParser(argparse.ArgumentParser):
     """
     Subclass of argparse.ArgumentParser that adds default command line
     options for all pipeline tasks.
     """
+
     def __init__(self, description):
         formatter_class = argparse.ArgumentDefaultsHelpFormatter
         argparse.ArgumentParser.__init__(self, description=description,
@@ -117,15 +127,15 @@ class TaskParser(argparse.ArgumentParser):
                           help='file pattern for mask files')
         self.add_argument('-o', '--output_dir', type=str, default='.',
                           help="output directory")
-        self.add_argument('-g', '--gains', type=str, 
+        self.add_argument('-g', '--gains', type=str,
                           help='file of system gains')
-        self.add_argument('-v', '--verbose', action='store_true',default=False,
+        self.add_argument('-v', '--verbose', action='store_true', default=False,
                           help='turn verbosity on')
         self.add_argument('-r', '--results_file', type=str, default=None,
                           help='Results file for EO test parameters. Computed value if left at default of None: <SENSOR_ID>_eotest_results.fits')
         self.add_argument('--temp_set_point', type=float, default=-95.,
                           help='Expected temperture set point (in degrees C) for measurement')
-        
+
     def parse_args(self):
         args = argparse.ArgumentParser.parse_args(self)
         if args.output_dir is not None:
@@ -134,6 +144,7 @@ class TaskParser(argparse.ArgumentParser):
             except OSError:
                 pass
         return TaskNamespace(args)
+
 
 if __name__ == '__main__':
     parser = TaskParser('test task')
