@@ -55,6 +55,7 @@ def makeAmplifierGeometry(infile):
                                   detysize=detsize['ymax'],
                                   amp_loc=amp_loc[vendor])
     myAmpGeom.compute_geometry(fitsfile=infile)
+    foo.close()
     return myAmpGeom
 
 
