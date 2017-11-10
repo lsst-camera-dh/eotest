@@ -160,8 +160,8 @@ class CCD(object):
             # writing image data as floats.
             #
             try:
-                del output[amp].header['BSCALE']
-                del output[amp].header['BZERO']
+                del output[0].header['BSCALE']
+                del output[0].header['BZERO']
             except KeyError:
                 pass
 
