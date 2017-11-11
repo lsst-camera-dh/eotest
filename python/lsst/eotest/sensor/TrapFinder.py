@@ -3,6 +3,7 @@ from __future__ import absolute_import
 from builtins import zip
 from builtins import range
 from builtins import object
+from collections import OrderedDict
 import numpy as np
 import lsst.afw.math as afwMath
 import lsst.pex.exceptions as pexExcept
@@ -74,6 +75,18 @@ class TrapFinder(object):
         if regfile is not None:
             self._write_reg_file(regfile, my_arrays[0], my_arrays[1])
         return tuple(my_arrays)
+
+    def findNew(self, regfile=None):
+        nx, ny = self.imarr.shape
+        arr_names = ['ix', 'iy', 'c2', 'c3', 'a0', 'a1']
+        my_arrays = OrderedDict([(name, []) for name in arr_names])
+        for icol in range(nx):
+            results = self.process_column(icol)
+            for i, item in enumerate(my_arrays.values()):
+                item.extend(results[i])
+        if regfile is not None:
+            self._write_reg_file(regfile, my_arrays['ix'], my_arrays['iy'])
+        return tuple([np.array(item) for item in my_arrays.values()])
 
     def _write_reg_file(self, regfile, ix, iy):
         reg_output = open(regfile, 'w')
