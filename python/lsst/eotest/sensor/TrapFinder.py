@@ -62,18 +62,18 @@ class TrapFinder(object):
 
     def find(self, regfile=None):
         nx, ny = self.imarr.shape
-        my_arrays = 'ix iy c2 c3 a0 a1'.split()
-        for item in my_arrays:
-            exec('%(item)s = []' % locals())
+        my_arrays = []
+        for i in range(6):
+            my_arrays.append([])
         for icol in range(nx):
             results = self.process_column(icol)
             for i, item in enumerate(my_arrays):
-                exec('%(item)s.extend(results[%(i)i])' % locals())
+                item.extend(results[i])
         for item in my_arrays:
-            exec('%(item)s = np.array(%(item)s)' % locals())
+            item = np.array(item)
         if regfile is not None:
-            self._write_reg_file(regfile, ix, iy)
-        return ix, iy, c2, c3, a0, a1
+            self._write_reg_file(regfile, my_arrays[0], my_arrays[1])
+        return tuple(my_arrays)
 
     def _write_reg_file(self, regfile, ix, iy):
         reg_output = open(regfile, 'w')
