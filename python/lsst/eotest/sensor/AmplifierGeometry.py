@@ -80,6 +80,7 @@ class AmplifierGeometry(dict):
             self.naxis2 = foo[1].header['NAXIS2']
             detxsize = self.naxis1*self.nsegx
             detysize = self.naxis2*self.nsegy
+            foo.close()
         else:
             # Compute geometry using supplied detxsize, detysize
             detxsize = kwds['detxsize']

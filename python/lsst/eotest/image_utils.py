@@ -43,7 +43,9 @@ def allAmps(fits_file=None):
     if fits_file is None:
         return all_amps
     try:
-        namps = fits.open(fits_file)[0].header['NAMPS']
+        f = fits.open(fits_file)
+        f.close()  # close first, in case exception is thrown and file is left open
+        namps = f[0].header['NAMPS']
         return list(range(1, namps+1))
     except KeyError:
         return all_amps
@@ -152,6 +154,7 @@ def fits_median_file(files, outfile, bitpix=16, clobber=True):
         if bitpix is not None:
             set_bitpix(output[amp], bitpix)
     fitsWriteto(output, outfile, clobber=clobber)
+    output.close()
 
 
 def fits_mean_file(files, outfile, bitpix=16, clobber=True):
@@ -168,11 +171,13 @@ def fits_mean_file(files, outfile, bitpix=16, clobber=True):
         input = fits.open(infile)
         for amp in all_amps:
             output[amp].data += input[amp].data
+        input.close()
     for amp in all_amps:
         output[amp].data /= len(files)
         if bitpix is not None:
             set_bitpix(output[amp], bitpix)
     fitsWriteto(output, outfile, clobber=clobber)
+    output.close()
 
 
 def fits_median(files, hdu=1, fix=True):
@@ -202,6 +207,7 @@ def writeFits(images, outfile, template_file, bitpix=-32):
         output[amp].data = images[amp].getArray()
         set_bitpix(output[amp], bitpix)
     fitsWriteto(output, outfile, clobber=True, checksum=True)
+    output.close()
 
 
 def check_temperatures(files, tol, setpoint=None, warn_only=False):
