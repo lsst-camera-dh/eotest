@@ -11,8 +11,8 @@ import lsst.afw.image as afwImage
 import lsst.eotest.image_utils as imutils
 from rolloff_mask import rolloff_mask
 from EOTestResults import EOTestResults
-from lsst.eotest.database.SensorDb import SensorDb, NullDbObject
-from lsst.eotest.database.SensorGains import SensorGains
+#from lsst.eotest.database.SensorDb import SensorDb, NullDbObject
+#from lsst.eotest.database.SensorGains import SensorGains
 
 class TaskNamespace(object):
     """
@@ -45,22 +45,22 @@ class TaskNamespace(object):
                 return None
             imutils.fits_median_file(bias_files, outfile, clobber=True)
             return outfile
-    def sensor(self):
-        if self.args.db_credentials is not None:
-            sensorDb = SensorDb(self.args.db_credentials)
-            return sensorDb.getSensor(self.args.Vendor, self.args.sensor_id, 
-                                      add=True)
-        else:
-            return NullDbObject()
-    def system_gains(self):
-        if self.args.db_credentials is not None:
-            return SensorGains(vendor=self.args.Vendor,
-                               vendorId=self.args.sensor_id,
-                               db_credentials=self.args.db_credentials)
-        else:
-            results = EOTestResults(self.args.gains)
-            gains = results['GAIN']
-            return dict([(amp, gains[amp-1]) for amp in imutils.allAmps()])
+#    def sensor(self):
+#        if self.args.db_credentials is not None:
+#            sensorDb = SensorDb(self.args.db_credentials)
+#            return sensorDb.getSensor(self.args.Vendor, self.args.sensor_id,
+#                                      add=True)
+#        else:
+#            return NullDbObject()
+#    def system_gains(self):
+#        if self.args.db_credentials is not None:
+#            return SensorGains(vendor=self.args.Vendor,
+#                               vendorId=self.args.sensor_id,
+#                               db_credentials=self.args.db_credentials)
+#        else:
+#            results = EOTestResults(self.args.gains)
+#            gains = results['GAIN']
+#            return dict([(amp, gains[amp-1]) for amp in imutils.allAmps()])
     def mask_files(self, infile=None):
         """
         Tuple of mask files to be used.  If infile is given and a
