@@ -57,7 +57,9 @@ class EOTestReport(object):
         self.plots = eotest_plots
         self.wl_dir = wl_dir
         if tex_file is None:
-            self.tex_file = '%s_eotest_report.tex' % self.plots.sensor_id
+            # all files are written to the .tex without path, so write the .tex to the same place as images
+            # then call pdflatex with the output_dir as the current working directory.
+            self.tex_file = os.path.join(self.plots.output_dir, '%s_eotest_report.tex'%self.plots.sensor_id)
         else:
             self.tex_file = tex_file
         self.output = open(self.tex_file, 'w')
@@ -84,7 +86,8 @@ class EOTestReport(object):
             print("  %s" % func)
             try:
                 exec('self.plots.%s()' % func)
-                pylab.savefig('%s_%s.png' % (self.plots.sensor_id, func))
+                pylab.savefig('%s_%s.png' % (os.path.join(self.plots.output_dir, self.plots.sensor_id),
+                                             func))
             except Exception as eobj:
                 print("Error running %s():" % func)
                 print("  ", eobj)
@@ -469,7 +472,7 @@ specification given the mean signal in the last imaging row.
         self.output.write("\\end{document}\n")
         self.output.close()
 
-        subprocess.call('pdflatex %s' % self.tex_file, shell=True)
+        subprocess.call('pdflatex %s' % self.tex_file, shell=True, cwd=os.path.dirname(self.tex_file))
 
 
 if __name__ == '__main__':
