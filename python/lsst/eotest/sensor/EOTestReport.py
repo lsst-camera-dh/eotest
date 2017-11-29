@@ -163,8 +163,17 @@ class EOTestReport(object):
             self.output.write(" %i & $%s$ & $\\num{%s}$ \\\\ \hline\n"
                               % (amp, my_full_well, my_max_frac_dev))
         self.output.write("\\end{tabular}\n\\end{table}\n")
+
+        """The following code is commented out because as of 2017/12/15 we are not producing
+        the necessary data to produce these plots. It has not been *removed* as it is possible
+        that this might be added in future. A config option to switch this is not appropraite
+        as this is a 3rd party package, so this commenting out just lives on its own commit
+        so that it can a) easily be undone, and b) won't be merged upsteam.
+
         self.output.write(_include_multipanel_png(('%(sensor_id)s_full_well'
                                                    % locals(),)))
+        """
+
         self.output.write(_include_multipanel_png(('%(sensor_id)s_linearity'
                                                    % locals(),)))
         self.output.write(_include_multipanel_png(('%(sensor_id)s_linearity_resids'
@@ -317,6 +326,12 @@ specification given the mean signal in the last imaging row.
         if os.path.isfile(crosstalk_image + '.png'):
             self.output.write(_include_png((crosstalk_image,)))
         self.output.write('\\pagebreak\n\n')
+
+        """The following code is commented out because as of 2017/12/15 we are not producing
+        the necessary data to produce these plots. It has not been *removed* as it is possible
+        that this might be added in future. A config option to switch this is not appropraite
+        as this is a 3rd party package, so this commenting out just lives on its own commit
+        so that it can a) easily be undone, and b) won't be merged upsteam.
         #
         # QE
         #
@@ -331,6 +346,7 @@ specification given the mean signal in the last imaging row.
         self.output.write(self.plots.specs.latex_footer() + '\n')
         self.output.write(_include_png(('%(sensor_id)s_qe' % locals(),)))
         self.output.write('\\pagebreak\n\n')
+        """
         #
         # PRNU
         #

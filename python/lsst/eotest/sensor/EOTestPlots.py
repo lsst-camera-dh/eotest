@@ -1067,6 +1067,12 @@ class CcdSpecs(OrderedDict):
         self['CCD-014'].measurement = '$\\num{%.2e}$\electron\,s$^{-1}$' % dark_current
         self['CCD-014'].ok = (dark_current < 0.2)
 
+        """The following code is commented out because as of 2017/12/15 we are not producing
+        the necessary data to produce these plots. It has not been *removed* as it is possible
+        that this might be added in future. A config option to switch this is not appropraite
+        as this is a 3rd party package, so this commenting out just lives on its own commit
+        so that it can a) easily be undone, and b) won't be merged upsteam.
+
         bands = self.plotter.qe_data['QE_BANDS'].data.field('BAND')
         bands = OrderedDict([(band, []) for band in bands])
         for amp in imutils.allAmps():
@@ -1112,7 +1118,7 @@ class CcdSpecs(OrderedDict):
                 + ', '.join([str(x) for x in sorted(target_wls)]) + "\\,nm"
             self['CCD-027'].measurement = '\\twolinecell{%s}' % measurement
         self['CCD-027'].ok = (max_ratio < 5e-2)
-
+        """
         psf_sigma = max(self.results['PSF_SIGMA'])
         self['CCD-028'].measurement = '$%.2f\,\mu$ (max. value)' % psf_sigma
         self['CCD-028'].ok = (psf_sigma < 5.)
