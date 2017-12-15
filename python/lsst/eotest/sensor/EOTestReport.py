@@ -57,7 +57,9 @@ class EOTestReport(object):
         self.plots = eotest_plots
         self.wl_dir = wl_dir
         if tex_file is None:
-            self.tex_file = '%s_eotest_report.tex' % self.plots.sensor_id
+            # all files are written to the .tex without path, so write the .tex to the same place as images
+            # then call pdflatex with the output_dir as the current working directory.
+            self.tex_file = os.path.join(self.plots.output_dir, '%s_eotest_report.tex'%self.plots.sensor_id)
         else:
             self.tex_file = tex_file
         self.output = open(self.tex_file, 'w')
@@ -84,7 +86,8 @@ class EOTestReport(object):
             print("  %s" % func)
             try:
                 exec('self.plots.%s()' % func)
-                pylab.savefig('%s_%s.png' % (self.plots.sensor_id, func))
+                pylab.savefig('%s_%s.png' % (os.path.join(self.plots.output_dir, self.plots.sensor_id),
+                                             func))
             except Exception as eobj:
                 print("Error running %s():" % func)
                 print("  ", eobj)
@@ -160,8 +163,17 @@ class EOTestReport(object):
             self.output.write(" %i & $%s$ & $\\num{%s}$ \\\\ \hline\n"
                               % (amp, my_full_well, my_max_frac_dev))
         self.output.write("\\end{tabular}\n\\end{table}\n")
+
+        """The following code is commented out because as of 2017/12/15 we are not producing
+        the necessary data to produce these plots. It has not been *removed* as it is possible
+        that this might be added in future. A config option to switch this is not appropraite
+        as this is a 3rd party package, so this commenting out just lives on its own commit
+        so that it can a) easily be undone, and b) won't be merged upsteam.
+
         self.output.write(_include_multipanel_png(('%(sensor_id)s_full_well'
                                                    % locals(),)))
+        """
+
         self.output.write(_include_multipanel_png(('%(sensor_id)s_linearity'
                                                    % locals(),)))
         self.output.write(_include_multipanel_png(('%(sensor_id)s_linearity_resids'
@@ -314,6 +326,12 @@ specification given the mean signal in the last imaging row.
         if os.path.isfile(crosstalk_image + '.png'):
             self.output.write(_include_png((crosstalk_image,)))
         self.output.write('\\pagebreak\n\n')
+
+        """The following code is commented out because as of 2017/12/15 we are not producing
+        the necessary data to produce these plots. It has not been *removed* as it is possible
+        that this might be added in future. A config option to switch this is not appropraite
+        as this is a 3rd party package, so this commenting out just lives on its own commit
+        so that it can a) easily be undone, and b) won't be merged upsteam.
         #
         # QE
         #
@@ -328,6 +346,7 @@ specification given the mean signal in the last imaging row.
         self.output.write(self.plots.specs.latex_footer() + '\n')
         self.output.write(_include_png(('%(sensor_id)s_qe' % locals(),)))
         self.output.write('\\pagebreak\n\n')
+        """
         #
         # PRNU
         #
@@ -469,7 +488,7 @@ specification given the mean signal in the last imaging row.
         self.output.write("\\end{document}\n")
         self.output.close()
 
-        subprocess.call('pdflatex %s' % self.tex_file, shell=True)
+        subprocess.call('pdflatex %s' % self.tex_file, shell=True, cwd=os.path.dirname(self.tex_file))
 
 
 if __name__ == '__main__':
