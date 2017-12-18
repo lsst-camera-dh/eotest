@@ -1,4 +1,4 @@
-language: C++
+language: python
 
 sudo: required
 
@@ -8,24 +8,12 @@ env:
 services:
   - docker
 
-before_install:
+install:
   - sudo apt-get update
   - echo 'DOCKER_OPTS="-H tcp://127.0.0.1:2375 -H unix:///var/run/docker.sock -s devicemapper"' | sudo tee /etc/default/docker > /dev/null
   - sudo service docker restart
   - sleep 5
   - sudo docker pull lsstsqre/centos:7-stack-lsst_distrib-v13_0
 
-install:
-  - travis_wait docker run -ti lsstsqre/centos:7-stack-lsst_distrib-v13_0
-  - . /opt/lsst/software/stack/loadLSST.bash
-  - setup lsst_distrib
-  - pip install coveralls
-  - eups declare -r . eotest -t current
-  - setup eotest
-  - scons opt=3
-
 script:
-  - nosetests -s --with-coverage --cover-package=lsst.eotest.image_utils,lsst.eotest.sensor
-
-after_success:
-  - coveralls
+  - docker run -v `pwd`:/home/eotest lsstsqre/centos:7-stack-lsst_distrib-v13_0 /home/eotest/travis_test.sh
