@@ -10,10 +10,14 @@ import lsst.eotest.sensor as sensorTest
 
 class Fe55GainFitterTestCase(unittest.TestCase):
     def setUp(self):
-        pass
+        # Save current floating point error handling.
+        self.np_fp_config = np.geterr()
+        # Explicitly ignore underflows.
+        np.seterr(under='ignore')
 
     def tearDown(self):
-        pass
+        # Restore floating point error handling.
+        np.seterr(**self.np_fp_config)
 
     def test_set_hist_range(self):
         infile = os.path.join(os.environ['EOTEST_DIR'], 'tests',

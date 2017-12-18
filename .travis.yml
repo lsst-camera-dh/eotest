@@ -1,28 +1,24 @@
-language: C++
+language: python
 
 sudo: required
 
-dist: trusty
+env:
+  - OS_TYPE=centos OS_VERSION=7
+
+services:
+  - docker
 
 install:
-  - travis_wait ./travis_install.sh lsst-sims nose
-  - ln -sf /home/travis/miniconda/lib/libssl.so.1.0.0 /home/travis/miniconda/lib/libssl.so.10
-  - ln -sf /home/travis/miniconda/lib/libcrypto.so.1.0.0 /home/travis/miniconda/lib/libcrypto.so.10
-  - export PATH="$HOME/miniconda/bin:$PATH"
-  - source eups-setups.sh
+  - sudo apt-get update
+  - echo 'DOCKER_OPTS="-H tcp://127.0.0.1:2375 -H unix:///var/run/docker.sock -s devicemapper"' | sudo tee /etc/default/docker > /dev/null
+  - sudo service docker restart
+  - sleep 5
+  - sudo docker pull lsstsqre/centos:7-stack-lsst_distrib-v13_0
   - pip install coveralls
-  - setup lsst_sims
-  - eups declare -r . eotest -t current
-  - setup eotest
-  - scons opt=3
-
-cache:
-  directories:
-  - $HOME/miniconda.tarball
-  timeout: 600
 
 script:
-  - nosetests -s --with-coverage --cover-package=lsst.eotest.image_utils,lsst.eotest.sensor
+  - sudo chown -R 1000:1000 .
+  - docker run -v `pwd`:/home/vagrant/eotest lsstsqre/centos:7-stack-lsst_distrib-v13_0 /home/vagrant/eotest/travis_test.sh
 
 after_success:
   - coveralls
