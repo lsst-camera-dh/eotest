@@ -80,16 +80,16 @@ def p9_values(peak, imarr, x0, y0, sigmax, sigmay, DN_tot):
     p9_model = psf_func(pos, x0, y0, sigmax, sigmay, DN_tot)
     return p9_data, p9_model
 
-def prect_values(peak, imarr,ixm=3,ixp=21,iym=3,iyp=3):   
+def prect_values(peak, imarr, ixm=3, ixp=21, iym=3, iyp=3):
     xpeak, ypeak = peak.getIx(), peak.getIy()
     # nb. imarr includes overscan
     yimsiz,ximsiz = imarr.shape
     # if we are too close to an edge, just return all 0's
-    if ypeak-iym<0 or xpeak-ixm<0 or ypeak+iyp+1>yimsiz or xpeak+ixp+1>ximsiz :
-        prect_data = np.zeros([iyp+iym+1,ixp+ixm+1])
+    if ypeak-iym<0 or xpeak-ixm<0 or ypeak+iyp+1>yimsiz or xpeak+ixp+1>ximsiz:
+        prect_data = np.zeros([iyp+iym+1, ixp+ixm+1])
     else:
         # store a region around peak pixel [-3,21] in x and [-3,3] in y
-        prect_data = imarr[ypeak-iym:ypeak+iyp+1,xpeak-ixm:xpeak+ixp+1]
+        prect_data = imarr[ypeak-iym:ypeak+iyp+1, xpeak-ixm:xpeak+ixp+1]
 
     # data is stored as a normal 2-d array and then flattened
     prect_data_flat = prect_data.flatten()
@@ -245,7 +245,8 @@ class PsfGaussFit(object):
                             % failed_curve_fits)
         self._save_ext_data(amp, x0, y0, sigmax, sigmay, dn, dn_fp, chiprob,
                             chi2s, dofs, maxDNs, xpeak, ypeak,
-                            np.array(p9_data), np.array(p9_model),np.array(prect_data))
+                            np.array(p9_data), np.array(p9_model),
+                            np.array(prect_data))
         self.amp_set.add(amp)
         self.sigmax.extend(sigmax)
         self.sigmay.extend(sigmay)
@@ -303,7 +304,7 @@ class PsfGaussFit(object):
             #
             colnames = ['AMPLIFIER', 'XPOS', 'YPOS', 'SIGMAX', 'SIGMAY', 'DN',
                         'DN_FP_SUM', 'CHIPROB', 'CHI2', 'DOF', 'MAXDN',
-                        'XPEAK', 'YPEAK', 'P9_DATA', 'P9_MODEL','PRECT_DATA']
+                        'XPEAK', 'YPEAK', 'P9_DATA', 'P9_MODEL', 'PRECT_DATA']
             columns = [np.ones(len(x0))*amp, np.array(x0), np.array(y0),
                        np.array(sigmax), np.array(sigmay),
                        np.array(dn), np.array(dn_fp),
@@ -313,7 +314,7 @@ class PsfGaussFit(object):
             formats = ['I'] + ['E']*(len(columns)-6) + ['I']*2 + ['9E']*2 + ['175E']
             units = ['None', 'pixel', 'pixel', 'pixel', 'pixel',
                      'ADU', 'ADU', 'None', 'None', 'None', 'ADU',
-                     'pixel', 'pixel', 'ADU', 'ADU','ADU']
+                     'pixel', 'pixel', 'ADU', 'ADU', 'ADU']
             fits_cols = lambda coldata: [fits.Column(name=colname,
                                                      format=format,
                                                      unit=unit,
