@@ -162,7 +162,6 @@ class EOTestResults(object):
             GRADE = "ENGIN."
 
         stats = OrderedDict()
-        stats['LSST_NUM'] = self.output[0].header['LSST_NUM']
         stats['GRADE'] = GRADE
         stats['max read noise'] = rn.max()
         stats['# rn > 8'] = (rn > 8).sum()

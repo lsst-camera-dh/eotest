@@ -37,7 +37,7 @@ def _include_png(pngfiles, frac_width=1.3, hspace=-1):
             image_name = item[:-len('.png')]
         else:
             image_name = item
-        lines.append('\\includegraphics[width=%s\\textwidth]{%s}' 
+        lines.append('\\includegraphics[width=%s\\textwidth]{%s}'
                      % (frac_width, image_name))
     return figure_template % ('\\\\\n'.join(lines))
 
@@ -119,6 +119,21 @@ class EOTestReport(object):
             self.output.write('Test Report Job ID: %s\n' % test_report_job_id)
         except KeyError:
             pass
+        #
+        # Write sensor grade stats
+        #
+        if sensor_grade_stats is not None:
+            self.output.write('\nSensor Grade Statistics:\n')
+            table = """\\begin{table}[h]
+\\centering
+\\begin{tabular}{""" + "|c"*len(sensor_grad_stats) + "|}\n"
+            table += "\hline\n"
+            table += '&'.join(["\\noformat{%s}" % key for key in
+                               sensor_grade_stats]) + "\\\\ \hline\n"
+            table += '&'.join(["%s" % value for value in
+                               sensor_grade_stats.values()]) + "\\\\ \hline"
+            table += '\end{tabular}\n\end{table}'
+            self.output.write(table)
         self.output.write('\\pagebreak\n\n')
         #
         # Read noise
