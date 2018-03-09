@@ -112,7 +112,19 @@ class EOTestResults(object):
                    + col_len*(self['NUM_BRIGHT_COLUMNS']
                               + self['NUM_DARK_COLUMNS']))
         return bad_pix/float(total_pixels)
-    def sensor_stats(self):
+
+    @staticmethod
+    def bias_offset_grade(bnl_bias_stats_file=None):
+        if bnl_bias_stats_file is not None:
+            with open(bnl_bias_stats_file) as input_:
+                bias_levels = eval(input_.readline().strip().split(':')[1])
+                med1_8 = np.median(bias_levels[:8])
+                med9_16 = np.median(bias_levels[8:])
+                if (max(med1_8, med_9_16) + 3000.)/2. > 6000.:
+                    return '-HI_BIAS'
+        return ''
+
+    def sensor_stats(self, bnl_bias_stats_file=None):
         """
         Return the sensor statistics based on the EO test results.  This
         applies POC's sensor grade criteria as given in LSSTTD-1255.
@@ -137,7 +149,7 @@ class EOTestResults(object):
             cti_hp.max() < 5 and
             defects < 0.0049 and
             num_bright_cols < 5):
-            GRADE = "SCIENCE"
+            GRADE = "SCIENCE" + self.bias_offset_grade(bnl_bias_stats_file)
         elif (rn.max() < 14 and
               (rn > 11).sum() < 4 and
               cti_ls.max() < 18 and

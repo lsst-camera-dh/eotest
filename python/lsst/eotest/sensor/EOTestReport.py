@@ -44,7 +44,7 @@ def _include_png(pngfiles, frac_width=1.3, hspace=-1):
 class EOTestReport(object):
     def __init__(self, eotest_plots, wl_dir, tex_file=None, qa_plot_files=None,
                  ccs_config_files=None, software_versions=None,
-                 teststand_config=None, job_ids=None):
+                 teststand_config=None, job_ids=None, sensor_grade_stats=None):
         self.plots = eotest_plots
         self.wl_dir = wl_dir
         if tex_file is None:
@@ -57,6 +57,7 @@ class EOTestReport(object):
         self.software_versions = software_versions
         self.teststand_config = teststand_config
         self.job_ids = job_ids
+        self.sensor_grade_stats = sensor_grade_stats
     def make_figures(self):
         print "Creating eotest report figures..."
         funcs = ('fe55_dists',
