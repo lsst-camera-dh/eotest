@@ -83,7 +83,7 @@ class EOTestResults(object):
         if outfile is None:
             outfile = self.infile
         fitsWriteto(self.output, outfile, clobber=clobber)
-    def defects_fractions(self, col_len=None, total_pixels=None):
+    def defect_fractions(self, col_len=None, total_pixels=None):
         """
         Sum the bad pixel contributions from the various defect types
         and express as a fraction per segment.  This is based on POC's
@@ -91,14 +91,17 @@ class EOTestResults(object):
 
         Returns
         -------
-        np.array: array of defects fractions for all of the amplifiers
+        np.array: array of defect fractions for all of the amplifiers
            in the sensor.
         """
         vendor_col_len = {'ITL': 2000, 'E2V': 2002}
         vendor_total_pixels = {'ITL': 1024000, 'E2V': 1025024}
-        # Extract the vendor from the filename.  TODO: extract this
-        # from FITS keywords instead.
-        vendor = self.infile[:3]
+        # Get vendor from FITS header, if set; otherwise, extract the
+        # from the filename, assuming the standard naming convention.
+        try:
+            vendor = self.output[0].header['CCD_MANU']
+        except KeyError:
+            vendor = self.infile[:3]
         if col_len is None:
             col_len = vendor_col_len[vendor]
         if total_pixels is None:
@@ -109,8 +112,42 @@ class EOTestResults(object):
                               + self['NUM_DARK_COLUMNS']))
         return float(bad_pix)/total_pixels
     def sensor_grade(self):
-        pass
+        """
+        Return the sensor grade based on the EO test results.  This
+        applies POC's criteria as given in LSSTTD-1255.
 
+        Returns
+        -------
+        str: "SCIENCE", "RESERVE", or "ENGIN."
+        """
+        rn = self['READ_NOISE']
+        ppm = 1e6
+        cti_ls = ppm*self['CTI_LOW_SERIAL']
+        cti_hs = ppm*self['CTI_HIGH_SERIAL']
+        cti_lp = ppm*self['CTI_LOW_PARALLEL']
+        cti_hp = ppm*self['CTI_HIGH_PARALLEL']
+        defects = self.defect_fractions().mean()
+        num_bright_cols = self['NUM_BRIGHT_COLUMNS'].sum()
+        if (rn.max() < 10 and
+            (rn > 8.5).sum() < 3 and
+            cti_ls.max() < 9 and
+            cti_lp.max() < 7 and
+            cti_hs.max() < 9 and
+            cti_hp.max() < 5 and
+            defects < 0.0049 and
+            num_bright_cols < 5):
+            GRADE = "SCIENCE"
+        elif (rn.max() < 14 and
+              (rn > 11).sum() < 4 and
+              cti_ls.max() < 18 and
+              (cti_ls > 10).sum() < 4 and
+              cti_lp.max() < 10 and
+              cti_hp.max() < 10 and
+              (cti_lp > 10).sum() < 4):
+            GRADE = "RESERVE"
+        else:
+            GRADE = "ENGIN."
+        return GRADE
 
 if __name__ == '__main__':
     outfile = 'foo.fits'
