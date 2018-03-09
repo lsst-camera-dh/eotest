@@ -5,6 +5,7 @@ as a binary table.
 @author J. Chiang <jchiang@slac.stanford.edu>
 """
 import os
+from collections import OrderedDict
 import numpy as np
 import astropy.io.fits as fits
 from lsst.eotest.fitsTools import fitsTableFactory, fitsWriteto
@@ -106,15 +107,15 @@ class EOTestResults(object):
             col_len = vendor_col_len[vendor]
         if total_pixels is None:
             total_pixels = vendor_total_pixels[vendor]
-        bad_pix = (self['NUM_BRIGHT_PIXELS'][amp-1]
-                   + self['NUM_DARK_PIXELS'][amp-1]
+        bad_pix = (self['NUM_BRIGHT_PIXELS']
+                   + self['NUM_DARK_PIXELS']
                    + col_len*(self['NUM_BRIGHT_COLUMNS']
                               + self['NUM_DARK_COLUMNS']))
-        return float(bad_pix)/total_pixels
-    def sensor_grade(self):
+        return bad_pix/float(total_pixels)
+    def sensor_stats(self):
         """
-        Return the sensor grade based on the EO test results.  This
-        applies POC's criteria as given in LSSTTD-1255.
+        Return the sensor statistics based on the EO test results.  This
+        applies POC's sensor grade criteria as given in LSSTTD-1255.
 
         Returns
         -------
@@ -147,7 +148,19 @@ class EOTestResults(object):
             GRADE = "RESERVE"
         else:
             GRADE = "ENGIN."
-        return GRADE
+
+        stats = OrderedDict()
+        stats['LSST_NUM'] = self.output[0].header['LSST_NUM']
+        stats['GRADE'] = GRADE
+        stats['max read noise'] = rn.max()
+        stats['# rn > 8'] = (rn > 8).sum()
+        stats['max SCTI'] = max(cti_ls.max(), cti_hs.max())
+        stats['# SCTI > 5'] = (cti_ls > 5).sum()
+        stats['max PCTI'] = max(cti_lp.max(), cti_hp.max())
+        stats['# PCTI > 3'] = (cti_lp > 3).sum()
+        stats['% defects'] = 100*defects
+        stats['# bright cols'] = num_bright_cols
+        return stats
 
 if __name__ == '__main__':
     outfile = 'foo.fits'
