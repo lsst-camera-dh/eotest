@@ -83,6 +83,34 @@ class EOTestResults(object):
         if outfile is None:
             outfile = self.infile
         fitsWriteto(self.output, outfile, clobber=clobber)
+    def defects_fractions(self, col_len=None, total_pixels=None):
+        """
+        Sum the bad pixel contributions from the various defect types
+        and express as a fraction per segment.  This is based on POC's
+        algorithm as given in LSSTTD-1255.
+
+        Returns
+        -------
+        np.array: array of defects fractions for all of the amplifiers
+           in the sensor.
+        """
+        vendor_col_len = {'ITL': 2000, 'E2V': 2002}
+        vendor_total_pixels = {'ITL': 1024000, 'E2V': 1025024}
+        # Extract the vendor from the filename.  TODO: extract this
+        # from FITS keywords instead.
+        vendor = self.infile[:3]
+        if col_len is None:
+            col_len = vendor_col_len[vendor]
+        if total_pixels is None:
+            total_pixels = vendor_total_pixels[vendor]
+        bad_pix = (self['NUM_BRIGHT_PIXELS'][amp-1]
+                   + self['NUM_DARK_PIXELS'][amp-1]
+                   + col_len*(self['NUM_BRIGHT_COLUMNS']
+                              + self['NUM_DARK_COLUMNS']))
+        return float(bad_pix)/total_pixels
+    def sensor_grade(self):
+        pass
+
 
 if __name__ == '__main__':
     outfile = 'foo.fits'
