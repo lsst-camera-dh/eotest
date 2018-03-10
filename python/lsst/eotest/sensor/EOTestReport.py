@@ -156,7 +156,7 @@ class EOTestReport(object):
 \\begin{tabular}{""" + "|c"*9 + "|}\n"
             table += "\hline\n"
             table += (' & '.join(('8-channel median',
-                                "\\multicolumn{8}{c|}{1-8, 8-16 bias values}"))
+                                "\\multicolumn{8}{c|}{BNL bias offset values, channels 1-8, 8-16}"))
                       + "\\\\ \hline\n")
             table += ' & '.join(entries[:9]) + "\\\\ \hline\n"
             table += ' & '.join(entries[9:]) + "\\\\ \hline\n"
