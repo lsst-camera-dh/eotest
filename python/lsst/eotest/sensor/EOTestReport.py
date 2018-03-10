@@ -130,11 +130,11 @@ class EOTestReport(object):
 \\hspace{-0.5in}
 \\begin{tabular}{""" + "|c"*len(self.sensor_grade_stats) + "|}\n"
             table += "\hline\n"
-            table += '&'.join(["\\texttt{%s}" % key for key in
+            table += ' & '.join(["\\texttt{%s}" % key for key in
                                self.sensor_grade_stats]) + "\\\\ \hline\n"
             fmts = ('%s', '%.2f', '%i', '%.2f', '%i', '%.2f', '%i',
                     '%.4f', '%i')
-            table += '&'.join([format % key for format, key in
+            table += ' & '.join([format % key for format, key in
                                zip(fmts, self.sensor_grade_stats.values())]) \
                                + "\\\\ \hline\n"
             table += '\end{tabular}\n\end{table}\n'
@@ -143,21 +143,23 @@ class EOTestReport(object):
         # Write BNL bias offsets
         #
         if self.bnl_bias_offsets is not None:
-            # Find the max of eight channel medians.
-            max_value = max(np.median(self.bnl_bias_offsets[:8]),
-                            np.median(self.bnl_bias_offsets[8:]))
-            index = np.where(self.bnl_bias_offsets == max_value)[0][0]
-            # Format the table entries and bold the max-median.
+            # Format the table entries.
             entries = ['%i' % x for x in self.bnl_bias_offsets]
-            entries[index] = '\\textbf{%s}' % entries[index]
+
+            # Compute the 8-channel medians and insert into table entries.
+            entries.insert(0, '%.1f'  % np.median(self.bnl_bias_offsets[:8]))
+            entries.insert(9, '%.1f'  % np.median(self.bnl_bias_offsets[8:]))
+
             # Write the table of bias value entries.
-            self.output.write("BNL Bias offsets:\n")
             table = """\\begin{table}[h]
-\\hspace{-0.5in}
-\\begin{tabular}{""" + "|c"*8 + "|}\n"
+\\centering
+\\begin{tabular}{""" + "|c"*9 + "|}\n"
             table += "\hline\n"
-            table += '&'.join(entries[:8]) + "\\\\ \hline\n"
-            table += '&'.join(entries[8:]) + "\\\\ \hline\n"
+            table += (' & '.join(('8-channel median',
+                                "\\multicolumn{8}{c|}{1-8, 8-16 bias values}"))
+                      + "\\\\ \hline\n")
+            table += ' & '.join(entries[:9]) + "\\\\ \hline\n"
+            table += ' & '.join(entries[9:]) + "\\\\ \hline\n"
             table += '\end{tabular}\n\end{table}\n'
             self.output.write(table)
         self.output.write('\\pagebreak\n\n')

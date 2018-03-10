@@ -120,7 +120,7 @@ class EOTestResults(object):
                 bias_levels = eval(input_.readline().strip().split(':')[1])
                 med1_8 = np.median(bias_levels[:8])
                 med9_16 = np.median(bias_levels[8:])
-                if (max(med1_8, med_9_16) + 3000.)/2. > 6000.:
+                if (max(med1_8, med9_16) + 3000.)/2. > 6000.:
                     return '-HI_BIAS'
         return ''
 
