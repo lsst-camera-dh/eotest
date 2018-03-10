@@ -44,7 +44,8 @@ def _include_png(pngfiles, frac_width=1.3, hspace=-1):
 class EOTestReport(object):
     def __init__(self, eotest_plots, wl_dir, tex_file=None, qa_plot_files=None,
                  ccs_config_files=None, software_versions=None,
-                 teststand_config=None, job_ids=None, sensor_grade_stats=None):
+                 teststand_config=None, job_ids=None, sensor_grade_stats=None,
+                 bnl_bias_offsets=None):
         self.plots = eotest_plots
         self.wl_dir = wl_dir
         if tex_file is None:
@@ -58,6 +59,7 @@ class EOTestReport(object):
         self.teststand_config = teststand_config
         self.job_ids = job_ids
         self.sensor_grade_stats = sensor_grade_stats
+        self.bnl_bias_offsets = bnl_bias_offsets
     def make_figures(self):
         print "Creating eotest report figures..."
         funcs = ('fe55_dists',
@@ -129,13 +131,34 @@ class EOTestReport(object):
 \\begin{tabular}{""" + "|c"*len(self.sensor_grade_stats) + "|}\n"
             table += "\hline\n"
             table += '&'.join(["\\texttt{%s}" % key for key in
-                               self.sensor_grade_stats])+ "\\\\ \hline\n"
+                               self.sensor_grade_stats]) + "\\\\ \hline\n"
             fmts = ('%s', '%.2f', '%i', '%.2f', '%i', '%.2f', '%i',
                     '%.4f', '%i')
             table += '&'.join([format % key for format, key in
                                zip(fmts, self.sensor_grade_stats.values())]) \
                                + "\\\\ \hline\n"
-            table += '\end{tabular}\n\end{table}'
+            table += '\end{tabular}\n\end{table}\n'
+            self.output.write(table)
+        #
+        # Write BNL bias offsets
+        #
+        if self.bnl_bias_offsets is not None:
+            # Find the max of eight channel medians.
+            max_value = max(np.median(self.bnl_bias_offsets[:8]),
+                            np.median(self.bnl_bias_offsets[8:]))
+            index = np.where(self.bnl_bias_offsets == max_value)[0][0]
+            # Format the table entries and bold the max-median.
+            entries = ['%i' % x for x in self.bnl_bias_offsets]
+            entries[index] = '\\textbf{%s}' % entries[index]
+            # Write the table of bias value entries.
+            self.output.write("BNL Bias offsets:\n")
+            table = """\\begin{table}[h]
+\\hspace{-0.5in}
+\\begin{tabular}{""" + "|c"*8 + "|}\n"
+            table += "\hline\n"
+            table += '&'.join(entries[:8]) + "\\\\ \hline\n"
+            table += '&'.join(entries[8:]) + "\\\\ \hline\n"
+            table += '\end{tabular}\n\end{table}\n'
             self.output.write(table)
         self.output.write('\\pagebreak\n\n')
         #
