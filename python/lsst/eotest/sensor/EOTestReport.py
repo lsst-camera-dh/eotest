@@ -122,16 +122,19 @@ class EOTestReport(object):
         #
         # Write sensor grade stats
         #
-        if sensor_grade_stats is not None:
-            self.output.write('\nSensor Grade Statistics:\n')
+        if self.sensor_grade_stats is not None:
+            self.output.write('\n\section{Sensor Grade Statistics}\n')
             table = """\\begin{table}[h]
-\\centering
-\\begin{tabular}{""" + "|c"*len(sensor_grad_stats) + "|}\n"
+\\hspace{-0.5in}
+\\begin{tabular}{""" + "|c"*len(self.sensor_grade_stats) + "|}\n"
             table += "\hline\n"
-            table += '&'.join(["\\noformat{%s}" % key for key in
-                               sensor_grade_stats]) + "\\\\ \hline\n"
-            table += '&'.join(["%s" % value for value in
-                               sensor_grade_stats.values()]) + "\\\\ \hline"
+            table += '&'.join(["\\texttt{%s}" % key for key in
+                               self.sensor_grade_stats])+ "\\\\ \hline\n"
+            fmts = ('%s', '%.2f', '%i', '%.2f', '%i', '%.2f', '%i',
+                    '%.4f', '%i')
+            table += '&'.join([format % key for format, key in
+                               zip(fmts, self.sensor_grade_stats.values())]) \
+                               + "\\\\ \hline\n"
             table += '\end{tabular}\n\end{table}'
             self.output.write(table)
         self.output.write('\\pagebreak\n\n')

@@ -163,14 +163,14 @@ class EOTestResults(object):
 
         stats = OrderedDict()
         stats['GRADE'] = GRADE
-        stats['max read noise'] = rn.max()
-        stats['# rn > 8'] = (rn > 8).sum()
+        stats['max rn'] = rn.max()
+        stats['\# rn>8'] = (rn > 8).sum()
         stats['max SCTI'] = max(cti_ls.max(), cti_hs.max())
-        stats['# SCTI > 5'] = (cti_ls > 5).sum()
+        stats['\# SCTI>5'] = (cti_ls > 5).sum()
         stats['max PCTI'] = max(cti_lp.max(), cti_hp.max())
-        stats['# PCTI > 3'] = (cti_lp > 3).sum()
-        stats['% defects'] = 100*defects
-        stats['# bright cols'] = num_bright_cols
+        stats['\# PCTI>3'] = (cti_lp > 3).sum()
+        stats['\% defects'] = 100*defects
+        stats['\# bright cols'] = num_bright_cols
         return stats
 
 if __name__ == '__main__':
