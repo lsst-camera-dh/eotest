@@ -37,14 +37,15 @@ def _include_png(pngfiles, frac_width=1.3, hspace=-1):
             image_name = item[:-len('.png')]
         else:
             image_name = item
-        lines.append('\\includegraphics[width=%s\\textwidth]{%s}' 
+        lines.append('\\includegraphics[width=%s\\textwidth]{%s}'
                      % (frac_width, image_name))
     return figure_template % ('\\\\\n'.join(lines))
 
 class EOTestReport(object):
     def __init__(self, eotest_plots, wl_dir, tex_file=None, qa_plot_files=None,
                  ccs_config_files=None, software_versions=None,
-                 teststand_config=None, job_ids=None):
+                 teststand_config=None, job_ids=None, sensor_grade_stats=None,
+                 bnl_bias_offsets=None):
         self.plots = eotest_plots
         self.wl_dir = wl_dir
         if tex_file is None:
@@ -57,6 +58,8 @@ class EOTestReport(object):
         self.software_versions = software_versions
         self.teststand_config = teststand_config
         self.job_ids = job_ids
+        self.sensor_grade_stats = sensor_grade_stats
+        self.bnl_bias_offsets = bnl_bias_offsets
     def make_figures(self):
         print "Creating eotest report figures..."
         funcs = ('fe55_dists',
@@ -118,6 +121,47 @@ class EOTestReport(object):
             self.output.write('Test Report Job ID: %s\n' % test_report_job_id)
         except KeyError:
             pass
+        #
+        # Write sensor grade stats
+        #
+        if self.sensor_grade_stats is not None:
+            self.output.write('\n\section{Sensor Grade Statistics}\n')
+            table = """\\begin{table}[h]
+\\hspace{-0.5in}
+\\begin{tabular}{""" + "|c"*len(self.sensor_grade_stats) + "|}\n"
+            table += "\hline\n"
+            table += ' & '.join(["\\texttt{%s}" % key for key in
+                               self.sensor_grade_stats]) + "\\\\ \hline\n"
+            fmts = ('%s', '%.2f', '%i', '%.2f', '%i', '%.2f', '%i',
+                    '%.4f', '%i')
+            table += ' & '.join([format % key for format, key in
+                               zip(fmts, self.sensor_grade_stats.values())]) \
+                               + "\\\\ \hline\n"
+            table += '\end{tabular}\n\end{table}\n'
+            self.output.write(table)
+        #
+        # Write BNL bias offsets
+        #
+        if self.bnl_bias_offsets is not None:
+            # Format the table entries.
+            entries = ['%i' % x for x in self.bnl_bias_offsets]
+
+            # Compute the 8-channel medians and insert into table entries.
+            entries.insert(0, '%.1f'  % np.median(self.bnl_bias_offsets[:8]))
+            entries.insert(9, '%.1f'  % np.median(self.bnl_bias_offsets[8:]))
+
+            # Write the table of bias value entries.
+            table = """\\begin{table}[h]
+\\centering
+\\begin{tabular}{""" + "|c"*9 + "|}\n"
+            table += "\hline\n"
+            table += (' & '.join(('8-channel median',
+                                "\\multicolumn{8}{c|}{BNL bias offset values, channels 1-8, 8-16}"))
+                      + "\\\\ \hline\n")
+            table += ' & '.join(entries[:9]) + "\\\\ \hline\n"
+            table += ' & '.join(entries[9:]) + "\\\\ \hline\n"
+            table += '\end{tabular}\n\end{table}\n'
+            self.output.write(table)
         self.output.write('\\pagebreak\n\n')
         #
         # Read noise
