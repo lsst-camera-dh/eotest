@@ -4,6 +4,7 @@ See https://jira.slac.stanford.edu/browse/LSSTTD-1273.
 """
 
 from __future__ import print_function
+import os
 from collections import namedtuple, OrderedDict
 import numpy as np
 import matplotlib.pyplot as plt
@@ -26,6 +27,7 @@ class TearingStats(OrderedDict):
             serial overscan to compute the bias level for each row.
         """
         super(TearingStats, self).__init__()
+        self.fitsfile = fitsfile
         ccd = MaskedCCD(fitsfile)
         for amp in ccd:
             self[amp] = AmpTearingStats(ccd[amp], ccd.amp_geom, buf=buf)
@@ -54,7 +56,7 @@ class TearingStats(OrderedDict):
                 ntear += 1
         return ntear > ntear_min
 
-    def plot_profiles(self, fig=None, figsize=(10, 10)):
+    def plot_profiles(self, fig=None, figsize=(10, 10), title=None):
         """
         Plot the tearing profiles for both edges of each amplifier.
 
@@ -64,29 +66,47 @@ class TearingStats(OrderedDict):
              If None, then one will be created.
         figsize: tuple(int, int) [10, 10]
              Size of the figure in inches.
+        title: str [None]
+             Title of the figure. If None, then the basename of the FITS
+             file will be used.
         """
         saved_figsize = plt.rcParams['figure.figsize']
+        saved_fontsize = plt.rcParams['font.size']
         try:
             if fig is None:
                 plt.rcParams['figure.figsize'] = figsize
+                plt.rcParams['font.size'] = 10
                 fig = plt.figure()
+            frame_axes = fig.add_subplot(111, frameon=False)
+            if title is None:
+                title = os.path.basename(self.fitsfile)
+            frame_axes.set_title(title)
+            frame_axes.set_xlabel('\ny-pixel', fontsize=12)
+            frame_axes.set_ylabel('ratio of counts for outer two columns\n\n',
+                                  fontsize=12)
+            frame_axes.get_xaxis().set_ticks([])
+            frame_axes.get_yaxis().set_ticks([])
             for amp in self:
                 prof1, prof2 = self[amp].ratio_profiles
                 ratios1, ratios2 = self[amp].ratios
                 stdevs1, stdevs2 = self[amp].stdevs
                 ax = fig.add_subplot(4, 4, amp)
                 plt.errorbar(range(len(prof1)), prof1, fmt='.', color='green',
-                             alpha=0.3, label='first edge')
-                plt.errorbar(self[amp].ylocs, ratios1, yerr=stdevs1,
-                             xerr=3*[self[amp].dy], fmt='.', color='black')
+                             alpha=0.3, label='first edge', zorder=1)
                 plt.errorbar(range(len(prof2)), prof2, fmt='.', color='blue',
-                             alpha=0.3, label='last edge')
+                             alpha=0.3, label='last edge', zorder=1)
+                plt.errorbar(self[amp].ylocs, ratios1, yerr=stdevs1,
+                             xerr=3*[self[amp].dy], fmt='.', color='black',
+                             zorder=10, markersize=1)
                 plt.errorbar(self[amp].ylocs, ratios2, yerr=stdevs2,
-                             xerr=3*[self[amp].dy], fmt='.', color='black')
-                plt.title('amp %d' % amp)
+                             xerr=3*[self[amp].dy], fmt='.', color='black',
+                             zorder=10, markersize=1)
+                ax.annotate('amp %d' % amp, (0.65, 0.9),
+                            xycoords='axes fraction', fontsize='small')
             plt.tight_layout()
         finally:
             plt.rcParams['figure.figsize'] = saved_figsize
+            plt.rcParams['font.size'] = saved_fontsize
 
 
 class AmpTearingStats(object):
