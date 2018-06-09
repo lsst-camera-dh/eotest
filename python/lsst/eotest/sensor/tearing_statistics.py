@@ -68,7 +68,8 @@ class TearingStats(OrderedDict):
              Size of the figure in inches.
         title: str [None]
              Title of the figure. If None, then the basename of the FITS
-             file will be used.
+             file will be used along with the text of "tearing" or
+             "no tearing" based on the analysis outcome.
         """
         saved_figsize = plt.rcParams['figure.figsize']
         saved_fontsize = plt.rcParams['font.size']
@@ -80,7 +81,8 @@ class TearingStats(OrderedDict):
             frame_axes = fig.add_subplot(111, frameon=False)
             if title is None:
                 title = os.path.basename(self.fitsfile)
-            frame_axes.set_title(title)
+            outcome = "tearing detected" if self.has_tearing() else "no tearing"
+            frame_axes.set_title(title + ": " + outcome)
             frame_axes.set_xlabel('\ny-pixel', fontsize=12)
             frame_axes.set_ylabel('ratio of counts for outer two columns\n\n',
                                   fontsize=12)
