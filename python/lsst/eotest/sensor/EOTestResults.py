@@ -121,7 +121,7 @@ class EOTestResults(object):
                 med1_8 = np.median(bias_levels[:8])
                 med9_16 = np.median(bias_levels[8:])
                 if (max(med1_8, med9_16) + 3000.)/2. > 6000.:
-                    return '-HI_BIAS'
+                    return '-HI\_BIAS'
         return ''
 
     def sensor_stats(self, bnl_bias_stats_file=None):

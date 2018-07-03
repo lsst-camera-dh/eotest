@@ -34,9 +34,10 @@ class RaftSpecPlots(object):
             self.results[slot] = sensorTest.EOTestResults(filename)
 
     def _draw_slot_boundary(self, slot, step=20, namps=16, marker='k:'):
+        if slot == 'S00':
+            plt.axvline(-2, linestyle=marker[1:], color=marker[0])
         xbound = (step - namps)/2. + step*self._raft_slots[slot] + namps + 1
-        ymin, ymax = plt.axis()[2:]
-        plt.plot([xbound, xbound], [ymin, ymax], marker)
+        plt.axvline(xbound, linestyle=marker[1:], color=marker[0])
 
     def make_plot(self, column, ylabel=None, spec=None, step=20, yscaling=1,
                   marker='r--', title=None, ylog=False, figsize=(8, 6),
@@ -94,9 +95,8 @@ class RaftSpecPlots(object):
             if not hasattr(spec, '__iter__'):
                 spec = (spec,)
             for spec_value in spec:
-                xmin, xmax = plt.axis()[:2]
                 yval = yscaling*spec_value
-                plt.plot([xmin, xmax], [yval, yval], marker)
+                plt.axhline(yval, color=marker[0], linestyle=marker[1:])
         if title is not None:
             plt.title(title)
         if ylog:
@@ -190,9 +190,8 @@ class RaftSpecPlots(object):
             if not hasattr(spec, '__iter__'):
                 spec = (spec,)
             for spec_value in spec:
-                xmin, xmax = plt.axis()[:2]
                 yval = yscaling*spec_value
-                plt.plot([xmin, xmax], [yval, yval], marker)
+                plt.axhline(yval, color=marker[0], linestyle=marker[1:])
         if title is not None:
             plt.title(title)
         if add_legend:
