@@ -31,7 +31,7 @@ class Fe55GainFitter(object):
         self.signals = signals
         self.ccdtemp = ccdtemp
         self._compute_stats()
-    def fit(self, xrange=None, bins=100, hist_nsig=10, dADU=50):
+    def fit(self, xrange=None, bins=100, hist_nsig=3, dADU=150):
         if xrange is None:
             self._set_hist_range(dADU, bins, hist_nsig)
         else:
@@ -51,13 +51,16 @@ class Fe55GainFitter(object):
 
         kalpha_peak, kalpha_sigma = self.pars[1], self.pars[2]
         kalpha_peak_error = np.sqrt(pcov[1][1])
+        # when there is only one peak, check if it is kalpha.
+        if kalpha_peak < self.xrange[0] or (self.pars[3] > self.pars[0] and 6.49/5.889*self.pars[1] < self.xrange[1]):
+            kalpha_peak = 6.49/5.889*self.pars[1]
+            kalpha_peak_error = 6.49/5.889*np.sqrt(pcov[1][1])
         fe55_yield = Fe55Yield(self.ccdtemp)
         Ne, Ne_error = fe55_yield.alpha()
         self.gain = Ne/kalpha_peak
 #        self.gain_error = float(self.gain*np.sqrt((Ne_error/Ne)**2 +
 #                                                  (kalpha_peak_error/kalpha_peak)**2))
         self.gain_error = float(self.gain*kalpha_peak_error/kalpha_peak)
-
         return kalpha_peak, kalpha_sigma
     def _compute_stats(self):
         try:
@@ -79,7 +82,9 @@ class Fe55GainFitter(object):
         # Determine distribution mode and take that as the initial
         # estimate of the location of the Kalpha peak.
         hist = np.histogram(self.signals, bins=bins, range=xrange)
-        xpeak = hist[1][np.where(hist[0] == max(hist[0]))][0]
+        #xpeak = hist[1][np.where(hist[0] == max(hist[0]))][0]
+        peakidx = np.argmax(hist[0])
+        xpeak = (hist[1][peakidx] + hist[1][peakidx+1]) / 2
         # Set final xrange.
         self.xrange = max(0, xpeak - dADU), xpeak*1785./1620. + dADU
         if self.xrange[1] <= self.xrange[0]:
@@ -147,4 +152,4 @@ if __name__ == '__main__':
             win = foo.plot(interactive=True, subplot=(4, 4, hdu),
                            figsize=(11, 8.5))
         else:
-            foo.plot(interactive=True, subplot=(4, 4, hdu), win=win)
+            foo.plot(interactive=True, subplot=(4, 4, hdu), win=win, amp=hdu)
