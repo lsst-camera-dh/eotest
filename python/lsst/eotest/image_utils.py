@@ -11,6 +11,8 @@ import lsst.afw.geom as afwGeom
 import lsst.afw.image as afwImage
 import lsst.afw.math as afwMath
 import lsst.pex.exceptions as pexExcept
+from sensor.MaskedCCD import MaskedCCD
+from sensor.AmplifierGeometry import makeAmplifierGeometry
 
 class Metadata(object):
     def __init__(self, infile, hdu):
@@ -57,10 +59,25 @@ def dm_hdu(hdu):
     """ Compute DM HDU from the actual FITS file HDU."""
     return hdu + 1
 
+def image_overscan(file, amplifier):
+    """Return a masked image and the serial overscan region."""
+    masked = MaskedCCD(filepath)
+    oscan = makeAmplifierGeometry(filepath)
+    return(masked[amplifier], oscan.serial_overscan)
+
 def bias(im, overscan):
     """Compute the bias from the mean of the pixels in the serial
     overscan region."""
     return mean(im.Factory(im, overscan))
+
+def bias_row(im, oscan, dxmin=5):
+    """Compute the mean signal for each row in the overscan region for
+    a given amplifier on the CCD, skipping the first dxmin columns."""
+    imarr = im.Factory(im, oscan).getImage().getArray()
+    ny, nx = imarr.shape
+    rows = np.arange(ny)
+    values = np.array([np.mean(imarr[ii][dxmin:]) for ii in rows])
+    return(values)
 
 def bias_func(im, overscan, fit_order=1, statistic=np.mean,
               nskip_cols=5, num_cols=15):
@@ -105,6 +122,23 @@ def unbias_and_trim(im, overscan, imaging,
     if apply_trim:
         return trim(im, imaging)
     return im
+
+def unbias(im, values, mean_bias=None):
+    im_unbiased = afwImage.ImageF(im.getDimensions())
+    imarr = im_unbiased.getArray()
+    ny, nx = imarr.shape
+    if len(values) == 1:
+        values = np.full(ny, values)
+    if mean_bias != None:
+        for row in range(ny):
+            imarr[row] -= values[row]
+            imarr[row] += im.getImage().getArray()[row]
+            imarr[row] -= mean_bias.getArray()[row]
+    else:
+        for row in range(ny):
+            imarr[row] -= values[row]
+            imarr[row] += im.getImage().getArray()[row]
+    return(im_unbiased)
 
 def set_bitpix(hdu, bitpix):
     dtypes = {16 : np.int16, -32 : np.float32}
@@ -171,6 +205,13 @@ def fits_median(files, hdu=2, fix=True):
     median_image = afwMath.statisticsStack(images, afwMath.MEDIAN)
 
     return median_image
+
+def stack(ims, statistic=afwMath.MEDIAN):
+    images = afwImage.vectorImageF()
+    for image in ims:
+        images.push_back(image)
+    summary = afwMath.statisticsStack(images, statistic)
+    return(summary)
 
 def writeFits(images, outfile, template_file, bitpix=-32):
     output = fits.open(template_file)
