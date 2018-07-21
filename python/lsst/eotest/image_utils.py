@@ -94,17 +94,17 @@ def bias_func(im, overscan, fit_order=1, statistic=np.mean,
         return lambda x: values[int(x)]
 
 def bias_image(im, overscan, bias_method, fit_order=1, statistic=np.mean):
-    biasim = afw_image.ImageF(im.getDimensions())
+    biasim = afwImage.ImageF(im.getDimensions())
     imarr = biasim.getArray()
     ny, nx = imarr.shape
     if bias_method == 'bias':
-        my_bias = im_util.bias(im, overscan)
+        my_bias = bias(im, overscan)
     elif bias_method == 'bias_row':
         my_bias = bias_row(im, overscan)
     elif bias_method == 'bias_func':
-        poly = im_util.bias_func(im, overscan, fit_order, statistic)
+        poly = bias_func(im, overscan, fit_order, statistic)
         my_bias = poly(np.arange(ny))
-    biasim = afw_image.ImageF(im.getDimensions())
+    biasim = afwImage.ImageF(im.getDimensions())
     imarr = biasim.getArray()
     ny, nx = imarr.shape
     if isinstance(my_bias, float):
