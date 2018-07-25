@@ -65,7 +65,10 @@ def bias(im, overscan):
 def bias_row(im, overscan, dxmin=5, dxmax=2):
     """Compute the mean signal for each row in the overscan region for
     a given amplifier on the CCD, skipping the first dxmin columns."""
-    imarr = im.Factory(im, overscan).getImage().getArray()
+    try:
+        imarr = im.Factory(im, overscan).getArray()
+    except AttributeError: # Dealing with a MaskedImage
+        imarr = im.Factory(im, overscan).getImage().getArray()
     ny, nx = imarr.shape
     rows = np.arange(ny)
     values = np.array([np.mean(imarr[ii][dxmin:-dxmax]) for ii in rows])
