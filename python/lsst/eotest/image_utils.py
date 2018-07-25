@@ -97,7 +97,7 @@ def bias_image(im, overscan, bias_method, fit_order=1, statistic=np.mean):
     biasim = afwImage.ImageF(im.getDimensions())
     imarr = biasim.getArray()
     ny, nx = imarr.shape
-    if bias_method == 'bias':
+    if bias_method == 'bias_mean':
         my_bias = bias(im, overscan)
     elif bias_method == 'bias_row':
         my_bias = bias_row(im, overscan)
@@ -118,11 +118,11 @@ def trim(im, imaging):
     return im.Factory(im, imaging)
 
 def unbias_and_trim(im, overscan, imaging,
-                    apply_trim=True, fit_order=1):
+                    fit_order=1):
     """Subtract bias calculated from overscan region and optionally trim 
     prescan and overscan regions."""
     im -= bias_image(im, overscan, fit_order)
-    if apply_trim:
+    if imaging is not None:
         return trim(im, imaging)
     return im
 
