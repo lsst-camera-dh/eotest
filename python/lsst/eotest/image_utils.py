@@ -120,11 +120,11 @@ def trim(im, imaging):
     "Trim the prescan and overscan regions."
     return im.Factory(im, imaging)
 
-def unbias_and_trim(im, overscan, imaging,
-                    fit_order=1):
+def unbias_and_trim(im, overscan, bias_method, fit_order=1, statistic=np.mean, 
+                    imaging):
     """Subtract bias calculated from overscan region and optionally trim 
     prescan and overscan regions."""
-    im -= bias_image(im, overscan, fit_order)
+    im -= bias_image(im, overscan, bias_method, fit_order, statistic)
     if imaging is not None:
         return trim(im, imaging)
     return im
