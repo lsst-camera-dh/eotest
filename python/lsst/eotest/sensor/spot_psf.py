@@ -9,7 +9,7 @@ import lsst.afw.image as afwImage
 import lsst.afw.math as afwMath
 
 import lsst.eotest.image_utils as imutils
-from .MaskedCCD import MaskedCCD, MaskedCCDBiasImageException
+from MaskedCCD import MaskedCCD, MaskedCCDBiasImageException
 from fe55_psf import prect_values
 
 
@@ -18,10 +18,7 @@ class SpotMomentFit(object):
     def __init__(self, nsig=3, min_npix=10, max_npix=1000, outfile=None):
         
         self.nsig = nsig
-        if min_npix is None:
-            self.min_npix = self.npars + 1
-        else:
-            self.min_npix = min_npix
+        self.min_npix = min_npix
         self.max_npix = max_npix    
     
         self.amp_set = set()

@@ -75,3 +75,19 @@ class SpotTask(pipeBase.Task):
         else:
             fitter.read_spot_catalog(spot_catalog)
             namps = fits.open(spot_catalog)[0].header['NAMPS']
+
+if __name__ == '__main__':
+
+    import glob
+
+    output_dir = '/nfs/slac/g/ki/ki19/lsst/snyder18/LSST/'
+    sensor_id = 'S11'
+    mask_files = tuple()
+    image_files = glob.glob('/nfs/slac/g/ki/ki19/lsst/snyder18/LSST/Data/TS8_SLAC/RTM-010/6011D_spots/*_032_*.fits')
+    print image_files[-1]
+    print image_files[0]
+
+    spottask = SpotTask()
+    spottask.config.verbose = False
+    spottask.config.output_dir = output_dir
+    spottask.run(sensor_id, image_files[:1], mask_files, image_files[-1])
