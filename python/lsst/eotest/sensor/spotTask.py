@@ -9,7 +9,6 @@ from EOTestResults import EOTestResults
 import lsst.pex.config as pexConfig
 import lsst.pipe.base as pipeBase
 
-
 class SpotConfig(pexConfig.Config):
     """Configuration for Spot analysis task"""
     chiprob_min = pexConfig.Field("Minimum chi-square probability for cluster fit",
@@ -79,15 +78,28 @@ class SpotTask(pipeBase.Task):
 if __name__ == '__main__':
 
     import glob
+    import argparse
 
-    output_dir = '/u/ec/elp25/private/spots_testing/' #'/nfs/slac/g/ki/ki19/lsst/snyder18/LSST/'
-    sensor_id = 'S11'
+    parser = argparse.ArgumentParser()
+    parser.add_argument('sensor_id', help='Sensor name, e.g. S00')
+    parser.add_argument('image_files', nargs='+', help='List of spot images')
+    parser.add_argument('-b', '--bias_frame', default=None, 
+                        help='Bias frame to use')
+    parser.add_argument('-o', '--output_dir', 
+                        default='/u/ec/elp25/private/spots_testing/',
+                        help='Output directory')
+    args = parser.parse_args()
+
+    sensor_id = args.sensor_id
+    image_files = args.image_files
+    bias_frame = args.bias_frame
+    output_dir = args.output_dir
     mask_files = tuple()
-    image_files = glob.glob('/nfs/slac/g/ki/ki19/lsst/snyder18/LSST/Data/TS8_SLAC/RTM-010/6011D_spots/*_032_*.fits')
-    print image_files[-1]
-    print image_files[0]
+
+    print image_files
+    print bias_frame
 
     spottask = SpotTask()
     spottask.config.verbose = False
     spottask.config.output_dir = output_dir
-    spottask.run(sensor_id, image_files[:1], mask_files, image_files[-1])
+    spottask.run(sensor_id, image_files, mask_files, bias_frame)
