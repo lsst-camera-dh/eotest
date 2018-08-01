@@ -57,25 +57,25 @@ def dm_hdu(hdu):
     """ Compute DM HDU from the actual FITS file HDU."""
     return hdu + 1
 
-def bias(im, overscan):
+def bias(im, overscan, **kwargs):
     """Compute the bias from the mean of the pixels in the serial
     overscan region."""
     return mean(im.Factory(im, overscan))
 
-def bias_row(im, overscan, dxmin=5, dxmax=2):
-    """Compute the mean signal for each row in the overscan region for
-    a given amplifier on the CCD, skipping the first dxmin columns."""
+def bias_row(im, overscan, dxmin=5, dxmax=2, statistic=np.mean, **kwargs):
+    """Compute the signal based on a statistic for each row in the 
+    overscan region fora given amplifier on the CCD, skipping the first 
+    dxmin and the last dxmax columns."""
     try:
         imarr = im.Factory(im, overscan).getArray()
     except AttributeError: # Dealing with a MaskedImage
         imarr = im.Factory(im, overscan).getImage().getArray()
     ny, nx = imarr.shape
     rows = np.arange(ny)
-    values = np.array([np.mean(imarr[ii][dxmin:-dxmax]) for ii in rows])
+    values = np.array([statistic(imarr[ii][dxmin:-dxmax]) for ii in rows])
     return(values)
 
-def bias_func(im, overscan, fit_order=1, statistic=np.mean,
-              nskip_cols=5, num_cols=15):
+def bias_func(im, overscan, nskip_cols=5, num_cols=15, **kwargs):
     """Compute the bias by fitting a polynomial (linear, by default)
     to the mean of each row of the selected overscan region.  This
     returns a numpy.poly1d object that returns the fitted bias as
@@ -86,31 +86,21 @@ def bias_func(im, overscan, fit_order=1, statistic=np.mean,
         imarr = im.Factory(im, overscan).getImage().getArray()
     ny, nx = imarr.shape
     rows = np.arange(ny)
-    if fit_order >= 0:
-        values = np.array([statistic(imarr[j]) for j in rows])
-        return np.poly1d(np.polyfit(rows, values, fit_order))
-    else:
-        # Use row-by-row bias level estimate, skipping initial columns
-        # to avoid possible trailed charge.
-        values = np.array([np.median(imarr[j][nskip_cols:nskip_cols+num_cols])
-                           for j in rows])
-        return lambda x: values[int(x)]
+    values = np.array([kwargs.get('statistic')(imarr[j]) for j in rows])
+    return np.poly1d(np.polyfit(rows, values, kwargs.get('fit_order'))) 
 
-def bias_image(im, overscan, bias_method, fit_order=1, statistic=np.mean):
+def bias_image(im, overscan, bias_method, **kwargs):
     biasim = afwImage.ImageF(im.getDimensions())
     imarr = biasim.getArray()
     ny, nx = imarr.shape
-    if bias_method == 'bias_mean':
-        my_bias = bias(im, overscan)
-    elif bias_method == 'bias_row':
-        my_bias = bias_row(im, overscan)
-    elif bias_method == 'bias_func':
-        poly = bias_func(im, overscan, fit_order, statistic)
-        my_bias = poly(np.arange(ny))
-    biasim = afwImage.ImageF(im.getDimensions())
-    imarr = biasim.getArray()
-    ny, nx = imarr.shape
-    if isinstance(my_bias, float):
+    if bias_method not in ['mean', 'row', 'func']:
+        raise RuntimeError('Bias method must be either "mean", "row" or "func".')
+    # Number of rows in overscan must match number of rows in bias image
+    method = {'mean' : bias, 'row' : bias_row, 'func' : bias_func}
+    my_bias = method[bias_method](im, overscan, **kwargs)
+    if bias_method == 'func':
+        my_bias = my_bias(np.arange(ny))
+    elif isinstance(my_bias, float):
         my_bias = np.full(ny, my_bias)
     for row in range(ny):
         imarr[row] += my_bias[row]
@@ -120,11 +110,10 @@ def trim(im, imaging):
     "Trim the prescan and overscan regions."
     return im.Factory(im, imaging)
 
-def unbias_and_trim(im, overscan, bias_method, fit_order=1, statistic=np.mean, 
-                    imaging):
+def unbias_and_trim(im, overscan, bias_method, imaging=None, **kwargs):
     """Subtract bias calculated from overscan region and optionally trim 
     prescan and overscan regions."""
-    im -= bias_image(im, overscan, bias_method, fit_order, statistic)
+    im -= bias_image(im, overscan, bias_method, **kwargs)
     if imaging is not None:
         return trim(im, imaging)
     return im
@@ -196,6 +185,8 @@ def fits_median(files, hdu=2, fix=True):
     return median_image
 
 def stack(ims, statistic=afwMath.MEDIAN):
+    """Stacks a list of images based on a statistic. The images must
+    be unmasked."""
     images = afwImage.vectorImageF()
     for image in ims:
         images.push_back(image)
