@@ -20,11 +20,9 @@ _sqrt2 = np.sqrt(2)
 
 class SpotMomentFit(object):
 
-    def __init__(self, nsig=3, min_npix=10, max_npix=1000, outfile=None):
+    def __init__(self, nsig=1, outfile=None):
 
         self.nsig = nsig
-        self.min_npix = min_npix
-        self.max_npix = max_npix
 
         self.amp_set = set()
         self.outfile = outfile
@@ -59,10 +57,11 @@ class SpotMomentFit(object):
         stdev = statistics.getValue(afwMath.STDEVCLIP)
 
         threshold = afwDetect.Threshold(median + self.nsig*stdev)
+        npix_min = 40
         if logger is not None:
             logger.info("SpotMomentFit.process_image: threshold= %s"
                         % threshold.getValue())
-        fp_set = afwDetect.FootprintSet(image, threshold)
+        fp_set = afwDetect.FootprintSet(image.getImage(), threshold, npix_min)
 
         ## Iterate over each footprint and calculate moments
         x0, y0 = [], [] # These are arrays to hold per-spot measurements
@@ -73,8 +72,6 @@ class SpotMomentFit(object):
         failed_curve_fits = 0
         num_fp = 0
         for fp in fp_set.getFootprints():
-            if fp.getNpix() < self.min_npix or fp.getNpix() > self.max_npix:
-                continue
 
             num_fp +=1
             peak = [pk for pk in fp.getPeaks()][0]
