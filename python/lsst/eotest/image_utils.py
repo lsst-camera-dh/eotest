@@ -197,6 +197,16 @@ def stack(ims, statistic=afwMath.MEDIAN):
     summary = afwMath.statisticsStack(images, statistic)
     return(summary)
 
+def median_stack(filepaths, amplifier, bias_method='row', **kwargs):
+    """Generate the median of a stack of offset-corrected bias frames."""
+    corrected_bias_frames = []
+    for i, path in enumerate(filepaths):
+        im = MaskedCCD(path)
+	oscan = makeAmplifierGeometry(path)
+	corrected_bias_frames.append(unbias_and_trim(im=im[amplifier], overscan=oscan.serial_overscan, 
+		bias_method=bias_method, **kwargs).getImage())
+    return(stack(corrected_bias_frames))
+
 def writeFits(images, outfile, template_file, bitpix=-32):
     output = fits.open(template_file)
     output[0].header['FILENAME'] = outfile
