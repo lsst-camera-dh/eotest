@@ -110,10 +110,13 @@ def trim(im, imaging):
     "Trim the prescan and overscan regions."
     return im.Factory(im, imaging)
 
-def unbias_and_trim(im, overscan, bias_method, imaging=None, **kwargs):
+def unbias_and_trim(im, overscan, bias_method, median_stack=None, imaging=None, **kwargs):
     """Subtract bias calculated from overscan region and optionally trim 
-    prescan and overscan regions."""
+    prescan and overscan regions. Includes option to subtract the median of a stack of 
+    overscan-corrected bias frames to remove pixel-level variations in the offset."""
     im -= bias_image(im, overscan, bias_method, **kwargs)
+    if median_stack:
+	im -= median_stack
     if imaging is not None:
         return trim(im, imaging)
     return im
