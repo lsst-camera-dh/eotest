@@ -63,9 +63,8 @@ def bias(im, overscan, **kwargs):
     return mean(im.Factory(im, overscan))
 
 def bias_row(im, overscan, dxmin=5, dxmax=2, statistic=np.mean, **kwargs):
-    """Compute the signal based on a statistic for each row in the 
-    overscan region fora given amplifier on the CCD, skipping the first 
-    dxmin and the last dxmax columns."""
+    """Compute the signal based on a statistic for each row in the serial 
+    overscan region for columns dxmin through dxmax."""
     try:
         imarr = im.Factory(im, overscan).getArray()
     except AttributeError: # Dealing with a MaskedImage
@@ -90,6 +89,8 @@ def bias_func(im, overscan, nskip_cols=5, num_cols=15, **kwargs):
     return np.poly1d(np.polyfit(rows, values, kwargs.get('fit_order'))) 
 
 def bias_image(im, overscan, bias_method, **kwargs):
+    """Generate a bias image containing the offset values calculated from 
+    bias(), bias_row(), or bias_func()."""
     biasim = afwImage.ImageF(im.getDimensions())
     imarr = biasim.getArray()
     ny, nx = imarr.shape
