@@ -103,7 +103,7 @@ class BiasHandlingTestCase(unittest.TestCase):
 	    	    #
             	    # Test of corresponding MaskedCCD method.
             	    #
-            	    image = ccd.unbiased_and_trimmed_image(amp, overscan.serial_overscan, fit_order=1)
+            	    image = ccd.unbiased_and_trimmed_image(amp, overscan.serial_overscan, **self.kwargs)
             	    imarr = image.getImage().getArray()
 	    	    self.assertTrue(max(np.abs(imarr.flat)) < 1e-6)
     def test_bias_row(self):
@@ -117,7 +117,6 @@ class BiasHandlingTestCase(unittest.TestCase):
 	    ny = len(br_i)
 	    for ii in range(ny):
 	        self.assertEqual(br_i[ii], br_m[ii])
-
     def test_stack(self):
         ccd = MaskedCCD(self.image_file)
         overscan = makeAmplifierGeometry(self.image_file)

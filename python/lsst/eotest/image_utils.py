@@ -76,8 +76,8 @@ def bias_row(im, overscan, dxmin=5, dxmax=2, statistic=np.mean, **kwargs):
 
 def bias_func(im, overscan, nskip_cols=5, num_cols=15, **kwargs):
     """Compute the bias by fitting a polynomial (linear, by default)
-    to the mean of each row of the selected overscan region.  This
-    returns a numpy.poly1d object that returns the fitted bias as
+    to the mean of each row of the selected overscan region.  This 
+    returns a numpy.poly1d object that returns the fitted bias as 
     function of pixel row."""
     try:
         imarr = im.Factory(im, overscan).getArray()
@@ -88,7 +88,7 @@ def bias_func(im, overscan, nskip_cols=5, num_cols=15, **kwargs):
     values = np.array([kwargs.get('statistic')(imarr[j]) for j in rows])
     return np.poly1d(np.polyfit(rows, values, kwargs.get('fit_order'))) 
 
-def bias_image(im, overscan, bias_method, **kwargs):
+def bias_image(im, overscan, bias_method='func', **kwargs):
     """Generate a bias image containing the offset values calculated from 
     bias(), bias_row(), or bias_func()."""
     biasim = afwImage.ImageF(im.getDimensions())
