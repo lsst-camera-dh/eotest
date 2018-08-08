@@ -85,7 +85,8 @@ def bias_func(im, overscan, nskip_cols=5, num_cols=15, **kwargs):
         imarr = im.Factory(im, overscan).getImage().getArray()
     ny, nx = imarr.shape
     rows = np.arange(ny)
-    values = np.array([kwargs.get('statistic')(imarr[j]) for j in rows])
+    values = np.array([kwargs.get('statistic')(imarr[j][nskip_cols:nskip_cols+num_cols]) 
+	for j in rows])
     return np.poly1d(np.polyfit(rows, values, kwargs.get('fit_order'))) 
 
 def bias_image(im, overscan, bias_method='func', **kwargs):
