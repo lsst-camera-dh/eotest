@@ -13,7 +13,7 @@ class SpotConfig(pexConfig.Config):
     """Configuration for Spot analysis task"""
     chiprob_min = pexConfig.Field("Minimum chi-square probability for cluster fit",
                                   float, default=0.1)
-    nsig = pexConfig.Field("Charge cluster footprint threshold in number of standard deviations of noise in bias section", float, default=4)
+    nsig = pexConfig.Field("Charge cluster footprint threshold in number of standard deviations of noise in bias section", float, default=2)
     temp_set_point = pexConfig.Field("Required temperature (C) set point",
                                      float, default=-95.)
     temp_set_point_tol = pexConfig.Field("Required temperature set point tolerance (degrees C)",
@@ -88,12 +88,15 @@ if __name__ == '__main__':
     parser.add_argument('-o', '--output_dir', 
                         default='/u/ec/elp25/private/spots_testing/',
                         help='Output directory')
+    parser.add_argument('-n', '--nsig', type=float, default=10.0,
+                        help='Number of standard deviations to use when setting threshold.')
     args = parser.parse_args()
 
     sensor_id = args.sensor_id
     image_files = args.image_files
     bias_frame = args.bias_frame
     output_dir = args.output_dir
+    nsig = args.nsig
     mask_files = tuple()
 
     print image_files
@@ -102,4 +105,5 @@ if __name__ == '__main__':
     spottask = SpotTask()
     spottask.config.verbose = False
     spottask.config.output_dir = output_dir
+    spottask.config.nsig = nsig
     spottask.run(sensor_id, image_files, mask_files, bias_frame)

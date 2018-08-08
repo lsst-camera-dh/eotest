@@ -20,7 +20,7 @@ _sqrt2 = np.sqrt(2)
 
 class SpotMomentFit(object):
 
-    def __init__(self, nsig=1, outfile=None):
+    def __init__(self, nsig=10, outfile=None):
 
         self.nsig = nsig
 
@@ -57,7 +57,7 @@ class SpotMomentFit(object):
         stdev = statistics.getValue(afwMath.STDEVCLIP)
 
         threshold = afwDetect.Threshold(median + self.nsig*stdev)
-        npix_min = 40
+        npix_min = 60
         if logger is not None:
             logger.info("SpotMomentFit.process_image: threshold= %s"
                         % threshold.getValue())
