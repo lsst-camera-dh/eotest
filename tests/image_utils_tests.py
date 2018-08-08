@@ -117,6 +117,7 @@ class BiasHandlingTestCase(unittest.TestCase):
 	    ny = len(br_i)
 	    for ii in range(ny):
 	        self.assertEqual(br_i[ii], br_m[ii])
+
     def test_stack(self):
         ccd = MaskedCCD(self.image_file)
         overscan = makeAmplifierGeometry(self.image_file)
@@ -131,8 +132,6 @@ class BiasHandlingTestCase(unittest.TestCase):
 		self.assertTrue(max(np.abs(imarr.flat)) < 2)
 	    else:
 	    	self.assertTrue(max(np.abs(imarr.flat)) < 1e-6)
-
-
 
 class FitsMedianTestCase(unittest.TestCase):
     def setUp(self):
