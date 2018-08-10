@@ -11,6 +11,7 @@ from lsst.eotest.sensor import AmplifierGeometry
 
 class SegmentExposureTestCase(unittest.TestCase):
     amp_geom = AmplifierGeometry()
+    bias_method = 'row'
     def setUp(self):
         self.seg = sim_tools.SegmentExposure(exptime=100, gain=1, ccdtemp=-100,
                                              geometry=self.amp_geom)
@@ -21,9 +22,10 @@ class SegmentExposureTestCase(unittest.TestCase):
     def test_expose_flat(self):
         times = np.arange(0, 1000, self.seg.exptime)
         for i, time in enumerate(times):
-            image = imutils.unbias_and_trim(self.seg.image,
-                                            self.amp_geom.serial_overscan,
-                                            self.amp_geom.imaging)
+            image = imutils.unbias_and_trim(im=self.seg.image,
+                                            overscan=self.amp_geom.serial_overscan,
+                                            bias_method=self.bias_method,
+					    imaging=self.amp_geom.imaging)
             image_mean = imutils.mean(image)
             illum = i*self.intensity*self.seg.exptime/self.seg.gain
             if i != 0:
@@ -33,9 +35,10 @@ class SegmentExposureTestCase(unittest.TestCase):
         self.seg.full_well = self.full_well
         times = np.arange(0, 2000, self.seg.exptime)
         for i, time in enumerate(times):
-            image = imutils.unbias_and_trim(self.seg.image,
-                                            self.amp_geom.serial_overscan,
-                                            self.amp_geom.imaging)
+            image = imutils.unbias_and_trim(im=self.seg.image,
+                                            overscan=self.amp_geom.serial_overscan,
+					    bias_method=self.bias_method,
+                                            imaging=self.amp_geom.imaging)
             Ne_mean = imutils.mean(image)*self.seg.gain
             self.assertTrue(Ne_mean <= self.full_well)
             self.seg.expose_flat(intensity=self.intensity)
