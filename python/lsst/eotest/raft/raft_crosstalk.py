@@ -2,6 +2,7 @@ import argparse
 import os
 import glob
 import numpy as np
+import itertools
 
 #from lsst.eotest.sensor.crosstalkTask import stackedxtalk, bias_subtracted_image
 #from lsst.eotest.sensor.crosstalk import make_crosstalk_matrix
@@ -100,6 +101,7 @@ class CrosstalkHandler():
             
     def ingest_ccd_files(self, sensor_id, image_files, bias_files, 
                          mask_files, dark_files=None):
+        """Calibrate crosstalk images for each CCD."""
 
         aggressor_seqno = []
         calibrated_file_dict = dict()
@@ -125,21 +127,34 @@ class CrosstalkHandler():
         self.xtalk_dict[sensor_id] = (aggressor_seqno, calibrated_file_dict,
                                       mask_files)
 
-    def measure_xtalk(self, aggressor_sensor_id, victim_sensor_id):
+    def measure_raft_xtalk(self):
+        """Measure crosstalk for all sensor combinations."""
 
-        print "{0} x {1}".format(aggressor_sensor_id, victim_sensor_id)
+        ccd_list = sorted(self.xtalk_dict.keys())
+        namps = len(ccd_list)*16
+        raft_xtalk_result = CrosstalkMatrix(namps=namps)
+        
+        for i, (aggressor_sensor_id, victim_sensor_id) in enumerate(itertools.product(ccd_list, ccd_list)):
 
-        aggressor_seqno = self.xtalk_dict[aggressor_sensor_id][0]
-        aggressor_files = [self.xtalk_dict[aggressor_sensor_id][1][seqno]
+            print "{0} x {1}".format(aggressor_sensor_id, victim_sensor_id)
+
+            aggressor_seqno = self.xtalk_dict[aggressor_sensor_id][0]
+            aggressor_files = [self.xtalk_dict[aggressor_sensor_id][1][seqno]
                                for seqno in aggressor_seqno]
-        aggressor_masks = self.xtalk_dict[aggressor_sensor_id][2]
-        victim_files = [self.xtalk_dict[victim_sensor_id][1][seqno]
+            aggressor_masks = self.xtalk_dict[aggressor_sensor_id][2]
+            victim_files = [self.xtalk_dict[victim_sensor_id][1][seqno]
                             for seqno in aggressor_seqno]
-        victim_masks = self.xtalk_dict[victim_sensor_id][2]
+            victim_masks = self.xtalk_dict[victim_sensor_id][2]
 
-        result = make_crosstalk_matrix(aggressor_files, aggressor_masks, 
-                                       victim_file_list=victim_files,
-                                       victim_mask_files=victim_masks)
+            result = make_crosstalk_matrix(aggressor_files, aggressor_masks, 
+                                           victim_file_list=victim_files,
+                                           victim_mask_files=victim_masks)
+            
+            raft_xtalk_result.matrix[(i/9)*16:(i/9)*16+16,
+                                     (i%9)*16:(i%9)*16+16] = result.matrix
+
+        raft_xtalk_result.write_fits(os.path.join(self.output_dir,
+                                      'raft_xtalk_matrix.fits'))
     
 if __name__ == '__main__':
 
@@ -154,9 +169,11 @@ if __name__ == '__main__':
     mask_files = ()
     xtalk_handler = CrosstalkHandler('/nfs/slac/g/ki/ki19/lsst/snyder18/LSST',
                                      ['{0:03d}'.format(i) for i in range(36)])
-    for ccd in ccd_names[:1]:
+    for ccd in ccd_names:
         
         all_files = glob.glob(os.path.join(main_dir, ccd, '*.fits'))
         image_files = [f for f in all_files if '_xy_stage_' not in f]
         bias_files = [f for f in all_files if 'bias' in f]
         xtalk_handler.ingest_ccd_files(ccd, image_files, bias_files, mask_files)
+
+    xtalk_handler.measure_raft_xtalk()
