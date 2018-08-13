@@ -3,7 +3,8 @@ import os
 import glob
 import numpy as np
 
-#from lsst.eotest.sensor.crosstalkTask import stackedxtalk
+#from lsst.eotest.sensor.crosstalkTask import stackedxtalk, bias_subtracted_image
+#from lsst.eotest.sensor.crosstalk import make_crosstalk_matrix
 
 ## Needed just for testing
 import lsst.afw.image as afwImage
@@ -91,20 +92,20 @@ def which_ccd(x, y):
 
 class CrosstalkHandler():
 
-    def __init__(self, output_dir):
+    def __init__(self, output_dir, seqno_list=None):
 
         self.xtalk_dict = dict()
         self.output_dir = output_dir
-        self.seqno_list = ['{0:03d}'.format(i) for i in range(36)] # Need to determine programatically
-
-        pass
+        self.seqno_list = seqno_list
             
     def ingest_ccd_files(self, sensor_id, image_files, bias_files, 
                          mask_files, dark_files=None):
 
         aggressor_seqno = []
         calibrated_file_dict = dict()
-        
+
+        if self.seqno_list is None:
+            self.seqno_list = list(set([f.split('_')[-3] for f in image_files]))
         for seqno in self.seqno_list:
             imfiles = [f for f in image_files if f.split('_')[-3] == seqno]
             bfiles = [f for f in bias_files if f.split('_')[-3] == seqno]
@@ -129,12 +130,16 @@ class CrosstalkHandler():
         print "{0} x {1}".format(aggressor_sensor_id, victim_sensor_id)
 
         aggressor_seqno = self.xtalk_dict[aggressor_sensor_id][0]
-        aggressor_ccd_files = [self.xtalk_dict[aggressor_sensor_id][1][seqno]
+        aggressor_files = [self.xtalk_dict[aggressor_sensor_id][1][seqno]
                                for seqno in aggressor_seqno]
-        victim_ccd_files = [self.xtalk_dict[victim_sensor_id][1][seqno]
+        aggressor_masks = self.xtalk_dict[aggressor_sensor_id][2]
+        victim_files = [self.xtalk_dict[victim_sensor_id][1][seqno]
                             for seqno in aggressor_seqno]
+        victim_masks = self.xtalk_dict[victim_sensor_id][2]
 
-
+        result = make_crosstalk_matrix(aggressor_files, aggressor_masks, 
+                                       victim_file_list=victim_files,
+                                       victim_mask_files=victim_masks)
     
 if __name__ == '__main__':
 
@@ -147,7 +152,8 @@ if __name__ == '__main__':
     ccd_names = ['S00', 'S01', 'S02', 'S10', 'S11', 'S12', 'S20', 'S21', 'S22']
 
     mask_files = ()
-    xtalk_handler = CrosstalkHandler('/nfs/slac/g/ki/ki19/lsst/snyder18/LSST')
+    xtalk_handler = CrosstalkHandler('/nfs/slac/g/ki/ki19/lsst/snyder18/LSST',
+                                     ['{0:03d}'.format(i) for i in range(36)])
     for ccd in ccd_names[:1]:
         
         all_files = glob.glob(os.path.join(main_dir, ccd, '*.fits'))
