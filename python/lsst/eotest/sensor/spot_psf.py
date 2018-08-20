@@ -73,9 +73,11 @@ class SpotMomentFit2(object):
                 mosaic[ymin:ymax, xmin:xmax] = subarr
 
         ## Cast the mosaic as an afw Image
-        image = afwImage.ImageF(nx, ny)
+        mosaic_filename = 'mosaic.fits'
+        hdu = fits.PrimaryHDU(mosaic)
+        hdu.writeto(mosaic_filename)
+        image = afwImage.ImageF(mosaic_filename)
         imarr = image.getArray()
-        imarr = mosaic
 
         flags = afwMath.MEDIAN | afwMath.STDEVCLIP
         statistics = afwMath.makeStatistics(image, flags, ccd.stat_ctrl)
