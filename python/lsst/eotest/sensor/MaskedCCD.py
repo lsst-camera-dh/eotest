@@ -114,7 +114,7 @@ class MaskedCCD(dict):
         return self.bias_image_using_overscan(amp, overscan=overscan,
                                               fit_order=fit_order)
 
-    def bias_subtracted_image(self, amp, overscan=None, fit_order=1, statistic=np.mean):
+    def bias_subtracted_image(self, amp, overscan=None, fit_order=1, fit_statistic=np.mean):
         if self.bias_frame is not None:
             # Make a deep copy of the bias frame.
             bias = self.bias_frame[amp].Factory(self.bias_frame[amp])
@@ -135,8 +135,8 @@ class MaskedCCD(dict):
         return self[amp]
 
     def unbiased_and_trimmed_image(self, amp, overscan=None,
-                                   imaging=None, fit_order=1, statistic=np.mean):
-        unbiased_image = self.bias_subtracted_image(amp, overscan, fit_order, statistic)
+                                   imaging=None, fit_order=1, fit_statistic=np.mean):
+        unbiased_image = self.bias_subtracted_image(amp, overscan, fit_order, fit_statistic)
         if imaging is None:
             imaging = self.amp_geom.imaging
         mi = imutils.trim(unbiased_image, imaging)

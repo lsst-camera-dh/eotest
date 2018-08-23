@@ -23,7 +23,7 @@ class BiasHandlingTestCase(unittest.TestCase):
     bias_intercept = 0.5
     exptime = 1
     gain = 1
-    kwargs = {'fit_order' : 1, 'statistic' : np.mean, 'imaging' : AmplifierGeometry().imaging}
+    kwargs = {'fit_order' : 1, 'fit_statistic' : np.mean, 'imaging' : AmplifierGeometry().imaging}
     image_file = 'test_image.fits'
     mean_image_file = 'test_mean_image.fits'
     @classmethod
@@ -94,7 +94,7 @@ class BiasHandlingTestCase(unittest.TestCase):
         for amp in ccd:
             for method in ['mean', 'row', 'func']:
                 image = imutils.unbias_and_trim(ccd[amp], 
-                                                 overscan.serial_overscan, method, **self.kwargs)
+                                                 overscan.serial_overscan, bias_method=method, **self.kwargs)
                 imarr = image.getImage().getArray()
                 if method == 'mean':
 		    self.assertTrue(max(np.abs(imarr.flat)) < 2)
@@ -124,7 +124,7 @@ class BiasHandlingTestCase(unittest.TestCase):
         for method in ['mean', 'row', 'func']:
             corrected = []
             for image in ccd.values():
-                corrected.append(imutils.unbias_and_trim(image, overscan.serial_overscan, method, **self.kwargs).getImage())
+                corrected.append(imutils.unbias_and_trim(image, overscan.serial_overscan, bias_method=method, **self.kwargs).getImage())
             stacked = imutils.stack(corrected)
 	    imarr = stacked.getArray()
 	    if method == 'mean':

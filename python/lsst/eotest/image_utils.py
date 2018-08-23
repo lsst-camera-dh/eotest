@@ -59,12 +59,36 @@ def dm_hdu(hdu):
 
 def bias(im, overscan, **kwargs):
     """Compute the bias from the mean of the pixels in the serial
-    overscan region."""
+    overscan region.
+    
+    Args:
+        im: A masked (lsst.afw.image.imageLib.MaskedImageF) or unmasked 
+            (lsst.afw.image.imageLib.ImageF) afw image.
+        overscan: A bounding box for the serial overscan region.
+
+    Returns:
+        A single float value for the mean of the overscan region.
+    """
     return mean(im.Factory(im, overscan))
 
 def bias_row(im, overscan, dxmin=5, dxmax=2, statistic=np.mean, **kwargs):
-    """Compute the signal based on a statistic for each row in the serial 
-    overscan region for columns dxmin through dxmax."""
+    """Compute the bias based on a statistic for each row in the serial 
+    overscan region for columns dxmin through dxmax.
+    
+    Args:
+        im: A masked (lsst.afw.image.imageLib.MaskedImageF) or unmasked 
+            (lsst.afw.image.imageLib.ImageF) afw image.
+        overscan: A bounding box for the serial overscan region.
+        dxmin: The number of columns to skip at the beginning of the overscan
+            region.
+        dxmax: The number of columns to skip at the end of the overscan region.
+        statistic: The statistic to use to calculate the bias level for each
+            row.
+
+    Returns:
+        A numpy array with length equal to the number of rows in the overscan
+        region.
+    """
     try:
         imarr = im.Factory(im, overscan).getArray()
     except AttributeError: # Dealing with a MaskedImage
@@ -76,22 +100,58 @@ def bias_row(im, overscan, dxmin=5, dxmax=2, statistic=np.mean, **kwargs):
 
 def bias_func(im, overscan, nskip_cols=5, num_cols=15, **kwargs):
     """Compute the bias by fitting a polynomial (linear, by default)
-    to the mean of each row of the selected overscan region.  This 
-    returns a numpy.poly1d object that returns the fitted bias as 
-    function of pixel row."""
+    to the mean of each row of the selected overscan region.  This
+    returns a numpy.poly1d object that returns the fitted bias as
+    function of pixel row. Allows the option to explicitly set the fit order
+    and statistic to apply to each row using additional **kwargs.
+
+    Args:
+        im: A masked (lsst.afw.image.imageLib.MaskedImageF) or unmasked 
+            (lsst.afw.image.imageLib.ImageF) afw image.
+        overscan: A bounding box for the serial overscan region.
+        nskip_cols: The number of columns to skip at the beginning of the 
+            overscan region.
+        num_cols: The total number of columns to include in the bias level 
+            calculation.
+    
+    Keyword Arguments:
+        fit_statistic: The statistic applied to each row to be fit
+            by the polynomial. The default is: np.mean.
+        fit_order: The order of the polynomial. The default is: 1.
+
+    Returns:
+        A np.poly1d object containing the coefficients for the polynomial fit.
+    """
     try:
         imarr = im.Factory(im, overscan).getArray()
     except AttributeError: # Dealing with a MaskedImage
         imarr = im.Factory(im, overscan).getImage().getArray()
     ny, nx = imarr.shape
     rows = np.arange(ny)
-    values = np.array([kwargs.get('statistic')(imarr[j][nskip_cols:nskip_cols+num_cols]) 
-	for j in rows])
-    return np.poly1d(np.polyfit(rows, values, kwargs.get('fit_order'))) 
+    values = np.array([kwargs.get('fit_statistic', np.mean)(imarr[j][nskip_cols:nskip_cols+num_cols]) for j in rows])
+    return np.poly1d(np.polyfit(rows, values, kwargs.get('fit_order', 1))) 
 
 def bias_image(im, overscan, bias_method='func', **kwargs):
     """Generate a bias image containing the offset values calculated from 
-    bias(), bias_row(), or bias_func()."""
+    bias(), bias_row(), or bias_func().
+    
+    Args:
+        im: A masked (lsst.afw.image.imageLib.MaskedImageF) or unmasked 
+            (lsst.afw.image.imageLib.ImageF) afw image.
+        overscan: A bounding box for the serial overscan region.
+        bias_method: Either 'bias', 'row', or 'func', corresponding to one of the 
+            three bias methods.
+
+    Keyword Arguments:
+        fit_statistic: The statistic applied to each row to be fit by the polynomial. 
+            This only needs to be specified when using the 'func' method. The default is: np.mean.
+        fit_order: The order of the polynomial. This only needs to be specified when using 
+            the 'func' method. The default is: 1.
+
+    Returns:
+        An image with size equal to the input image containing just the bias level 
+        calculated from one of the three methods specified above. 
+    """
     biasim = afwImage.ImageF(im.getDimensions())
     imarr = biasim.getArray()
     ny, nx = imarr.shape
@@ -109,16 +169,47 @@ def bias_image(im, overscan, bias_method='func', **kwargs):
     return biasim
 
 def trim(im, imaging):
-    "Trim the prescan and overscan regions."
+    """Trim the prescan and overscan regions.
+
+    Args:
+        im: A masked (lsst.afw.image.imageLib.MaskedImageF) or unmasked 
+            (lsst.afw.image.imageLib.ImageF) afw image.
+        imaging: A bounding box containing only the imaging section and 
+            excluding the prescan.
+    Returns:
+        An unmasked afw image. 
+    """
+
     return im.Factory(im, imaging)
 
-def unbias_and_trim(im, overscan, bias_method, median_stack=None, imaging=None, **kwargs):
+def unbias_and_trim(im, overscan, imaging=None, bias_method='func', median_stack=None, **kwargs):
     """Subtract bias calculated from overscan region and optionally trim 
     prescan and overscan regions. Includes option to subtract the median of a stack of 
-    overscan-corrected bias frames to remove pixel-level variations in the offset."""
+    overscan-corrected bias frames to remove pixel-level variations in the offset.
+    
+    Args:
+        im: A masked (lsst.afw.image.imageLib.MaskedImageF) or unmasked 
+            (lsst.afw.image.imageLib.ImageF) afw image.
+        overscan: A bounding box for the serial overscan region.
+        imaging: A bounding box containing only the imaging section and 
+            excluding the prescan.
+        bias_method: Either 'bias', 'row', or 'func', corresponding to one of the 
+            three bias methods.
+        median_stack: A single bias image containing a series of unbiased and trimmed 
+            bias frames that have been stacked using the stack() method. 
+
+    Keyword Arguments:
+        fit_statistic: The statistic applied to each row to be fit by the polynomial. 
+            This only needs to be specified when using the 'func' method. The default is: np.mean.
+        fit_order: The order of the polynomial. This only needs to be specified when using 
+            the 'func' method. The default is: 1.
+
+    Returns:
+        An unmasked afw image.
+    """
     im -= bias_image(im, overscan, bias_method, **kwargs)
     if median_stack:
-	im -= median_stack
+	    im -= median_stack
     if imaging is not None:
         return trim(im, imaging)
     return im
