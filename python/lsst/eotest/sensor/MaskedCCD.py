@@ -90,18 +90,18 @@ class MaskedCCD(dict):
         self.stat_ctrl.setAndMask(mask_bits)
         return self.stat_ctrl
 
-    def bias_image_using_overscan(self, amp, overscan=None, fit_order=1, statistic=np.mean):
+    def bias_image_using_overscan(self, amp, overscan=None, fit_order=1, fit_statistic=np.mean):
         if overscan is None:
             overscan = self.amp_geom.serial_overscan
         try:
             return imutils.bias_image(self[amp], overscan=overscan,
-                                      fit_order=fit_order, statistic=statistic)
+                                      fit_order=fit_order, fit_statistic=fit_statistic)
         except pexExcept.LSST_RUNTIME_EXCEPTION as eobj:
             raise MaskedCCDBiasImageException("DM stack error generating bias "
                                               + "image from overscan region:\n"
                                               + str(eobj))
 
-    def bias_image(self, amp, overscan=None, fit_order=1):
+    def bias_image(self, amp, overscan=None, fit_order=1, fit_statistic=np.mean):
         """
         Use separately stored metadata to determine file-specified
         overscan region.
@@ -112,7 +112,7 @@ class MaskedCCD(dict):
             #
             return self.bias_frame[amp].getImage()
         return self.bias_image_using_overscan(amp, overscan=overscan,
-                                              fit_order=fit_order)
+                                              fit_order=fit_order, fit_statistic=fit_statistic)
 
     def bias_subtracted_image(self, amp, overscan=None, fit_order=1, fit_statistic=np.mean):
         if self.bias_frame is not None:
@@ -122,16 +122,16 @@ class MaskedCCD(dict):
             bias -= \
                 self.bias_frame.bias_image_using_overscan(amp,
                                                           overscan=overscan,
-                                                          fit_order=fit_order, statistic=statistic)
+                                                          fit_order=fit_order, fit_statistic=fit_statistic)
             # Subtract x-independent component of image for this amp
             # using overscan.
             self[amp] -= \
                 self.bias_image_using_overscan(amp, overscan=overscan,
-                                               fit_order=fit_order, statistic=statistic)
+                                               fit_order=fit_order, fit_statistic=fit_statistic)
             # Subtract structured, x-dependent part.
             self[amp] -= bias
         else:
-            self[amp] -= self.bias_image(amp, overscan, fit_order)
+            self[amp] -= self.bias_image(amp, overscan, fit_order, fit_statistic)
         return self[amp]
 
     def unbiased_and_trimmed_image(self, amp, overscan=None,
