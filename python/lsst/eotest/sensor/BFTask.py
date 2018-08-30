@@ -249,19 +249,3 @@ class BFTask(pipeBase.Task):
                 xcorr[xlag, ylag] = afwMath.makeStatistics(dim_xy,afwMath.MEANCLIP, sctrl).getValue()
 
         return xcorr
-
-def test():
-
-    for sensor_id in ['E2V-CCD250-137']:#,'E2V-CCD250-179','E2V-CCD250-200','E2V-CCD250-226','E2V-CCD250-263','E2V-CCD250-264','E2V-CCD250-266','E2V-CCD250-268','E2V-CCD250-273']:
-        flats = glob.glob('/gpfs/slac/lsst/fs1/g/data/jobHarness/jh_archive-test/LCA-11021_RTM/LCA-11021_RTM-010-Dev/6006D/flat_pair_raft_acq/v0/40512/*/' + sensor_id + '*flat*.fits')
-        rolloff_mask = glob.glob('/gpfs/slac/lsst/fs1/g/data/jobHarness/jh_archive-test/LCA-11021_RTM/LCA-11021_RTM-010-Dev/6006D/fe55_raft_analysis/v0/40510/'+sensor_id+'*mask.fits')[0]
-        traps_mask = glob.glob('/gpfs/slac/lsst/fs1/g/data/jobHarness/jh_archive-test/LCA-11021_RTM/LCA-11021_RTM-010-Dev/6006D/traps_raft/v0/40520/*/'+sensor_id+'*traps_mask.fits')[0]
-        dark_mask = glob.glob('/gpfs/slac/lsst/fs1/g/data/jobHarness/jh_archive-test/LCA-11021_RTM/LCA-11021_RTM-010-Dev/6006D/dark_defects_raft/v0/40519/'+sensor_id+'*_dark_pixel_mask.fits')[0]
-        bright_mask = glob.glob('/gpfs/slac/lsst/fs1/g/data/jobHarness/jh_archive-test/LCA-11021_RTM/LCA-11021_RTM-010-Dev/6006D/bright_defects_raft/v0/40518/*/'+sensor_id+'*_bright_pixel_mask.fits')[0]
-        dark_frame = glob.glob('/gpfs/slac/lsst/fs1/g/data/jobHarness/jh_archive-test/LCA-11021_RTM/LCA-11021_RTM-010-Dev/6006D/dark_raft_acq/v0/40511/*/'+sensor_id+'*dark_dark*.fits')[0]
-        mask_files = (bright_mask,dark_mask,traps_mask,rolloff_mask)
-        BfTask = BFTask()
-        BfTask.run(sensor_id, flats,single_pairs = True,mask_files = mask_files,meanidx=0,dark_frame=None)
-    return
-
-test()
