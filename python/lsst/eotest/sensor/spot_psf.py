@@ -18,6 +18,16 @@ from AmplifierGeometry import parse_geom_kwd
 
 _sqrt2 = np.sqrt(2)
 
+def get_amp_number(amp_coords, x, y):
+    """Determine amplifier number from x, y mosaic coordinates."""
+
+    for key in amp_coords.keys():
+        x_lims = amp_coords[key][:2]
+        y_lims = amp_coords[key][2:]
+
+        if min(x_lims) <= x < max(x_lims) and min(y_lims) <= y < max(y_lims):
+            return key
+
 class SpotMomentFit2(object):
     """Copy of spot moment fitter for use on combined CCD image."""
 
@@ -40,7 +50,7 @@ class SpotMomentFit2(object):
         ny_segments = len(ccd)/nx_segments
         nx = nx_segments*(datasec['xmax'] - datasec['xmin'] + 1)
         ny = ny_segments*(datasec['ymax'] - datasec['ymin'] + 1)
-        mosaic = np.zeros((ny, nx), dtype=np.float)
+        mosaic = np.zeros((ny, nx), dtype=np.float32)
         amp_coords = {}
         for ypos in range(ny_segments):
             for xpos in range(nx_segments):
@@ -56,7 +66,7 @@ class SpotMomentFit2(object):
                 #
                 # Save coordinates of segment for later use
                 #
-                amp_coords[(xpos, ypos)] = xmin, xmax, ymin, ymax
+                amp_coords[amp] = xmin, xmax, ymin, ymax
                 #
                 # Extract the bias-subtracted masked image for this segment.
                 segment_image = ccd.unbiased_and_trimmed_image(amp)
@@ -72,11 +82,10 @@ class SpotMomentFit2(object):
                 # Set the subarray in the mosaicked image.
                 mosaic[ymin:ymax, xmin:xmax] = subarr
 
-        ## Cast the mosaic as an afw Image
-        mosaic_filename = 'mosaic.fits'
-        hdu = fits.PrimaryHDU(mosaic)
-        hdu.writeto(mosaic_filename)
-        image = afwImage.ImageF(mosaic_filename)
+        for key in amp_coords.keys():
+            print key, amp_coords[key]
+
+        image = afwImage.ImageF(mosaic)
         imarr = image.getArray()
 
         flags = afwMath.MEDIAN | afwMath.STDEVCLIP
@@ -92,6 +101,7 @@ class SpotMomentFit2(object):
         fp_set = afwDetect.FootprintSet(image, threshold, npix_min)
 
         ## Iterate over each footprint and calculate moments
+        amp = [] # Array for amplifier location identifier
         x0, y0 = [], [] # These are arrays to hold per-spot measurements
         prect_data = [] # This holds flattened spot footprint
         sigmax, sigmay, dn, dn_fp, chiprob = [], [], [], [], [] # Arrays to hold the moments fitting measurements
@@ -122,11 +132,15 @@ class SpotMomentFit2(object):
                 pars, _ = scipy.optimize.leastsq(residuals, p0,
                                                      args=(positions, zvals,
                                                            dn_errors))
-                sigmax.append(pars[2])
-                sigmay.append(pars[3])
+                sigmax.append(np.abs(pars[2]))
+                sigmay.append(np.abs(pars[3]))
                 dn.append(pars[4])
                 x0.append(pars[0])
                 y0.append(pars[1])
+                amp.append(get_amp_number(amp_coords, pars[0], pars[1]))
+
+                ## Determine amplifier position
+                fp_amp = get_amp_number(amp_coords, x0, y0)
 
                 dn_fp.append(dn_sum)
                 chi2 = chisq(positions, zvals, x0[-1], y0[-1],
@@ -142,19 +156,19 @@ class SpotMomentFit2(object):
             except RuntimeError:
                 failed_curve_fits +=1
 
-        self._save_ext_data(x0, y0,prect_data, sigmax, sigmay, dn, dn_fp, chiprob,
+        self._save_ext_data(amp, x0, y0,prect_data, sigmax, sigmay, dn, dn_fp, chiprob,
                             chi2s, dofs, maxDNs)
 
         print(num_fp)
 
-    def _save_ext_data(self, x0, y0, prect_data, sigmax, sigmay, dn, dn_fp, chiprob,
+    def _save_ext_data(self, amp, x0, y0, prect_data, sigmax, sigmay, dn, dn_fp, chiprob,
                         chi2s, dofs, maxDNs):
         """
         Write results from the source detection and Gaussian fitting
         to the FITS extension corresponding to the specified
         amplifier.
         """
-        extname = 'Mosaic'
+        extname = 'MOSAIC'
         try:
             #
             # Append new rows if HDU for this segment already exists.
@@ -165,6 +179,7 @@ class SpotMomentFit2(object):
             table_hdu = fitsTableFactory(table_hdu.data, nrows=nrows)
             for i in range(len(x0)):
                 row = i + row0
+                table_hdu.data[row]['AMPLIFIER'] = amp[i]
                 table_hdu.data[row]['XPOS'] = x0[i]
                 table_hdu.data[row]['YPOS'] = y0[i]
                 table_hdu.data[row]['PRECT_DATA'] = prect_data[i]
@@ -182,16 +197,16 @@ class SpotMomentFit2(object):
             #
             # Extension for this segment does not yet exist, so add it.
             #
-            colnames = ['XPOS', 'YPOS', 'PRECT_DATA','SIGMAX', 'SIGMAY', 'DN',
+            colnames = ['AMPLIFIER', 'XPOS', 'YPOS', 'PRECT_DATA','SIGMAX', 'SIGMAY', 'DN',
                         'DN_FP_SUM', 'CHIPROB', 'CHI2', 'DOF', 'MAXDN']
 
-            columns = [np.array(x0), np.array(y0),np.array(prect_data),
+            columns = [np.array(amp), np.array(x0), np.array(y0), np.array(prect_data),
                        np.array(sigmax), np.array(sigmay),
                        np.array(dn), np.array(dn_fp),
                        np.array(chiprob), np.array(chi2s), np.array(dofs),
                        np.array(maxDNs)]
-            formats = formats = ['E']*(2) + ['441E'] +['E']*(8)
-            units = ['pixel', 'pixel', 'pixel', 'pixel',
+            formats  = ['I'] + ['E']*(2) + ['441E'] +['E']*(8)
+            units = ['None', 'pixel', 'pixel', 'pixel', 'pixel',
                      'ADU', 'ADU', 'None', 'None', 'None', 'ADU',
                      'pixel', 'pixel', 'ADU']
             fits_cols = lambda coldata: [fits.Column(name=colname,
