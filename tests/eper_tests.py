@@ -1,11 +1,13 @@
 """
 Unit tests for extended pixel edge response code.
 """
+from builtins import range
 import os
 import unittest
 import lsst.eotest.sensor as sensorTest
 from lsst.eotest.sensor.eperTask import SubImage
 import lsst.eotest.sensor.sim_tools as sim_tools
+
 
 class EperTestCase(unittest.TestCase):
     """
@@ -16,10 +18,12 @@ class EperTestCase(unittest.TestCase):
     overscans = 2
     verbose = False
 
+
 class SerialEperTestCase(EperTestCase):
     """
     TestCase class for EPERTask implementation in the serial direction.
     """
+
     def setUp(self):
         """
         Create a CCD frame FITS file with known imaging and overscan
@@ -29,11 +33,11 @@ class SerialEperTestCase(EperTestCase):
         ccd = sim_tools.CCD()
         for amp in ccd.segments:
             segment = ccd.segments[amp]
-            segment.imarr[:,-1] = self.imaging_value
+            segment.imarr[:, -1] = self.imaging_value
             overscan_region = segment.geometry.serial_overscan
             overscan = segment.image.Factory(segment.image,
                                              overscan_region).getArray()
-            overscan[:,0:self.overscans] = self.overscan_value
+            overscan[:, 0:self.overscans] = self.overscan_value
         ccd.writeto(self.fits_file)
 
     def tearDown(self):
@@ -65,18 +69,20 @@ class SerialEperTestCase(EperTestCase):
         task.config.direction = 's'
         task.config.cti = True
         task.config.verbose = self.verbose
-        cti, bias_ests = task.run(self.fits_file, range(1, 17), self.overscans)
+        cti, bias_ests = task.run(self.fits_file, list(range(1, 17)), self.overscans)
         ncols = (ccd.amp_geom.prescan.getWidth() +
                  ccd.amp_geom.imaging.getWidth())
         cti_expected = (float(self.overscans*self.overscan_value)
-                        /float(self.imaging_value)/float(ncols))
+                        / float(self.imaging_value)/float(ncols))
         for amp in ccd:
             self.assertEqual(cti[amp].value, cti_expected)
+
 
 class ParallelEperTestCase(EperTestCase):
     """
     TestCase class for EPERTask implementation in the parallel direction.
     """
+
     def setUp(self):
         """
         Create a CCD frame FITS file with known imaging and overscan
@@ -86,11 +92,11 @@ class ParallelEperTestCase(EperTestCase):
         ccd = sim_tools.CCD()
         for amp in ccd.segments:
             segment = ccd.segments[amp]
-            segment.imarr[-1,:] = self.imaging_value
+            segment.imarr[-1, :] = self.imaging_value
             overscan_region = segment.geometry.parallel_overscan
             overscan = segment.image.Factory(segment.image,
                                              overscan_region).getArray()
-            overscan[0:self.overscans,:] = self.overscan_value
+            overscan[0:self.overscans, :] = self.overscan_value
         ccd.writeto(self.fits_file)
 
     def tearDown(self):
@@ -122,10 +128,10 @@ class ParallelEperTestCase(EperTestCase):
         task.config.direction = 'p'
         task.config.cti = True
         task.config.verbose = self.verbose
-        cti, bias_ests = task.run(self.fits_file, range(1, 17), self.overscans)
+        cti, bias_ests = task.run(self.fits_file, list(range(1, 17)), self.overscans)
         nrows = ccd.amp_geom.imaging.getHeight()
         cti_expected = (float(self.overscans*self.overscan_value)
-                        /float(self.imaging_value)/float(nrows))
+                        / float(self.imaging_value)/float(nrows))
         for amp in ccd:
             self.assertEqual(cti[amp].value, cti_expected)
 

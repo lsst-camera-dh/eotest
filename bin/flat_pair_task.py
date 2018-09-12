@@ -27,4 +27,3 @@ bias_frame = args.bias_frame('%s_flat_bias_frame.fits' % args.sensor_id)
 task.run(args.sensor_id, flat_files, args.mask_files(flat_files[0]),
          args.system_gains(), detrespfile=args.detector_response_file,
          bias_frame=bias_frame)
-         

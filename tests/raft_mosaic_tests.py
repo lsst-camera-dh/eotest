@@ -15,10 +15,13 @@ import lsst.eotest.raft as raftTest
 
 _root_dir = '/nfs/farm/g/lsst/u1/jobHarness/jh_archive-test/LCA-10753_RSA/LCA-10753_RSA-003_ETU1-Dev/4578D/qe_raft_acq_sim/v0/25597'
 
+
 class RaftMosaicTestCase(unittest.TestCase):
     "Test case class for raft_image_mosaic module."
+
     def setUp(self):
         self.outfile = 'raft_test_pattern.png'
+
     def tearDown(self):
         try:
             os.remove(self.outfile)
@@ -41,7 +44,7 @@ class RaftMosaicTestCase(unittest.TestCase):
         test_files = dict()
         step = 100
         level = step
-        for slot, infile in infiles.items():
+        for slot, infile in list(infiles.items()):
             outfile = '%s_test_image_%05i.fits' % (slot, level)
             hdu_list = fits.open(infile)
             for hdu in hdu_list[1:17]:
@@ -53,6 +56,7 @@ class RaftMosaicTestCase(unittest.TestCase):
         raft_mosaic = raftTest.RaftMosaic(test_files, bias_subtract=False)
         raft_mosaic.plot(title='Test pattern')
         plt.savefig(self.outfile)
+
 
 if __name__ == '__main__':
     unittest.main()

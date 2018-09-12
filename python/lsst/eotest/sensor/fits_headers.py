@@ -3,18 +3,21 @@
 
 @author J. Chiang <jchiang@slac.stanford.edu>
 """
+from __future__ import print_function
+from __future__ import absolute_import
 import os
 import sys
 import numpy as np
 import astropy.io.fits as fits
 from collections import OrderedDict
 import lsst.eotest.image_utils as imutils
-from AmplifierGeometry import parse_geom_kwd
+from .AmplifierGeometry import parse_geom_kwd
 
 _module_path = os.environ['EOTEST_DIR']
 template_file = os.path.join(_module_path, 'policy', 'fits_header_template.txt')
 template_used_file = os.path.join(_module_path, 'policy',
                                   'fits_header_template_used.txt')
+
 
 def _cast(value):
     """
@@ -34,6 +37,7 @@ def _cast(value):
     if value.strip() == 'F':
         return False
     return value.strip("'")
+
 
 def fits_headers(template=template_file):
     """
@@ -62,6 +66,7 @@ def fits_headers(template=template_file):
         value, comment = data[0].strip(), '/'.join(data[1:]).strip()
         hdr[key] = (_cast(value), comment)
     return headers
+
 
 def check_keywords(infile, template=template_file, verbose=True):
     """
@@ -96,8 +101,8 @@ def check_keywords(infile, template=template_file, verbose=True):
                 missing_headers.append(extname)
                 continue
         # Check for required keywords.
-        missing_keys[extname] = [keyword for keyword in prototype.keys()
-                                 if keyword not in input_hdu.header.keys()]
+        missing_keys[extname] = [keyword for keyword in list(prototype.keys())
+                                 if keyword not in list(input_hdu.header.keys())]
         if missing_keys[extname]:
             report.append("Checking HDU #%i, '%s'. Missing keywords:"
                           % (i, input_hdu.name))
@@ -110,28 +115,30 @@ def check_keywords(infile, template=template_file, verbose=True):
     if verbose:
         if report:
             for line in report:
-                print line
+                print(line)
         else:
-            print "No missing keywords or extensions"
+            print("No missing keywords or extensions")
     return missing_keys
+
 
 def check_noao_keywords(infile, verbose=True):
     defects = []
     input = fits.open(infile)
-    geom_kwd = lambda x : parse_geom_kwd(input[0].header[x])
+
+    def geom_kwd(x): return parse_geom_kwd(input[0].header[x])
     # Sanity check for DETSIZE in PHDU
     try:
         pdetsize = geom_kwd('DETSIZE')
         if (pdetsize['xmin'] != 1 or pdetsize['ymin'] != 1 or
             pdetsize['xmax'] <= pdetsize['xmin'] or
-            pdetsize['ymax'] <= pdetsize['ymin']):
-            defects.append("Primary HDU DETSIZE fails sanity check: %s" 
+                pdetsize['ymax'] <= pdetsize['ymin']):
+            defects.append("Primary HDU DETSIZE fails sanity check: %s"
                            % input[0].header['DETSIZE'])
     except KeyError:
         pdetsize = None
         defects.append("Primary HDU: missing DETSIZE keyword")
     for extnum in imutils.allAmps(infile):
-        geom_kwd = lambda x : parse_geom_kwd(input[extnum].header[x])
+        def geom_kwd(x): return parse_geom_kwd(input[extnum].header[x])
         try:
             detsec = geom_kwd('DETSEC')
         except KeyError:
@@ -145,15 +152,15 @@ def check_noao_keywords(infile, verbose=True):
         if datasec is not None and datasec['xmin'] <= 1:
             defects.append("HDU %i, No prescan pixels implied by DATASEC: %s"
                            % (extnum, input[extnum].header['DATASEC']))
-        if (datasec is not None and detsec is not None and 
+        if (datasec is not None and detsec is not None and
             (abs(datasec['xmin'] - datasec['xmax'])
              != abs(detsec['xmin'] - detsec['xmax']) or
              abs(datasec['ymin'] - datasec['ymax'])
              != abs(detsec['ymin'] - detsec['ymax']))):
-            defects.append("HDU %i, inconsistent DETSEC and DATASEC sizes: %s %s" 
+            defects.append("HDU %i, inconsistent DETSEC and DATASEC sizes: %s %s"
                            % (extnum, input[extnum].header['DETSEC'],
                               input[extnum].header['DATASEC']))
     if verbose and defects:
         for item in defects:
-            print item
+            print(item)
     return defects

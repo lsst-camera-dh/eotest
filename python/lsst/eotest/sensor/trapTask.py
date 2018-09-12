@@ -13,6 +13,7 @@ from .generate_mask import generate_mask
 import lsst.pex.config as pexConfig
 import lsst.pipe.base as pipeBase
 
+
 class TrapConfig(pexConfig.Config):
     """Configuration for TrapTask"""
     output_dir = pexConfig.Field("Output directory", str, default=".")
@@ -27,10 +28,12 @@ class TrapConfig(pexConfig.Config):
                                           str, default=None)
     verbose = pexConfig.Field("Turn verbosity on", bool, default=True)
 
+
 class TrapTask(pipeBase.Task):
     """Configuration for task to find traps from pocket-pumped exposure"""
     ConfigClass = TrapConfig
     _DefaultName = "TrapTask"
+
     @pipeBase.timeMethod
     def run(self, sensor_id, pocket_pumped_file, mask_files, gains,
             cycles=100, threshold=200):

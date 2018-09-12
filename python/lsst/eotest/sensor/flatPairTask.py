@@ -4,6 +4,8 @@ These data are to be used for linearity and full-well measurments.
 
 @author J. Chiang <jchiang@slac.stanford.edu>
 """
+from builtins import str
+from builtins import range
 import os
 import glob
 import numpy as np
@@ -17,6 +19,7 @@ from .DetectorResponse import DetectorResponse
 import lsst.afw.math as afwMath
 import lsst.pex.config as pexConfig
 import lsst.pipe.base as pipeBase
+
 
 def pair_mean(flat1, flat2, amp):
     """
@@ -40,10 +43,12 @@ def pair_mean(flat1, flat2, amp):
                       stats2.getValue(afwMath.MEAN))/2.
     return avg_mean_value
 
+
 def find_flat2(flat1):
     pattern = flat1.split('flat1')[0] + 'flat2*.fits'
     flat2 = glob.glob(pattern)[0]
     return flat2
+
 
 class FlatPairConfig(pexConfig.Config):
     """Configuration for flat pair task"""
@@ -51,6 +56,7 @@ class FlatPairConfig(pexConfig.Config):
     eotest_results_file = pexConfig.Field("EO test results filename",
                                           str, default=None)
     verbose = pexConfig.Field("Turn verbosity on", bool, default=True)
+
 
 class FlatPairTask(pipeBase.Task):
     """Task to compute detector response vs incident flux from
@@ -89,7 +95,7 @@ class FlatPairTask(pipeBase.Task):
         for amp in all_amps:
             try:
                 full_well, fp = detresp.full_well(amp)
-            except StandardError as eobj:
+            except Exception as eobj:
                 self.log.info("Exception caught in full well calculation:")
                 self.log.info(str(eobj))
                 full_well = None
@@ -98,7 +104,7 @@ class FlatPairTask(pipeBase.Task):
             try:
                 maxdev, fit_pars, Ne, flux = \
                     detresp.linearity(amp, spec_range=linearity_spec_range)
-            except StandardError as eobj:
+            except Exception as eobj:
                 self.log.info("Exception caught in linearity calculation:")
                 self.log.info(str(eobj))
                 maxdev = None
@@ -110,6 +116,7 @@ class FlatPairTask(pipeBase.Task):
             if maxdev is not None:
                 output.add_seg_result(amp, 'MAX_FRAC_DEV', float(maxdev))
         output.write()
+
     def _create_detresp_fits_output(self, nrows):
         self.output = fits.HDUList()
         self.output.append(fits.PrimaryHDU())
@@ -124,6 +131,7 @@ class FlatPairTask(pipeBase.Task):
         hdu = fitsTableFactory(fits_cols)
         hdu.name = 'DETECTOR_RESPONSE'
         self.output.append(hdu)
+
     def extract_det_response(self, use_exptime):
         max_pd_frac_dev = self.max_pd_frac_dev
         outfile = os.path.join(self.config.output_dir,
@@ -162,12 +170,13 @@ class FlatPairTask(pipeBase.Task):
                 or isinstance(pd1, str)
                 or isinstance(pd2, str)
                 or pd1 == 0
-                or pd2 == 0):
+                    or pd2 == 0):
                 flux = exptime1
             else:
                 flux = abs(pd1*exptime1 + pd2*exptime2)/2.
                 if np.abs((pd1 - pd2)/((pd1 + pd2)/2.)) > max_pd_frac_dev:
-                    self.log.info("Skipping %s and %s since MONDIODE values do not agree to %.1f%%" % (file1, file2, max_pd_frac_dev*100.))
+                    self.log.info("Skipping %s and %s since MONDIODE values do not agree to %.1f%%" %
+                                  (file1, file2, max_pd_frac_dev*100.))
                     continue
             if self.config.verbose:
                 self.log.info('   row = %s' % row)

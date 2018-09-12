@@ -2,6 +2,10 @@
 @brief Find dark pixels and dark columns above a threshold specified
 in units of e- per second per pixel.
 """
+from __future__ import print_function
+from __future__ import absolute_import
+from builtins import range
+from builtins import object
 import os
 import numpy as np
 import astropy.io.fits as fits
@@ -17,6 +21,7 @@ from .MaskedCCD import MaskedCCD
 from .AmplifierGeometry import makeAmplifierGeometry
 from .fits_headers import fits_headers
 
+
 class DarkPixels(object):
     """
     Find dark pixels and dark columns based on a threshold of
@@ -25,6 +30,7 @@ class DarkPixels(object):
     exclusive of the dark columns.  The mask that is generated will
     be identified as mask_plane.
     """
+
     def __init__(self, ccd, amp, frac_thresh=0.8, colthresh=100,
                  mask_plane='BAD'):
         self.ccd = ccd
@@ -35,6 +41,7 @@ class DarkPixels(object):
         self.mask_plane = mask_plane
         self.dark_pixels = None
         self.dark_columns = None
+
     def _inverted_image(self, offset=None):
         """
         Return a masked image which is the trimmed and unbiased amp
@@ -51,6 +58,7 @@ class DarkPixels(object):
         imarr = my_image.getImage().getArray()  # a view into the image data
         imarr[:] = median - imarr[:]
         return my_image, median
+
     def find(self):
         """
         Find and return the dark pixels and dark columns.
@@ -95,8 +103,11 @@ class DarkPixels(object):
         self.dark_pixels = dark_pixs
         self.dark_columns = dark_cols
         return dark_pixs, dark_cols
+
+
 if __name__ == '__main__':
-    import sim_tools
+    from . import sim_tools
+
     def write_test_image(outfile, emin=10, dark_curr=2e-3, exptime=10,
                          gain=5, ccdtemp=-100, bias_level=1e2,
                          bias_sigma=4, ncols=2, npix=100):
@@ -133,4 +144,4 @@ if __name__ == '__main__':
     for amp in ccd:
         dark_pixels = DarkPixels(ccd, amp, ccd.md.get('EXPTIME'), gain)
         pixels, columns = dark_pixels.find()
-        print imutils.channelIds[amp], len(pixels), columns
+        print(imutils.channelIds[amp], len(pixels), columns)

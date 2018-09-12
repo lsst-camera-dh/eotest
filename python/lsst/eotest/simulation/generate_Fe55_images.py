@@ -4,16 +4,19 @@ according to section 5.4 of the E/O document (Dec 19, 2012 version).
 
 @author J. Chiang <jchiang@slac.stanford.edu>
 """
+from builtins import zip
+from builtins import range
 import os
 import numpy as np
 from sim_inputs import *
 from sim_tools import *
 
+
 def generate_Fe55_images(exptimes, nxrays, outdir, sensorid, gain=gain,
                          bias_level=bias_level, sys_noise=sys_noise,
                          dark_current=dark_current):
     nexp = len(exptimes)
-    for i, exptime, nxray in zip(range(nexp), exptimes, nxrays):
+    for i, exptime, nxray in zip(list(range(nexp)), exptimes, nxrays):
         #
         # Bias images
         #
@@ -72,10 +75,11 @@ def generate_Fe55_images(exptimes, nxrays, outdir, sensorid, gain=gain,
         fe55_output[0].header['FE55HITS'] = nxray
         fe55_output.writeto(Fe55_file, clobber=True)
 
+
 if __name__ == '__main__':
     nexp = 10
 
     exptimes = np.linspace(1, 5, nexp)
-    nxrays = [int(x*1000) for x in exptimes] 
+    nxrays = [int(x*1000) for x in exptimes]
 
     generate_Fe55_images(exptimes, nxrays, '.', 'xxx-xx')

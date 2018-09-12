@@ -3,6 +3,8 @@
 
 @author J. Chiang <jchiang@slac.stanford.edu>
 """
+from __future__ import absolute_import
+from builtins import zip
 import os
 import numpy as np
 import astropy.io.fits as fits
@@ -12,8 +14,9 @@ import lsst.afw.geom as afwGeom
 import lsst.afw.image as afwImage
 import lsst.afw.math as afwMath
 import lsst.eotest.image_utils as imutils
-from MaskedCCD import MaskedCCD
-from TrapFinder import TrapFinder
+from .MaskedCCD import MaskedCCD
+from .TrapFinder import TrapFinder
+
 
 class Traps(dict):
     """
@@ -21,12 +24,13 @@ class Traps(dict):
     positions and size by amplifier.  Provide a method to write the
     results to a FITS file as a binary table.
     """
+
     def __init__(self, ccd, gains, cycles=100, C2_thresh=10,
                  C3_thresh=1, nx=10, ny=10,
                  edge_rolloff=10, amps=None):
         super(Traps, self).__init__()
         if amps is None:
-            amps = ccd.keys()
+            amps = list(ccd.keys())
         for amp in amps:
             self[amp] = []
             finder = TrapFinder(ccd, amp, C2_thresh=C2_thresh,
@@ -36,6 +40,7 @@ class Traps(dict):
             for ix, iy, c2, c3, a0, a1 in zip(*results):
                 trap_size = max(a0, a1)*gains[amp]/cycles
                 self[amp].append((ix, iy, trap_size, a0, a1))
+
     def write(self, outfile, clobber=True):
         """
         Write the results as a FITS binary table.
@@ -50,8 +55,8 @@ class Traps(dict):
                    + [np.zeros(nrows, dtype=float)]*2)
         hdu = fitsTableFactory([fits.Column(name=colname, format=format,
                                             unit=unit, array=column)
-                                  for colname, format, unit, column in
-                                  zip(colnames, formats, units, columns)])
+                                for colname, format, unit, column in
+                                zip(colnames, formats, units, columns)])
         hdu.name = 'TRAPS'
         output.append(hdu)
         row = 0
@@ -65,6 +70,7 @@ class Traps(dict):
                 output['TRAPS'].data[row]['A1'] = a1
                 row += 1
         fitsWriteto(output, outfile, clobber=True)
+
 
 if __name__ == '__main__':
     gains = dict([(amp, 5) for amp in imutils.allAmps()])

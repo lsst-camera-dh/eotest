@@ -3,6 +3,7 @@
 
 @author J. Chiang <jchiang@slac.stanford.edu>
 """
+from builtins import range
 import os
 import unittest
 
@@ -59,7 +60,7 @@ e2v_amp_geom = dict(
      (16, dict([('DATASEC', '[11:522,1:2002]'),
                 ('DETSEC', '[1:512,4004:2003]'),
                 ('DETSIZE', '[1:4096,1:4004]')]))]
-    )
+)
 
 full_segment = afwGeom.Box2I(afwGeom.Point2I(0, 0),
                              afwGeom.Point2I(541, 2021))
@@ -70,11 +71,12 @@ prescan = afwGeom.Box2I(afwGeom.Point2I(0, 0),
 imaging = afwGeom.Box2I(afwGeom.Point2I(10, 0),
                         afwGeom.Point2I(521, 2001))
 
-serial_overscan = afwGeom.Box2I(afwGeom.Point2I(522, 0), 
+serial_overscan = afwGeom.Box2I(afwGeom.Point2I(522, 0),
                                 afwGeom.Point2I(541, 2021))
 
 parallel_overscan = afwGeom.Box2I(afwGeom.Point2I(10, 2002),
                                   afwGeom.Point2I(522, 2021))
+
 
 class AmplifierGeometryTestCase(unittest.TestCase):
     def setUp(self):
@@ -90,20 +92,24 @@ class AmplifierGeometryTestCase(unittest.TestCase):
         self.itl_test_file = 'test_itl_image.fits'
         ccd1 = sim_tools.CCD(geometry=self.itl)
         ccd1.writeto(self.itl_test_file, bitpix=16)
+
     def tearDown(self):
         os.remove(self.itl_test_file)
         os.remove(self.e2v_test_file)
+
     def test_e2v_keywords(self):
         self.assertEquals(self.e2v.DETSIZE, '[1:4336,1:4044]')
         for amp in range(1, 17):
             for key in ('DATASEC', 'DETSEC', 'DETSIZE'):
                 self.assertEquals(self.e2v[amp][key], e2v_amp_geom[amp][key])
+
     def test_e2v_geometry(self):
         self.assertEquals(self.e2v.full_segment, full_segment)
         self.assertEquals(self.e2v.prescan, prescan)
         self.assertEquals(self.e2v.imaging, imaging)
         self.assertEquals(self.e2v.serial_overscan, serial_overscan)
         self.assertEquals(self.e2v.parallel_overscan, parallel_overscan)
+
     def test_makeAmplifierGeometry_factory(self):
         e2v_geom = makeAmplifierGeometry(self.e2v_test_file)
         self.assertEquals(self.e2v, e2v_geom)
@@ -113,6 +119,7 @@ class AmplifierGeometryTestCase(unittest.TestCase):
 
         self.assertNotEqual(self.e2v, itl_geom)
         self.assertNotEqual(self.itl, e2v_geom)
-        
+
+
 if __name__ == '__main__':
     unittest.main()

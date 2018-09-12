@@ -1,7 +1,14 @@
+from __future__ import print_function
+from __future__ import absolute_import
+from builtins import zip
+from builtins import range
+from builtins import object
+from collections import OrderedDict
 import numpy as np
 import lsst.afw.math as afwMath
 import lsst.pex.exceptions as pexExcept
-import pylab_plotter as plot
+from . import pylab_plotter as plot
+
 
 def getProcessedImageArray(ccd, amp, nx=10, ny=10):
     """
@@ -15,13 +22,14 @@ def getProcessedImageArray(ccd, amp, nx=10, ny=10):
         bg = afwMath.makeBackground(image, bg_ctrl)
         bg_image = bg.getImageF()
         image -= bg.getImageF()
-    except pexExcept.OutOfRangeError, eObj:
+    except pexExcept.OutOfRangeError as eObj:
         # Stack fails to derive a local background image so rely on
         # bias subtraction. This produces less reliable results on
         # real and simulated data.
-        print "TrapFinder.getProcessedImageArray:", eObj
-        print "Skipping local background subtraction for amp", amp
+        print("TrapFinder.getProcessedImageArray:", eObj)
+        print("Skipping local background subtraction for amp", amp)
     return image.getImage().getArray()
+
 
 class TrapFinder(object):
     """
@@ -29,6 +37,7 @@ class TrapFinder(object):
     Kotov et al. 2014, NIMA 
     (http://www.sciencedirect.com/science/article/pii/S0168900214012066).
     """
+
     def __init__(self, ccd, amp, C2_thresh=10, C3_thresh=1,
                  nx=10, ny=10, edge_rolloff=10):
         """
@@ -51,20 +60,34 @@ class TrapFinder(object):
         self.edge_rolloff = edge_rolloff
         self.prescan = ccd.amp_geom.prescan_width
         self.row_max = ccd.amp_geom.imaging.getHeight()+1
+
     def find(self, regfile=None):
         nx, ny = self.imarr.shape
-        my_arrays = 'ix iy c2 c3 a0 a1'.split()
-        for item in my_arrays:
-            exec('%(item)s = []' % locals())
+        my_arrays = []
+        for i in range(6):
+            my_arrays.append([])
         for icol in range(nx):
             results = self.process_column(icol)
             for i, item in enumerate(my_arrays):
-                exec('%(item)s.extend(results[%(i)i])' % locals())
+                item.extend(results[i])
         for item in my_arrays:
-            exec('%(item)s = np.array(%(item)s)' % locals())
+            item = np.array(item)
         if regfile is not None:
-            self._write_reg_file(regfile, ix, iy)
-        return ix, iy, c2, c3, a0, a1
+            self._write_reg_file(regfile, my_arrays[0], my_arrays[1])
+        return tuple(my_arrays)
+
+    def findNew(self, regfile=None):
+        nx, ny = self.imarr.shape
+        arr_names = ['ix', 'iy', 'c2', 'c3', 'a0', 'a1']
+        my_arrays = OrderedDict([(name, []) for name in arr_names])
+        for icol in range(nx):
+            results = self.process_column(icol)
+            for i, item in enumerate(my_arrays.values()):
+                item.extend(results[i])
+        if regfile is not None:
+            self._write_reg_file(regfile, my_arrays['ix'], my_arrays['iy'])
+        return tuple([np.array(item) for item in my_arrays.values()])
+
     def _write_reg_file(self, regfile, ix, iy):
         reg_output = open(regfile, 'w')
         reg_output.write("""# Region file format: DS9 version 4.1
@@ -74,6 +97,7 @@ image
         for coord in zip(ix, iy):
             reg_output.write("point(%i,%i) # point=circle\n" % coord)
         reg_output.close()
+
     def process_column(self, icol, plot_stats=False, oplot=0):
         """
         Process a single column and return a tuple of
@@ -106,10 +130,11 @@ image
         if plot_stats:
             self._plot_stats(icol, C2, C3, oplot)
         return ix, iy, c2, c3, a0, a1
+
     def _plot_stats(self, icol, C2, C3, oplot):
         plot.pylab.ion()
         if oplot == 0:
-            rows = range(self.edge_rolloff+1, self.edge_rolloff + len(C2) + 1)
+            rows = list(range(self.edge_rolloff+1, self.edge_rolloff + len(C2) + 1))
             win0 = plot.curve(rows, C2, xname='row', yname='C2')
             win0.set_title('Column %i' % icol)
             plot.hline(-self.C2_thresh)
@@ -118,8 +143,9 @@ image
         plot.hline(self.C3_thresh)
         plot.vline(-self.C2_thresh)
 
+
 if __name__ == '__main__':
-    from MaskedCCD import MaskedCCD
+    from .MaskedCCD import MaskedCCD
     trap_file = '../20141118-184914/114-03_trap_000.fits'
     ccd = MaskedCCD(trap_file)
     amp = 4
@@ -127,7 +153,7 @@ if __name__ == '__main__':
     finder = TrapFinder(ccd, amp)
     results = finder.find()
     for row in zip(*results):
-        print row
+        print(row)
 
     index = np.where(results[2] == min(results[2]))
     finder.process_column(results[0][index[0][0]]-4, True)

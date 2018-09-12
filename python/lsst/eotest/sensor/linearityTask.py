@@ -4,20 +4,23 @@ These data are to be used for linearity measurments.
 
 @author J. Chiang <jchiang@slac.stanford.edu>
 """
+from __future__ import absolute_import
+from builtins import range
 import os
 import glob
 import numpy as np
 import astropy.io.fits as fits
 from lsst.eotest.fitsTools import fitsTableFactory, fitsWriteto
 import lsst.eotest.image_utils as imutils
-from MaskedCCD import MaskedCCD
-from EOTestResults import EOTestResults
-from DetectorResponse import DetectorResponse
+from .MaskedCCD import MaskedCCD
+from .EOTestResults import EOTestResults
+from .DetectorResponse import DetectorResponse
 
 import lsst.afw.math as afwMath
 import lsst.pex.config as pexConfig
 import lsst.pipe.base as pipeBase
-from flatPairTask import pair_mean, find_flat2
+from .flatPairTask import pair_mean, find_flat2
+
 
 class LinearityConfig(pexConfig.Config):
     """Configuration for flat pair task"""
@@ -25,6 +28,7 @@ class LinearityConfig(pexConfig.Config):
     eotest_results_file = pexConfig.Field("EO test results filename",
                                           str, default=None)
     verbose = pexConfig.Field("Turn verbosity on", bool, default=True)
+
 
 class LinearityTask(pipeBase.Task):
     """Task to compute detector response vs incident flux from
@@ -68,6 +72,7 @@ class LinearityTask(pipeBase.Task):
             if maxdev is not None:
                 output.add_seg_result(amp, 'MAX_FRAC_DEV', float(maxdev))
         output.write()
+
     def _create_detresp_fits_output(self, nrows):
         self.output = fits.HDUList()
         self.output.append(fits.PrimaryHDU())
@@ -82,11 +87,12 @@ class LinearityTask(pipeBase.Task):
         hdu = fitsTableFactory(fits_cols)
         hdu.name = 'DETECTOR_RESPONSE'
         self.output.append(hdu)
+
     def extract_det_response(self):
         outfile = os.path.join(self.config.output_dir,
                                '%s_det_response_linearity.fits' % self.sensor_id)
-        file1s = sorted([item for item in self.infiles 
-                         if item.find('flat1')  != -1 or 
+        file1s = sorted([item for item in self.infiles
+                         if item.find('flat1') != -1 or
                          item.find('linearity_flat') != -1])
         if self.config.verbose:
             self.log.info("writing to %s" % outfile)
@@ -111,7 +117,7 @@ class LinearityTask(pipeBase.Task):
                                    % (file1, file2))
 
             if (flat1.md.get('MONDIODE') != 0 and
-                flat2.md.get('MONDIODE') != 0):
+                    flat2.md.get('MONDIODE') != 0):
                 flux = abs(flat1.md.get('EXPTIME')*flat1.md.get('MONDIODE') +
                            flat2.md.get('EXPTIME')*flat2.md.get('MONDIODE'))/2.
             else:
@@ -125,6 +131,7 @@ class LinearityTask(pipeBase.Task):
         self.output[0].header['NAMPS'] = len(flat1)
         fitsWriteto(self.output, outfile, clobber=True)
         return outfile
+
 
 if __name__ == '__main__':
     parser = TaskParser('Compute detector response vs incident flux')

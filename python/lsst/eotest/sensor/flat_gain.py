@@ -3,12 +3,17 @@
 examining two flat field images. The calculation is the standard
 mean/variance thing.
 """
+from __future__ import print_function
+from __future__ import absolute_import
+from builtins import zip
+from builtins import range
 import numpy as np
 import numpy.random as random
 import lsst.eotest.image_utils as imutils
 import lsst.afw.geom as afwGeom
 import lsst.afw.image as afwImage
 import lsst.pex.exceptions as pexExcept
+
 
 def flat_gain(image1, image2, count=1000, dx=100, dy=100, binsize=1,
               seed=None):
@@ -56,7 +61,7 @@ def flat_gain(image1, image2, count=1000, dx=100, dy=100, binsize=1,
     ntrial = 0
     exception_count = 0
     for x, y in zip(xarr, yarr):
-        bbox = afwGeom.Box2I(afwGeom.Point2I(int(x), int(y)), 
+        bbox = afwGeom.Box2I(afwGeom.Point2I(int(x), int(y)),
                              afwGeom.Extent2I(dx, dy))
         imarr1 = im1.Factory(im1, bbox).getArray()
         imarr2 = im2.Factory(im2, bbox).getArray()
@@ -71,9 +76,10 @@ def flat_gain(image1, image2, count=1000, dx=100, dy=100, binsize=1,
     gain = 1./np.median(gains)  # gain in Ne/DN
     return gain, im1, im2
 
+
 if __name__ == '__main__':
     import os
-    from sim_tools import simulateFlat
+    from .sim_tools import simulateFlat
 
     file1 = 'test_flat1.fits'
     file2 = 'test_flat2.fits'
@@ -86,7 +92,7 @@ if __name__ == '__main__':
         image1 = afwImage.ImageF(file1, imutils.dm_hdu(amp))
         image2 = afwImage.ImageF(file2, imutils.dm_hdu(amp))
         gain, im1, im2 = flat_gain(image1, image2, count=1000)
-        print amp, gain
+        print(amp, gain)
 
     os.remove(file1)
     os.remove(file2)

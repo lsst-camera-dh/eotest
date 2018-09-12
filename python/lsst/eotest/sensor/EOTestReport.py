@@ -1,9 +1,15 @@
+from __future__ import print_function
+from __future__ import absolute_import
+from builtins import str
+from builtins import range
+from builtins import object
 import os
 import sys
 import subprocess
 import numpy as np
 import pylab
-from EOTestPlots import op_str
+from .EOTestPlots import op_str
+
 
 def latex_minus_value(value, error=None, format='%.2e'):
     """
@@ -22,8 +28,10 @@ def latex_minus_value(value, error=None, format='%.2e'):
         result += template % error
     return result
 
+
 def _include_multipanel_png(pngfiles, frac_width=1.5, hspace=-1.9):
     return _include_png(pngfiles, frac_width=frac_width, hspace=hspace)
+
 
 def _include_png(pngfiles, frac_width=1.3, hspace=-1):
     figure_template = """\\begin{figure}[H]
@@ -37,9 +45,10 @@ def _include_png(pngfiles, frac_width=1.3, hspace=-1):
             image_name = item[:-len('.png')]
         else:
             image_name = item
-        lines.append('\\includegraphics[width=%s\\textwidth]{%s}' 
+        lines.append('\\includegraphics[width=%s\\textwidth]{%s}'
                      % (frac_width, image_name))
     return figure_template % ('\\\\\n'.join(lines))
+
 
 class EOTestReport(object):
     def __init__(self, eotest_plots, wl_dir, tex_file=None, qa_plot_files=None,
@@ -48,7 +57,9 @@ class EOTestReport(object):
         self.plots = eotest_plots
         self.wl_dir = wl_dir
         if tex_file is None:
-            self.tex_file = '%s_eotest_report.tex' % self.plots.sensor_id
+            # all files are written to the .tex without path, so write the .tex to the same place as images
+            # then call pdflatex with the output_dir as the current working directory.
+            self.tex_file = os.path.join(self.plots.output_dir, '%s_eotest_report.tex'%self.plots.sensor_id)
         else:
             self.tex_file = tex_file
         self.output = open(self.tex_file, 'w')
@@ -57,8 +68,9 @@ class EOTestReport(object):
         self.software_versions = software_versions
         self.teststand_config = teststand_config
         self.job_ids = job_ids
+
     def make_figures(self):
-        print "Creating eotest report figures..."
+        print("Creating eotest report figures...")
         funcs = ('fe55_dists',
                  'ptcs',
                  'gains',
@@ -71,16 +83,18 @@ class EOTestReport(object):
                  'psf_dists',
                  'persistence')
         for func in funcs:
-            print "  %s" % func
+            print("  %s" % func)
             try:
                 exec('self.plots.%s()' % func)
-                pylab.savefig('%s_%s.png' % (self.plots.sensor_id, func))
-            except Exception, eobj:
-                print "Error running %s():" % func
-                print "  ", eobj
+                pylab.savefig('%s_%s.png' % (os.path.join(self.plots.output_dir, self.plots.sensor_id),
+                                             func))
+            except Exception as eobj:
+                print("Error running %s():" % func)
+                print("  ", eobj)
         self.plots.flat_fields(self.wl_dir)
+
     def _write_tex_preamble(self):
-        self.output.write("""\documentclass{article}
+        self.output.write(str(b"""\documentclass{article}
 \usepackage{graphicx}
 \usepackage{amssymb}
 \usepackage{siunitx}
@@ -98,7 +112,8 @@ class EOTestReport(object):
 
 \\begin{document}
 
-""")
+""", encoding='ascii'))
+
     def make_pdf(self):
         self._write_tex_preamble()
         sensor_id = self.plots.sensor_id
@@ -133,7 +148,7 @@ class EOTestReport(object):
         self.output.write(self.plots.specs.latex_header() + '\n')
         self.output.write(self.plots.specs['CCD-008'].latex_entry() + '\n')
         self.output.write(self.plots.specs['CCD-009'].latex_entry() + '\n')
-        self.output.write(self.plots.specs.latex_footer()+ '\n')
+        self.output.write(self.plots.specs.latex_footer() + '\n')
         self.output.write("""\\begin{table}[!htbp]
 \centering
 \\begin{tabular}{|c|r|r|}
@@ -148,8 +163,17 @@ class EOTestReport(object):
             self.output.write(" %i & $%s$ & $\\num{%s}$ \\\\ \hline\n"
                               % (amp, my_full_well, my_max_frac_dev))
         self.output.write("\\end{tabular}\n\\end{table}\n")
+
+        """The following code is commented out because as of 2017/12/15 we are not producing
+        the necessary data to produce these plots. It has not been *removed* as it is possible
+        that this might be added in future. A config option to switch this is not appropraite
+        as this is a 3rd party package, so this commenting out just lives on its own commit
+        so that it can a) easily be undone, and b) won't be merged upsteam.
+
         self.output.write(_include_multipanel_png(('%(sensor_id)s_full_well'
                                                    % locals(),)))
+        """
+
         self.output.write(_include_multipanel_png(('%(sensor_id)s_linearity'
                                                    % locals(),)))
         self.output.write(_include_multipanel_png(('%(sensor_id)s_linearity_resids'
@@ -170,7 +194,7 @@ class EOTestReport(object):
         bright_defects_file = '%(sensor_id)s_medianed_dark' % locals()
         dark_defects_file = '%(sensor_id)s_superflat_dark_defects' % locals()
         if (os.path.isfile(bright_defects_file + '.png') and
-            os.path.isfile(dark_defects_file + '.png')):
+                os.path.isfile(dark_defects_file + '.png')):
             self.output.write('\section{Bright and Dark Defect Frames}')
             self.output.write(_include_png((bright_defects_file,)))
             self.output.write('\\pagebreak\n\n')
@@ -183,7 +207,7 @@ class EOTestReport(object):
         self.output.write(self.plots.specs.latex_header() + '\n')
         self.output.write(self.plots.specs['CCD-010'].latex_entry() + '\n')
         self.output.write(self.plots.specs['CCD-011'].latex_entry() + '\n')
-        self.output.write(self.plots.specs.latex_footer()+ '\n')
+        self.output.write(self.plots.specs.latex_footer() + '\n')
         #
         # High flux level results
         #
@@ -240,7 +264,7 @@ class EOTestReport(object):
         sflat_high = '%(sensor_id)s_superflat_high' % locals()
         sflat_low = '%(sensor_id)s_superflat_low' % locals()
         if (os.path.isfile(sflat_high + '.png') and
-            os.path.isfile(sflat_low + '.png')):
+                os.path.isfile(sflat_low + '.png')):
             self.output.write(_include_png((sflat_high,)))
             self.output.write('\\pagebreak\n\n')
             self.output.write(_include_png((sflat_low,)))
@@ -249,7 +273,7 @@ class EOTestReport(object):
         serial_profile_high = '%(sensor_id)s_serial_oscan_high' % locals()
         serial_profile_low = '%(sensor_id)s_serial_oscan_low' % locals()
         if (os.path.isfile(serial_profile_high + '.png') and
-            os.path.isfile(serial_profile_low + '.png')):
+                os.path.isfile(serial_profile_low + '.png')):
             self.output.write(_include_png((serial_profile_high,)))
             self.output.write("""\\noindent
 The blue points are the bias-subtracted column means; the red point is
@@ -272,7 +296,7 @@ CTE specification given the mean signal in the last imaging column.
         parallel_profile_high = '%(sensor_id)s_parallel_oscan_high' % locals()
         parallel_profile_low = '%(sensor_id)s_parallel_oscan_low' % locals()
         if (os.path.isfile(parallel_profile_high + '.png') and
-            os.path.isfile(parallel_profile_low + '.png')):
+                os.path.isfile(parallel_profile_low + '.png')):
             self.output.write(_include_png((parallel_profile_high,)))
             self.output.write("""\\noindent
 The blue points are the bias-subtracted row means; the red point is
@@ -302,6 +326,12 @@ specification given the mean signal in the last imaging row.
         if os.path.isfile(crosstalk_image + '.png'):
             self.output.write(_include_png((crosstalk_image,)))
         self.output.write('\\pagebreak\n\n')
+
+        """The following code is commented out because as of 2017/12/15 we are not producing
+        the necessary data to produce these plots. It has not been *removed* as it is possible
+        that this might be added in future. A config option to switch this is not appropraite
+        as this is a 3rd party package, so this commenting out just lives on its own commit
+        so that it can a) easily be undone, and b) won't be merged upsteam.
         #
         # QE
         #
@@ -316,6 +346,7 @@ specification given the mean signal in the last imaging row.
         self.output.write(self.plots.specs.latex_footer() + '\n')
         self.output.write(_include_png(('%(sensor_id)s_qe' % locals(),)))
         self.output.write('\\pagebreak\n\n')
+        """
         #
         # PRNU
         #
@@ -348,7 +379,7 @@ specification given the mean signal in the last imaging row.
         # Fe55 gains and PTC
         #
         self.output.write('\section{System Gain and Photon Transfer Curves}\n')
-        self.output.write(_include_multipanel_png(('%(sensor_id)s_fe55_dists' 
+        self.output.write(_include_multipanel_png(('%(sensor_id)s_fe55_dists'
                                                    % locals(),)))
         self.output.write(_include_png(('%(sensor_id)s_gains' % locals(),)))
         self.output.write('\\pagebreak\n\n')
@@ -370,7 +401,7 @@ specification given the mean signal in the last imaging row.
         fe55_apflux_serial = '%(sensor_id)s_fe55_apflux_serial' % locals()
         fe55_apflux_parallel = '%(sensor_id)s_fe55_apflux_parallel' % locals()
         if (os.path.isfile(fe55_apflux_serial + '.png') and
-            os.path.isfile(fe55_apflux_parallel + '.png')):
+                os.path.isfile(fe55_apflux_parallel + '.png')):
             self.output.write('\section{Fe55 aperture flux vs pixel number}\n')
             self.output.write(_include_png((fe55_apflux_serial,)))
             self.output.write(_include_png((fe55_apflux_parallel,)))
@@ -381,7 +412,7 @@ specification given the mean signal in the last imaging row.
         fe55_p3_p5_hists = '%(sensor_id)s_fe55_p3_p5_hists' % locals()
         fe55_p3_p5_profiles = '%(sensor_id)s_fe55_p3_p5_profiles' % locals()
         if (os.path.isfile(fe55_p3_p5_hists + '.png') and
-            os.path.isfile(fe55_p3_p5_profiles + '.png')):
+                os.path.isfile(fe55_p3_p5_profiles + '.png')):
             self.output.write('\section{Fe55 p3-p5 statistics}\n')
             self.output.write(_include_png((fe55_p3_p5_hists,)))
             self.output.write(_include_png((fe55_p3_p5_profiles,)))
@@ -405,10 +436,10 @@ specification given the mean signal in the last imaging row.
 \hline
 \\textbf{Job Name} & \\textbf{activityId} \\\\ \hline
 """)
-            values = np.array([int(x) for x in self.job_ids.values()])
-            keys = self.job_ids.keys()
+            values = np.array([int(x) for x in list(self.job_ids.values())])
+            keys = list(self.job_ids.keys())
             index = np.argsort(values)
-            print "sorted job id indexes:", index
+            print("sorted job id indexes:", index)
             for i in index:
                 job_name = keys[i].replace('_', '\_')
                 self.output.write("%s & %i \\\\ \hline\n"
@@ -421,7 +452,7 @@ specification given the mean signal in the last imaging row.
         if self.software_versions is not None:
             self.output.write('\section{Software Versions}\n')
             self.output.write('\\begin{description}\n')
-            for key, value in self.software_versions.items():
+            for key, value in list(self.software_versions.items()):
                 self.output.write('\\item[%s] %s\n' % (key.replace('_', '\_'),
                                                        value.replace('_', '\_')))
             self.output.write('\end{description}\n')
@@ -431,8 +462,8 @@ specification given the mean signal in the last imaging row.
         if self.teststand_config is not None:
             self.output.write('\section{Test Stand Configuration}\n')
             self.output.write('\\begin{description}\n')
-            for key, value in self.teststand_config.items():
-                self.output.write('\\item[%s] %s\n' % 
+            for key, value in list(self.teststand_config.items()):
+                self.output.write('\\item[%s] %s\n' %
                                   (key.replace('_', '\_'),
                                    str(value).replace('_', '\_')))
             self.output.write('\end{description}\n')
@@ -457,10 +488,11 @@ specification given the mean signal in the last imaging row.
         self.output.write("\\end{document}\n")
         self.output.close()
 
-        subprocess.call('pdflatex %s' % self.tex_file, shell=True)
+        subprocess.call('pdflatex %s' % self.tex_file, shell=True, cwd=os.path.dirname(self.tex_file))
+
 
 if __name__ == '__main__':
-    from EOTestPlots import EOTestPlots
+    from .EOTestPlots import EOTestPlots
     plots = EOTestPlots('000-00', 'results', output_dir='plots')
     report = EOTestReport(plots, './sensorData/000-00/lambda/debug')
     report.make_figures()

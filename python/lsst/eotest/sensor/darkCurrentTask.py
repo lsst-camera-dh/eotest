@@ -4,16 +4,21 @@ units of e-/sec/pixel.
 
 @author J. Chiang <jchiang@slac.stanford.edu>
 """
+from __future__ import print_function
+from __future__ import absolute_import
+from builtins import str
+from builtins import range
 import os
 import numpy as np
 import astropy.io.fits as fits
 from lsst.eotest.fitsTools import fitsWriteto
 import lsst.eotest.image_utils as imutils
-from MaskedCCD import MaskedCCD
-from EOTestResults import EOTestResults
+from .MaskedCCD import MaskedCCD
+from .EOTestResults import EOTestResults
 import lsst.afw.image as afwImage
 import lsst.pex.config as pexConfig
 import lsst.pipe.base as pipeBase
+
 
 class DarkCurrentConfig(pexConfig.Config):
     """Configuration for DarkCurrentTask"""
@@ -25,6 +30,7 @@ class DarkCurrentConfig(pexConfig.Config):
     eotest_results_file = pexConfig.Field('EO test results filename',
                                           str, default=None)
     verbose = pexConfig.Field("Turn verbosity on", bool, default=True)
+
 
 class DarkCurrentTask(pipeBase.Task):
     """Task to evaluate dark current quantiles."""
@@ -72,7 +78,7 @@ class DarkCurrentTask(pipeBase.Task):
                 dark95s[amp] = unmasked[int(len(unmasked)*0.95)]
                 median = unmasked[len(unmasked)/2]
             except IndexError as eobj:
-                print str(eobj)
+                print(str(eobj))
                 dark95s[amp] = -1.
                 median = -1.
             if self.config.verbose:
@@ -83,7 +89,7 @@ class DarkCurrentTask(pipeBase.Task):
         #
         dark_curr_pixels = sorted(dark_curr_pixels)
         darkcurr95 = dark_curr_pixels[int(len(dark_curr_pixels)*0.95)]
-        dark95mean = np.mean(dark95s.values())
+        dark95mean = np.mean(list(dark95s.values()))
         if self.config.verbose:
             #self.log.info("CCD: mean 95 percentile value = %s" % dark95mean)
             self.log.info("CCD-wide 95 percentile value = %s" % darkcurr95)

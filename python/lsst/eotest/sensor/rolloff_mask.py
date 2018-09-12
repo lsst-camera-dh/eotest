@@ -24,6 +24,7 @@ from .BrightPixels import BrightPixels
 from .sim_tools import CCD
 from .generate_mask import generate_mask
 
+
 def rolloff_mask(infile, outfile,
                  mask_plane='ROLLOFF_DEFECTS',
                  tmp_mask_image=None,
@@ -107,7 +108,7 @@ def rolloff_mask(infile, outfile,
         imarr[0:outer_edge_width, :] += signal
 
         if amp_geom.amp_loc == amp_loc['E2V']:
-        #if True:
+            #if True:
             #
             # Set signal around blooming stop
             #
@@ -132,6 +133,7 @@ def rolloff_mask(infile, outfile,
     generate_mask(infile, outfile, mask_plane, pixels=pixels, columns=columns)
     if cleanup:
         os.remove(tmp_mask_image)
+
 
 def pixel_counts(ccd_file, input_mask=None):
     """

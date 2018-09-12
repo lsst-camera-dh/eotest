@@ -5,6 +5,7 @@ import unittest
 import numpy as np
 import lsst.eotest.sensor as sensorTest
 
+
 class Cte_Tools_TestCase(unittest.TestCase):
     def setUp(self):
         pass
@@ -25,6 +26,7 @@ class Cte_Tools_TestCase(unittest.TestCase):
             cti_est = \
                 sum(pixels[npix-noscan:])/pixels[npix-noscan-1]/(npix-noscan+1)
             self.assertAlmostEqual(1, cti_est/cti)
+
 
 if __name__ == '__main__':
     unittest.main()

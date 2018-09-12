@@ -31,5 +31,5 @@ task.config.C3_thresh = args.C3_thresh
 pocket_pumped_file = glob.glob(args.pocket_pumped_file)[0]
 
 task.run(args.sensor_id, pocket_pumped_file,
-         args.mask_files(pocket_pumped_file), args.system_gains(), 
+         args.mask_files(pocket_pumped_file), args.system_gains(),
          cycles=args.cycles, threshold=args.threshold)

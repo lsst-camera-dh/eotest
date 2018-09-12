@@ -4,6 +4,10 @@ photon transfer curve and compute and write out the full well.
 
 @author J. Chiang <jchiang@slac.stanford.edu>
 """
+from __future__ import print_function
+from builtins import str
+from builtins import range
+from builtins import object
 import os
 import glob
 import operator
@@ -20,6 +24,7 @@ import lsst.afw.math as afwMath
 import lsst.pex.config as pexConfig
 import lsst.pipe.base as pipeBase
 
+
 def find_flat2(flat1):
     pattern = flat1.split('flat1')[0] + 'flat2*.fits'
     try:
@@ -28,7 +33,9 @@ def find_flat2(flat1):
     except IndexError:
         return flat1
 
-exptime = lambda x: imutils.Metadata(x).get('EXPTIME')
+
+def exptime(x): return imutils.Metadata(x).get('EXPTIME')
+
 
 def glob_flats(full_path, outfile='ptc_flats.txt'):
     flats = glob.glob(os.path.join(full_path, '*_flat?.fits'))
@@ -37,11 +44,13 @@ def glob_flats(full_path, outfile='ptc_flats.txt'):
         output.write('%s\n' % item)
     output.close()
 
+
 def find_flats(args):
     files = args.files(args.flats, args.flats_file_list)
     file1s = sorted([item.strip() for item in files
                      if item.find('flat1') != -1])
     return [(f1, find_flat2(f1)) for f1 in file1s]
+
 
 def ptc_func(pars, mean):
     """
@@ -51,14 +60,17 @@ def ptc_func(pars, mean):
     alpha, gain = pars
     return mean*(1./gain - mean*alpha)
 
+
 def residuals(pars, mean, var):
     "Residuals function for least-squares fit of PTC curve."
     return (var - ptc_func(pars, mean))/np.sqrt(var)
+
 
 class FlatPairStats(object):
     def __init__(self, fmean, fvar):
         self.flat_mean = fmean
         self.flat_var = fvar
+
 
 def flat_pair_stats(ccd1, ccd2, amp, mask_files=(), bias_frame=None):
     if ccd1.md.get('EXPTIME') != ccd2.md.get('EXPTIME'):
@@ -68,10 +80,12 @@ def flat_pair_stats(ccd1, ccd2, amp, mask_files=(), bias_frame=None):
     # Mean and variance calculations that account for masks (via
     # ccd1.stat_ctrl, which is the same for both MaskedImages).
     #
-    mean = lambda im: afwMath.makeStatistics(im, afwMath.MEAN,
-                                             ccd1.stat_ctrl).getValue()
-    var = lambda im: afwMath.makeStatistics(im, afwMath.VARIANCE,
-                                            ccd1.stat_ctrl).getValue()
+
+    def mean(im): return afwMath.makeStatistics(im, afwMath.MEAN,
+                                                ccd1.stat_ctrl).getValue()
+
+    def var(im): return afwMath.makeStatistics(im, afwMath.VARIANCE,
+                                               ccd1.stat_ctrl).getValue()
     #
     # Extract imaging region for segments of both CCDs.
     #
@@ -99,13 +113,16 @@ def flat_pair_stats(ccd1, ccd2, amp, mask_files=(), bias_frame=None):
 
     return FlatPairStats(fmean, fvar)
 
+
 class PtcConfig(pexConfig.Config):
     """Configuration for ptc task"""
     output_dir = pexConfig.Field("Output directory", str, default='.')
     eotest_results_file = pexConfig.Field("EO test results filename",
                                           str, default=None)
-    max_frac_offset = pexConfig.Field("maximum fraction offset from median gain curve to omit points from PTC fit.", float, default=0.2)
+    max_frac_offset = pexConfig.Field(
+        "maximum fraction offset from median gain curve to omit points from PTC fit.", float, default=0.2)
     verbose = pexConfig.Field("Turn verbosity on", bool, default=True)
+
 
 class PtcTask(pipeBase.Task):
     """Task to compute photon transfer curve from flat pair dataset"""
@@ -181,8 +198,8 @@ class PtcTask(pipeBase.Task):
                 ptc_gain = pars[1]
                 ptc_error = np.sqrt(cov[1][1])
             except Exception as eobj:
-                print "Exception caught while fitting PTC:"
-                print str(eobj)
+                print("Exception caught while fitting PTC:")
+                print(str(eobj))
                 ptc_gain = 0
                 ptc_error = -1
             # Write gain and error to EO test results file.

@@ -4,21 +4,28 @@ segment.
 
 @author J. Chiang <jchiang@slac.stanford.edu>
 """
+from __future__ import print_function
+from __future__ import absolute_import
+from builtins import zip
+from builtins import range
 import numpy as np
 
 import lsst.afw.image as afwImage
 import lsst.afw.math as afwMath
-from MaskedCCD import MaskedCCD
+from .MaskedCCD import MaskedCCD
 import lsst.eotest.image_utils as imutils
 
+
 class NoiseDistributions(dict):
-    def __init__(self, amps=range(1, 17)):
+    def __init__(self, amps=list(range(1, 17))):
         super(NoiseDistributions, self).__init__()
         for amp in amps:
             self[amp] = np.array((), dtype=np.float)
+
     def append(self, other):
         for amp in self:
             self[amp] = np.concatenate((self[amp], other[amp]))
+
 
 def noise_samples(raw_image, gain, region_sampler,
                   stat_ctrl=afwMath.StatisticsControl()):
@@ -33,16 +40,18 @@ def noise_samples(raw_image, gain, region_sampler,
         samples.append(stdev*gain)
     return np.array(samples)
 
+
 def noise_dists(imfile, gains, sampler, mask_files=()):
     if imfile is None:
         return dict([(amp, np.zeros(len(sampler.xarr), dtype=np.float))
                      for amp in imutils.allAmps()])
     ccd = MaskedCCD(imfile, mask_files=mask_files)
-    my_noise_dists = NoiseDistributions(amps=ccd.keys())
+    my_noise_dists = NoiseDistributions(amps=list(ccd.keys()))
     for amp in ccd:
         my_noise_dists[amp] = noise_samples(ccd[amp], gains[amp], sampler,
                                             ccd.stat_ctrl)
     return my_noise_dists
+
 
 if __name__ == '__main__':
     from simulation.sim_tools import SegmentExposure, writeFits
@@ -85,4 +94,4 @@ if __name__ == '__main__':
     #
     for amp in Ntot:
         Nread = np.sqrt(Ntot[amp]*Ntot[amp] - Nsys[amp]*Nsys[amp])
-        print imutils.median(Nread), imutils.stdev(Nread)
+        print(imutils.median(Nread), imutils.stdev(Nread))

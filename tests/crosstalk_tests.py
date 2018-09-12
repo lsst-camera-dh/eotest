@@ -10,8 +10,10 @@ from lsst.eotest.sensor import MaskedCCD
 import lsst.eotest.sensor.sim_tools as sim_tools
 import lsst.eotest.sensor.crosstalk as crosstalk
 
+
 class CrosstalkTestCase(unittest.TestCase):
     """Test case for crosstalk code."""
+
     def setUp(self):
         self.xtalk_file = 'xtalk_test.fits'
         self.aggressor = 6
@@ -21,8 +23,10 @@ class CrosstalkTestCase(unittest.TestCase):
         ccd = generate_crosstalk_frame(self.aggressor, dn, x, y, radius,
                                        xtalk_frac=self.xtalk_frac)
         ccd.writeto(self.xtalk_file)
+
     def tearDown(self):
         os.remove(self.xtalk_file)
+
     def test_detector_crosstalk(self):
         ccd = MaskedCCD(self.xtalk_file)
         ratios = crosstalk.detector_crosstalk(ccd, self.aggressor)
@@ -30,6 +34,7 @@ class CrosstalkTestCase(unittest.TestCase):
             if amp != self.aggressor:
                 self.assertTrue(abs(ratios[amp][0] - self.xtalk_frac[amp])
                                 < ratios[amp][1])
+
 
 class CrosstalkMatrixTestCase(unittest.TestCase):
     def setUp(self):
@@ -42,11 +47,13 @@ class CrosstalkMatrixTestCase(unittest.TestCase):
             ccd = generate_crosstalk_frame(agg, 2000, 250, 250, 20,
                                            xtalk_frac=xtalk_frac)
             ccd.writeto(self.xtalk_files[-1])
+
     def tearDown(self):
         for item in self.xtalk_files:
             os.remove(item)
         os.remove(self.matrix_text_output)
         os.remove(self.matrix_fits_output)
+
     def test_CrosstalkMatrix(self):
         det_xtalk = crosstalk.make_crosstalk_matrix(self.xtalk_files,
                                                     verbose=False)
@@ -61,6 +68,7 @@ class CrosstalkMatrixTestCase(unittest.TestCase):
         diff = det_xtalk - det_xtalk3
         self.assertTrue(max([abs(x) for x in diff.matrix.flat]) < 1e-4)
 
+
 def generate_crosstalk_frame(aggressor, dn, x, y, radius,
                              xtalk_frac=None, nom_frac=0.1):
     if xtalk_frac is None:
@@ -74,6 +82,7 @@ def generate_crosstalk_frame(aggressor, dn, x, y, radius,
         else:
             ccd.segments[amp].add_spot_image(dn*xtalk_frac[amp], x, y, radius)
     return ccd
+
 
 if __name__ == '__main__':
     unittest.main()

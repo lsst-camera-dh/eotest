@@ -3,6 +3,9 @@ Code to perform raft-level mosaicking from single sensor frames
 compliant with LCA-13501.
 """
 from __future__ import absolute_import, print_function
+from builtins import zip
+from builtins import range
+from builtins import object
 import os
 import copy
 from collections import defaultdict
@@ -16,10 +19,12 @@ from lsst.eotest.sensor.EOTestPlots import cmap_range
 
 __all__ = ['RaftMosaic']
 
+
 class RaftMosaic(object):
     """
     Raft level mosaic of individual CCDs.
     """
+
     def __init__(self, fits_files, gains=None, bias_subtract=True,
                  nx=12700, ny=12700, nx_segments=8, ny_segments=2,
                  segment_processor=None):
@@ -51,8 +56,8 @@ class RaftMosaic(object):
             then set do the standard bias subtraction and gain correction.
         """
         self.fits_files = fits_files
-        self.raft_name = fits.open(fits_files.values()[0])[0].header['RAFTNAME']
-        self.wl = fits.open(fits_files.values()[0])[0].header['MONOWL']
+        self.raft_name = fits.open(list(fits_files.values())[0])[0].header['RAFTNAME']
+        self.wl = fits.open(list(fits_files.values())[0])[0].header['MONOWL']
         self.image_array = np.zeros((nx, ny), dtype=np.float32)
         self.nx = nx
         self.ny = ny
@@ -64,7 +69,7 @@ class RaftMosaic(object):
             # Assume unit gain for all amplifiers.
             unit_gains = dict([(i, 1) for i in range(1, 17)])
             gains = dict([(slot, unit_gains) for slot in fits_files])
-        for slot, filename in fits_files.items():
+        for slot, filename in list(fits_files.items()):
             print("processing", os.path.basename(filename))
             ccd = sensorTest.MaskedCCD(filename)
             hdu_list = fits.open(filename)
@@ -166,7 +171,7 @@ class RaftMosaic(object):
                         labelbottom='off', labelleft='off')
         # Label segments by sensor bay and segment number.
         for slot in self.fits_files:
-            seg_coords = self._amp_coords[slot].values()[-8]
+            seg_coords = list(self._amp_coords[slot].values())[-8]
             xmin, xmax, ymin, ymax = seg_coords
             xx = float(xmax + xmin)/2./float(self.nx)
             if flipx:
@@ -176,7 +181,7 @@ class RaftMosaic(object):
                          (xx, yy), xycoords='axes fraction',
                          size='x-small', horizontalalignment='center',
                          verticalalignment='center', color=textcolor)
-            for amp, seg_coords in self._amp_coords[slot].items():
+            for amp, seg_coords in list(self._amp_coords[slot].items()):
                 xmin, xmax, ymin, ymax = seg_coords
                 xx = float(xmax + xmin)/2./float(self.nx)
                 if flipx:

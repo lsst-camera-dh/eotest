@@ -1,5 +1,7 @@
+from builtins import range
 import numpy as np
 import scipy.special
+
 
 def cte_matrix(npix, cti, ntransfers=20, nexact=30):
     """

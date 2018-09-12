@@ -3,6 +3,8 @@
 
 @author J. Chiang <jchiang@slac.stanford.edu>
 """
+from builtins import range
+from builtins import object
 import os
 import unittest
 import numpy as np
@@ -11,11 +13,14 @@ from lsst.eotest.sensor import MaskedCCD, AmplifierGeometry
 import lsst.eotest.sensor.sim_tools as sim_tools
 import lsst.afw.image as afwImage
 
+
 class BiasFunc(object):
     def __init__(self, slope, intercept):
         self.pars = slope, intercept
+
     def __call__(self, x):
         return x*self.pars[0] + self.pars[1]
+
 
 class BiasHandlingTestCase(unittest.TestCase):
     bias_slope = 1e-3
@@ -23,6 +28,7 @@ class BiasHandlingTestCase(unittest.TestCase):
     exptime = 1
     gain = 1
     image_file = 'test_image.fits'
+
     @classmethod
     def setUpClass(cls):
         cls.amp_geom = AmplifierGeometry()
@@ -32,15 +38,17 @@ class BiasHandlingTestCase(unittest.TestCase):
         yvals = np.arange(0, ny, dtype=np.float)
         bias_func = BiasFunc(cls.bias_slope, cls.bias_intercept)
         for x in range(nx):
-            imarr[:,x] += bias_func(yvals)
+            imarr[:, x] += bias_func(yvals)
         ccd = sim_tools.CCD(exptime=cls.exptime, gain=cls.gain,
                             geometry=cls.amp_geom)
         for amp in ccd.segments:
             ccd.segments[amp].image += cls.bias_image
         ccd.writeto(cls.image_file)
+
     @classmethod
     def tearDownClass(cls):
         os.remove(cls.image_file)
+
     def test_bias_func(self):
         bias_func = BiasFunc(self.bias_slope, self.bias_intercept)
         ccd = MaskedCCD(self.image_file)
@@ -57,14 +65,16 @@ class BiasHandlingTestCase(unittest.TestCase):
                                          fit_order=-1)
             for y in range(2022):
                 self.assertAlmostEqual(bf_i(y), row_bias(y), places=6)
+
     def test_bias_image(self):
         ccd = MaskedCCD(self.image_file)
         for amp in ccd:
             my_bias_image = imutils.bias_image(ccd[amp],
                                                self.amp_geom.serial_overscan)
             fracdiff = ((self.bias_image.getArray() - my_bias_image.getArray())
-                        /self.bias_image.getArray())
+                        / self.bias_image.getArray())
             self.assertTrue(max(np.abs(fracdiff.flat)) < 1e-6)
+
     def test_unbias_and_trim(self):
         ccd = MaskedCCD(self.image_file)
         for amp in ccd:
@@ -80,6 +90,7 @@ class BiasHandlingTestCase(unittest.TestCase):
             imarr = image.getImage().getArray()
             self.assertTrue(max(np.abs(imarr.flat)) < 1e-6)
 
+
 class FitsMedianTestCase(unittest.TestCase):
     def setUp(self):
         self.values = (0, 1, 2, 3, 4)
@@ -90,14 +101,17 @@ class FitsMedianTestCase(unittest.TestCase):
             for amp in ccd.segments:
                 ccd.segments[amp].image += i
             ccd.writeto(self.files[-1])
+
     def tearDown(self):
         for item in self.files:
             os.remove(item)
+
     def test_fits_median(self):
         median_image = imutils.fits_median(self.files, hdu=1, fix=True)
         imarr = median_image.getArray()
         for x in imarr.flat:
             self.assertEqual(self.values[len(self.values)/2], x)
+
 
 if __name__ == '__main__':
     unittest.main()

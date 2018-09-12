@@ -12,6 +12,7 @@ from lsst.eotest.sensor.rolloff_mask import rolloff_mask
 from lsst.eotest.sensor import AmplifierGeometry, makeAmplifierGeometry, amp_loc
 import lsst.eotest.sensor.sim_tools as sim_tools
 
+
 class _FitsFile(dict):
     def __init__(self, infile):
         dict.__init__(self)
@@ -20,8 +21,10 @@ class _FitsFile(dict):
         for amp in amps:
             self[amp] = foo[amp].data
 
+
 class rolloff_mask_TestCase(unittest.TestCase):
     """Test case for rolloff_mask function."""
+
     def setUp(self):
         self.input_file = 'input_image.fits'
         self.mask_file = 'rolloff_defects_mask.fits'
@@ -31,10 +34,12 @@ class rolloff_mask_TestCase(unittest.TestCase):
         self.signal = 10
         ccd = sim_tools.CCD(geometry=AmplifierGeometry(amp_loc=amp_loc['E2V']))
         ccd.writeto(self.input_file, bitpix=16)
+
     def tearDown(self):
         os.remove(self.mask_file)
         os.remove(self.image_file)
         os.remove(self.input_file)
+
     def test_rolloff_mask(self):
         amp_geom = makeAmplifierGeometry(self.input_file)
         rolloff_mask(self.input_file, self.mask_file,
@@ -64,6 +69,7 @@ class rolloff_mask_TestCase(unittest.TestCase):
             #
             indx = np.where(mask[amp] != 0)
             self.assertTrue(min(image[amp][indx].flat) >= self.signal)
+
 
 if __name__ == '__main__':
     unittest.main()

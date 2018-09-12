@@ -3,20 +3,22 @@
 
 @author J. Chiang <jchiang@slac.stanford.edu>
 """
+from __future__ import absolute_import
 import os
 import numpy as np
 import astropy.io.fits as fits
 from lsst.eotest.fitsTools import fitsWriteto
 import lsst.eotest.image_utils as imutils
-from AmplifierGeometry import makeAmplifierGeometry
-from EOTestResults import EOTestResults
-from eperTask import EPERTask
-from MaskedCCD import MaskedCCD
+from .AmplifierGeometry import makeAmplifierGeometry
+from .EOTestResults import EOTestResults
+from .eperTask import EPERTask
+from .MaskedCCD import MaskedCCD
 
 import lsst.afw.image as afwImage
 import lsst.afw.math as afwMath
 import lsst.pex.config as pexConfig
 import lsst.pipe.base as pipeBase
+
 
 def bias_subtracted_image(image, bias_image, overscan, fit_order=1,
                           statistic=np.median):
@@ -31,6 +33,7 @@ def bias_subtracted_image(image, bias_image, overscan, fit_order=1,
     # Subtract remaining strucutured bias.
     im_out -= bias_sub
     return im_out
+
 
 def superflat(files, bias_frame=None, outfile='superflat.fits', bitpix=-32,
               bias_subtract=True):
@@ -62,6 +65,7 @@ def superflat(files, bias_frame=None, outfile='superflat.fits', bitpix=-32,
     fitsWriteto(output, outfile, clobber=True)
     return outfile
 
+
 class CteConfig(pexConfig.Config):
     """Configuration for charge transfer efficiency task"""
     overscans = pexConfig.Field("Number of overscan rows/columns to use",
@@ -70,6 +74,7 @@ class CteConfig(pexConfig.Config):
     eotest_results_file = pexConfig.Field('EO test results filename',
                                           str, default=None)
     verbose = pexConfig.Field("Turn verbosity on", bool, default=True)
+
 
 class CteTask(pipeBase.Task):
     """Charge transfer efficiency task"""
@@ -126,14 +131,14 @@ class CteTask(pipeBase.Task):
             self.log.info('amp  parallel_cti  serial_cti')
         for amp in all_amps:
             line = '%i  %s  %s' % (amp, pcti[amp], scti[amp])
-            results.add_seg_result(amp, 'CTI_%s_SERIAL' % flux_level.upper(), 
+            results.add_seg_result(amp, 'CTI_%s_SERIAL' % flux_level.upper(),
                                    scti[amp].value)
             results.add_seg_result(amp, 'CTI_%s_PARALLEL' % flux_level.upper(),
                                    pcti[amp].value)
             results.add_seg_result(amp,
-                                   'CTI_%s_SERIAL_ERROR' % flux_level.upper(), 
+                                   'CTI_%s_SERIAL_ERROR' % flux_level.upper(),
                                    scti[amp].error)
-            results.add_seg_result(amp, 
+            results.add_seg_result(amp,
                                    'CTI_%s_PARALLEL_ERROR' % flux_level.upper(),
                                    pcti[amp].error)
             if self.config.verbose:

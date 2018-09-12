@@ -5,18 +5,23 @@ noise contribution from the electronics, must be provided.
 
 @author J. Chiang <jchiang@slac.stanford.edu>
 """
+from __future__ import absolute_import
+from builtins import str
+from builtins import zip
+from builtins import range
 import os
 import numpy as np
 import astropy.io.fits as fits
 from lsst.eotest.fitsTools import fitsTableFactory, fitsWriteto
 import lsst.eotest.image_utils as imutils
-from MaskedCCD import MaskedCCD
-from EOTestResults import EOTestResults
-from read_noise import noise_dists, NoiseDistributions
+from .MaskedCCD import MaskedCCD
+from .EOTestResults import EOTestResults
+from .read_noise import noise_dists, NoiseDistributions
 import lsst.afw.geom as afwGeom
 
 import lsst.pex.config as pexConfig
 import lsst.pipe.base as pipeBase
+
 
 def _write_read_noise_dists(outfile, Ntot, Nsys, gains, bias, sysnoise):
     output = fits.HDUList()
@@ -38,6 +43,7 @@ def _write_read_noise_dists(outfile, Ntot, Nsys, gains, bias, sysnoise):
             imutils.median(sigsys)
     fitsWriteto(output, outfile, clobber=True)
 
+
 class ReadNoiseConfig(pexConfig.Config):
     """Configuration for read noise task"""
     dx = pexConfig.Field("Subregion size in pixels along x-direction",
@@ -54,6 +60,7 @@ class ReadNoiseConfig(pexConfig.Config):
     eotest_results_file = pexConfig.Field("EO test results filename",
                                           str, default=None)
     verbose = pexConfig.Field("Turn verbosity on", bool, default=True)
+
 
 class ReadNoiseTask(pipeBase.Task):
     """Task to estimate sensor read noise."""
@@ -72,7 +79,7 @@ class ReadNoiseTask(pipeBase.Task):
         Nsys = NoiseDistributions(amps=all_amps)
         if system_noise_files is None:
             system_noise_files = [None]*len(bias_files)
-        for i, bias, sysnoise in zip(range(len(bias_files)), bias_files,
+        for i, bias, sysnoise in zip(list(range(len(bias_files))), bias_files,
                                      system_noise_files):
             outfile = "%s_read_noise_%03i.fits" % (sensor_id, i)
             outfile = os.path.join(self.config.output_dir, outfile)

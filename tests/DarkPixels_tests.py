@@ -10,8 +10,10 @@ import lsst.eotest.image_utils as imutils
 from lsst.eotest.sensor import MaskedCCD, DarkPixels
 import lsst.eotest.sensor.sim_tools as sim_tools
 
+
 class DarkPixelsTestCase(unittest.TestCase):
     """Test case for DarkPixels code."""
+
     def setUp(self):
         self.sflat_file = 'dark_pixels_test.fits'
         self.emin = 10
@@ -34,8 +36,10 @@ class DarkPixelsTestCase(unittest.TestCase):
         self.pixels = self.ccd.generate_bright_pix(self.npix)
         self.ccd.set_dark_pix(self.pixels, self.frac_level)
         self.ccd.writeto(self.sflat_file)
+
     def tearDown(self):
         os.remove(self.sflat_file)
+
     def test_find_pixel_defects(self):
         ccd = MaskedCCD(self.sflat_file)
         for amp in ccd:
@@ -47,8 +51,10 @@ class DarkPixelsTestCase(unittest.TestCase):
             pixels.sort()
             self.assertEqual(pixels, results[0])
 
+
 class DarkColumnsTestCase(unittest.TestCase):
     """Test case for DarkPixels code."""
+
     def setUp(self):
         self.sflat_file = 'dark_columns_test.fits'
         self.emin = 10
@@ -69,8 +75,10 @@ class DarkColumnsTestCase(unittest.TestCase):
         self.columns = self.ccd.generate_bright_cols(self.ncols)
         self.ccd.set_dark_cols(self.columns, self.frac_level)
         self.ccd.writeto(self.sflat_file)
+
     def tearDown(self):
         os.remove(self.sflat_file)
+
     def test_find_column_defects(self):
         ccd = MaskedCCD(self.sflat_file)
         for amp in ccd:
@@ -80,6 +88,7 @@ class DarkColumnsTestCase(unittest.TestCase):
             self.assertEqual(len(columns), self.ncols)
             self.assertEqual(len(results[1]), self.ncols)
             self.assertEqual(columns, results[1])
+
 
 if __name__ == '__main__':
     unittest.main()
