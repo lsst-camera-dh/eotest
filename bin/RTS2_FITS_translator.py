@@ -25,7 +25,7 @@ class RTS2_FITS_translator(object):
                                                  amp_loc=amp_loc)
         self._sequence_number = -1
 
-    def __call__(self, infile, outfile, clobber=True):
+    def __call__(self, infile, outfile, overwrite=True):
         if self.verbose:
             print("processing", infile)
 
@@ -64,7 +64,7 @@ class RTS2_FITS_translator(object):
         except KeyError:
             self._set_bnl_mondiode_keyword_value()
 
-        fitsWriteto(self.output, outfile, clobber=clobber, checksum=True,
+        fitsWriteto(self.output, outfile, overwrite=overwrite, checksum=True,
                     output_verify='fix')
 
     def _seqnum(self, infile):

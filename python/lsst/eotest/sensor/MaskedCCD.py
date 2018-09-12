@@ -155,7 +155,7 @@ class MaskedCCD(dict):
         return mi
 
 
-def add_mask_files(mask_files, outfile, clobber=True):
+def add_mask_files(mask_files, outfile, overwrite=True):
     amp_list = imutils.allAmps(mask_files[0])
     masks = dict([(amp, afwImage.Mask(mask_files[0], imutils.dm_hdu(amp)))
                   for amp in amp_list])
@@ -165,7 +165,7 @@ def add_mask_files(mask_files, outfile, clobber=True):
     output = fits.HDUList()
     output.append(fits.PrimaryHDU())
     output[0].header['MASKTYPE'] = 'SUMMED_MASKS'
-    fitsWriteto(output, outfile, clobber=clobber)
+    fitsWriteto(output, outfile, overwrite=overwrite)
     for amp in masks:
         md = dafBase.PropertySet()
         md.set('EXTNAME', 'SEGMENT%s' % imutils.channelIds[amp])

@@ -46,10 +46,10 @@ class ParfileTestCase(unittest.TestCase):
         pars['ft1file'] = 'ft1_file.fits'
         pars.write()
         foo = Parfile('foo.pars')
-        self.assertEquals(foo['ft1file'], 'ft1_file.fits')
-        self.assertEquals(foo['ft2file'], 'ft2.fits')
-        self.assertEquals(foo['ra'], 83.57)
-        self.assertEquals(foo['dec'], 22.01)
+        self.assertEqual(foo['ft1file'], 'ft1_file.fits')
+        self.assertEqual(foo['ft2file'], 'ft2.fits')
+        self.assertEqual(foo['ra'], 83.57)
+        self.assertEqual(foo['dec'], 22.01)
 
     def testWriteMethod(self):
         outfile = self.write_test_file
@@ -58,9 +58,9 @@ class ParfileTestCase(unittest.TestCase):
         pars.write(outfile)
         bar = Parfile(infile)
         foo = Parfile(outfile)
-        self.assertEquals(foo, bar)
+        self.assertEqual(foo, bar)
         foo['ft1file'] = 'ft2.fits'
-        self.assertNotEquals(foo, bar)
+        self.assertNotEqual(foo, bar)
 
 
 if __name__ == '__main__':

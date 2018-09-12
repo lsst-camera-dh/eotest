@@ -41,7 +41,7 @@ class Traps(dict):
                 trap_size = max(a0, a1)*gains[amp]/cycles
                 self[amp].append((ix, iy, trap_size, a0, a1))
 
-    def write(self, outfile, clobber=True):
+    def write(self, outfile, overwrite=True):
         """
         Write the results as a FITS binary table.
         """
@@ -69,7 +69,7 @@ class Traps(dict):
                 output['TRAPS'].data[row]['A0'] = a0
                 output['TRAPS'].data[row]['A1'] = a1
                 row += 1
-        fitsWriteto(output, outfile, clobber=True)
+        fitsWriteto(output, outfile, overwrite=overwrite)
 
 
 if __name__ == '__main__':

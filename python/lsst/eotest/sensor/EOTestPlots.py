@@ -153,7 +153,7 @@ def plot_flat(infile, nsig=3, cmap=pylab.cm.hot, win=None, subplot=(1, 1, 1),
         hdulist = fits.HDUList()
         hdulist.append(fits.PrimaryHDU())
         hdulist[0].data = mosaic[::-1, :]
-        hdulist.writeto(outfile, clobber=True)
+        hdulist.writeto(outfile, overwrite=True)
     #
     # Set the color map to extend over the range median +/- stdev(clipped)
     # of the pixel values.

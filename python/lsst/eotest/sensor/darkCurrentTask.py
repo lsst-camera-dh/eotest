@@ -111,6 +111,6 @@ class DarkCurrentTask(pipeBase.Task):
         for amp in ccd:
             output[0].header['DARK95%s'%imutils.channelIds[amp]] = dark95s[amp]
             results.add_seg_result(amp, 'DARK_CURRENT_95', dark95s[amp])
-        fitsWriteto(output, medfile, clobber=True, checksum=True)
-        results.write(clobber=True)
+        fitsWriteto(output, medfile, overwrite=True, checksum=True)
+        results.write(overwrite=True)
         return dark_curr_pixels_per_amp, dark95s

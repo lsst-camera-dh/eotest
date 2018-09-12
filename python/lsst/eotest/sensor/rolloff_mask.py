@@ -69,11 +69,13 @@ def rolloff_mask(infile, outfile,
     # can append only image extensions (and not write to the PHDU).
     #
     hdulist = fits.HDUList()
-    hdulist.append(fits.open(infile)[0])
+    hdulist.append(fits.PrimaryHDU())
+    with fits.open(infile) as fd:
+        hdulist[0].header.update(fd[0].header)
     # Use the mask_plane value ('ROLLOFF_DEFECTS') to distinguish
     # this file from other mask files.
     hdulist[0].header['MASKTYPE'] = mask_plane
-    fitsWriteto(hdulist, outfile, clobber=True)
+    fitsWriteto(hdulist, outfile, overwrite=True)
     #
     # Amplifiers 1 (AMP10), 8 (AMP17), 9 (AMP07) and 16 (AMP00) are
     # along the perimeter.

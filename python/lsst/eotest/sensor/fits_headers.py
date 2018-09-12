@@ -47,24 +47,25 @@ def fits_headers(template=template_file):
     """
     headers = OrderedDict()
     hdr = fits.header.Header()
-    for line in open(template):
-        # Skip comments and whitespace lines.
-        if line[0] == '#' or len(line.strip()) == 0:
-            continue
-        if line[:3] == 'END':
-            if len(headers) == 0:
-                # First hdu must be the Primary HDU.
-                headers['PRIMARY'] = hdr
-            else:
-                # Subsequent ones must be extensions with an EXTNAME
-                headers[hdr['EXTNAME']] = hdr
-            hdr = fits.header.Header()
-            continue
-        data = line.split('=')
-        key, value = data[0].strip(), '='.join(data[1:]).strip()
-        data = value.split('/')
-        value, comment = data[0].strip(), '/'.join(data[1:]).strip()
-        hdr[key] = (_cast(value), comment)
+    with open(template) as fd:
+        for line in fd:
+            # Skip comments and whitespace lines.
+            if line[0] == '#' or len(line.strip()) == 0:
+                continue
+            if line[:3] == 'END':
+                if len(headers) == 0:
+                    # First hdu must be the Primary HDU.
+                    headers['PRIMARY'] = hdr
+                else:
+                    # Subsequent ones must be extensions with an EXTNAME
+                    headers[hdr['EXTNAME']] = hdr
+                hdr = fits.header.Header()
+                continue
+            data = line.split('=')
+            key, value = data[0].strip(), '='.join(data[1:]).strip()
+            data = value.split('/')
+            value, comment = data[0].strip(), '/'.join(data[1:]).strip()
+            hdr[key] = (_cast(value), comment)
     return headers
 
 

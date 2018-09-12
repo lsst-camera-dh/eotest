@@ -46,24 +46,24 @@ class EstimatorTestCase(unittest.TestCase):
 
     def test_addition(self):
         result = self.est1 + self.est2
-        self.assertEquals(result.value, self.est1.value + self.est2.value)
-        self.assertEquals(result.error, np.sqrt(self.est1.error**2 +
-                                                self.est2.error**2))
+        self.assertEqual(result.value, self.est1.value + self.est2.value)
+        self.assertEqual(result.error, np.sqrt(self.est1.error**2 +
+                                               self.est2.error**2))
         foo = sum([self.est1, self.est2])
-        self.assertEquals(foo.value, result.value)
-        self.assertEquals(foo.error, result.error)
+        self.assertEqual(foo.value, result.value)
+        self.assertEqual(foo.error, result.error)
 
     def test_subtraction(self):
         result = self.est1 - self.est2
-        self.assertEquals(result.value, self.est1.value - self.est2.value)
-        self.assertEquals(result.error, np.sqrt(self.est1.error**2 +
-                                                self.est2.error**2))
+        self.assertEqual(result.value, self.est1.value - self.est2.value)
+        self.assertEqual(result.error, np.sqrt(self.est1.error**2 +
+                                               self.est2.error**2))
 
     def test_rsubtraction(self):
         my_term = 10.
         result = my_term - self.est1
-        self.assertEquals(result.value, my_term - self.est1.value)
-        self.assertEquals(result.error, self.est1.error)
+        self.assertEqual(result.value, my_term - self.est1.value)
+        self.assertEqual(result.error, self.est1.error)
 
     def test_multiplication(self):
         my_value = self.est1.value*self.est2.value
@@ -71,8 +71,8 @@ class EstimatorTestCase(unittest.TestCase):
             np.sqrt((self.est1.error/self.est1.value)**2 +
                     (self.est2.error/self.est2.value)**2)
         result = self.est1*self.est2
-        self.assertEquals(result.value, my_value)
-        self.assertEquals(result.error, my_error)
+        self.assertEqual(result.value, my_value)
+        self.assertEqual(result.error, my_error)
 
     def test_division(self):
         my_value = self.est1.value/self.est2.value
@@ -80,8 +80,8 @@ class EstimatorTestCase(unittest.TestCase):
             np.sqrt((self.est1.error/self.est1.value)**2 +
                     (self.est2.error/self.est2.value)**2)
         result = self.est1/self.est2
-        self.assertEquals(result.value, my_value)
-        self.assertEquals(result.error, my_error)
+        self.assertEqual(result.value, my_value)
+        self.assertEqual(result.error, my_error)
 
     def test_equation(self):
         const = 5

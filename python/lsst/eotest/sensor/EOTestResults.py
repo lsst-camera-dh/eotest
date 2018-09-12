@@ -29,6 +29,9 @@ class EOTestResults(object):
             self.output = fits.open(infile)
             self.colnames = self.output[self.extname].data.names
 
+    def __del__(self):
+        self.output.close()
+
     def _createFitsObject(self):
         self.output = fits.HDUList()
         self.output.append(fits.PrimaryHDU())
@@ -87,13 +90,13 @@ class EOTestResults(object):
         """
         self.output[0].header[keyword] = value
 
-    def write(self, outfile=None, clobber=True):
+    def write(self, outfile=None, overwrite=True):
         """
         Write or update the output file.
         """
         if outfile is None:
             outfile = self.infile
-        fitsWriteto(self.output, outfile, clobber=clobber)
+        fitsWriteto(self.output, outfile, overwrite=overwrite)
 
 
 if __name__ == '__main__':

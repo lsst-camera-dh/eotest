@@ -64,7 +64,7 @@ class QE_Data(object):
         return images
 
     def calculate_medians(self, infiles, outfile, mask_files=(),
-                          bias_frame=None, clobber=False,
+                          bias_frame=None, overwrite=False,
                           correction_image=None):
         files = sorted([x for x in infiles])
         self.medians = dict([(amp, []) for amp in imutils.allAmps(files[0])])
@@ -214,7 +214,7 @@ class QE_Data(object):
                 band_qe[band] = mean_value
         return band_qe
 
-    def write_fits_tables(self, outfile, clobber=True):
+    def write_fits_tables(self, outfile, overwrite=True):
         amps = list(self.qe.keys())
         colnames = ['WAVELENGTH']
         colnames.extend(['AMP%02i' % i for i in amps])
@@ -252,7 +252,7 @@ class QE_Data(object):
                                                       units, columns)))))
         HDUList[-1].name = 'QE_BANDS'
         HDUList[0].header['NAMPS'] = len(amps)
-        fitsWriteto(HDUList, outfile, clobber=clobber)
+        fitsWriteto(HDUList, outfile, overwrite=overwrite)
 
     def plot_curves(self, outfile=None, interactive=False):
         if interactive:

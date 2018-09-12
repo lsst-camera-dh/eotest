@@ -26,22 +26,23 @@ class Parfile(dict):
             pass
 
     def _readfile(self):
-        for line in open(self.filename):
-            if line.find('#') == 0:
-                continue
-            if line.find(" #") != -1 or line.find("\t#") != -1:
-                data = '#'.join(line.split('#')[:-1])
-            else:
-                data = line
-            key, value = [x.strip() for x in data.split("=")]
-            self._addkey(key)
-            try:
+        with open(self.filename) as fd:
+            for line in fd:
+                if line.find('#') == 0:
+                    continue
+                if line.find(" #") != -1 or line.find("\t#") != -1:
+                    data = '#'.join(line.split('#')[:-1])
+                else:
+                    data = line
+                key, value = [x.strip() for x in data.split("=")]
+                self._addkey(key)
                 try:
-                    self[key.strip()] = int(value.strip())
-                except:
-                    self[key.strip()] = float(value.strip())
-            except ValueError:
-                self[key.strip()] = value.strip().strip("'").strip('"')
+                    try:
+                        self[key.strip()] = int(value.strip())
+                    except:
+                        self[key.strip()] = float(value.strip())
+                except ValueError:
+                    self[key.strip()] = value.strip().strip("'").strip('"')
 
     def _addkey(self, key):
         if self.keylist.count(key) == 0:
@@ -61,13 +62,12 @@ class Parfile(dict):
         """
         if outfile is not None:
             self.filename = os.path.abspath(outfile)
-        output = open(self.filename, 'w')
-        for key in self.keylist:
-            try:
-                output.write('%s = %s\n' % (key, self[key]))
-            except TypeError:
-                output.write('%s = %s\n' % (key, repr(self[key])))
-        output.close()
+        with open(self.filename, 'w') as output:
+            for key in self.keylist:
+                try:
+                    output.write('%s = %s\n' % (key, self[key]))
+                except TypeError:
+                    output.write('%s = %s\n' % (key, repr(self[key])))
 
     def update(self, pars):
         """

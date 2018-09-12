@@ -330,7 +330,7 @@ class PsfGaussFit(object):
 
     def write_results(self, outfile='fe55_psf_params.fits'):
         self.output[0].header['NAMPS'] = len(self.amp_set)
-        fitsWriteto(self.output, outfile, clobber=True, checksum=True)
+        fitsWriteto(self.output, outfile, overwrite=True, checksum=True)
 
 
 if __name__ == '__main__':

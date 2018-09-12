@@ -84,7 +84,7 @@ class DarkPixelsTask(pipeBase.Task):
         if self.config.verbose:
             self.log.info("Total dark pixels: %i" % total_dark_pixels)
             self.log.info("Total dark columns: %i" % total_dark_columns)
-        results.write(clobber=True)
+        results.write(overwrite=True)
 
         # Generate the mask file based on the pixel and columns.
         mask_file = os.path.join(self.config.output_dir,

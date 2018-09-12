@@ -4,6 +4,7 @@
 @author J. Chiang <jchiang@slac.stanford.edu>
 """
 import os
+import copy
 import unittest
 import numpy as np
 import astropy.io.fits as fits
@@ -15,11 +16,11 @@ import lsst.eotest.sensor.sim_tools as sim_tools
 
 class _FitsFile(dict):
     def __init__(self, infile):
-        dict.__init__(self)
-        foo = fits.open(infile)
-        amps = imutils.allAmps(infile)
-        for amp in amps:
-            self[amp] = foo[amp].data
+        super(_FitsFile, self).__init__()
+        with fits.open(infile) as foo:
+            amps = imutils.allAmps(infile)
+            for amp in amps:
+                self[amp] = copy.deepcopy(foo[amp].data)
 
 
 class rolloff_mask_TestCase(unittest.TestCase):

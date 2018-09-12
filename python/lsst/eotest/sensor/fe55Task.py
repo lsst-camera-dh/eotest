@@ -143,6 +143,6 @@ class Fe55Task(pipeBase.Task):
             results.add_seg_result(amp, 'GAIN', gains[amp])
             results.add_seg_result(amp, 'GAIN_ERROR', gain_errors[amp])
             results.add_seg_result(amp, 'PSF_SIGMA', sigma_modes[amp])
-        results.write(clobber=True)
+        results.write(overwrite=True)
 
         return gains

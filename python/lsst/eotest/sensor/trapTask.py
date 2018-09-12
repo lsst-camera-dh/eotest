@@ -51,7 +51,7 @@ class TrapTask(pipeBase.Task):
                          C3_thresh=self.config.C3_thresh,
                          nx=self.config.nx, ny=self.config.ny,
                          edge_rolloff=self.config.edge_rolloff)
-        my_traps.write(outfile, clobber=True)
+        my_traps.write(outfile, overwrite=True)
         results_file = self.config.eotest_results_file
         if results_file is None:
             results_file = os.path.join(self.config.output_dir,
@@ -73,4 +73,4 @@ class TrapTask(pipeBase.Task):
                 self.log.info("%i             %i" % (amp, num_traps))
         mask_file = '%s_traps_mask.fits' % sensor_id
         generate_mask(pocket_pumped_file, mask_file, 'TRAPS', columns=columns)
-        results.write(clobber=True)
+        results.write(overwrite=True)

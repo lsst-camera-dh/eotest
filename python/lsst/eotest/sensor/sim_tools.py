@@ -175,7 +175,7 @@ class CCD(object):
         output[0].header['DATE-OBS'] = obs_time.isot
         output[0].header['DATE'] = obs_time.isot
         output[0].header.set('MJD-OBS', value=float('%.5f' % obs_time.mjd))
-        fitsWriteto(output, outfile, clobber=True, checksum=True)
+        fitsWriteto(output, outfile, overwrite=True, checksum=True)
 
 
 class SegmentExposure(object):
@@ -342,14 +342,14 @@ def fitsFile(ccd_segments):
     return output
 
 
-def writeFits(ccd_segments, outfile, clobber=True):
+def writeFits(ccd_segments, outfile, overwrite=True):
     output = fitsFile(ccd_segments)
     if clobber:
         try:
             os.remove(outfile)
         except OSError:
             pass
-    fitsWriteto(output, outfile, clobber=clobber, checksum=True)
+    fitsWriteto(output, outfile, overwrite=overwrite, checksum=True)
     return outfile
 
 

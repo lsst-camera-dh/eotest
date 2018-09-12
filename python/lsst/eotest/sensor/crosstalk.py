@@ -9,6 +9,7 @@ from builtins import range
 from builtins import object
 import os
 import time
+import copy
 import numpy as np
 import astropy.io.fits as fits
 from lsst.eotest.fitsTools import fitsWriteto
@@ -202,42 +203,42 @@ class CrosstalkMatrix(object):
             self._read_text_matrix()
 
     def _read_fits_matrix(self):
-        self.matrix = fits.open(self.filename)[0].data
+        with fits.open(self.filename) as fd:
+            self.matrix = copy.deepcopy(fd[0].data)
 
     def _read_text_matrix(self):
-        input = open(self.filename, 'r')
         amp = 0
-        for line in input:
-            if line[0] == '#':
-                continue
-            self.matrix[amp] = np.array([float(x) for x
-                                         in line.strip().split()])
-            amp += 1
+        with open(self.filename, 'r') as input_:
+            for line in input_:
+                if line[0] == '#':
+                    continue
+                self.matrix[amp] = np.array([float(x) for x
+                                             in line.strip().split()])
+                amp += 1
 
-    def write_fits(self, outfile=None, clobber=True):
+    def write_fits(self, outfile=None, overwrite=True):
         if outfile is None:
             outfile = self.filename
         else:
             self.filename = outfile
         output = fits.HDUList()
         output.append(fits.PrimaryHDU(data=self.matrix))
-        fitsWriteto(output, outfile, clobber=clobber)
+        fitsWriteto(output, outfile, overwrite=overwrite)
 
     def write(self, outfile=None):
         if outfile is None:
             outfile = self.filename
         else:
             self.filename = outfile
-        output = open(outfile, 'w')
-        output.write('#')
-        for amp in range(1, self.namps+1, 1):
-            output.write('%02i  ' % amp)
-        output.write('\n')
-        for agg in range(self.namps):
-            for victim in range(self.namps):
-                output.write('%12.4e  ' % self.matrix[agg][victim])
+        with open(outfile, 'w') as output:
+            output.write('#')
+            for amp in range(1, self.namps+1, 1):
+                output.write('%02i  ' % amp)
             output.write('\n')
-        output.close()
+            for agg in range(self.namps):
+                for victim in range(self.namps):
+                    output.write('%12.4e  ' % self.matrix[agg][victim])
+                output.write('\n')
 
     def plot_matrix(self, title=None, cmap_range=(0.6, 0.4), precision=3,
                     scale_factor=1e2, fontsize=10, figsize=(12, 6),

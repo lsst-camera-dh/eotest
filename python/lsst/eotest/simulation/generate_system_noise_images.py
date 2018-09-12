@@ -24,7 +24,7 @@ def generate_system_noise_images(nexp, outdir, sensorid, gain=gain,
         output = fitsFile(noise_segs)
         output[0].header['BIASLVL'] = bias_level
         output[0].header['SYSNOISE'] = sys_noise
-        output.writeto(outfile, clobber=True)
+        output.writeto(outfile, overwrite=True)
 
 
 if __name__ == '__main__':

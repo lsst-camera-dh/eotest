@@ -41,7 +41,7 @@ class TaskNamespace(object):
             raise RuntimeError('You must specify a file pattern or file list.')
         return my_files
 
-    def bias_frame(self, outfile, clobber=True):
+    def bias_frame(self, outfile, overwrite=True):
         if (self.args.bias_frame_pattern is None and
                 self.args.bias_frame_list is None):
             return None

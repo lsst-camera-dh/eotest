@@ -129,7 +129,7 @@ class LinearityTask(pipeBase.Task):
                 signal = pair_mean(flat1, flat2, amp)*self.gains[amp]
                 self.output[-1].data.field('AMP%02i_SIGNAL' % amp)[row] = signal
         self.output[0].header['NAMPS'] = len(flat1)
-        fitsWriteto(self.output, outfile, clobber=True)
+        fitsWriteto(self.output, outfile, overwrite=True)
         return outfile
 
 

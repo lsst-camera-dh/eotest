@@ -110,7 +110,7 @@ class FitsMedianTestCase(unittest.TestCase):
         median_image = imutils.fits_median(self.files, hdu=1, fix=True)
         imarr = median_image.getArray()
         for x in imarr.flat:
-            self.assertEqual(self.values[len(self.values)/2], x)
+            self.assertEqual(self.values[len(self.values)//2], x)
 
 
 if __name__ == '__main__':

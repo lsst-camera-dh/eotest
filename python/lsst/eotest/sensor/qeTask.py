@@ -41,7 +41,7 @@ class QeTask(pipeBase.Task):
             qe_data.calculate_medians(qe_files, medians_file,
                                       mask_files=mask_files,
                                       bias_frame=bias_frame,
-                                      clobber=True,
+                                      overwrite=True,
                                       correction_image=correction_image)
 
         qe_data.read_medians(medians_file)

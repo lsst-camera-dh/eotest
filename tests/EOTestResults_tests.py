@@ -17,7 +17,7 @@ class EOTestResultsTestCase(unittest.TestCase):
         self.gains = [ra.normal(0, 1) for x in range(16)]
         for amp in range(1, 17):
             results.add_seg_result(amp, 'GAIN', self.gains[amp-1])
-        results.write(clobber=True)
+        results.write(overwrite=True)
 
     def tearDown(self):
         try:

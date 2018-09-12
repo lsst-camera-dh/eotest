@@ -42,7 +42,7 @@ def translate(infile, test_type, image_type, seqno, time_stamp='000'):
     except OSError:
         pass
     outfile = os.path.join(outdir, outfile)
-    foo.writeto(outfile, clobber=True, checksum=True)
+    foo.writeto(outfile, overwrite=True, checksum=True)
 
 
 def trr_files(x): return sorted(glob.glob(os.path.join('Final_TRR_Data_Set', x)))

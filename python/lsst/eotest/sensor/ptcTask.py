@@ -171,7 +171,7 @@ class PtcTask(pipeBase.Task):
         output.append(fitsTableFactory(fits_cols))
         output[-1].name = 'PTC_STATS'
         output[0].header['NAMPS'] = len(all_amps)
-        fitsWriteto(output, outfile, clobber=True)
+        fitsWriteto(output, outfile, overwrite=True)
 
     def _fit_curves(self, ptc_stats, sensor_id):
         """

@@ -98,24 +98,24 @@ class AmplifierGeometryTestCase(unittest.TestCase):
         os.remove(self.e2v_test_file)
 
     def test_e2v_keywords(self):
-        self.assertEquals(self.e2v.DETSIZE, '[1:4336,1:4044]')
+        self.assertEqual(self.e2v.DETSIZE, '[1:4336,1:4044]')
         for amp in range(1, 17):
             for key in ('DATASEC', 'DETSEC', 'DETSIZE'):
-                self.assertEquals(self.e2v[amp][key], e2v_amp_geom[amp][key])
+                self.assertEqual(self.e2v[amp][key], e2v_amp_geom[amp][key])
 
     def test_e2v_geometry(self):
-        self.assertEquals(self.e2v.full_segment, full_segment)
-        self.assertEquals(self.e2v.prescan, prescan)
-        self.assertEquals(self.e2v.imaging, imaging)
-        self.assertEquals(self.e2v.serial_overscan, serial_overscan)
-        self.assertEquals(self.e2v.parallel_overscan, parallel_overscan)
+        self.assertEqual(self.e2v.full_segment, full_segment)
+        self.assertEqual(self.e2v.prescan, prescan)
+        self.assertEqual(self.e2v.imaging, imaging)
+        self.assertEqual(self.e2v.serial_overscan, serial_overscan)
+        self.assertEqual(self.e2v.parallel_overscan, parallel_overscan)
 
     def test_makeAmplifierGeometry_factory(self):
         e2v_geom = makeAmplifierGeometry(self.e2v_test_file)
-        self.assertEquals(self.e2v, e2v_geom)
+        self.assertEqual(self.e2v, e2v_geom)
 
         itl_geom = makeAmplifierGeometry(self.itl_test_file)
-        self.assertEquals(self.itl, itl_geom)
+        self.assertEqual(self.itl, itl_geom)
 
         self.assertNotEqual(self.e2v, itl_geom)
         self.assertNotEqual(self.itl, e2v_geom)

@@ -41,7 +41,7 @@ def _write_read_noise_dists(outfile, Ntot, Nsys, gains, bias, sysnoise):
             imutils.median(sigtot)
         output[0].header["SIGSYS%s" % imutils.channelIds[amp]] = \
             imutils.median(sigsys)
-    fitsWriteto(output, outfile, clobber=True)
+    fitsWriteto(output, outfile, overwrite=True)
 
 
 class ReadNoiseConfig(pexConfig.Config):
@@ -147,4 +147,4 @@ class ReadNoiseTask(pipeBase.Task):
             results.add_seg_result(amp, 'READ_NOISE', Nread)
             results.add_seg_result(amp, 'TOTAL_NOISE', Ntot_med)
             results.add_seg_result(amp, 'SYSTEM_NOISE', Nsys_med)
-        results.write(clobber=True)
+        results.write(overwrite=True)

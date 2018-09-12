@@ -62,7 +62,7 @@ def superflat(files, bias_frame=None, outfile='superflat.fits', bitpix=-32,
         output[amp].data = median_image.getArray()
         if bitpix is not None:
             imutils.set_bitpix(output[amp], bitpix)
-    fitsWriteto(output, outfile, clobber=True)
+    fitsWriteto(output, outfile, overwrite=True)
     return outfile
 
 
@@ -143,4 +143,4 @@ class CteTask(pipeBase.Task):
                                    pcti[amp].error)
             if self.config.verbose:
                 self.log.info(line)
-        results.write(clobber='yes')
+        results.write(overwrite=True)

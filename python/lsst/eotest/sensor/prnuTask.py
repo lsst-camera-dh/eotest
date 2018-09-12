@@ -68,7 +68,7 @@ class PrnuTask(pipeBase.Task):
         return results
 
     @pipeBase.timeMethod
-    def write(self, results, outfile, clobber=True):
+    def write(self, results, outfile, overwrite=True):
         colnames = ['WAVELENGTH', 'STDEV', 'MEAN']
         formats = 'IEE'
         my_types = dict((("I", np.int), ("E", np.float)))
@@ -94,4 +94,4 @@ class PrnuTask(pipeBase.Task):
             output[hdu.name] = hdu
         except KeyError:
             output.append(hdu)
-        fitsWriteto(output, outfile, clobber=clobber)
+        fitsWriteto(output, outfile, overwrite=overwrite)

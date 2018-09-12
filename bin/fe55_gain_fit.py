@@ -55,4 +55,4 @@ if args.verbose:
 results = sensorTest.EOTestResults(results_file)
 for amp in gains:
     results.add_seg_result(amp, 'GAIN', gains[amp])
-results.write(clobber=True)
+results.write(overwrite=True)

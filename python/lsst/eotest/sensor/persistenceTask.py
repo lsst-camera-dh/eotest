@@ -152,10 +152,10 @@ class PersistenceTask(pipeBase.Task):
 
         outfile = os.path.join(self.config.output_dir,
                                '%s_persistence.fits' % sensor_id)
-        self.write(times, deferred_charges, outfile, clobber=True)
+        self.write(times, deferred_charges, outfile, overwrite=True)
 
     @pipeBase.timeMethod
-    def write(self, times, deferred_charges, outfile, clobber=True):
+    def write(self, times, deferred_charges, outfile, overwrite=True):
         colnames = ['TIME']
         columns = [times]
         units = ['s']
@@ -178,4 +178,4 @@ class PersistenceTask(pipeBase.Task):
                                          zip(colnames, formats, units, columns)]))
         HDUList[-1].name = 'IMAGE_PERSISTENCE_CURVES'
         HDUList[0].header['NAMPS'] = len(deferred_charges[0])
-        fitsWriteto(HDUList, outfile, clobber=clobber)
+        fitsWriteto(HDUList, outfile, overwrite=overwrite)

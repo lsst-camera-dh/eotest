@@ -142,7 +142,7 @@ def set_bitpix(hdu, bitpix):
     hdu.data = np.array(my_round(hdu.data), dtype=dtypes[bitpix])
 
 
-def fits_median_file(files, outfile, bitpix=16, clobber=True):
+def fits_median_file(files, outfile, bitpix=16, overwrite=True):
     output = fits.open(files[0])
     for amp in allAmps(files[0]):
         try:
@@ -153,11 +153,11 @@ def fits_median_file(files, outfile, bitpix=16, clobber=True):
         output[amp].data = fits_median(files, hdu=dm_hdu(amp)).getArray()
         if bitpix is not None:
             set_bitpix(output[amp], bitpix)
-    fitsWriteto(output, outfile, clobber=clobber)
+    fitsWriteto(output, outfile, overwrite=overwrite)
     output.close()
 
 
-def fits_mean_file(files, outfile, bitpix=16, clobber=True):
+def fits_mean_file(files, outfile, bitpix=16, overwrite=True):
     output = fits.open(files[0])
     all_amps = allAmps(files[0])
     for amp in all_amps:
@@ -176,7 +176,7 @@ def fits_mean_file(files, outfile, bitpix=16, clobber=True):
         output[amp].data /= len(files)
         if bitpix is not None:
             set_bitpix(output[amp], bitpix)
-    fitsWriteto(output, outfile, clobber=clobber)
+    fitsWriteto(output, outfile, overwrite=overwrite)
     output.close()
 
 
@@ -206,7 +206,7 @@ def writeFits(images, outfile, template_file, bitpix=-32):
     for amp in images:
         output[amp].data = images[amp].getArray()
         set_bitpix(output[amp], bitpix)
-    fitsWriteto(output, outfile, clobber=True, checksum=True)
+    fitsWriteto(output, outfile, overwrite=True, checksum=True)
     output.close()
 
 

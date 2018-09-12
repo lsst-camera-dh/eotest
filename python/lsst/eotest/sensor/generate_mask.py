@@ -3,6 +3,7 @@ Function to generate mask files given a set of pixels and columns to mask.
 """
 from __future__ import absolute_import, print_function
 import os
+import copy
 import tempfile
 import astropy.io.fits as fits
 import lsst.afw.detection as afwDetect
@@ -55,9 +56,11 @@ def generate_mask(infile, outfile, mask_plane, pixels=None, columns=None,
     # Create a primary HDU with the input file primary HDU metadata,
     # updated with the mask type info.
     hdulist = fits.HDUList()
-    hdulist.append(fits.open(infile)[0])
+    hdulist.append(fits.PrimaryHDU())
+    with fits.open(infile) as input_hdu_list:
+        hdulist[0].header.update(input_hdu_list[0].header)
     hdulist[0].header['MASKTYPE'] = mask_plane
-    fitsWriteto(hdulist, outfile, clobber=True)
+    fitsWriteto(hdulist, outfile, overwrite=True)
     # Loop over segments in the temporary file and add all pixels to
     # the mask with the inserted signal.
     maskedCCD = MaskedCCD(temp_mask_image)

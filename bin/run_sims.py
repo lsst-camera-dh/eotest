@@ -387,7 +387,7 @@ def generate_superflat(pars):
         filename = ("%s_%s_flat_%02i_%s.fits"
                     % (sensor_id, superflat.test_type, frame,
                        time_stamp(debug=pars.debug)))
-        foo.writeto(os.path.join(outputdir, filename), clobber=True)
+        foo.writeto(os.path.join(outputdir, filename), overwrite=True)
     #
     # Generate non-uniform illumination correction file.  For these
     # simulations, we set every pixel to unity, i.e., no correction.
