@@ -143,41 +143,46 @@ def set_bitpix(hdu, bitpix):
 
 
 def fits_median_file(files, outfile, bitpix=16, overwrite=True):
-    output = fits.open(files[0])
-    for amp in allAmps(files[0]):
-        try:
-            del output[amp].header['BSCALE']
-            del output[amp].header['BZERO']
-        except KeyError:
-            pass
-        output[amp].data = fits_median(files, hdu=dm_hdu(amp)).getArray()
-        if bitpix is not None:
-            set_bitpix(output[amp], bitpix)
-    fitsWriteto(output, outfile, overwrite=overwrite)
-    output.close()
-
-
-def fits_mean_file(files, outfile, bitpix=16, overwrite=True):
-    output = fits.open(files[0])
-    all_amps = allAmps(files[0])
+    output = fits.HDUList()
+    output.append(fits.PrimaryHDU())
+    all_amps = allAmps()
     for amp in all_amps:
-        try:
-            del output[amp].header['BSCALE']
-            del output[amp].header['BZERO']
-        except KeyError:
-            pass
-        output[amp].data = np.zeros(output[amp].data.shape)
-    for infile in files:
-        input = fits.open(infile)
+        data  = fits_median(files, hdu=dm_hdu(amp)).getArray()
+        output.append(fits.CompImageHDU(data=data,
+                                        compresssion_type='RICE_1'))
+        if bitpix is not None:
+            set_bitpix(output[-1], bitpix)
+    with fits.open(files[0]) as template:
+        output[0].header.update(template[0].header)
+        output[0].header['FILENAME'] = os.path.basename(outfile)
         for amp in all_amps:
-            output[amp].data += input[amp].data
-        input.close()
+            output[amp].header.update(template[amp].header)
+            if bitpix is not None:
+                set_bitpix(output[amp], bitpix)
+        fitsWriteto(output, outfile, overwrite=overwrite)
+
+
+def fits_mean_file(files, outfile, overwrite=True):
+    output = fits.HDUList()
+    output.append(fits.PrimaryHDU())
+    all_amps = allAmps()
     for amp in all_amps:
-        output[amp].data /= len(files)
-        if bitpix is not None:
-            set_bitpix(output[amp], bitpix)
-    fitsWriteto(output, outfile, overwrite=overwrite)
-    output.close()
+        images = [afwImage.ImageF(item, amp) for item in files]
+        mean_image = afwMath.statisticsStack(images, afwMath.MEAN)
+        output.append(fits.CompImageHDU(data=mean_image.getArray(),
+                                        compression_type='RICE_1'))
+    with fits.open(files[0]) as template:
+        output[0].header.update(template[0].header)
+        for amp in all_amps:
+            output[amp].header.update(template[amp].header)
+            try:
+                del output[amp].header['BSCALE']
+                del output[amp].header['BZERO']
+            except KeyError:
+                pass
+        for i in (-3, -2, -1):
+            output.append(template[i])
+        fitsWriteto(output, outfile, overwrite=overwrite)
 
 
 def fits_median(files, hdu=1, fix=True):
@@ -201,13 +206,23 @@ def fits_median(files, hdu=1, fix=True):
 
 
 def writeFits(images, outfile, template_file, bitpix=-32):
-    output = fits.open(template_file)
-    output[0].header['FILENAME'] = outfile
-    for amp in images:
-        output[amp].data = images[amp].getArray()
-        set_bitpix(output[amp], bitpix)
-    fitsWriteto(output, outfile, overwrite=True, checksum=True)
-    output.close()
+    output = fits.HDUList()
+    output.append(fits.PrimaryHDU())
+    all_amps = allAmps()
+    for amp in all_amps:
+        output.append(fits.CompImageHDU(data=images[amp].getArray(),
+                                        compression_type='RICE_1'))
+        set_bitpix(output[-1], bitpix)
+    with fits.open(template_file) as template:
+        output[0].header.update(template[0].header)
+        output[0].header['FILENAME'] = outfile
+        for amp in all_amps:
+            output[amp].header.update(template[amp].header)
+            if bitpix is not None:
+                set_bitpix(output[amp], bitpix)
+        for i in (-3, -2, -1):
+            output.append(template[i])
+        fitsWriteto(output, outfile, overwrite=True, checksum=True)
 
 
 def check_temperatures(files, tol, setpoint=None, warn_only=False):
