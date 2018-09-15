@@ -9,6 +9,7 @@ import glob
 import numpy as np
 import scipy.optimize
 import astropy.io.fits as fits
+from copy import deepcopy
 from lsst.eotest.fitsTools import fitsTableFactory, fitsWriteto
 import lsst.eotest.image_utils as imutils
 from .MaskedCCD import MaskedCCD
@@ -45,10 +46,10 @@ def find_flats(args):
 def ptc_func(pars, mean):
     """
     Model for variance vs mean.
-    See http://adsabs.harvard.edu/abs/2015A%26A...575A..41G.
+    See Astier et al.
     """
-    alpha, gain = pars
-    return mean*(1./gain - mean*alpha)
+    a00, gain, intcpt = pars
+    return 0.5/(a00*gain*gain)*(1 - np.exp(-2*a00*mean*gain)) + intcpt/(gain*gain)
 
 def residuals(pars, mean, var):
     "Residuals function for least-squares fit of PTC curve."
@@ -157,8 +158,7 @@ class PtcTask(pipeBase.Task):
 
     def _fit_curves(self, ptc_stats, sensor_id):
         """
-        Fit a quadratic to the variance vs mean data for each amp.
-        See http://adsabs.harvard.edu/abs/2015A%26A...575A..41G.
+        Fit a model to the variance vs. mean
         """
         outfile = self.config.eotest_results_file
         if outfile is None:
@@ -167,25 +167,49 @@ class PtcTask(pipeBase.Task):
         output = EOTestResults(outfile, namps=len(ptc_stats))
         for amp in ptc_stats:
             mean, var = np.array(ptc_stats[amp][0]), np.array(ptc_stats[amp][1])
-            # Compute the median gain and remove outliers.
-            med_gain = np.median(mean/var)
-            frac_resids = np.abs((var - mean/med_gain)/var)
-            index = np.where(frac_resids < self.config.max_frac_offset)
-            # Least-squares fit to the brighter-fatter model.
-            p0 = 0, med_gain
+            index_old = []
+            index = list(np.where(mean < 1e5)[0])
+            count = 1
+            sig_cut = 5
             try:
-                results = scipy.optimize.leastsq(residuals, p0, full_output=1,
-                                                 args=(mean[index], var[index]))
-                pars, cov = results[:2]
+                while index != index_old and count < 10:
+                    results = scipy.optimize.leastsq(residuals, pars, full_output=1, 
+                                                     args=(mean[index], var[index]))
+                    sig_resids = (var - ptc_func(pars, mean))/np.sqrt(var)
+                    index_old = deepcopy(index)
+                    index = list(np.where(np.abs(sig_resids) < sig_cut)[0])
+                    pars, cov = results[:2]
+                    count += 1
+
+                ptc_a00 = pars[0]
+                ptc_a00_error = np.sqrt(cov[0][0])
                 ptc_gain = pars[1]
                 ptc_error = np.sqrt(cov[1][1])
+                ptc_noise = pars[2]
+                ptc_noise_error = np.sqrt(cov[2][2])
+                # Cannot assume that the mean values are sorted
+                ptc_turnoff = max(mean[index])
             except StandardError as eobj:
                 self.log.info("Exception caught while fitting PTC:")
                 self.log.info(str(eobj))
                 ptc_gain = 0.
                 ptc_error = -1.
-            # Write gain and error to EO test results file.
+                ptc_a00 = 0.
+                ptc_a00_error = -1.
+                ptc_noise = 0.
+                ptc_noise_error = -1.
+                ptc_turnoff = 0.
+            # Write gain and error, a00 and its uncertainty, inferred noise and
+            # uncertainty, and the 'turnoff' level (in electrons) to EO test 
+            # results file.
             output.add_seg_result(amp, 'PTC_GAIN', ptc_gain)
             output.add_seg_result(amp, 'PTC_GAIN_ERROR', ptc_error)
-            self.log.info("%i  %f  %f" % (amp, ptc_gain, ptc_error))
+            output.add_seg_result(amp, 'PTC_A00', ptc_a00)
+            output.add_seg_result(amp, 'PTC_A00_ERROR', ptc_a00_error)
+            output.add_seg_result(amp, 'PTC_NOISE', ptc_noise)
+            output.add_seg_result(amp, 'PTC_NOISE_ERROR', ptc_noise_error)
+            output.add_seg_result(amp, 'PTC_TURNOFF', ptc_turnoff)
+            self.log.info("%i  %f  %fi %f %f %f %f %f" % (amp, ptc_gain, 
+                          ptc_error, ptc_a00, ptc_a00_error,
+                          ptc_noise, ptc_noise_error, ptc_turnoff))
         output.write()
