@@ -1,6 +1,6 @@
 import warnings
 import numpy as np
-import astropy.io.fits as fits
+from astropy.io import fits
 
 
 def fitsTableFactory(*args, **kwds):

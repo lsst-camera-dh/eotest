@@ -8,9 +8,12 @@ from __future__ import absolute_import
 from builtins import zip
 from builtins import range
 from builtins import object
+import os
+import warnings
 import numpy as np
 import numpy.random as random
-import astropy.io.fits as fits
+from astropy.io import fits
+from astropy.utils.exceptions import AstropyWarning, AstropyUserWarning
 from .fitsTools import fitsWriteto
 import lsst.afw.geom as afwGeom
 import lsst.afw.image as afwImage
@@ -152,14 +155,19 @@ def fits_median_file(files, outfile, bitpix=16, overwrite=True):
                                         compresssion_type='RICE_1'))
         if bitpix is not None:
             set_bitpix(output[-1], bitpix)
-    with fits.open(files[0]) as template:
-        output[0].header.update(template[0].header)
-        output[0].header['FILENAME'] = os.path.basename(outfile)
-        for amp in all_amps:
-            output[amp].header.update(template[amp].header)
-            if bitpix is not None:
-                set_bitpix(output[amp], bitpix)
-        fitsWriteto(output, outfile, overwrite=overwrite)
+    with warnings.catch_warnings():
+        warnings.filterwarnings('ignore', category=UserWarning, append=True)
+        warnings.filterwarnings('ignore', category=AstropyWarning, append=True)
+        warnings.filterwarnings('ignore', category=AstropyUserWarning,
+                                append=True)
+        with fits.open(files[0]) as template:
+            output[0].header.update(template[0].header)
+            output[0].header['FILENAME'] = os.path.basename(outfile)
+            for amp in all_amps:
+                output[amp].header.update(template[amp].header)
+                if bitpix is not None:
+                    set_bitpix(output[amp], bitpix)
+            fitsWriteto(output, outfile, overwrite=overwrite)
 
 
 def fits_mean_file(files, outfile, overwrite=True, bitpix=32):
@@ -171,15 +179,21 @@ def fits_mean_file(files, outfile, overwrite=True, bitpix=32):
         mean_image = afwMath.statisticsStack(images, afwMath.MEAN)
         output.append(fits.CompImageHDU(data=mean_image.getArray(),
                                         compression_type='RICE_1'))
-    with fits.open(files[0]) as template:
-        output[0].header.update(template[0].header)
-        for amp in all_amps:
-            output[amp].header.update(template[amp].header)
-            if bitpix is not None:
-                set_bitpix(output[amp], bitpix)
-        for i in (-3, -2, -1):
-            output.append(template[i])
-        fitsWriteto(output, outfile, overwrite=overwrite)
+    with warnings.catch_warnings():
+        warnings.filterwarnings('ignore', category=UserWarning, append=True)
+        warnings.filterwarnings('ignore', category=AstropyWarning, append=True)
+        warnings.filterwarnings('ignore', category=AstropyUserWarning,
+                                append=True)
+        with fits.open(files[0]) as template:
+            output[0].header.update(template[0].header)
+            output[0].header['FILENAME'] = os.path.basename(outfile)
+            for amp in all_amps:
+                output[amp].header.update(template[amp].header)
+                if bitpix is not None:
+                    set_bitpix(output[amp], bitpix)
+            for i in (-3, -2, -1):
+                output.append(template[i])
+            fitsWriteto(output, outfile, overwrite=overwrite)
 
 
 def fits_median(files, hdu=1, fix=True):
@@ -209,17 +223,23 @@ def writeFits(images, outfile, template_file, bitpix=-32):
     for amp in all_amps:
         output.append(fits.CompImageHDU(data=images[amp].getArray(),
                                         compression_type='RICE_1'))
-        set_bitpix(output[-1], bitpix)
-    with fits.open(template_file) as template:
-        output[0].header.update(template[0].header)
-        output[0].header['FILENAME'] = outfile
-        for amp in all_amps:
-            output[amp].header.update(template[amp].header)
-            if bitpix is not None:
-                set_bitpix(output[amp], bitpix)
-        for i in (-3, -2, -1):
-            output.append(template[i])
-        fitsWriteto(output, outfile, overwrite=True, checksum=True)
+
+    with warnings.catch_warnings():
+        warnings.filterwarnings('ignore', category=UserWarning, append=True)
+        warnings.filterwarnings('ignore', category=AstropyWarning, append=True)
+        warnings.filterwarnings('ignore', category=AstropyUserWarning,
+                                append=True)
+
+        with fits.open(template_file) as template:
+            output[0].header.update(template[0].header)
+            output[0].header['FILENAME'] = outfile
+            for amp in all_amps:
+                output[amp].header.update(template[amp].header)
+                if bitpix is not None:
+                    set_bitpix(output[amp], bitpix)
+            for i in (-3, -2, -1):
+                output.append(template[i])
+            fitsWriteto(output, outfile, overwrite=True, checksum=True)
 
 
 def check_temperatures(files, tol, setpoint=None, warn_only=False):
