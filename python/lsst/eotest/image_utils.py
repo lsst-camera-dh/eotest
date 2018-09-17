@@ -131,7 +131,7 @@ def unbias_and_trim(im, overscan, imaging,
 
 
 def set_bitpix(hdu, bitpix):
-    dtypes = {16: np.int16, -32: np.float32}
+    dtypes = {16: np.int16, -32: np.float32, 32: np.int32}
     for keyword in 'BSCALE BZERO'.split():
         if keyword in list(hdu.header.keys()):
             del hdu.header[keyword]
@@ -162,7 +162,7 @@ def fits_median_file(files, outfile, bitpix=16, overwrite=True):
         fitsWriteto(output, outfile, overwrite=overwrite)
 
 
-def fits_mean_file(files, outfile, overwrite=True):
+def fits_mean_file(files, outfile, overwrite=True, bitpix=32):
     output = fits.HDUList()
     output.append(fits.PrimaryHDU())
     all_amps = allAmps()
@@ -175,11 +175,8 @@ def fits_mean_file(files, outfile, overwrite=True):
         output[0].header.update(template[0].header)
         for amp in all_amps:
             output[amp].header.update(template[amp].header)
-            try:
-                del output[amp].header['BSCALE']
-                del output[amp].header['BZERO']
-            except KeyError:
-                pass
+            if bitpix is not None:
+                set_bitpix(output[amp], bitpix)
         for i in (-3, -2, -1):
             output.append(template[i])
         fitsWriteto(output, outfile, overwrite=overwrite)
