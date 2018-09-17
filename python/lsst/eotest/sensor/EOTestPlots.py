@@ -98,7 +98,7 @@ def plot_flat(infile, nsig=3, cmap=pylab.cm.hot, win=None, subplot=(1, 1, 1),
     datasec = parse_geom_kwd(foo[1].header['DATASEC'])
     # Specialize to science sensor or wavefront sensor geometries.
     nx_segments = 8
-    ny_segments = len(ccd)/nx_segments
+    ny_segments = len(ccd)//nx_segments
     nx = nx_segments*(datasec['xmax'] - datasec['xmin'] + 1)
     ny = ny_segments*(datasec['ymax'] - datasec['ymin'] + 1)
     mosaic = np.zeros((ny, nx), dtype=np.float)
