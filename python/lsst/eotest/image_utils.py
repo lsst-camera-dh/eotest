@@ -46,9 +46,8 @@ def allAmps(fits_file=None):
     if fits_file is None:
         return all_amps
     try:
-        f = fits.open(fits_file)
-        f.close()  # close first, in case exception is thrown and file is left open
-        namps = f[0].header['NAMPS']
+        with fits.open(fits_file) as f:
+            namps = f[0].header['NAMPS']
         return list(range(1, namps+1))
     except KeyError:
         return all_amps
@@ -151,10 +150,11 @@ def fits_median_file(files, outfile, bitpix=16, overwrite=True):
     all_amps = allAmps()
     for amp in all_amps:
         data  = fits_median(files, hdu=dm_hdu(amp)).getArray()
-        output.append(fits.CompImageHDU(data=data,
-                                        compresssion_type='RICE_1'))
-        if bitpix is not None:
-            set_bitpix(output[-1], bitpix)
+        if bitpix < 0:
+            output.append(fits.ImageHDU(data=data))
+        else:
+            output.append(fits.CompImageHDU(data=data,
+                                            compresssion_type='RICE_1'))
     with warnings.catch_warnings():
         warnings.filterwarnings('ignore', category=UserWarning, append=True)
         warnings.filterwarnings('ignore', category=AstropyWarning, append=True)
@@ -165,8 +165,7 @@ def fits_median_file(files, outfile, bitpix=16, overwrite=True):
             output[0].header['FILENAME'] = os.path.basename(outfile)
             for amp in all_amps:
                 output[amp].header.update(template[amp].header)
-                if bitpix is not None:
-                    set_bitpix(output[amp], bitpix)
+                set_bitpix(output[amp], bitpix)
             fitsWriteto(output, outfile, overwrite=overwrite)
 
 
@@ -177,8 +176,11 @@ def fits_mean_file(files, outfile, overwrite=True, bitpix=32):
     for amp in all_amps:
         images = [afwImage.ImageF(item, amp) for item in files]
         mean_image = afwMath.statisticsStack(images, afwMath.MEAN)
-        output.append(fits.CompImageHDU(data=mean_image.getArray(),
-                                        compression_type='RICE_1'))
+        if bitpix < 0:
+            output.append(fits.ImageHDU(data=mean_image.getArray()))
+        else:
+            output.append(fits.CompImageHDU(data=mean_image.getArray(),
+                                            compression_type='RICE_1'))
     with warnings.catch_warnings():
         warnings.filterwarnings('ignore', category=UserWarning, append=True)
         warnings.filterwarnings('ignore', category=AstropyWarning, append=True)
@@ -189,8 +191,7 @@ def fits_mean_file(files, outfile, overwrite=True, bitpix=32):
             output[0].header['FILENAME'] = os.path.basename(outfile)
             for amp in all_amps:
                 output[amp].header.update(template[amp].header)
-                if bitpix is not None:
-                    set_bitpix(output[amp], bitpix)
+                set_bitpix(output[amp], bitpix)
             for i in (-3, -2, -1):
                 output.append(template[i])
             fitsWriteto(output, outfile, overwrite=overwrite)
@@ -216,14 +217,16 @@ def fits_median(files, hdu=1, fix=True):
     return median_image
 
 
-def writeFits(images, outfile, template_file, bitpix=-32):
+def writeFits(images, outfile, template_file, bitpix=32):
     output = fits.HDUList()
     output.append(fits.PrimaryHDU())
     all_amps = allAmps()
     for amp in all_amps:
-        output.append(fits.CompImageHDU(data=images[amp].getArray(),
-                                        compression_type='RICE_1'))
-
+        if bitpix < 0:
+            output.append(fits.ImageHDU(data=images[amp].getArray()))
+        else:
+            output.append(fits.CompImageHDU(data=images[amp].getArray(),
+                                            compression_type='RICE_1'))
     with warnings.catch_warnings():
         warnings.filterwarnings('ignore', category=UserWarning, append=True)
         warnings.filterwarnings('ignore', category=AstropyWarning, append=True)
@@ -235,8 +238,8 @@ def writeFits(images, outfile, template_file, bitpix=-32):
             output[0].header['FILENAME'] = outfile
             for amp in all_amps:
                 output[amp].header.update(template[amp].header)
-                if bitpix is not None:
-                    set_bitpix(output[amp], bitpix)
+                set_bitpix(output[amp], bitpix)
+                print(np.median(output[amp].data.ravel()))
             for i in (-3, -2, -1):
                 output.append(template[i])
             fitsWriteto(output, outfile, overwrite=True, checksum=True)
