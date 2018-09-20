@@ -80,14 +80,13 @@ def bias_row(im, overscan, dxmin=5, dxmax=2, statistic=np.mean, **kwargs):
         im: A masked (lsst.afw.image.imageLib.MaskedImageF) or unmasked 
             (lsst.afw.image.imageLib.ImageF) afw image.
         overscan: A bounding box for the serial overscan region.
-        dxmin: The number of columns to skip at the beginning of the overscan
-            region.
-        dxmax: The number of columns to skip at the end of the overscan region.
-        statistic: The statistic to use to calculate the bias level for each
-            row.
+        dxmin: The number of columns to skip at the beginning of the serial 
+            overscan region.
+        dxmax: The number of columns to skip at the end of the serial overscan region.
+        statistic: The statistic to use to calculate the offset for each row.
 
     Returns:
-        A numpy array with length equal to the number of rows in the overscan
+        A numpy array with length equal to the number of rows in the serial overscan
         region.
     """
     try:
@@ -102,17 +101,17 @@ def bias_row(im, overscan, dxmin=5, dxmax=2, statistic=np.mean, **kwargs):
 def bias_func(im, overscan, nskip_cols=5, num_cols=15, **kwargs):
     """Compute the offset by fitting a polynomial (linear, by default)
     to the mean of each row of the serial overscan region.  This
-    returns a numpy.poly1d object that returns the fitted bias as
-    function of pixel row. Allows the option to explicitly set the fit order
-    and statistic to apply to each row using additional **kwargs.
+    returns a numpy.poly1d object with the fitted bias as function of pixel row. 
+    Allows the option to explicitly set the fit order and statistic to apply to 
+    each row using additional **kwargs.
 
     Args:
         im: A masked (lsst.afw.image.imageLib.MaskedImageF) or unmasked 
             (lsst.afw.image.imageLib.ImageF) afw image.
         overscan: A bounding box for the serial overscan region.
         nskip_cols: The number of columns to skip at the beginning of the 
-            overscan region.
-        num_cols: The total number of columns to include in the bias level 
+            serial overscan region.
+        num_cols: The total number of columns to include in the offset level 
             calculation.
     
     Keyword Arguments:
@@ -132,7 +131,7 @@ def bias_func(im, overscan, nskip_cols=5, num_cols=15, **kwargs):
     values = np.array([kwargs.get('fit_statistic', np.mean)(imarr[j][nskip_cols:nskip_cols+num_cols]) for j in rows])
     return np.poly1d(np.polyfit(rows, values, kwargs.get('fit_order', 1))) 
 
-def bias_spline(im, overscan, nskip_cols=5, num_cols=15, k=3, s=8000, t=None, **kwargs):
+def bias_spline(im, overscan, nskip_cols=5, num_cols=15, **kwargs):
     """Compute the offset by fitting a spline to the mean of each row in the 
     serial overscan region.
 
@@ -144,13 +143,16 @@ def bias_spline(im, overscan, nskip_cols=5, num_cols=15, k=3, s=8000, t=None, **
             overscan region.
         num_cols: The total number of columns to include in the bias level
             calculation.
-        k: The degree of the spline fit.
-        s: The amount of smoothing to be applied to the fit.
-        t: The number of knots to be used.
+
+    Keyword Arguments:
+        k: The degree of the spline fit. The default is: 3.
+        s: The amount of smoothing to be applied to the fit. The default is: 8000.
+        t: The number of knots. If None, finds the number of knots to use 
+            for a given smoothing factor, s. The default is: None.
 
     Returns:
-        A tuple (t,c,k) containing the vector of knots, the B-spline coefficients, and the 
-        degree of the spline.
+        A tuple (t,c,k) containing the vector of knots, the B-spline coefficients, 
+        and the degree of the spline.
     """ 
 
     try:
@@ -162,9 +164,9 @@ def bias_spline(im, overscan, nskip_cols=5, num_cols=15, k=3, s=8000, t=None, **
     values = np.array([kwargs.get('statistic', np.mean)(imarr[j][nskip_cols:nskip_cols+num_cols]) for j in rows])
     rms = 7 # Expected read noise per pixel
     weights = np.ones(ny) * (rms / np.sqrt(nx))
-    return(interpolate.splrep(rows, values, w=1/weights, k=3, s=s, t=t))
+    return(interpolate.splrep(rows, values, w=1/weights, k=kwargs.get('k', 3), s=kwargs.get('s', 8000), t=kwargs.get('t', None)))
 
-def bias_image(im, overscan, bias_method='func', **kwargs):
+def bias_image(im, overscan, bias_method='spline', **kwargs):
     """Generate a bias image containing the offset values calculated from 
     bias(), bias_row(), bias_func() or bias_spline().
     
@@ -176,12 +178,20 @@ def bias_image(im, overscan, bias_method='func', **kwargs):
 
     Keyword Arguments:
         fit_statistic: The statistic applied to each row to be fit by the polynomial. 
-            This only needs to be specified when using the 'func' method. The default is: np.mean.
-        fit_order: The order of the polynomial. This only needs to be specified when using 
-            the 'func' method. The default is: 1.
+            This only needs to be specified when using the 'func' method. 
+            The default is: np.mean.
+        fit_order: The order of the polynomial. This only needs to be specified when 
+            using the 'func' method. The default is: 1.
+        k: The degree of the spline fit. This only needs to be specified when using 
+            the 'spline' method. The default is: 3.
+        s: The amount of smoothing to be applied to the fit. This only needs to be 
+            specified when using the 'spline' method. The default is: 8000.
+        t: The number of knots. If None, finds the number of knots to use for a given 
+            smoothing factor, s. This only needs to be specified when using the 'spline' 
+            method. The default is: None.
 
     Returns:
-        An image with size equal to the input image containing just the overscan offset. 
+        An image with size equal to the input image containing the offset level. 
     """
     biasim = afwImage.ImageF(im.getDimensions())
     imarr = biasim.getArray()
@@ -235,9 +245,15 @@ def unbias_and_trim(im, overscan, imaging=None, bias_method='func', median_stack
             This only needs to be specified when using the 'func' method. The default is: np.mean.
         fit_order: The order of the polynomial. This only needs to be specified when using 
             the 'func' method. The default is: 1.
+        k: The degree of the spline fit. This only needs to be specified when using the 'spline' 
+            method. The default is: 3.
+        s: The amount of smoothing to be applied to the fit. This only needs to be specified when 
+            using the 'spline' method. The default is: 8000.
+        t: The number of knots. If None, finds the number of knots to use for a given smoothing 
+            factor, s. This only needs to be specified when using the 'spline' method. The default is: None.
 
     Returns:
-        An masked afw image.
+        An afw image.
     """
     im -= bias_image(im, overscan, bias_method, **kwargs)
     if median_stack:

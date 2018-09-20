@@ -6,6 +6,7 @@
 import os
 import unittest
 import numpy as np
+from scipy import interpolate
 import lsst.eotest.image_utils as imutils
 from lsst.eotest.sensor import MaskedCCD, AmplifierGeometry
 from lsst.eotest.sensor.AmplifierGeometry import makeAmplifierGeometry
@@ -23,7 +24,8 @@ class BiasHandlingTestCase(unittest.TestCase):
     bias_intercept = 0.5
     exptime = 1
     gain = 1
-    kwargs = {'fit_order' : 1, 'fit_statistic' : np.mean, 'imaging' : AmplifierGeometry().imaging}
+    kwargs = {'fit_order' : 1, 'fit_statistic' : np.mean, 'k' : 3, 's' : 8000, 't' : None, 
+        'imaging' : AmplifierGeometry().imaging}
     image_file = 'test_image.fits'
     mean_image_file = 'test_mean_image.fits'
     @classmethod
@@ -117,6 +119,19 @@ class BiasHandlingTestCase(unittest.TestCase):
 	    ny = len(br_i)
 	    for ii in range(ny):
 	        self.assertEqual(br_i[ii], br_m[ii])
+
+    def test_bias_spline(self):
+        ccd = MaskedCCD(self.image_file)
+        overscan = makeAmplifierGeometry(self.image_file)
+        for amp in ccd:
+            # Unmasked image
+            bs_i = imutils.bias_spline(ccd[amp].getImage(), overscan.serial_overscan)
+            # Masked image
+            bs_m = imutils.bias_spline(ccd[amp], overscan.serial_overscan)
+            ny = len(bs_i)
+            for ii in range(ny):
+                self.assertEqual(interpolate.splev(ii, bs_i), interpolate.splev(ii, bs_m))
+
     def test_stack(self):
         ccd = MaskedCCD(self.image_file)
         overscan = makeAmplifierGeometry(self.image_file)
