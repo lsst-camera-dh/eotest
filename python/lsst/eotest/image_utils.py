@@ -225,7 +225,7 @@ def trim(im, imaging):
 
     return im.Factory(im, imaging)
 
-def unbias_and_trim(im, overscan, imaging=None, bias_method='func', median_stack=None, **kwargs):
+def unbias_and_trim(im, overscan, imaging=None, bias_method='spline', median_stack=None, **kwargs):
     """Subtract the offset calculated from the serial overscan region and optionally trim 
     prescan and overscan regions. Includes the option to subtract the median of a stack of 
     offset-subtracted bias frames to remove the bias level.
