@@ -12,6 +12,7 @@ from builtins import range
 from builtins import object
 import numpy as np
 import warnings
+import itertools
 import astropy.io.fits as fits
 from lsst.eotest.fitsTools import fitsTableFactory, fitsWriteto
 import scipy.optimize
@@ -23,6 +24,8 @@ import lsst.afw.math as afwMath
 
 import lsst.eotest.image_utils as imutils
 from .MaskedCCD import MaskedCCD, MaskedCCDBiasImageException
+
+import pdb
 
 _sqrt2 = np.sqrt(2)
 
@@ -83,6 +86,33 @@ def chisq(pos, dn, x0, y0, sigmax, sigmay, dn_fit, dn_errors):
     "The chi-square of the fit of the data to psf_func."
     return sum((psf_func(pos, x0, y0, sigmax, sigmay, dn_fit)
                 - np.array(dn))**2/dn_errors**2)
+
+
+def p9_values(peak, imarr, x0, y0, sigmax, sigmay, DN_tot):
+    x5, y5 = peak.getIx(), peak.getIy()
+    pos = [(x5 + dyx[1], y5 + dyx[0]) for dyx in
+           itertools.product((-1, 0, 1), (-1, 0, 1))]
+    p9_data = np.array([imarr[y][x] for x, y in pos])
+    p9_model = psf_func(pos, x0, y0, sigmax, sigmay, DN_tot)
+    return p9_data, p9_model
+
+
+def prect_values(peak, imarr, ixm=3, ixp=21, iym=3, iyp=3):
+    xpeak, ypeak = peak.getIx(), peak.getIy()
+    # nb. imarr includes overscan
+    yimsiz,ximsiz = imarr.shape
+    # if we are too close to an edge, just return all 0's
+    if ypeak-iym<0 or xpeak-ixm<0 or ypeak+iyp+1>yimsiz or xpeak+ixp+1>ximsiz:
+        prect_data = np.zeros([iyp+iym+1, ixp+ixm+1])
+    else:
+        # store a region around peak pixel [-3,21] in x and [-3,3] in y
+        prect_data = imarr[ypeak-iym:ypeak+iyp+1, xpeak-ixm:xpeak+ixp+1]
+
+    # data is stored as a normal 2-d array and then flattened
+    prect_data_flat = prect_data.flatten()
+    if prect_data_flat.shape[0] == 0:
+        pdb.set_trace()
+    return prect_data_flat
 
 
 class PsfGaussFit(object):
@@ -161,6 +191,10 @@ class PsfGaussFit(object):
         sigmax, sigmay, dn, dn_fp, chiprob = [], [], [], [], []
         chi2s, dofs = [], []
         maxDNs = []
+        xpeak, ypeak = [], []
+        p9_data = []
+        p9_model = []
+        prect_data = []
         failed_curve_fits = 0
         num_fp = 0
         for fp in fpset.getFootprints():
@@ -207,6 +241,20 @@ class PsfGaussFit(object):
                 chi2s.append(chi2)
                 dofs.append(dof)
                 maxDNs.append(max(zvals))
+                try:
+                    p9_data_row, p9_model_row \
+                        = p9_values(peak, imarr, x0[-1], y0[-1], sigmax[-1],
+                                    sigmay[-1], dn[-1])
+                    prect_data_row = prect_values(peak,imarr)
+                    p9_data.append(p9_data_row)
+                    p9_model.append(p9_model_row)
+                    prect_data.append(prect_data_row)
+                    xpeak.append(peak.getIx())
+                    ypeak.append(peak.getIy())
+                except IndexError:
+                    [item.pop() for item in (x0, y0, sigmax, sigmay,
+                                             dn, dn_fp, chiprob,
+                                             chi2s, dofs, maxDNs)]
             except RuntimeError:
                 failed_curve_fits += 1
                 pass
@@ -216,7 +264,9 @@ class PsfGaussFit(object):
                 logger.info("Failed scipy.optimize.leastsq calls: %s"
                             % failed_curve_fits)
         self._save_ext_data(amp, x0, y0, sigmax, sigmay, dn, dn_fp, chiprob,
-                            chi2s, dofs, maxDNs)
+                            chi2s, dofs, maxDNs, xpeak, ypeak,
+                            np.array(p9_data), np.array(p9_model),
+                            np.array(prect_data))
         self.amp_set.add(amp)
         self.sigmax.extend(sigmax)
         self.sigmay.extend(sigmay)
@@ -235,7 +285,7 @@ class PsfGaussFit(object):
         return my_numGoodFits
 
     def _save_ext_data(self, amp, x0, y0, sigmax, sigmay, dn, dn_fp, chiprob,
-                       chi2s, dofs, maxDNs):
+                       chi2s, dofs, maxDNs, xpeak, ypeak, p9_data, p9_model, prect_data):
         """
         Write results from the source detection and Gaussian fitting
         to the FITS extension corresponding to the specified
@@ -263,6 +313,11 @@ class PsfGaussFit(object):
                 table_hdu.data[row]['CHI2'] = chi2s[i]
                 table_hdu.data[row]['DOF'] = dofs[i]
                 table_hdu.data[row]['MAXDN'] = maxDNs[i]
+                table_hdu.data[row]['XPEAK'] = xpeak[i]
+                table_hdu.data[row]['YPEAK'] = ypeak[i]
+                table_hdu.data[row]['P9_DATA'] = p9_data[i]
+                table_hdu.data[row]['P9_MODEL'] = p9_model[i]
+                table_hdu.data[row]['PRECT_DATA'] = prect_data[i]
             table_hdu.name = extname
             self.output[extname] = table_hdu
         except KeyError:
@@ -270,23 +325,25 @@ class PsfGaussFit(object):
             # Extension for this segment does not yet exist, so add it.
             #
             colnames = ['AMPLIFIER', 'XPOS', 'YPOS', 'SIGMAX', 'SIGMAY', 'DN',
-                        'DN_FP_SUM', 'CHIPROB', 'CHI2', 'DOF', 'MAXDN']
+                        'DN_FP_SUM', 'CHIPROB', 'CHI2', 'DOF', 'MAXDN',
+                        'XPEAK', 'YPEAK', 'P9_DATA', 'P9_MODEL', 'PRECT_DATA']
             columns = [np.ones(len(x0))*amp, np.array(x0), np.array(y0),
                        np.array(sigmax), np.array(sigmay),
                        np.array(dn), np.array(dn_fp),
                        np.array(chiprob), np.array(chi2s), np.array(dofs),
-                       np.array(maxDNs)]
-            formats = ['I'] + ['E']*(len(columns)-1)
+                       np.array(maxDNs), np.array(xpeak), np.array(ypeak),
+                       np.array(p9_data), np.array(p9_model), np.array(prect_data)]
+            formats = ['I'] + ['E']*(len(columns)-6) + ['I']*2 + ['9E']*2 + ['175E']
             units = ['None', 'pixel', 'pixel', 'pixel', 'pixel',
-                     'ADU', 'ADU', 'None', 'None', 'None', 'ADU']
-
-            def fits_cols(coldata): return [fits.Column(name=colname,
-                                                        format=format,
-                                                        unit=unit,
-                                                        array=column)
-                                            for colname, format, unit, column
-                                            in coldata]
-            self.output.append(fitsTableFactory(fits_cols(list(zip(colnames,
+                     'ADU', 'ADU', 'None', 'None', 'None', 'ADU',
+                     'pixel', 'pixel', 'ADU', 'ADU', 'ADU']
+            fits_cols = lambda coldata: [fits.Column(name=colname,
+                                                     format=format,
+                                                     unit=unit,
+                                                     array=column)
+                                         for colname, format, unit, column
+                                         in coldata]
+            self.output.append(fitsTableFactory(fits_cols(zip(colnames,
                                                               formats,
                                                               units,
                                                               columns)))))

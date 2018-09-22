@@ -447,7 +447,7 @@ class EOTestPlots(object):
             ymin = max(min(gain - error), min(gain - 1))
             ymax = min(max(gain + error), max(gain + 1))
             yname = 'gain (e-/DN)'
-        if xrange is not None:
+        if xrange is None:
             xrange = (0, len(gain) + 0.5)
         win = plot.xyplot(results['AMP'], results['GAIN'],
                           yerr=results['GAIN_ERROR'], xname='AMP',

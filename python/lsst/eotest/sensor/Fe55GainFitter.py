@@ -90,6 +90,8 @@ class Fe55GainFitter(object):
         xpeak = hist[1][np.where(hist[0] == max(hist[0]))][0]
         # Set final xrange.
         self.xrange = max(0, xpeak - dADU), xpeak*1785./1620. + dADU
+        if self.xrange[1] <= self.xrange[0]:
+            self.xrange = None
 
     def plot(self, xrange=None, interactive=False, bins=100,
              win=None, subplot=(1, 1, 1), figsize=None, add_labels=False,

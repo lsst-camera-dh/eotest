@@ -197,11 +197,11 @@ class PtcTask(pipeBase.Task):
                 pars, cov = results[:2]
                 ptc_gain = pars[1]
                 ptc_error = np.sqrt(cov[1][1])
-            except Exception as eobj:
-                print("Exception caught while fitting PTC:")
-                print(str(eobj))
-                ptc_gain = 0
-                ptc_error = -1
+            except StandardError as eobj:
+                self.log.info("Exception caught while fitting PTC:")
+                self.log.info(str(eobj))
+                ptc_gain = 0.
+                ptc_error = -1.
             # Write gain and error to EO test results file.
             output.add_seg_result(amp, 'PTC_GAIN', ptc_gain)
             output.add_seg_result(amp, 'PTC_GAIN_ERROR', ptc_error)

@@ -95,7 +95,8 @@ class EPERTask(pipeBase.Task):
     _DefaultName = "eper"
 
     @pipeBase.timeMethod
-    def run(self, infilename, amps, overscans, gains=None, mask_files=()):
+    def run(self, infilename, nframes, amps, overscans, gains=None,
+            mask_files=()):
         if not infilename:
             self.log.error("Please specify an input file path.")
             sys.exit(1)
@@ -112,7 +113,7 @@ class EPERTask(pipeBase.Task):
 
             # find signal in last image vector (i.e., row or column)
             last_im = Estimator(subimage(lastpix), ccd.stat_ctrl,
-                                gain=gains[amp])
+                                gain=gains[amp], var_wt=nframes)
             if self.config.verbose:
                 self.log.info("Last imaging row/column = " + str(last_im))
 
@@ -120,7 +121,8 @@ class EPERTask(pipeBase.Task):
             overscan_ests = []
             for i in range(1, overscans+1):
                 overscan_ests.append(Estimator(subimage(lastpix+i),
-                                               ccd.stat_ctrl, gain=gains[amp]))
+                                               ccd.stat_ctrl, gain=gains[amp],
+                                               var_wt=nframes))
             if self.config.verbose:
                 self.log.info("Overscan values = " + str(overscan_ests))
 
