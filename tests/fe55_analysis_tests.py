@@ -70,12 +70,12 @@ class Fe55PsfTestCase(unittest.TestCase):
             = sensorTest.fe55_psf.p9_values(peak, imarr, x0, y0,
                                             sigmax, sigmay, DN_tot)
         self.assertEqual(len(p9_data), len(p9_model))
-        self.assertItemsEqual(p9_data, range(9))
+        self.assertListEqual(p9_data.tolist(), list(range(9)))
         for i in (2, 6, 8):
             self.assertEqual(p9_model[0], p9_model[i])
         for i in (3, 5, 7):
             self.assertEqual(p9_model[1], p9_model[i])
-        for i in range(4) + range(5, 9):
+        for i in list(range(4)) + list(range(5, 9)):
             self.assertGreater(p9_model[4], p9_model[i])
 
 

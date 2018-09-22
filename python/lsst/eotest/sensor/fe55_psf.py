@@ -346,7 +346,7 @@ class PsfGaussFit(object):
             self.output.append(fitsTableFactory(fits_cols(zip(colnames,
                                                               formats,
                                                               units,
-                                                              columns)))))
+                                                              columns))))
             self.output[-1].name = extname
 
     def read_fe55_catalog(self, psf_catalog, chiprob_min=0.1):
