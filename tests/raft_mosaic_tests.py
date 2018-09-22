@@ -46,11 +46,11 @@ class RaftMosaicTestCase(unittest.TestCase):
         level = step
         for slot, infile in list(infiles.items()):
             outfile = '%s_test_image_%05i.fits' % (slot, level)
-            hdu_list = fits.open(infile)
-            for hdu in hdu_list[1:17]:
-                hdu.data = np.ones(hdu.data.shape, dtype=np.float32)*level
-                level += step
-            hdu_list.writeto(outfile, overwrite=True)
+            with fits.open(infile) as hdu_list:
+                for hdu in hdu_list[1:17]:
+                    hdu.data = np.ones(hdu.data.shape, dtype=np.float32)*level
+                    level += step
+                hdu_list.writeto(outfile, overwrite=True)
             test_files[slot] = outfile
 
         raft_mosaic = raftTest.RaftMosaic(test_files, bias_subtract=False)

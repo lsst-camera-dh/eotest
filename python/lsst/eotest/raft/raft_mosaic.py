@@ -56,8 +56,9 @@ class RaftMosaic(object):
             then set do the standard bias subtraction and gain correction.
         """
         self.fits_files = fits_files
-        self.raft_name = fits.open(list(fits_files.values())[0])[0].header['RAFTNAME']
-        self.wl = fits.open(list(fits_files.values())[0])[0].header['MONOWL']
+        with fits.open(list(fits_files.values())[0]) as hdu_list:
+            self.raft_name = hdu_list[0].header['RAFTNAME']
+            self.wl = hdu_list[0].header['MONOWL']
         self.image_array = np.zeros((nx, ny), dtype=np.float32)
         self.nx = nx
         self.ny = ny
@@ -72,10 +73,10 @@ class RaftMosaic(object):
         for slot, filename in list(fits_files.items()):
             print("processing", os.path.basename(filename))
             ccd = sensorTest.MaskedCCD(filename)
-            hdu_list = fits.open(filename)
-            for amp, hdu in zip(ccd, hdu_list[1:]):
-                self._set_segment(slot, ccd, amp, hdu, gains[slot][amp],
-                                  bias_subtract)
+            with fits.open(filename) as hdu_list:
+                for amp, hdu in zip(ccd, hdu_list[1:]):
+                    self._set_segment(slot, ccd, amp, hdu, gains[slot][amp],
+                                      bias_subtract)
 
     def _set_segment(self, slot, ccd, amp, hdu, amp_gain, bias_subtract):
         """
