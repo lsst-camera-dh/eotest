@@ -5,8 +5,6 @@ structured configuration file in the future.
 @author J. Chiang <jchiang@slac.stanford.edu>
 """
 from __future__ import absolute_import
-from builtins import range
-from builtins import object
 import os
 import numpy as np
 from .PhotodiodeResponse import Interpolator

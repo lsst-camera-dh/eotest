@@ -4,7 +4,6 @@
 @author J. Chiang <jchiang@slac.stanford.edu>
 """
 from __future__ import absolute_import
-from builtins import zip
 import os
 import numpy as np
 import astropy.io.fits as fits

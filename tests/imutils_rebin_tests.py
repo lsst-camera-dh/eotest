@@ -1,6 +1,6 @@
-from builtins import range
 import unittest
 import math
+import fractions
 import numpy as np
 import lsst.eotest.image_utils as imutils
 import lsst.afw.image as afwImage
@@ -8,7 +8,10 @@ from functools import reduce
 
 
 def lcm(*numbers):
-    return reduce(lambda x, y: (x*y)//math.gcd(x, y), numbers, 1)
+    try:
+        return reduce(lambda x, y: (x*y)//math.gcd(x, y), numbers, 1)
+    except AttributeError:
+        return reduce(lambda x, y: (x*y)//fractions.gcd(x, y), numbers, 1)
 
 
 class RebinTestCase(unittest.TestCase):

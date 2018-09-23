@@ -3,8 +3,6 @@ Plot the profile of mean overscan columns as a function of column # to
 illustrate the serial CTE.
 """
 from __future__ import print_function, absolute_import, division
-from builtins import zip
-from builtins import range
 import numpy as np
 import matplotlib.pyplot as plt
 from . import pylab_plotter as plot

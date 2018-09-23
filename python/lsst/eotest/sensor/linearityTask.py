@@ -5,7 +5,6 @@ These data are to be used for linearity measurments.
 @author J. Chiang <jchiang@slac.stanford.edu>
 """
 from __future__ import absolute_import
-from builtins import range
 import os
 import glob
 import numpy as np

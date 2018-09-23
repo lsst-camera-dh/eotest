@@ -6,8 +6,6 @@ units of e-/sec/pixel.
 """
 from __future__ import print_function
 from __future__ import absolute_import
-from builtins import str
-from builtins import range
 import os
 import numpy as np
 import astropy.io.fits as fits

@@ -1,5 +1,6 @@
 import warnings
 import numpy as np
+import astropy
 from astropy.io import fits
 
 
@@ -11,6 +12,10 @@ def fitsTableFactory(*args, **kwds):
 
 def fitsWriteto(hdulist, outfile, **kwds):
     """Silence warnings about over-writing a file."""
+    # Handle change from clobber to overwrite:
+    if 'overwrite' in kwds and astropy.__version__.startswith('1.'):
+        kwds['clobber'] = kwds['overwrite']
+        del kwds['overwrite']
     warnings.resetwarnings()
     warnings.filterwarnings('ignore', category=UserWarning, append=True)
     hdulist.writeto(outfile, **kwds)

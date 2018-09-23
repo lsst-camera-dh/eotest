@@ -4,9 +4,6 @@ conditions.  Darks, flats, Fe55, etc..
 """
 from __future__ import print_function
 from __future__ import absolute_import
-from builtins import zip
-from builtins import range
-from builtins import object
 import os
 from collections import OrderedDict
 import datetime
@@ -159,11 +156,9 @@ class CCD(object):
             # Delete any BSCALE and BZERO entries, since we are
             # writing image data as floats.
             #
-            try:
-                del output[0].header['BSCALE']
-                del output[0].header['BZERO']
-            except KeyError:
-                pass
+            for key in ('BSCALE', 'BZERO'):
+                if key in output[0].header:
+                    del output[0].header[key]
 
             def my_round(x): return x
         for hdu in output[1:-2]:

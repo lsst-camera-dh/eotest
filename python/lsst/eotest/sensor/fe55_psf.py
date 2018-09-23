@@ -7,9 +7,6 @@ compute the probability of the chi-square fit.
 """
 from __future__ import print_function
 from __future__ import absolute_import
-from builtins import zip
-from builtins import range
-from builtins import object
 import numpy as np
 import warnings
 import itertools

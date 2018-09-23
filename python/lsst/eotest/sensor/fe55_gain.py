@@ -8,7 +8,6 @@ with mean ratios fixed to the Mn Kalpha/Kbeta line energy ratio.
 """
 from __future__ import print_function
 from __future__ import absolute_import
-from builtins import object
 import os
 import numpy as np
 import scipy.stats

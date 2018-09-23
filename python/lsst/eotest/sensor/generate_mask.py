@@ -52,7 +52,10 @@ def generate_mask(infile, outfile, mask_plane, pixels=None, columns=None,
     fitsWriteto(ccd, temp_mask_image)
 
     # Use the afw code to create a mask file.
-    afwImage.Mask.addMaskPlane(mask_plane)
+    try:
+        afwImage.Mask.addMaskPlane(mask_plane)
+    except AttributeError:
+        afwImage.MaskU.addMaskPlane(mask_plane)
     # Create a primary HDU with the input file primary HDU metadata,
     # updated with the mask type info.
     hdulist = fits.HDUList()
@@ -67,7 +70,10 @@ def generate_mask(infile, outfile, mask_plane, pixels=None, columns=None,
     for amp in maskedCCD:
         threshold = afwDetect.Threshold(signal/2.*exptime/gain)
         fp_set = afwDetect.FootprintSet(maskedCCD[amp], threshold)
-        mask = afwImage.Mask(maskedCCD[amp].getDimensions())
+        try:
+            mask = afwImage.Mask(maskedCCD[amp].getDimensions())
+        except AttributeError:
+            mask = afwImage.MaskU(maskedCCD[amp].getDimensions())
         fp_set.setMask(mask, mask_plane)
         md = dafBase.PropertySet()
         md.set('EXTNAME', 'SEGMENT%s' % imutils.channelIds[amp])

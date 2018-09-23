@@ -2,8 +2,6 @@
 Data and tools to generate simulation input for multiaggressor crosstalk
 pattern.
 """
-from builtins import zip
-from builtins import object
 import lsst.eotest.image_utils as imutils
 
 _xpos = [3856, 3364, 2872, 2380, 1888, 1396, 904, 412,

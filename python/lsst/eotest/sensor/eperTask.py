@@ -1,11 +1,8 @@
-from __future__ import absolute_import
 #/usr/bin/env python
+from __future__ import absolute_import
 
 # Charge transfer efficiency by EPER, now as a pipe task!
 
-from builtins import str
-from builtins import range
-from builtins import object
 import lsst.pex.config as pexConfig
 import lsst.pipe.base as pipeBase
 

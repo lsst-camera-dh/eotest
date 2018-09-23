@@ -3,9 +3,6 @@ Code to perform raft-level mosaicking from single sensor frames
 compliant with LCA-13501.
 """
 from __future__ import absolute_import, print_function
-from builtins import zip
-from builtins import range
-from builtins import object
 import os
 import copy
 from collections import defaultdict
@@ -71,7 +68,7 @@ class RaftMosaic(object):
             unit_gains = dict([(i, 1) for i in range(1, 17)])
             gains = dict([(slot, unit_gains) for slot in fits_files])
         for slot, filename in list(fits_files.items()):
-            print("processing", os.path.basename(filename))
+            #print("processing", os.path.basename(filename))
             ccd = sensorTest.MaskedCCD(filename)
             with fits.open(filename) as hdu_list:
                 for amp, hdu in zip(ccd, hdu_list[1:]):

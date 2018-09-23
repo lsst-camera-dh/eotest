@@ -3,7 +3,6 @@ Simulate effects of CTE using cte_matrix.
 """
 from __future__ import print_function
 from __future__ import absolute_import
-from builtins import range
 import numpy as np
 import astropy.io.fits as fits
 import lsst.afw.image as afwImage

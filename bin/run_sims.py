@@ -7,9 +7,6 @@ sensors using a specified directory structure.
 @author J. Chiang <jchiang@slac.stanford.edu>
 """
 from __future__ import print_function
-from builtins import zip
-from builtins import range
-from builtins import object
 import os
 import copy
 import time

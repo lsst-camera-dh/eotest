@@ -3,8 +3,6 @@
 
 @author J. Chiang <jchiang@slac.stanford.edu>
 """
-from builtins import zip
-from builtins import object
 import sys
 import numpy as np
 import pylab

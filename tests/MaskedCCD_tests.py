@@ -3,8 +3,6 @@
 
 @author J. Chiang <jchiang@slac.stanford.edu>
 """
-from builtins import range
-from builtins import object
 import os
 import unittest
 import numpy as np
@@ -31,7 +29,10 @@ class MaskedCCDTestCase(unittest.TestCase):
     xmin, xmax = 200, 250
     ymin, ymax = 1000, 1050
     mask_image = 'mask_image.fits'
-    mpd = dict(list(afwImage.Mask().getMaskPlaneDict().items()))
+    try:
+        mpd = dict(list(afwImage.Mask().getMaskPlaneDict().items()))
+    except AttributeError:
+        mpd = dict(list(afwImage.MaskU().getMaskPlaneDict().items()))
 
     @classmethod
     def setUpClass(cls):

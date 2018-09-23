@@ -5,9 +5,6 @@ trimming, etc..
 """
 from __future__ import print_function
 from __future__ import absolute_import
-from builtins import zip
-from builtins import range
-from builtins import object
 import os
 import warnings
 import numpy as np
@@ -15,6 +12,7 @@ import numpy.random as random
 from astropy.io import fits
 from astropy.utils.exceptions import AstropyWarning, AstropyUserWarning
 from .fitsTools import fitsWriteto
+import lsst.afw
 import lsst.afw.geom as afwGeom
 import lsst.afw.image as afwImage
 import lsst.afw.math as afwMath
@@ -25,7 +23,7 @@ class Metadata(object):
     def __init__(self, infile, hdu=0):
         self.header = None
         try:
-            self.md = afwImage.readMetadata(infile, hdu)
+            self.md = afwImage.readMetadata(infile, dm_hdu(hdu))
         except:
             # This exception occurs when DM stack encounters a "." in
             # a FITS header keyword.
@@ -75,6 +73,8 @@ def stdev(x): return afwMath.makeStatistics(x, afwMath.STDEV).getValue()
 
 def dm_hdu(hdu):
     """ Compute DM HDU from the actual FITS file HDU."""
+    if lsst.afw.__version__.startswith('12.0'):
+        return hdu + 1
     return hdu
 
 
@@ -124,7 +124,7 @@ def trim(im, imaging):
 
 def unbias_and_trim(im, overscan, imaging,
                     apply_trim=True, fit_order=1):
-    """Subtract bias calculated from overscan region and optionally trim 
+    """Subtract bias calculated from overscan region and optionally trim
     prescan and overscan regions."""
     im -= bias_image(im, overscan, fit_order)
     if apply_trim:
@@ -135,7 +135,7 @@ def unbias_and_trim(im, overscan, imaging,
 def set_bitpix(hdu, bitpix):
     dtypes = {16: np.int16, -32: np.float32, 32: np.int32}
     for keyword in 'BSCALE BZERO'.split():
-        if keyword in list(hdu.header.keys()):
+        if keyword in hdu.header:
             del hdu.header[keyword]
     if bitpix > 0:
         my_round = np.round
@@ -175,6 +175,8 @@ def fits_mean_file(files, outfile, overwrite=True, bitpix=32):
     all_amps = allAmps()
     for amp in all_amps:
         images = [afwImage.ImageF(item, amp) for item in files]
+        if lsst.afw.__version__.startswith('12.0'):
+            images = afwImage.vectorImageF(images)
         mean_image = afwMath.statisticsStack(images, afwMath.MEAN)
         if bitpix < 0:
             output.append(fits.ImageHDU(data=mean_image.getArray()))
@@ -199,7 +201,7 @@ def fits_mean_file(files, outfile, overwrite=True, bitpix=32):
 
 def fits_median(files, hdu=1, fix=True):
     """Compute the median image from a set of image FITS files."""
-    ims = [afwImage.ImageF(f, hdu) for f in files]
+    ims = [afwImage.ImageF(f, dm_hdu(hdu)) for f in files]
     exptimes = [Metadata(f).get('EXPTIME') for f in files]
 
     if min(exptimes) != max(exptimes):
@@ -212,6 +214,8 @@ def fits_median(files, hdu=1, fix=True):
         for im, err in zip(ims, errs):
             im -= err
 
+    if lsst.afw.__version__.startswith('12.0'):
+        ims = afwImage.vectorImageF(ims)
     median_image = afwMath.statisticsStack(ims, afwMath.MEDIAN)
 
     return median_image

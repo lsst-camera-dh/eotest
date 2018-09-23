@@ -6,7 +6,6 @@ R. A. Sareen, 2007, NIMA, 576, 367 (L&S).
 from __future__ import print_function
 
 
-from builtins import object
 def pair_energy(ccdtemp):
     """Electron-hole pair creation energy in silicon."""
     T = 273.2 + ccdtemp  # Convert to Kelvin.

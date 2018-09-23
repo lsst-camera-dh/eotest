@@ -1,7 +1,6 @@
 """
 Code to make a summary of QE performance at the raft-level.
 """
-from builtins import range
 from collections import OrderedDict
 import json
 import itertools

@@ -1,8 +1,6 @@
 from __future__ import print_function
 #script to check all FITS headers in a directory
 
-from builtins import str
-from builtins import range
 import re
 import sys
 import traceback

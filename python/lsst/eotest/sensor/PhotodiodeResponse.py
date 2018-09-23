@@ -6,7 +6,6 @@ location.
 @author J. Chiang <jchiang@slac.stanford.edu>
 """
 from __future__ import absolute_import
-from builtins import object
 import bisect
 import numpy as np
 

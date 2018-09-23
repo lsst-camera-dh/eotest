@@ -6,8 +6,6 @@ linearity) from flat pairs data.
 """
 from __future__ import print_function
 from __future__ import absolute_import
-from builtins import zip
-from builtins import object
 import sys
 import numpy as np
 import astropy.io.fits as fits

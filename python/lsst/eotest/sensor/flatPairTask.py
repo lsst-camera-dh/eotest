@@ -4,8 +4,6 @@ These data are to be used for linearity and full-well measurments.
 
 @author J. Chiang <jchiang@slac.stanford.edu>
 """
-from builtins import str
-from builtins import range
 import os
 import glob
 import numpy as np

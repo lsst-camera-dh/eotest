@@ -2,9 +2,6 @@
 Code to produce plots of EO measurements for 9 CCDs in a raft.
 """
 from __future__ import print_function, absolute_import
-from builtins import next
-from builtins import range
-from builtins import object
 import os
 from collections import OrderedDict
 import cycler

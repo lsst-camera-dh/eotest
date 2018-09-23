@@ -11,6 +11,7 @@ import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import astropy.io.fits as fits
+from lsst.eotest.fitsTools import fitsWriteto
 import lsst.eotest.raft as raftTest
 
 _root_dir = '/nfs/farm/g/lsst/u1/jobHarness/jh_archive-test/LCA-10753_RSA/LCA-10753_RSA-003_ETU1-Dev/4578D/qe_raft_acq_sim/v0/25597'
@@ -50,7 +51,7 @@ class RaftMosaicTestCase(unittest.TestCase):
                 for hdu in hdu_list[1:17]:
                     hdu.data = np.ones(hdu.data.shape, dtype=np.float32)*level
                     level += step
-                hdu_list.writeto(outfile, overwrite=True)
+                fitsWriteto(hdu_list, outfile, overwrite=True)
             test_files[slot] = outfile
 
         raft_mosaic = raftTest.RaftMosaic(test_files, bias_subtract=False)

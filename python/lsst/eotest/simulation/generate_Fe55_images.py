@@ -4,8 +4,6 @@ according to section 5.4 of the E/O document (Dec 19, 2012 version).
 
 @author J. Chiang <jchiang@slac.stanford.edu>
 """
-from builtins import zip
-from builtins import range
 import os
 import numpy as np
 from sim_inputs import *

@@ -7,11 +7,11 @@ afwMath.makeStatistics object.
 """
 from __future__ import print_function
 from __future__ import absolute_import
-from builtins import str
 import astropy.io.fits as fits
 from lsst.eotest.fitsTools import fitsWriteto
 from .AmplifierGeometry import makeAmplifierGeometry
 import lsst.daf.base as dafBase
+import lsst.afw
 import lsst.afw.geom as afwGeom
 import lsst.afw.image as afwImage
 import lsst.afw.math as afwMath
@@ -19,6 +19,10 @@ import lsst.ip.isr as ipIsr
 import lsst.pex.exceptions as pexExcept
 import lsst.eotest.image_utils as imutils
 
+try:
+    afwImage_Mask = afwImage.Mask
+except AttributeError:
+    afwImage_Mask = afwImage.MaskU
 
 class MaskedCCDBiasImageException(RuntimeError):
     def __init__(self, *args):
@@ -42,7 +46,7 @@ class MaskedCCD(dict):
         all_amps = imutils.allAmps(imfile)
         for amp in all_amps:
             image = afwImage.ImageF(imfile, imutils.dm_hdu(amp))
-            mask = afwImage.Mask(image.getDimensions())
+            mask = afwImage_Mask(image.getDimensions())
             self[amp] = afwImage.MaskedImageF(image, mask)
         self._added_mask_types = []
         for mask_file in mask_files:
@@ -76,7 +80,7 @@ class MaskedCCD(dict):
         self._added_mask_types.append(md('MASKTYPE'))
         for amp in self:
             curr_mask = self[amp].getMask()
-            curr_mask |= afwImage.Mask(mask_file, imutils.dm_hdu(amp))
+            curr_mask |= afwImage_Mask(mask_file, imutils.dm_hdu(amp))
 
     def setMask(self, mask_name=None, clear=False):
         """
@@ -89,7 +93,7 @@ class MaskedCCD(dict):
             self.stat_ctrl.setAndMask(0)
         if mask_name is not None:         # Set the desired mask.
             new_mask = (self.stat_ctrl.getAndMask()
-                        | afwImage.Mask.getPlaneBitMask(mask_name))
+                        | afwImage_Mask.getPlaneBitMask(mask_name))
             self.stat_ctrl.setAndMask(new_mask)
         return self.stat_ctrl
 
@@ -157,11 +161,11 @@ class MaskedCCD(dict):
 
 def add_mask_files(mask_files, outfile, overwrite=True):
     amp_list = imutils.allAmps(mask_files[0])
-    masks = dict([(amp, afwImage.Mask(mask_files[0], imutils.dm_hdu(amp)))
+    masks = dict([(amp, afwImage_Mask(mask_files[0], imutils.dm_hdu(amp)))
                   for amp in amp_list])
     for mask_file in mask_files[1:]:
         for amp in masks:
-            masks[amp] |= afwImage.Mask(mask_file, imutils.dm_hdu(amp))
+            masks[amp] |= afwImage_Mask(mask_file, imutils.dm_hdu(amp))
     output = fits.HDUList()
     output.append(fits.PrimaryHDU())
     output[0].header['MASKTYPE'] = 'SUMMED_MASKS'

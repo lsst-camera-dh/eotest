@@ -3,11 +3,6 @@ Module to manage plots for single sensor EO test reports.
 """
 from __future__ import print_function
 from __future__ import absolute_import
-from builtins import next
-from builtins import zip
-from builtins import str
-from builtins import range
-from builtins import object
 import os
 import sys
 import glob

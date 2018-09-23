@@ -1,7 +1,6 @@
 """
 Unit tests for extended pixel edge response code.
 """
-from builtins import range
 import os
 import unittest
 import lsst.eotest.sensor as sensorTest
