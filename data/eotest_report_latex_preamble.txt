@@ -1,0 +1,17 @@
+\documentclass{article}
+\usepackage{graphicx}
+\usepackage{amssymb}
+\usepackage{siunitx}
+\usepackage{float}
+\usepackage[table,xcdraw]{xcolor}
+\usepackage[margin=1in]{geometry}
+
+\pagestyle{myheadings}
+
+\newcommand{\ok}{{\color[HTML]{009901} \checkmark}}
+\newcommand{\fail}{{\color[HTML]{FE0000} $\boldmath \times$}}
+\newcommand{\electron}{{e$^-$}}
+\newcommand{\twolinecell}[2][t]{%
+  \begin{tabular}[#1]{@{}l@{}}#2\end{tabular}}
+
+\begin{document}
