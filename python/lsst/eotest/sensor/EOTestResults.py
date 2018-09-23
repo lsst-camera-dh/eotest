@@ -89,13 +89,13 @@ class EOTestResults(object):
         """
         self.output[0].header[keyword] = value
 
-    def write(self, outfile=None, overwrite=True):
+    def write(self, outfile=None, clobber=True):
         """
         Write or update the output file.
         """
         if outfile is None:
             outfile = self.infile
-        fitsWriteto(self.output, outfile, overwrite=overwrite)
+        fitsWriteto(self.output, outfile, overwrite=clobber)
 
     def defect_fractions(self, col_len=None, total_pixels=None):
         """

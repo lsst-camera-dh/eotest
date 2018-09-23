@@ -13,7 +13,7 @@ from .AmplifierGeometry import makeAmplifierGeometry
 from .EOTestResults import EOTestResults
 from .eperTask import EPERTask
 from .MaskedCCD import MaskedCCD
-
+import lsst.afw
 import lsst.afw.image as afwImage
 import lsst.afw.math as afwMath
 import lsst.pex.config as pexConfig
@@ -58,6 +58,8 @@ def superflat(files, bias_frame=None, outfile='superflat.fits', bitpix=-32,
                     image -= imutils.bias_image(image, overscan,
                                                 statistic=np.median)
             images.append(image)
+        if lsst.afw.__version__.startswith('12.0'):
+            images = afwImage.vectorImageF(images)
         median_image = afwMath.statisticsStack(images, afwMath.MEDIAN)
         output[amp].data = median_image.getArray()
         if bitpix is not None:

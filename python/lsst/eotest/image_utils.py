@@ -174,7 +174,7 @@ def fits_mean_file(files, outfile, overwrite=True, bitpix=32):
     output.append(fits.PrimaryHDU())
     all_amps = allAmps()
     for amp in all_amps:
-        images = [afwImage.ImageF(item, amp) for item in files]
+        images = [afwImage.ImageF(item, dm_hdu(amp)) for item in files]
         if lsst.afw.__version__.startswith('12.0'):
             images = afwImage.vectorImageF(images)
         mean_image = afwMath.statisticsStack(images, afwMath.MEAN)
@@ -199,9 +199,9 @@ def fits_mean_file(files, outfile, overwrite=True, bitpix=32):
             fitsWriteto(output, outfile, overwrite=overwrite)
 
 
-def fits_median(files, hdu=1, fix=True):
+def fits_median(files, dm_hdu_=2, fix=True):
     """Compute the median image from a set of image FITS files."""
-    ims = [afwImage.ImageF(f, dm_hdu(hdu)) for f in files]
+    ims = [afwImage.ImageF(f, dm_hdu_) for f in files]
     exptimes = [Metadata(f).get('EXPTIME') for f in files]
 
     if min(exptimes) != max(exptimes):
