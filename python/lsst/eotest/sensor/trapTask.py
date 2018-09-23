@@ -73,4 +73,4 @@ class TrapTask(pipeBase.Task):
                 self.log.info("%i             %i" % (amp, num_traps))
         mask_file = '%s_traps_mask.fits' % sensor_id
         generate_mask(pocket_pumped_file, mask_file, 'TRAPS', columns=columns)
-        results.write(overwrite=True)
+        results.write(clobber=True)

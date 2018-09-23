@@ -146,4 +146,4 @@ class CteTask(pipeBase.Task):
                                    pcti[amp].error)
             if self.config.verbose:
                 self.log.info(line)
-        results.write(overwrite=True)
+        results.write(clobber=True)

@@ -144,4 +144,4 @@ class ReadNoiseTask(pipeBase.Task):
             results.add_seg_result(amp, 'READ_NOISE', Nread)
             results.add_seg_result(amp, 'TOTAL_NOISE', Ntot_med)
             results.add_seg_result(amp, 'SYSTEM_NOISE', Nsys_med)
-        results.write(overwrite=True)
+        results.write(clobber=True)

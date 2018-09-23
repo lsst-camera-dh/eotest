@@ -88,7 +88,7 @@ class BrightPixelsTask(pipeBase.Task):
         if self.config.verbose:
             self.log.info("Total bright pixels: %i" % total_bright_pixels)
             self.log.info("Total bright columns: %i" % total_bright_columns)
-        results.write(overwrite=True)
+        results.write(clobber=True)
 
         # Generate the mask file based on the pixel and columns.
         mask_file = os.path.join(self.config.output_dir,

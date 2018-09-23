@@ -199,9 +199,9 @@ def fits_mean_file(files, outfile, overwrite=True, bitpix=32):
             fitsWriteto(output, outfile, overwrite=overwrite)
 
 
-def fits_median(files, dm_hdu_=2, fix=True):
+def fits_median(files, hdu=2, fix=True):
     """Compute the median image from a set of image FITS files."""
-    ims = [afwImage.ImageF(f, dm_hdu_) for f in files]
+    ims = [afwImage.ImageF(f, hdu) for f in files]
     exptimes = [Metadata(f).get('EXPTIME') for f in files]
 
     if min(exptimes) != max(exptimes):

@@ -95,25 +95,10 @@ class EOTestReport(object):
         self.plots.flat_fields(self.wl_dir)
 
     def _write_tex_preamble(self):
-        self.output.write("""\documentclass{article}
-\usepackage{graphicx}
-\usepackage{amssymb}
-\usepackage{siunitx}
-\usepackage{float}
-\usepackage[table,xcdraw]{xcolor}
-\usepackage[margin=1in]{geometry}
-
-\pagestyle{myheadings}
-
-\\newcommand{\ok}{{\color[HTML]{009901} \checkmark}}
-\\newcommand{\\fail}{{\color[HTML]{FE0000} $\\boldmath \\times$}}
-\\newcommand{\electron}{{e$^-$}}
-\\newcommand{\\twolinecell}[2][t]{%
-  \\begin{tabular}[#1]{@{}l@{}}#2\end{tabular}}
-
-\\begin{document}
-
-""")
+        with open(os.path.join(os.environ['EOTEST_DIR'], 'data',
+                               'eotest_report_latex_preamble.txt'), 'r') as fd:
+            for line in fd:
+                self.output.write(line)
 
     def make_pdf(self):
         self._write_tex_preamble()
