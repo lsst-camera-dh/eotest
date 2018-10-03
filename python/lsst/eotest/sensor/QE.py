@@ -56,7 +56,7 @@ class QE_Data(object):
         return images
     def calculate_medians(self, infiles, outfile, mask_files=(),
                           bias_frame=None, clobber=False,
-                          correction_image=None):
+                          correction_image=None, median_stack=None):
         files = sorted([x for x in infiles])
         self.medians = dict([(amp, []) for amp in imutils.allAmps(files[0])])
         self.wl = []          # wavelength in nanometers
@@ -104,7 +104,7 @@ class QE_Data(object):
             output.write('  %.3e' % self.exptime[-1])
             output.write('  %.3e' % self.pd[-1])
             for amp in ccd:
-                im = ccd.unbiased_and_trimmed_image(amp)
+                im = ccd.unbiased_and_trimmed_image(amp, median_stack=median_stack)
                 im *= corrections[amp]
                 value = afwMath.makeStatistics(im, afwMath.MEDIAN,
                                                ccd.stat_ctrl).getValue()

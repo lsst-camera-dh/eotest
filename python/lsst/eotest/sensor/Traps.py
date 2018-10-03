@@ -23,7 +23,7 @@ class Traps(dict):
     """
     def __init__(self, ccd, gains, cycles=100, C2_thresh=10,
                  C3_thresh=1, nx=10, ny=10,
-                 edge_rolloff=10, amps=None):
+                 edge_rolloff=10, amps=None, median_stack=None):
         super(Traps, self).__init__()
         if amps is None:
             amps = ccd.keys()
@@ -31,7 +31,8 @@ class Traps(dict):
             self[amp] = []
             finder = TrapFinder(ccd, amp, C2_thresh=C2_thresh,
                                 C3_thresh=C3_thresh, nx=nx, ny=ny,
-                                edge_rolloff=edge_rolloff)
+                                edge_rolloff=edge_rolloff, 
+                                median_stack=median_stack)
             results = finder.find()
             for ix, iy, c2, c3, a0, a1 in zip(*results):
                 trap_size = max(a0, a1)*gains[amp]/cycles

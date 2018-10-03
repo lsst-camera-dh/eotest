@@ -42,7 +42,7 @@ class BrightPixelsTask(pipeBase.Task):
     _DefaultName = "BrightPixelsTask"
 
     @pipeBase.timeMethod
-    def run(self, sensor_id, dark_files, mask_files, gains, bias_frame=None):
+    def run(self, sensor_id, dark_files, mask_files, gains, bias_frame=None, median_stack=None):
         imutils.check_temperatures(dark_files, self.config.temp_set_point_tol,
                                    setpoint=self.config.temp_set_point,
                                    warn_only=True)
@@ -73,7 +73,7 @@ class BrightPixelsTask(pipeBase.Task):
         pixels = {}
         columns = {}
         for amp in ccd:
-            bright_pixels = BrightPixels(ccd, amp, exptime, gains[amp])
+            bright_pixels = BrightPixels(ccd, amp, exptime, gains[amp], median_stack=median_stack)
             pixels[amp], columns[amp] = bright_pixels.find()
             pix_count = len(pixels[amp])
             col_count = len(columns[amp])

@@ -24,13 +24,14 @@ class BrightPixels(object):
     exclusive of the bright columns.  The mask that is generated will
     be identified as mask_plane.
     """
-    def __init__(self, ccd, amp, exptime, gain,
+    def __init__(self, ccd, amp, exptime, gain, median_stack=None,
                  ethresh=5, colthresh=20, mask_plane='BAD'):
         self.ccd = ccd
         self.amp = amp
         self.raw_image = ccd[amp]
         self.exptime = exptime
         self.gain = gain
+        self.median_stack = median_stack
         self.ethresh = ethresh
         self.colthresh = colthresh
         self.mask_plane = mask_plane
@@ -40,7 +41,7 @@ class BrightPixels(object):
         """
         Find and return the bright pixels and bright columns.
         """
-        image = self.ccd.unbiased_and_trimmed_image(self.amp)
+        image = self.ccd.unbiased_and_trimmed_image(self.amp, median_stack=self.median_stack)
         #
         # Multiply e- threshold rate by exptime and convert to DN;
         # create Threshold object.

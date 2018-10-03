@@ -32,7 +32,8 @@ class DarkCurrentTask(pipeBase.Task):
     _DefaultName = "DarkCurrentTask"
 
     @pipeBase.timeMethod
-    def run(self, sensor_id, dark_files, mask_files, gains, bias_frame=None):
+    def run(self, sensor_id, dark_files, mask_files, gains, bias_frame=None, 
+            median_stack=None):
         imutils.check_temperatures(dark_files, self.config.temp_set_point_tol,
                                    setpoint=self.config.temp_set_point,
                                    warn_only=True)
@@ -57,7 +58,8 @@ class DarkCurrentTask(pipeBase.Task):
             imaging_region = ccd.amp_geom.imaging
             overscan = ccd.amp_geom.serial_overscan
             image = imutils.unbias_and_trim(ccd[amp].getImage(),
-                                            overscan, imaging_region)
+                                            overscan, imaging_region, 
+                                            median_stack=median_stack)
             mask = imutils.trim(ccd[amp].getMask(), imaging_region)
             imarr = image.getArray()
             mskarr = mask.getArray()

@@ -34,12 +34,13 @@ class LinearityTask(pipeBase.Task):
 
     @pipeBase.timeMethod
     def run(self, sensor_id, infiles, mask_files, gains, detrespfile=None,
-            bias_frame=None):
+            bias_frame=None, median_stack=median_stack):
         self.sensor_id = sensor_id
         self.infiles = infiles
         self.mask_files = mask_files
         self.gains = gains
         self.bias_frame = bias_frame
+        self.median_stack = median_stack
         if detrespfile is None:
             #
             # Compute detector response from flat pair files.
@@ -120,7 +121,7 @@ class LinearityTask(pipeBase.Task):
             self.output[-1].data.field('FLUX')[row] = flux
             for amp in flat1:
                 # Convert to e- and write out for each segment.
-                signal = pair_mean(flat1, flat2, amp)*self.gains[amp]
+		signal = pair_mean(flat1, flat2, amp, self.median_stack)*self.gains[amp]
                 self.output[-1].data.field('AMP%02i_SIGNAL' % amp)[row] = signal
         self.output[0].header['NAMPS'] = len(flat1)
         fitsWriteto(self.output, outfile, clobber=True)

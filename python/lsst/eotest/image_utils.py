@@ -13,6 +13,7 @@ import lsst.afw.image as afwImage
 import lsst.afw.math as afwMath
 import lsst.pex.exceptions as pexExcept
 
+
 class Metadata(object):
     def __init__(self, infile, hdu):
         self.header = None
@@ -166,7 +167,7 @@ def bias_spline(im, overscan, nskip_cols=5, num_cols=15, **kwargs):
     weights = np.ones(ny) * (rms / np.sqrt(nx))
     return(interpolate.splrep(rows, values, w=1/weights, k=kwargs.get('k', 3), s=kwargs.get('s', 8000), t=kwargs.get('t', None)))
 
-def bias_image(im, overscan, bias_method='spline', **kwargs):
+def bias_image(im, overscan, bias_method='spline', median_stack=None, **kwargs):
     """Generate a bias image containing the offset values calculated from 
     bias(), bias_row(), bias_func() or bias_spline().
     
@@ -175,6 +176,8 @@ def bias_image(im, overscan, bias_method='spline', **kwargs):
             (lsst.afw.image.imageLib.ImageF) afw image.
         overscan: A bounding box for the serial overscan region.
         bias_method: Either 'mean', 'row', 'func' or 'spline'.
+        median_stack: A single bias image containing a set of stacked oversan-corrected 
+            and trimmed bias frames.
 
     Keyword Arguments:
         fit_statistic: The statistic applied to each row to be fit by the polynomial. 
@@ -209,6 +212,8 @@ def bias_image(im, overscan, bias_method='spline', **kwargs):
         my_bias = np.full(ny, my_bias)
     for row in range(ny):
         imarr[row] += my_bias[row]
+    if median_stack:
+        biasim -= median_stack
     return biasim
 
 def trim(im, imaging):
@@ -237,8 +242,8 @@ def unbias_and_trim(im, overscan, imaging=None, bias_method='spline', median_sta
         imaging: A bounding box containing only the imaging section and 
             excluding the prescan.
         bias_method: Either 'mean', 'row', 'func' or 'spline'.
-        median_stack: A single bias image containing a set of oversan-corrected and trimmed 
-            bias frames that have been stacked using the stack() method. 
+        median_stack: A single bias image containing a set of stacked oversan-corrected
+            and trimmed bias frames.
 
     Keyword Arguments:
         fit_statistic: The statistic applied to each row to be fit by the polynomial. 
@@ -252,12 +257,12 @@ def unbias_and_trim(im, overscan, imaging=None, bias_method='spline', median_sta
         t: The number of knots. If None, finds the number of knots to use for a given smoothing 
             factor, s. This only needs to be specified when using the 'spline' method. The default is: None.
 
-    Returns:
+    tack: A single bias image containing a set of stacked oversan-corrected
+            and trimmed bias frames.eturns:
         An afw image.
     """
-    im -= bias_image(im, overscan, bias_method, **kwargs)
-    if median_stack:
-	    im -= median_stack
+    
+    im -= bias_image(im, overscan, bias_method, median_stack, **kwargs)
     if imaging is not None:
         return trim(im, imaging)
     return im
@@ -336,6 +341,22 @@ def stack(ims, statistic=afwMath.MEDIAN):
         images.push_back(image)
     summary = afwMath.statisticsStack(images, statistic)
     return(summary)
+
+
+def super_bias(ims, oscan, statistic=afwMath.MEDIAN, **kwargs):
+    """Generates a single stacked 'super' bias frame based on 
+    a statistic. Images must be either all masked or all unmasked."""
+
+    try:
+        unmasked = ims[0].Factory(ims[0], oscan.serial_overscan).getArray()    
+        bias_frames = [unbias_and_trim(im, oscan.serial_overscan, 
+            imaging=oscan.imaging, **kwargs) for im in ims]
+    
+    except AttributeError: # Dealing with masked images
+        bias_frames = [unbias_and_trim(im, oscan.serial_overscan,
+            imaging=oscan.imaging, **kwargs).getImage() for im in ims]
+    
+    return(stack(bias_frames, statistic))
 
 
 def writeFits(images, outfile, template_file, bitpix=-32):

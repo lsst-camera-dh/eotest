@@ -33,7 +33,7 @@ class TrapTask(pipeBase.Task):
     _DefaultName = "TrapTask"
     @pipeBase.timeMethod
     def run(self, sensor_id, pocket_pumped_file, mask_files, gains,
-            cycles=100, threshold=200):
+            cycles=100, threshold=200, median_stack=None):
         if self.config.verbose:
             self.log.info("processing %s" % pocket_pumped_file)
         ccd = MaskedCCD(pocket_pumped_file, mask_files=mask_files)
@@ -47,7 +47,8 @@ class TrapTask(pipeBase.Task):
                          C2_thresh=self.config.C2_thresh,
                          C3_thresh=self.config.C3_thresh,
                          nx=self.config.nx, ny=self.config.ny,
-                         edge_rolloff=self.config.edge_rolloff)
+                         edge_rolloff=self.config.edge_rolloff, 
+                         median_stack=self.median_stack)
         my_traps.write(outfile, clobber=True)
         results_file = self.config.eotest_results_file
         if results_file is None:
