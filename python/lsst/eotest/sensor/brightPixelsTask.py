@@ -72,6 +72,7 @@ class BrightPixelsTask(pipeBase.Task):
         results = EOTestResults(results_file, namps=len(ccd))
         pixels = {}
         columns = {}
+        median_stack = afwImage.ImageF(median_stack)
         for amp in ccd:
             bright_pixels = BrightPixels(ccd, amp, exptime, gains[amp], median_stack=median_stack)
             pixels[amp], columns[amp] = bright_pixels.find()
