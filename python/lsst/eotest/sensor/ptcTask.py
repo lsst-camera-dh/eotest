@@ -194,7 +194,7 @@ class PtcTask(pipeBase.Task):
                 pars, cov = results[:2]
                 ptc_gain = pars[1]
                 ptc_error = np.sqrt(cov[1][1])
-            except StandardError as eobj:
+            except Exception as eobj:
                 self.log.info("Exception caught while fitting PTC:")
                 self.log.info(str(eobj))
                 ptc_gain = 0.

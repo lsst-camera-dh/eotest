@@ -87,7 +87,7 @@ class QE_Data(object):
                 else:
                     print('processing', item)
             ccd = MaskedCCD(item, mask_files=mask_files, bias_frame=bias_frame)
-            md = imutils.Metadata(item, 1)
+            md = imutils.Metadata(item)
             wl = md.get('MONOWL')
             exptime = md.get('EXPTIME')
             if exptime == 0:
