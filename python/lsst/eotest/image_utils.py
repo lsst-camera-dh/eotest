@@ -268,7 +268,7 @@ def unbias_and_trim(im, overscan, imaging=None, bias_method='spline', median_sta
     return im
 
 def set_bitpix(hdu, bitpix):
-    dtypes = {16 : np.int16, -32 : np.float32}
+    dtypes = {16 : np.int16, 32 : np.float32}
     for keyword in 'BSCALE BZERO'.split():
         if keyword in hdu.header.keys():
             del hdu.header[keyword]
@@ -350,16 +350,16 @@ def super_bias(ims, oscan, statistic=afwMath.MEDIAN, **kwargs):
     try:
         unmasked = ims[0].Factory(ims[0], oscan.serial_overscan).getArray()    
         bias_frames = [unbias_and_trim(im, oscan.serial_overscan, 
-            imaging=oscan.imaging, **kwargs) for im in ims]
+                       **kwargs) for im in ims]
     
     except AttributeError: # Dealing with masked images
-        bias_frames = [unbias_and_trim(im, oscan.serial_overscan,
-            imaging=oscan.imaging, **kwargs).getImage() for im in ims]
+        bias_frames = [unbias_and_trim(im, oscan.serial_overscan, 
+                       **kwargs).getImage() for im in ims]
     
     return(stack(bias_frames, statistic))
 
 
-def writeFits(images, outfile, template_file, bitpix=-32):
+def writeFits(images, outfile, template_file, bitpix=32):
     output = fits.open(template_file)
     output[0].header['FILENAME'] = outfile
     for amp in images:

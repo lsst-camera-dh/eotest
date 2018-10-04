@@ -35,6 +35,8 @@ class BrightPixelsConfig(pexConfig.Config):
     eotest_results_file = pexConfig.Field("EO test results filename",
                                           str, default=None)
     verbose = pexConfig.Field("Turn verbosity on", bool, default=True)
+    median_stack = pexConfig.Field("Superbias to be used for bias correction", 
+                                   str, default=None)
 
 class BrightPixelsTask(pipeBase.Task):
     """Task to find bright pixels and columns."""

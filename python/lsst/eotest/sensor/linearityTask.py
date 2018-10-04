@@ -34,7 +34,7 @@ class LinearityTask(pipeBase.Task):
 
     @pipeBase.timeMethod
     def run(self, sensor_id, infiles, mask_files, gains, detrespfile=None,
-            bias_frame=None, median_stack=median_stack):
+            bias_frame=None, median_stack=None):
         self.sensor_id = sensor_id
         self.infiles = infiles
         self.mask_files = mask_files
