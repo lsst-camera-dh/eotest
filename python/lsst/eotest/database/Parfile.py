@@ -7,6 +7,7 @@ to int and float as appropriate.
 """
 import os
 
+
 class Parfile(dict):
     def __init__(self, filename, fixed_keys=True):
         """
@@ -23,31 +24,36 @@ class Parfile(dict):
             if fixed_keys:
                 raise
             pass
+
     def _readfile(self):
-        for line in open(self.filename):
-            if line.find('#') == 0:
-                continue
-            if line.find(" #") != -1 or line.find("\t#") != -1:
-                data = '#'.join(line.split('#')[:-1])
-            else:
-                data = line
-            key, value = [x.strip() for x in data.split("=")]
-            self._addkey(key)
-            try:
+        with open(self.filename) as fd:
+            for line in fd:
+                if line.find('#') == 0:
+                    continue
+                if line.find(" #") != -1 or line.find("\t#") != -1:
+                    data = '#'.join(line.split('#')[:-1])
+                else:
+                    data = line
+                key, value = [x.strip() for x in data.split("=")]
+                self._addkey(key)
                 try:
-                    self[key.strip()] = int(value.strip())
-                except:
-                    self[key.strip()] = float(value.strip())
-            except ValueError:
-                self[key.strip()] = value.strip().strip("'").strip('"')
+                    try:
+                        self[key.strip()] = int(value.strip())
+                    except:
+                        self[key.strip()] = float(value.strip())
+                except ValueError:
+                    self[key.strip()] = value.strip().strip("'").strip('"')
+
     def _addkey(self, key):
         if self.keylist.count(key) == 0:
             self.keylist.append(key)
+
     def __setitem__(self, key, value):
         if self.fixed_keys and self.keylist.count(key) == 0:
-            raise KeyError, "Invalid parameter key: " + key
+            raise KeyError("Invalid parameter key: " + key)
         self._addkey(key)
         dict.__setitem__(self, key, value)
+
     def write(self, outfile=None):
         """
         Write current set of parameters to an output par file. If
@@ -56,13 +62,13 @@ class Parfile(dict):
         """
         if outfile is not None:
             self.filename = os.path.abspath(outfile)
-        output = open(self.filename, 'w')
-        for key in self.keylist:
-            try:
-                output.write('%s = %s\n' % (key, self[key]))
-            except TypeError:
-                output.write('%s = %s\n' % (key, `self[key]`))
-        output.close()
+        with open(self.filename, 'w') as output:
+            for key in self.keylist:
+                try:
+                    output.write('%s = %s\n' % (key, self[key]))
+                except TypeError:
+                    output.write('%s = %s\n' % (key, repr(self[key])))
+
     def update(self, pars):
         """
         Reimplement from dict base class to check self.fixed_keys and

@@ -9,6 +9,7 @@ bright column is specified via the --colthresh option.
 
 @author J. Chiang <jchiang@slac.stanford.edu>
 """
+from __future__ import print_function
 import lsst.eotest.sensor as sensorTest
 
 parser = sensorTest.TaskParser('Find bright pixels and columns')
@@ -39,9 +40,9 @@ task.config.verbose = args.verbose
 
 dark_files = args.files(args.dark_files, args.dark_file_list)
 if args.verbose:
-    print "processing files: "
+    print("processing files: ")
     for item in dark_files:
-        print "  ", item
+        print("  ", item)
 
 bias_frame = args.bias_frame('%s_dark_bias_frame.fits' % args.sensor_id)
 task.run(args.sensor_id, dark_files, args.mask_files(dark_files[0]),

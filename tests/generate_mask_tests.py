@@ -7,6 +7,7 @@ import lsst.eotest.image_utils as imutils
 import lsst.eotest.sensor as sensorTest
 import lsst.eotest.sensor.sim_tools as sim_tools
 
+
 class GenerateMaskTestCase(unittest.TestCase):
     """
     TestCase class for mask generation.
@@ -52,6 +53,7 @@ class GenerateMaskTestCase(unittest.TestCase):
             for ix in self.columns[amp]:
                 self.assertNotEqual(0, imarr[0][ix])
                 self.assertEqual(imarr[0][ix]*imarr.shape[0], sum(imarr[:, ix]))
+
 
 if __name__ == '__main__':
     unittest.main()

@@ -1,12 +1,13 @@
 """
 Module to manage plots for single sensor EO test reports.
 """
+from __future__ import print_function
+from __future__ import absolute_import
 import os
 import sys
 import glob
 import copy
 from collections import OrderedDict
-from sets import Set
 import json
 import numpy as np
 import astropy.io.fits as fits
@@ -18,7 +19,7 @@ import lsst.afw.math as afwMath
 import lsst.afw.display.ds9 as ds9
 import lsst.eotest.image_utils as imutils
 from lsst.eotest.Estimator import Estimator
-import pylab_plotter as plot
+from . import pylab_plotter as plot
 from .MaskedCCD import MaskedCCD
 from .EOTestResults import EOTestResults
 from .Fe55GainFitter import Fe55GainFitter
@@ -29,12 +30,15 @@ from .QE import QE_Data
 from .AmplifierGeometry import parse_geom_kwd
 from .cte_profile import *
 
+
 class Subplot(object):
     def __init__(self, namps):
         self.nx = 4
         self.ny = namps/4
+
     def __call__(self, amp):
         return (self.nx, self.ny, amp)
+
 
 def op_str(arg, format, op=None):
     if op is None:
@@ -46,11 +50,14 @@ def op_str(arg, format, op=None):
     except TypeError:
         return str(my_val)
 
+
 def min_str(values, format):
     return op_str(values, format, op=np.min)
 
+
 def max_str(values, format):
     return op_str(values, format, op=np.max)
+
 
 def latex_minus_max(values, errors, format='%.2e'):
     # values or errors may contain nan's so eliminate those.
@@ -66,6 +73,7 @@ def latex_minus_max(values, errors, format='%.2e'):
     template += ' \pm \\num{' + format + '}'
     return template % (np.abs(max_value), errors[index])
 
+
 def cmap_range(image_array, nsig=5):
     pixel_data = np.array(image_array, dtype=np.float).flatten()
     stats = afwMath.makeStatistics(pixel_data,
@@ -76,6 +84,7 @@ def cmap_range(image_array, nsig=5):
     vmax = min(max(pixel_data), median + nsig*stdev)
     return vmin, vmax
 
+
 def plot_flat(infile, nsig=3, cmap=pylab.cm.hot, win=None, subplot=(1, 1, 1),
               figsize=None, wl=None, gains=None, use_ds9=False, outfile=None,
               title=None, annotation=''):
@@ -84,7 +93,7 @@ def plot_flat(infile, nsig=3, cmap=pylab.cm.hot, win=None, subplot=(1, 1, 1),
     datasec = parse_geom_kwd(foo[1].header['DATASEC'])
     # Specialize to science sensor or wavefront sensor geometries.
     nx_segments = 8
-    ny_segments = len(ccd)/nx_segments
+    ny_segments = len(ccd)//nx_segments
     nx = nx_segments*(datasec['xmax'] - datasec['xmin'] + 1)
     ny = ny_segments*(datasec['ymax'] - datasec['ymin'] + 1)
     mosaic = np.zeros((ny, nx), dtype=np.float)
@@ -139,7 +148,7 @@ def plot_flat(infile, nsig=3, cmap=pylab.cm.hot, win=None, subplot=(1, 1, 1),
         hdulist = fits.HDUList()
         hdulist.append(fits.PrimaryHDU())
         hdulist[0].data = mosaic[::-1, :]
-        hdulist.writeto(outfile, clobber=True)
+        hdulist.writeto(outfile, overwrite=True)
     #
     # Set the color map to extend over the range median +/- stdev(clipped)
     # of the pixel values.
@@ -178,6 +187,7 @@ def plot_flat(infile, nsig=3, cmap=pylab.cm.hot, win=None, subplot=(1, 1, 1),
                  horizontalalignment='right', verticalalignment='bottom')
     return win
 
+
 def fe55_zoom(infile, size=250, amp=1, cmap=pylab.cm.hot, nsig=10,
               subplot=(1, 1, 1), win=None, figsize=None, title=None,
               axisRange=None, annotation=''):
@@ -208,9 +218,11 @@ def fe55_zoom(infile, size=250, amp=1, cmap=pylab.cm.hot, nsig=10,
                  horizontalalignment='right', verticalalignment='bottom')
     return win
 
+
 class EOTestPlots(object):
     band_pass = QE_Data.band_pass
     prnu_wls = (350, 450, 500, 620, 750, 870, 1000)
+
     def __init__(self, sensor_id, rootdir='.', output_dir='.',
                  interactive=False, results_file=None, xtalk_file=None):
         self.sensor_id = sensor_id
@@ -231,17 +243,22 @@ class EOTestPlots(object):
                               xtalk_file=xtalk_file, prnu_wls=self.prnu_wls)
         self._linearity_results = None
         self.subplot = Subplot(len(self.results['AMP']))
+
     @property
     def qe_data(self):
         if self._qe_data is None:
             self._qe_data = fits.open(self._qe_file)
         return self._qe_data
+
     def _save_fig(self, outfile_root):
         plot.pylab.savefig(self._outputpath('%s.png' % outfile_root))
+
     def _fullpath(self, basename):
         return os.path.join(self.rootdir, basename)
+
     def _outputpath(self, basename):
         return os.path.join(self.output_dir, basename)
+
     def crosstalk_matrix(self, cmap=pylab.cm.hot, xtalk_file=None):
         if xtalk_file is None:
             xtalk_file = os.path.join(self.rootdir,
@@ -249,6 +266,7 @@ class EOTestPlots(object):
         foo = CrosstalkMatrix(xtalk_file)
         win = foo.plot(title="Crosstalk, %s" % self.sensor_id)
         return foo
+
     def persistence(self, infile=None, figsize=(11, 8.5)):
         if infile is None:
             infile = self._fullpath('%s_persistence.fits' % self.sensor_id)
@@ -265,8 +283,8 @@ class EOTestPlots(object):
                                   xlabel=r'Time since end of flat exposure (s)',
                                   ylabel=r'Deferred charge (e-/pixel)')
                 win.frameAxes.text(0.5, 1.08,
-                                   'Image Persistence vs Time, %s' \
-                                       % self.sensor_id,
+                                   'Image Persistence vs Time, %s'
+                                   % self.sensor_id,
                                    horizontalalignment='center',
                                    verticalalignment='top',
                                    transform=win.frameAxes.transAxes,
@@ -280,8 +298,8 @@ class EOTestPlots(object):
                 pylab.annotate('Amp %i' % amp, (0.5, 0.8),
                                xycoords='axes fraction', size='x-small')
             except Exception as eobj:
-                print "Exception raised in generating image persistence plot for amp", amp
-                print eobj
+                print("Exception raised in generating image persistence plot for amp", amp)
+                print(eobj)
                 # Continue with remaining amps
 
     def psf_dists(self, chiprob_min=0.1, fe55_file=None, figsize=(11, 8.5),
@@ -318,7 +336,7 @@ class EOTestPlots(object):
                 plot.histogram(sigmay, oplot=1, color='red', xrange=xrange,
                                bins=bins)
                 plot.histogram(sigma, oplot=1, xrange=xrange, bins=bins)
-                pylab.xticks(range(xrange[0], xrange[1]+1))
+                pylab.xticks(list(range(xrange[0], xrange[1]+1)))
                 # Find mode from histogram data
                 mode, median, mean = psf_sigma_statistics(sigma, bins=bins,
                                                           range=xrange)
@@ -329,8 +347,8 @@ class EOTestPlots(object):
             except Exception as eobj:
                 # Skip this plot so that the rest of the plots can be
                 # generated.
-                print "Exception raised in generating PSF sigma plot for amp", amp
-                print eobj
+                print("Exception raised in generating PSF sigma plot for amp", amp)
+                print(eobj)
 
     def fe55_dists(self, chiprob_min=0.1, fe55_file=None, figsize=(11, 8.5)):
         if fe55_file is None:
@@ -361,6 +379,7 @@ class EOTestPlots(object):
                          subplot=self.subplot(amp), win=win,
                          frameLabels=True, amp=amp)
             pylab.locator_params(axis='x', nbins=4, tight=True)
+
     def ptcs(self, xrange=None, yrange=None, figsize=(11, 8.5), ptc_file=None):
         if ptc_file is None:
             ptc_file = self._fullpath('%s_ptc.fits' % self.sensor_id)
@@ -374,8 +393,8 @@ class EOTestPlots(object):
                                   xlabel=r'mean (ADU)',
                                   ylabel=r'variance (ADU$^2$)', size='large')
                 win.frameAxes.text(0.5, 1.08,
-                                   'Photon Transfer Curves, %s' \
-                                       % self.sensor_id,
+                                   'Photon Transfer Curves, %s'
+                                   % self.sensor_id,
                                    horizontalalignment='center',
                                    verticalalignment='top',
                                    transform=win.frameAxes.transAxes,
@@ -398,6 +417,7 @@ class EOTestPlots(object):
                 % (amp, ptc_gain, ptc_gain_error)
             pylab.annotate(note, (0.05, 0.9), xycoords='axes fraction',
                            verticalalignment='top', size='x-small')
+
     def _offset_subplot(self, win, xoffset=0.025, yoffset=0.025):
         bbox = win.axes[-1].get_position()
         points = bbox.get_points()
@@ -405,6 +425,7 @@ class EOTestPlots(object):
         points[1] += yoffset
         bbox.set_points(points)
         win.axes[-1].set_position(bbox)
+
     def gains(self, oplot=0, xoffset=0.25, width=0.5, xrange=None):
         results = self.results
         gain = results['GAIN']
@@ -432,6 +453,7 @@ class EOTestPlots(object):
         except:
             pass
         win.set_title("System Gain, %s" % self.sensor_id)
+
     def noise(self, oplot=0, xoffset=0.2, width=0.2, color='b'):
         results = self.results
         read_noise = results['READ_NOISE']
@@ -516,6 +538,7 @@ class EOTestPlots(object):
                 pass
             pylab.annotate('Amp %i' % amp, (0.1, 0.8),
                            xycoords='axes fraction', size='x-small')
+
     @property
     def linearity_results(self, gain_range=(1, 6),
                           ptc_file=None, detresp_file=None):
@@ -541,9 +564,10 @@ class EOTestPlots(object):
                 self._linearity_results[amp] \
                     = detresp.linearity(amp, fit_range=self._Ne_bounds)
             except Exception as eObj:
-                print "EOTestPlots.linearity: amp %i" % amp
-                print "  ", eObj
+                print("EOTestPlots.linearity: amp %i" % amp)
+                print("  ", eObj)
         return self._linearity_results
+
     def linearity(self, gain_range=(1, 6), max_dev=0.02, figsize=(11, 8.5),
                   ptc_file=None, detresp_file=None, use_exptime=False,
                   Ne_bounds=(1e3, 9e4)):
@@ -593,14 +617,14 @@ class EOTestPlots(object):
             # Plot Ne vs flux
             try:
                 win.axes[-1].loglog(flux, Ne, 'ko', markersize=3)
-            except Exception, eObj:
-                print "EOTestPlots.linearity: amp %i" % amp
-                print "  ", eObj
+            except Exception as eObj:
+                print("EOTestPlots.linearity: amp %i" % amp)
+                print("  ", eObj)
             try:
                 win.axes[-1].loglog(flux, f1(flux), 'r-')
-            except Exception, eObj:
-                print "EOTestPlots.linearity: amp %i" % amp
-                print "  ", eObj
+            except Exception as eObj:
+                print("EOTestPlots.linearity: amp %i" % amp)
+                print("  ", eObj)
             sys.stdout.flush()
 
             # Plot horizontal lines showing the range of the linearity
@@ -627,6 +651,7 @@ class EOTestPlots(object):
             bot_ax.semilogx(flux, np.zeros(len(Ne)), 'r-')
             pylab.locator_params(axis='y', nbins=5, tight=True)
             plot.setAxis(yrange=(-1.5*max_dev, 1.5*max_dev))
+
     def linearity_resids(self, gain_range=(1, 6), max_dev=0.02,
                          figsize=(11, 8.5), ptc_file=None, detresp_file=None,
                          Ne_bounds=(1e3, 9e4), use_exptime=False):
@@ -675,8 +700,8 @@ class EOTestPlots(object):
             # the linearity spec is written
             flux_min = (Ne_bounds[0] - fit_pars[1])/fit_pars[0]
             flux_max = (Ne_bounds[1] - fit_pars[1])/fit_pars[0]
-            print 'amp, flux bounds, fit_pars:', amp, flux_min, flux_max, \
-                fit_pars
+            print('amp, flux bounds, fit_pars:', amp, flux_min, flux_max, \
+                fit_pars)
             win.axes[-1].semilogx([flux_min, flux_min], [ymin, ymax], 'k--')
             win.axes[-1].semilogx([flux_max, flux_max], [ymin, ymax], 'k--')
             # Label plots by amplifier number.
@@ -745,7 +770,7 @@ class EOTestPlots(object):
         else:
             amps = (amp,)
         for amp in amps:
-            print "Amp", amp
+            print("Amp", amp)
             wls = []
             ref_wls = ref.qe_data[1].data.field('WAVELENGTH')
             fluxes, ref_fluxes = [], []
@@ -764,15 +789,16 @@ class EOTestPlots(object):
                                                          ref.sensor_id))
             win.set_title('Amp %i' % amp)
             plot.hline(1)
+
     def qe(self, qe_file=None):
         if qe_file is not None:
             self._qe_file = qe_file
         qe_data = self.qe_data
         bands = qe_data[2].data.field('BAND')
         band_wls = np.array([sum(self.band_pass[b])/2. for b in
-                             self.band_pass.keys() if b in bands])
+                             list(self.band_pass.keys()) if b in bands])
         band_wls_errs = np.array([(self.band_pass[b][1]-self.band_pass[b][0])/2.
-                                  for b in self.band_pass.keys() if b in bands])
+                                  for b in list(self.band_pass.keys()) if b in bands])
         wl = qe_data[1].data.field('WAVELENGTH')
         qe = {}
         for amp in imutils.allAmps(self._qe_file):
@@ -786,6 +812,7 @@ class EOTestPlots(object):
             plot.xyplot(band_wls, qe_band, xerr=band_wls_errs,
                         oplot=1, color='g')
         plot.hline(100)
+
     def flat_fields(self, lambda_dir, nsig=3, cmap=pylab.cm.hot, annotation=''):
         glob_string = os.path.join(lambda_dir, '*_lambda_*.fits')
         #print glob_string
@@ -815,6 +842,7 @@ class EOTestPlots(object):
                 pylab.clf()
             except IndexError:
                 pass
+
     def confluence_tables(self, outfile=False):
         if outfile:
             output = open(self._outputpath('%s_results.txt'
@@ -844,10 +872,12 @@ class EOTestPlots(object):
                 output.write("| %i | ... | ... | ... |\n" % wl)
         if outfile:
             output.close()
+
     @property
     def prnu_results(self):
         my_prnu_results = fits.open(self.results.infile)['PRNU_RESULTS'].data
         return my_prnu_results
+
     def latex_table(self, outfile=None, hspace=None):
         lines = []
         lines.append(self.specs.latex_header(hspace=hspace))
@@ -860,6 +890,7 @@ class EOTestPlots(object):
             output.write(my_table)
             output.close()
         return my_table
+
 
 class CcdSpecs(OrderedDict):
     _job_name_map = dict(read_noise=('CCD-007',),
@@ -883,6 +914,7 @@ class CcdSpecs(OrderedDict):
                          fe55_analysis=('CCD-028',),
                          fe55_offline=('CCD-028',),
                          )
+
     def __init__(self, results_file, xtalk_file=None, plotter=None,
                  prnu_wls=()):
         super(CcdSpecs, self).__init__()
@@ -893,26 +925,29 @@ class CcdSpecs(OrderedDict):
         try:
             self._ingestResults(results_file, xtalk_file=xtalk_file)
         except Exception as eobj:
-            print "EOTestPlots.CcdSpecs: exception:"
-            print "  ", str(eobj)
+            print("EOTestPlots.CcdSpecs: exception:")
+            print("  ", str(eobj))
+
     def add_job_ids(self, summary_files):
         for summary_lims_file in summary_files:
             foo = json.loads(open(summary_lims_file).read())
             for result in foo:
-                if result.has_key('job_id'):
+                if 'job_id' in result:
                     try:
                         specids = self._job_name_map[result['job_name']]
                         for specid in specids:
                             self[specid].job_id = result['job_id']
                             if specid == 'CCD-027':
-                                for prnu_spec in self.prnu_specs.values():
+                                for prnu_spec in list(self.prnu_specs.values()):
                                     prnu_spec.job_id = result['job_id']
                     except KeyError:
                         pass
+
     def factory(self, *args, **kwds):
         spec = CcdSpec(*args, **kwds)
         self[spec.name] = spec
         return spec
+
     def _createSpecs(self):
         self.factory('CCD-007', 'Read Noise', spec='$< 8$\,\electron rms')
         self.factory('CCD-008', 'Blooming Full Well',
@@ -920,7 +955,8 @@ class CcdSpecs(OrderedDict):
         self.factory('CCD-009', 'Nonlinearity', spec='$<2\\%$')
         self.factory('CCD-010', 'Serial CTE', spec='$> 1 - \\num{5e-6}$')
         self.factory('CCD-011', 'Parallel CTE', spec='$> 1 - \\num{3e-6}$')
-        self.factory('CCD-012', '\\twolinecell{Active Imaging Area \\\\and Cosmetic Quality}', spec='\\twolinecell{$<0.5$\\% defective \\\\pixels}')
+        self.factory('CCD-012', '\\twolinecell{Active Imaging Area \\\\and Cosmetic Quality}',
+                     spec='\\twolinecell{$<0.5$\\% defective \\\\pixels}')
         self.factory('CCD-012a', 'Bright Pixels')
         self.factory('CCD-012b', 'Dark Pixels')
         self.factory('CCD-012c', 'Bright Columns')
@@ -941,19 +977,23 @@ class CcdSpecs(OrderedDict):
             self.prnu_specs[wl] = CcdSpec("CCD-027 (%inm)" % wl, 'PRNU',
                                           spec='$<5$\\%')
         self.factory('CCD-028', 'Point Spread Function', spec='$\sigma < 5\mu$')
+
     @staticmethod
     def latex_header(hspace=None):
         return CcdSpec.latex_header(hspace=hspace)
+
     @staticmethod
     def latex_footer():
         return CcdSpec.latex_footer()
+
     def latex_table(self, hspace=None):
         output = []
         output.append(self.latex_header(hspace=hspace))
-        for name, spec in self.items():
+        for name, spec in list(self.items()):
             output.append(spec.latex_entry())
         output.append(self.latex_footer())
         return '\n'.join(output) + '\n'
+
     def _ingestResults(self, results_file, xtalk_file=None):
         self.results = EOTestResults(results_file)
         rn = self.results['READ_NOISE']
@@ -964,7 +1004,8 @@ class CcdSpecs(OrderedDict):
         self['CCD-008'].measurement = '$%s$--$%s$\,\electron' % (min_str(fw, '%i'), max_str(fw, '%i'))
         self['CCD-008'].ok = (max(fw) < 175000)
         max_frac_dev = self.results['MAX_FRAC_DEV']
-        self['CCD-009'].measurement = '\\twolinecell{max. fractional deviation \\\\from linearity: $\\num{%s}$}' % max_str(max_frac_dev, '%.1e')
+        self['CCD-009'].measurement = '\\twolinecell{max. fractional deviation \\\\from linearity: $\\num{%s}$}' % max_str(
+            max_frac_dev, '%.1e')
         self['CCD-009'].ok = (max(max_frac_dev) < 0.02)
         scti = self.results['CTI_HIGH_SERIAL']
         scti = np.concatenate((scti, self.results['CTI_LOW_SERIAL']))
@@ -999,7 +1040,7 @@ class CcdSpecs(OrderedDict):
         try:
             num_pixels = (self.results['TOTAL_NUM_PIXELS']
                           - self.results['ROLLOFF_MASK_PIXELS'])
-        except StandardError:
+        except Exception:
             num_pixels = 16129000
         col_size = 2002 - 9 # exclude masked edge rolloff.
         num_defects = (num_bright_pixels + num_dark_pixels + num_traps
@@ -1030,7 +1071,7 @@ class CcdSpecs(OrderedDict):
                     bands[band].append(value)
             except KeyError:
                 pass
-        for band, specnum, minQE in zip('ugrizy', range(21, 27),
+        for band, specnum, minQE in zip('ugrizy', list(range(21, 27)),
                                         (41, 78, 83, 82, 75, 21)):
             try:
                 qe_mean = np.mean(bands[band])
@@ -1039,14 +1080,14 @@ class CcdSpecs(OrderedDict):
             except KeyError:
                 self['CCD-0%i' % specnum].measurement = 'No data'
         prnu_results = self.plotter.prnu_results
-        target_wls = Set(EOTestPlots.prnu_wls)
+        target_wls = set(EOTestPlots.prnu_wls)
         ratios = {}
         for wl, stdev, mean in zip(prnu_results['WAVELENGTH'],
                                    prnu_results['STDEV'], prnu_results['MEAN']):
             if stdev > 0:
                 target_wls.remove(int(wl))
                 ratios[wl] = stdev/mean
-                if self.prnu_specs.has_key(wl):
+                if wl in self.prnu_specs:
                     if ratios[wl] < 0.01:
                         self.prnu_specs[wl].measurement = \
                             "\\num{%.1e}\\%%" % (ratios[wl]*100)
@@ -1055,9 +1096,10 @@ class CcdSpecs(OrderedDict):
                             "%.2f\\%%" % (ratios[wl]*100)
                     self.prnu_specs[wl].ok = (ratios[wl] < 5e-2)
         max_ratio = max(ratios.values())
-        max_wl = ratios.keys()[np.where(ratios.values() == max_ratio)[0][0]]
+        max_wl = list(ratios.keys())[np.where(list(ratios.values()) == max_ratio)[0][0]]
         if max_ratio < 0.01:
-            self['CCD-027'].measurement = 'max. variation = \\num{%.1e}\\%% at %i\\,nm' % (max_ratio*100, max_wl)
+            self['CCD-027'].measurement = 'max. variation = \\num{%.1e}\\%% at %i\\,nm' % (
+                max_ratio*100, max_wl)
         else:
             self['CCD-027'].measurement = 'max. variation = %.2f\\%% at %i\\,nm' % (max_ratio*100, max_wl)
         if target_wls:
@@ -1065,13 +1107,14 @@ class CcdSpecs(OrderedDict):
                 + ', '.join([str(x) for x in sorted(target_wls)]) + "\\,nm"
             self['CCD-027'].measurement = '\\twolinecell{%s}' % measurement
         self['CCD-027'].ok = (max_ratio < 5e-2)
-
         psf_sigma = max(self.results['PSF_SIGMA'])
         self['CCD-028'].measurement = '$%.2f\,\mu$ (max. value)' % psf_sigma
         self['CCD-028'].ok = (psf_sigma < 5.)
 
+
 class CcdSpec(object):
     _latex_status = dict([(True, '\ok'), (False, '\\fail'), (None, '$\cdots$')])
+
     def __init__(self, name, description, spec=None, ok=None, measurement=None):
         self.name = name
         self.description = description
@@ -1079,12 +1122,14 @@ class CcdSpec(object):
         self.ok = ok
         self.measurement = measurement
         self.job_id = '$\cdots$'
+
     @staticmethod
     def _table_cell(value):
         if value is None:
             return '$\cdots$'
         else:
             return value
+
     @staticmethod
     def latex_header(hspace=None):
         if hspace is None:
@@ -1100,10 +1145,12 @@ class CcdSpec(object):
 \hline
 \\textbf{Status} & \\textbf{Spec. ID} & \\textbf{Description} & \\textbf{Specification} & \\textbf{Measurement}  & \\textbf{Job ID} \\\\ \hline""" % hspace
         return header
+
     @staticmethod
     def latex_footer():
         footer = "\end{tabular}\n\end{table}"
         return footer
+
     def latex_entry(self):
         entry = '%s & %s & %s & %s & %s & %s \\\\ \hline' % \
                 (self._latex_status[self.ok],
@@ -1113,12 +1160,14 @@ class CcdSpec(object):
                  self._table_cell(self.measurement),
                  self.job_id)
         return entry
+
     def latex_table(self):
         lines = []
         lines.append(CcdSpecs.latex_header())
         lines.append(self.latex_entry())
         lines.append(CcdSpecs.latex_footer())
         return '\n'.join(lines)
+
 
 if __name__ == '__main__':
     plots = EOTestPlots('114-03')

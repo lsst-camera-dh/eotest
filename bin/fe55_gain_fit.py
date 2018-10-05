@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+from __future__ import print_function
 import os
 import sys
 import numpy as np
@@ -25,31 +26,31 @@ for amp in imutils.allAmps:
     dn = catalog[amp].data.field('DN')[index]
     if args.verbose:
         sys.stdout.write("amp = %s, len(DN) = %i, " % (amp, len(dn)))
-    
+
     if len(dn) > 2:
         plot_filename = "Fe55_dist_%s_amp%02i.png" % (args.sensor_id, amp)
         try:
             gains[amp], peak, sigma = \
-               sensorTest.fe55_gain_fitter(dn, make_plot=args.plot,
-                                           title='Amp %i' % amp,
-                                           plot_filename=plot_filename)
-        except RuntimeError, e:
-            print e
+                sensorTest.fe55_gain_fitter(dn, make_plot=args.plot,
+                                            title='Amp %i' % amp,
+                                            plot_filename=plot_filename)
+        except RuntimeError as e:
+            print(e)
             continue
-            
+
     if args.verbose:
         try:
-            print "gain = %.2f" % (gains[amp],)
+            print("gain = %.2f" % (gains[amp],))
         except KeyError:
-            print
+            print()
 
 results_file = args.results_file
 if results_file is None:
-    results_file = os.path.join(args.output_dir, 
+    results_file = os.path.join(args.output_dir,
                                 '%s_eotest_results.fits' % args.sensor_id)
 
 if args.verbose:
-    print "Writing to %s" % results_file
+    print("Writing to %s" % results_file)
 
 results = sensorTest.EOTestResults(results_file)
 for amp in gains:

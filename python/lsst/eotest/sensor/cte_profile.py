@@ -13,6 +13,7 @@ __all__ = ['bias_estimate', 'cte_profile']
 
 plt.ion()
 
+
 def make_estimator(pixel_values, bias):
     """
     Create an Estimator object (value and error) based on the counts
@@ -30,6 +31,7 @@ def make_estimator(pixel_values, bias):
         estimator.error = bias.error
     return estimator
 
+
 def bias_estimate(masked_image, amp_geom, overscans=2, nskip_last_cols=4,
                   serial=True):
     """
@@ -40,8 +42,8 @@ def bias_estimate(masked_image, amp_geom, overscans=2, nskip_last_cols=4,
     imarr = masked_image.getImage().getArray()
     if serial:
         overscan = imarr[:amp_geom.serial_overscan.getMaxY() + 1,
-                          amp_geom.serial_overscan.getMinX() + overscans:
-                              -nskip_last_cols].flatten()
+                         amp_geom.serial_overscan.getMinX() + overscans:
+                         -nskip_last_cols].flatten()
     else:
         overscan = imarr[amp_geom.parallel_overscan.getMinY() + overscans:,
                          :amp_geom.parallel_overscan.getMaxX() + 1].flatten()
@@ -52,8 +54,10 @@ def bias_estimate(masked_image, amp_geom, overscans=2, nskip_last_cols=4,
     bias_est.error = bias_stats.getValue(afwMath.STDEV)/np.sqrt(len(overscan))
     return bias_est
 
+
 class EstimatorList(list):
     "Container list for Estimator objects"
+
     def __init__(self, *args, **kwds):
         "Constructor"
         super(EstimatorList, self).__init__(*args, **kwds)
@@ -67,6 +71,7 @@ class EstimatorList(list):
     def errors(self):
         "Return a numpy.array of the errors."
         return np.array([x.error for x in self])
+
 
 def get_overscan_ests(masked_image, gain, amp_geom, bias_est=None,
                       overscans=2, serial=True):
@@ -88,6 +93,7 @@ def get_overscan_ests(masked_image, gain, amp_geom, bias_est=None,
                                                    bias_est)
                                     for iy in range(1, num_rows+1)])
     return estimators
+
 
 def cte_profile(axes, masked_image, gain, amp_geom, cti, bias_est,
                 bias_subtract=True, overscans=2, xaxis_range=None,
@@ -154,6 +160,7 @@ def cte_profile(axes, masked_image, gain, amp_geom, cti, bias_est,
                          - bias_offset, spec.value) + 10)
     plt.axis(axisrange)
 
+
 def plot_cte_profiles(ccd, gains, cti, title=None, bias_est=None,
                       bias_subtract=True, xaxis_range=None, figsize=(11, 8.5),
                       serial=True):
@@ -198,6 +205,7 @@ def plot_cte_profiles(ccd, gains, cti, title=None, bias_est=None,
                     xaxis_range=xaxis_range,
                     serial=serial)
     return win
+
 
 if __name__ == '__main__':
     from .EOTestResults import EOTestResults

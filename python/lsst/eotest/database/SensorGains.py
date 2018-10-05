@@ -4,9 +4,13 @@ from user input or by querying the Sensor Test database.
 
 @author J. Chiang <jchiang@.slac.stanford.edu>
 """
+from __future__ import print_function
+from __future__ import absolute_import
+from builtins import zip
 import os
 import lsst.eotest.image_utils as imutils
-from SensorDb import SensorDb
+from .SensorDb import SensorDb
+
 
 class SensorGains(dict):
     def __init__(self, gains=None, vendorId=None, vendor='e2v',
@@ -19,10 +23,11 @@ class SensorGains(dict):
              for amp in imutils.allAmps]
         else:
             try:
-                [self.__setitem__(amp, gain) 
+                [self.__setitem__(amp, gain)
                  for amp, gain in zip(imutils.allAmps, gains)]
             except TypeError:
                 [self.__setitem__(amp, gains) for amp in imutils.allAmps]
+
 
 if __name__ == '__main__':
     import numpy.random as random
@@ -40,7 +45,7 @@ if __name__ == '__main__':
     # Check for failure.
     try:
         g2 = SensorGains()
-    except KeyError, message:
+    except KeyError as message:
         assert(("%s" % message) == "'DB_CREDENTIALS'")
         pass
 
@@ -48,4 +53,4 @@ if __name__ == '__main__':
     os.environ['DB_CREDENTIALS'] = '/nfs/farm/g/lsst/u1/testData/SIMData/pipeline/db_test_ro.par'
     g3 = SensorGains(vendorId='000-00', vendor='e2v')
     for amp in imutils.allAmps:
-        print g3[amp]
+        print(g3[amp])

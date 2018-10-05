@@ -28,7 +28,7 @@ if args.policy is None:
         template = sensorTest.fits_headers.template_file
 else:
     template = args.policy
-    
+
 missing = sensorTest.fits_headers.check_keywords(args.infile,
                                                  template=template,
                                                  verbose=args.verbose)
@@ -37,5 +37,5 @@ noao_defects = sensorTest.fits_headers.check_noao_keywords(args.infile,
                                                            verbose=args.verbose)
 
 # Use the total number of missing keywords and defects as the return code.
-retcode = sum(len(x) for x in missing.values()) + len(noao_defects)
+retcode = sum(len(x) for x in list(missing.values())) + len(noao_defects)
 sys.exit(retcode)

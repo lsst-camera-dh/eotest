@@ -3,6 +3,7 @@ Function to generate mask files given a set of pixels and columns to mask.
 """
 from __future__ import absolute_import, print_function
 import os
+import copy
 import tempfile
 import astropy.io.fits as fits
 import lsst.afw.detection as afwDetect
@@ -13,6 +14,7 @@ import lsst.eotest.image_utils as imutils
 from .AmplifierGeometry import makeAmplifierGeometry
 from .MaskedCCD import MaskedCCD
 from .sim_tools import CCD
+
 
 def generate_mask(infile, outfile, mask_plane, pixels=None, columns=None,
                   temp_mask_image=None):
@@ -50,20 +52,28 @@ def generate_mask(infile, outfile, mask_plane, pixels=None, columns=None,
     fitsWriteto(ccd, temp_mask_image)
 
     # Use the afw code to create a mask file.
-    afwImage.MaskU.addMaskPlane(mask_plane)
+    try:
+        afwImage.Mask.addMaskPlane(mask_plane)
+    except AttributeError:
+        afwImage.MaskU.addMaskPlane(mask_plane)
     # Create a primary HDU with the input file primary HDU metadata,
     # updated with the mask type info.
     hdulist = fits.HDUList()
-    hdulist.append(fits.open(infile)[0])
+    hdulist.append(fits.PrimaryHDU())
+    with fits.open(infile) as input_hdu_list:
+        hdulist[0].header.update(input_hdu_list[0].header)
     hdulist[0].header['MASKTYPE'] = mask_plane
-    fitsWriteto(hdulist, outfile, clobber=True)
+    fitsWriteto(hdulist, outfile, overwrite=True)
     # Loop over segments in the temporary file and add all pixels to
     # the mask with the inserted signal.
     maskedCCD = MaskedCCD(temp_mask_image)
     for amp in maskedCCD:
         threshold = afwDetect.Threshold(signal/2.*exptime/gain)
         fp_set = afwDetect.FootprintSet(maskedCCD[amp], threshold)
-        mask = afwImage.MaskU(maskedCCD[amp].getDimensions())
+        try:
+            mask = afwImage.Mask(maskedCCD[amp].getDimensions())
+        except AttributeError:
+            mask = afwImage.MaskU(maskedCCD[amp].getDimensions())
         fp_set.setMask(mask, mask_plane)
         md = dafBase.PropertySet()
         md.set('EXTNAME', 'SEGMENT%s' % imutils.channelIds[amp])
@@ -72,4 +82,3 @@ def generate_mask(infile, outfile, mask_plane, pixels=None, columns=None,
         md.set('DATASEC', geometry[amp]['DATASEC'])
         mask.writeFits(outfile, md, 'a')
     os.remove(temp_mask_image)
-

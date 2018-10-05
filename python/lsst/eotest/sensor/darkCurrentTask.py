@@ -4,16 +4,19 @@ units of e-/sec/pixel.
 
 @author J. Chiang <jchiang@slac.stanford.edu>
 """
+from __future__ import print_function
+from __future__ import absolute_import
 import os
 import numpy as np
 import astropy.io.fits as fits
 from lsst.eotest.fitsTools import fitsWriteto
 import lsst.eotest.image_utils as imutils
-from MaskedCCD import MaskedCCD
-from EOTestResults import EOTestResults
+from .MaskedCCD import MaskedCCD
+from .EOTestResults import EOTestResults
 import lsst.afw.image as afwImage
 import lsst.pex.config as pexConfig
 import lsst.pipe.base as pipeBase
+
 
 class DarkCurrentConfig(pexConfig.Config):
     """Configuration for DarkCurrentTask"""
@@ -26,6 +29,7 @@ class DarkCurrentConfig(pexConfig.Config):
                                           str, default=None)
     verbose = pexConfig.Field("Turn verbosity on", bool, default=True)
 
+
 class DarkCurrentTask(pipeBase.Task):
     """Task to evaluate dark current quantiles."""
     ConfigClass = DarkCurrentConfig
@@ -37,7 +41,7 @@ class DarkCurrentTask(pipeBase.Task):
                                    setpoint=self.config.temp_set_point,
                                    warn_only=True)
         median_images = {}
-        md = imutils.Metadata(dark_files[0], 1)
+        md = imutils.Metadata(dark_files[0])
         for amp in imutils.allAmps(dark_files[0]):
             median_images[amp] = imutils.fits_median(dark_files,
                                                      imutils.dm_hdu(amp))
@@ -72,7 +76,7 @@ class DarkCurrentTask(pipeBase.Task):
                 dark95s[amp] = unmasked[int(len(unmasked)*0.95)]
                 median = unmasked[len(unmasked)/2]
             except IndexError as eobj:
-                print str(eobj)
+                print(str(eobj))
                 dark95s[amp] = -1.
                 median = -1.
             if self.config.verbose:
@@ -83,7 +87,7 @@ class DarkCurrentTask(pipeBase.Task):
         #
         dark_curr_pixels = sorted(dark_curr_pixels)
         darkcurr95 = dark_curr_pixels[int(len(dark_curr_pixels)*0.95)]
-        dark95mean = np.mean(dark95s.values())
+        dark95mean = np.mean(list(dark95s.values()))
         if self.config.verbose:
             #self.log.info("CCD: mean 95 percentile value = %s" % dark95mean)
             self.log.info("CCD-wide 95 percentile value = %s" % darkcurr95)
@@ -105,6 +109,6 @@ class DarkCurrentTask(pipeBase.Task):
         for amp in ccd:
             output[0].header['DARK95%s'%imutils.channelIds[amp]] = dark95s[amp]
             results.add_seg_result(amp, 'DARK_CURRENT_95', dark95s[amp])
-        fitsWriteto(output, medfile, clobber=True, checksum=True)
+        fitsWriteto(output, medfile, overwrite=True, checksum=True)
         results.write(clobber=True)
         return dark_curr_pixels_per_amp, dark95s

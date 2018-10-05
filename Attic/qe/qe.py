@@ -1,5 +1,7 @@
 #QE Calibration
 
+from builtins import str
+from builtins import range
 import numpy as np
 import pylab as p
 import matplotlib as mpl
@@ -11,7 +13,7 @@ import glob
 ########User Editable Parameters
 
 #which amps to measure
-amps = range(1,16)
+amps = list(range(1, 16))
 
 #list of gain measured for each amp, from Fe55 measurement (just a placeholder here)
 gain = np.ones(16)*5.2
@@ -36,8 +38,8 @@ f2 = "OD143.csv"
 f3 = "WLscan.txt"
 
 ########Constants
-h=6.626e-34
-c=299792458
+h = 6.626e-34
+c = 299792458
 
 #window transmission - will go away once we recalibrate
 windowtr = 0.932
@@ -57,8 +59,8 @@ e2vqe = [47.5, 82.9, 93.1, 89.8, 75.5, 23.5]
 
 ##########
 #LSST Specs
-lsstwl=[375, 475, 625, 750, 875]
-lsstqe=[40, 80, 88, 85, 80]
+lsstwl = [375, 475, 625, 750, 875]
+lsstqe = [40, 80, 88, 85, 80]
 
 
 ############Get auxiliary data
@@ -84,15 +86,14 @@ ccdpos = alldata["ccdpos"]
 
 #Calibrate IS to Detector data by dividing out QE of photodiodes
 for i in range(len(intsphere)):
-	intsphere[i] = intsphere[i]/od143qe[np.where(wl==wls[i])]
+    intsphere[i] = intsphere[i]/od143qe[np.where(wl == wls[i])]
 
 for i in range(len(ccdpos)):
-	ccdpos[i] = ccdpos[i]/od142qe[np.where(wl==wls[i])]
+    ccdpos[i] = ccdpos[i]/od142qe[np.where(wl == wls[i])]
 
 
 #Get calibrated fraction of light received at detector position
 fractionatccd = ccdpos/intsphere
-
 
 
 #Read in image data and photodiode readings
@@ -106,21 +107,22 @@ exptime = imdata['exptime']
 #Calibrate PD reading
 pdiscal = []
 for j in range(len(pd)):
-	pdiscal.append(pd[j]/od143qe[np.where(abs(wls - imwl[j]) <=0.1)])
+    pdiscal.append(pd[j]/od143qe[np.where(abs(wls - imwl[j]) <= 0.1)])
 
 pdiscal = np.array(pdiscal)
 
 
-#########Finally calculate QE 
+#########Finally calculate QE
 
 f4 = open(outfile_all, "w+")
 f4.write("amp\twl\tqe\n")
 
 #Note: only calculates 400-1000nm because that's what we have calib data for at the moment
 for a in amps:
-	for w in imwl[np.where((amp==a) & (imwl<1001) )]:
-		qe = 100 * (median[np.where((amp==a) & (imwl==w))]*h*c*pdarea) / ((1.0/gain[a])*exptime[np.where(imwl==w)][0]*pdiscal[np.where(imwl==w)][0]*fractionatccd[np.where(abs(wls-w)<=0.1)]*pxarea*(w*1e-9))
-		f4.write('\t'.join([str(a), str(w), str(qe[0]), '\n']))
+    for w in imwl[np.where((amp == a) & (imwl < 1001))]:
+        qe = 100 * (median[np.where((amp == a) & (imwl == w))]*h*c*pdarea) / ((1.0/gain[a])*exptime[np.where(imwl == w)]
+                                                                              [0]*pdiscal[np.where(imwl == w)][0]*fractionatccd[np.where(abs(wls-w) <= 0.1)]*pxarea*(w*1e-9))
+        f4.write('\t'.join([str(a), str(w), str(qe[0]), '\n']))
 
 f4.close()
 
@@ -136,36 +138,34 @@ qe_wl = qedata["wl"]
 
 
 for a in amps:
-	#u
-	if len(qe_all[np.where((qe_amp==a) & (qe_wl >= 321) & (qe_wl <= 391))])>0:
-		qeu = np.mean(qe_all[np.where((qe_amp==a) & (qe_wl >= 321) & (qe_wl <= 391))])
-	else:
-		qeu='no data'
-	#g
-	if len(qe_all[np.where((qe_amp==a) & (qe_wl >= 402) & (qe_wl <= 552))])>0:
-		qeg = np.mean(qe_all[np.where((qe_amp==a) & (qe_wl >= 402) & (qe_wl <= 552))])
-	else:
-		qeg='no data'
-	#r
-	if len(qe_all[np.where((qe_amp==a) & (qe_wl >= 552) & (qe_wl <= 691))])>0:
-		qer = np.mean(qe_all[np.where((qe_amp==a) & (qe_wl >= 552) & (qe_wl <= 691))])
-	else:
-		qer='no data'	
-	#i
-	if len(qe_all[np.where((qe_amp==a) & (qe_wl >= 691) & (qe_wl <= 818))])>0:
-		qei = np.mean(qe_all[np.where((qe_amp==a) & (qe_wl >= 691) & (qe_wl <= 818))])
-	else:
-		qei='no data'	
-	#z
-	if len(qe_all[np.where((qe_amp==a) & (qe_wl >= 818) & (qe_wl <= 922))])>0:
-		qez = np.mean(qe_all[np.where((qe_amp==a) & (qe_wl >= 818) & (qe_wl <= 922))])
-	else:
-		qez='no data'
-	#y
-	if len(qe_all[np.where((qe_amp==a) & (qe_wl >= 930) & (qe_wl <= 1070))])>0:
-		qey = np.mean(qe_all[np.where((qe_amp==a) & (qe_wl >= 930) & (qe_wl <= 1070))])
-	else:
-		qey='no data'	
-	f5.write('\t'.join([str(a), str(qeu), str(qeg), str(qer), str(qei), str(qez), str(qey), '\n']))
-
-	
+    #u
+    if len(qe_all[np.where((qe_amp == a) & (qe_wl >= 321) & (qe_wl <= 391))]) > 0:
+        qeu = np.mean(qe_all[np.where((qe_amp == a) & (qe_wl >= 321) & (qe_wl <= 391))])
+    else:
+        qeu = 'no data'
+    #g
+    if len(qe_all[np.where((qe_amp == a) & (qe_wl >= 402) & (qe_wl <= 552))]) > 0:
+        qeg = np.mean(qe_all[np.where((qe_amp == a) & (qe_wl >= 402) & (qe_wl <= 552))])
+    else:
+        qeg = 'no data'
+    #r
+    if len(qe_all[np.where((qe_amp == a) & (qe_wl >= 552) & (qe_wl <= 691))]) > 0:
+        qer = np.mean(qe_all[np.where((qe_amp == a) & (qe_wl >= 552) & (qe_wl <= 691))])
+    else:
+        qer = 'no data'
+    #i
+    if len(qe_all[np.where((qe_amp == a) & (qe_wl >= 691) & (qe_wl <= 818))]) > 0:
+        qei = np.mean(qe_all[np.where((qe_amp == a) & (qe_wl >= 691) & (qe_wl <= 818))])
+    else:
+        qei = 'no data'
+    #z
+    if len(qe_all[np.where((qe_amp == a) & (qe_wl >= 818) & (qe_wl <= 922))]) > 0:
+        qez = np.mean(qe_all[np.where((qe_amp == a) & (qe_wl >= 818) & (qe_wl <= 922))])
+    else:
+        qez = 'no data'
+    #y
+    if len(qe_all[np.where((qe_amp == a) & (qe_wl >= 930) & (qe_wl <= 1070))]) > 0:
+        qey = np.mean(qe_all[np.where((qe_amp == a) & (qe_wl >= 930) & (qe_wl <= 1070))])
+    else:
+        qey = 'no data'
+    f5.write('\t'.join([str(a), str(qeu), str(qeg), str(qer), str(qei), str(qez), str(qey), '\n']))
