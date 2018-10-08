@@ -167,7 +167,7 @@ def bias_spline(im, overscan, nskip_cols=5, num_cols=15, **kwargs):
     weights = np.ones(ny) * (rms / np.sqrt(nx))
     return(interpolate.splrep(rows, values, w=1/weights, k=kwargs.get('k', 3), s=kwargs.get('s', 8000), t=kwargs.get('t', None)))
 
-def bias_image(im, overscan, bias_method='spline', median_stack=None, **kwargs):
+def bias_image(im, overscan, bias_method='spline', bias_frame=None, **kwargs):
     """Generate a bias image containing the offset values calculated from 
     bias(), bias_row(), bias_func() or bias_spline().
     
@@ -176,7 +176,7 @@ def bias_image(im, overscan, bias_method='spline', median_stack=None, **kwargs):
             (lsst.afw.image.imageLib.ImageF) afw image.
         overscan: A bounding box for the serial overscan region.
         bias_method: Either 'mean', 'row', 'func' or 'spline'.
-        median_stack: A single bias image containing a set of stacked oversan-corrected 
+        bias_frame: A single bias image containing a set of stacked oversan-corrected 
             and trimmed bias frames.
 
     Keyword Arguments:
@@ -212,8 +212,8 @@ def bias_image(im, overscan, bias_method='spline', median_stack=None, **kwargs):
         my_bias = np.full(ny, my_bias)
     for row in range(ny):
         imarr[row] += my_bias[row]
-    if median_stack:
-        biasim -= median_stack
+    if bias_frame:
+        biasim -= bias_frame
     return biasim
 
 def trim(im, imaging):
@@ -230,7 +230,7 @@ def trim(im, imaging):
 
     return im.Factory(im, imaging)
 
-def unbias_and_trim(im, overscan, imaging=None, bias_method='spline', median_stack=None, **kwargs):
+def unbias_and_trim(im, overscan, imaging=None, bias_method='spline', bias_frame=None, **kwargs):
     """Subtract the offset calculated from the serial overscan region and optionally trim 
     prescan and overscan regions. Includes the option to subtract the median of a stack of 
     offset-subtracted bias frames to remove the bias level.
@@ -242,7 +242,7 @@ def unbias_and_trim(im, overscan, imaging=None, bias_method='spline', median_sta
         imaging: A bounding box containing only the imaging section and 
             excluding the prescan.
         bias_method: Either 'mean', 'row', 'func' or 'spline'.
-        median_stack: A single bias image containing a set of stacked oversan-corrected
+        bias_frame: A single bias image containing a set of stacked oversan-corrected
             and trimmed bias frames.
 
     Keyword Arguments:
@@ -262,7 +262,7 @@ def unbias_and_trim(im, overscan, imaging=None, bias_method='spline', median_sta
         An afw image.
     """
     
-    im -= bias_image(im, overscan, bias_method, median_stack, **kwargs)
+    im -= bias_image(im, overscan, bias_method, bias_frame, **kwargs)
     if imaging is not None:
         return trim(im, imaging)
     return im
