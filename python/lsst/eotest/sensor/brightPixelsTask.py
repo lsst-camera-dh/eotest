@@ -35,8 +35,6 @@ class BrightPixelsConfig(pexConfig.Config):
     eotest_results_file = pexConfig.Field("EO test results filename",
                                           str, default=None)
     verbose = pexConfig.Field("Turn verbosity on", bool, default=True)
-    median_stack = pexConfig.Field("Superbias to be used for bias correction", 
-                                   str, default=None)
 
 class BrightPixelsTask(pipeBase.Task):
     """Task to find bright pixels and columns."""
@@ -44,7 +42,7 @@ class BrightPixelsTask(pipeBase.Task):
     _DefaultName = "BrightPixelsTask"
 
     @pipeBase.timeMethod
-    def run(self, sensor_id, dark_files, mask_files, gains, bias_frame=None, median_stack=None):
+    def run(self, sensor_id, dark_files, mask_files, gains, bias_frame=None):
         imutils.check_temperatures(dark_files, self.config.temp_set_point_tol,
                                    setpoint=self.config.temp_set_point,
                                    warn_only=True)
@@ -74,9 +72,8 @@ class BrightPixelsTask(pipeBase.Task):
         results = EOTestResults(results_file, namps=len(ccd))
         pixels = {}
         columns = {}
-        median_stack = afwImage.ImageF(median_stack)
         for amp in ccd:
-            bright_pixels = BrightPixels(ccd, amp, exptime, gains[amp], median_stack=median_stack)
+            bright_pixels = BrightPixels(ccd, amp, exptime, gains[amp])
             pixels[amp], columns[amp] = bright_pixels.find()
             pix_count = len(pixels[amp])
             col_count = len(columns[amp])

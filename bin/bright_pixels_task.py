@@ -24,8 +24,6 @@ parser.add_argument('-p', '--mask_plane', default='BAD', type=str,
                     help='mask plane to be used for output mask file')
 parser.add_argument('--temp_tol', default=1., type=float,
                     help='temperature tolerance for CCDTEMP among dark files')
-parser.add_argument('--median_stack', default=None, 
-                    help='apply a bias correction')
 args = parser.parse_args()
 
 task = sensorTest.BrightPixelsTask()
@@ -36,7 +34,6 @@ task.config.mask_plane = args.mask_plane
 task.config.temp_set_point_tol = args.temp_tol
 task.config.temp_set_point = args.temp_set_point
 task.config.output_dir = args.output_dir
-task.config.median_stack = args.median_stack
 task.config.eotest_results_file = args.results_file
 task.config.verbose = args.verbose
 
@@ -48,4 +45,4 @@ if args.verbose:
 
 bias_frame = args.bias_frame('%s_dark_bias_frame.fits' % args.sensor_id)
 task.run(args.sensor_id, dark_files, args.mask_files(dark_files[0]),
-         args.system_gains(), bias_frame=bias_frame, median_stack=args.median_stack)
+         args.system_gains(), bias_frame=bias_frame)

@@ -64,7 +64,7 @@ class PersistenceTask(pipeBase.Task):
 
     @pipeBase.timeMethod
     def run(self, sensor_id, pre_flat_darks, flat, post_flat_darks, 
-            mask_files, gains, median_stack=None):
+            mask_files, gains):
         darks = list(pre_flat_darks) + list(post_flat_darks)
         imutils.check_temperatures(darks, self.config.temp_set_point_tol,
                                    setpoint=self.config.temp_set_point,
@@ -89,7 +89,7 @@ class PersistenceTask(pipeBase.Task):
 
         # Define the sub-region for assessing the deferred charge.
         # This is the same bounding box for all segments, so use amp=1.
-        image = ccd.unbiased_and_trimmed_image(1, median_stack=median_stack)
+        image = ccd.unbiased_and_trimmed_image(1)
         xllc = ((image.getWidth() - self.config.region_size)/2. 
                 - self.config.region_x_offset)
         yllc = ((image.getHeight() - self.config.region_size)/2. 
@@ -101,8 +101,7 @@ class PersistenceTask(pipeBase.Task):
         # Compute reference dark current for each segment.
         dc_ref = {}
         for amp in ccd:
-            mi = imutils.unbias_and_trim(ccd[amp], overscan, imaging_reg, 
-                                         median_stack=median_stack)
+            mi = imutils.unbias_and_trim(ccd[amp], overscan, imaging_reg) 
             dc_ref[amp] = afwMath.makeStatistics(mi, afwMath.MEDIAN,
                                                  ccd.stat_ctrl).getValue()
             dc_ref[amp] *= gains[amp]/exptime
@@ -124,8 +123,7 @@ class PersistenceTask(pipeBase.Task):
             exptime = ccd.md.get('EXPTIME')
             charge = {}
             for amp in ccd:
-                mi = imutils.unbias_and_trim(ccd[amp], overscan, imaging_reg, 
-                                             median_stack=median_stack)
+                mi = imutils.unbias_and_trim(ccd[amp], overscan, imaging_reg) 
                 estimators = afwMath.MEDIAN | afwMath.STDEV
                 stats = afwMath.makeStatistics(mi, estimators, ccd.stat_ctrl)
                 value = (stats.getValue(afwMath.MEDIAN)*gains[amp] 

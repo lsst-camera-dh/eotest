@@ -3,14 +3,14 @@ import lsst.afw.math as afwMath
 import lsst.pex.exceptions as pexExcept
 import pylab_plotter as plot
 
-def getProcessedImageArray(ccd, amp, nx=10, ny=10, median_stack=None):
+def getProcessedImageArray(ccd, amp, nx=10, ny=10):
     """
     Subtract afwMath local background model from an de-biased and
     trimmed image segment and return the underlying ndarray.
     """
     # Define extent of local background region
     bg_ctrl = afwMath.BackgroundControl(nx, ny, ccd.stat_ctrl)
-    image = ccd.unbiased_and_trimmed_image(amp, median_stack=median_stack)
+    image = ccd.unbiased_and_trimmed_image(amp)
     try:
         bg = afwMath.makeBackground(image, bg_ctrl)
         bg_image = bg.getImageF()
@@ -30,7 +30,7 @@ class TrapFinder(object):
     (http://www.sciencedirect.com/science/article/pii/S0168900214012066).
     """
     def __init__(self, ccd, amp, C2_thresh=10, C3_thresh=1,
-                 nx=10, ny=10, edge_rolloff=10, median_stack=None):
+                 nx=10, ny=10, edge_rolloff=10):
         """
         ccd = MaskedCCD object.
         amp = Amplifier segment to analyze.
@@ -45,8 +45,7 @@ class TrapFinder(object):
         edge_rolloff = 10.  Ignore this number of rows near the sensor edge
                        to avoid edge rolloff regions.
         """
-        self.median_stack = median_stack
-        self.imarr = getProcessedImageArray(ccd, amp, nx, ny, self.median_stack).transpose()
+        self.imarr = getProcessedImageArray(ccd, amp, nx, ny).transpose()
         self.C2_thresh = C2_thresh
         self.C3_thresh = C3_thresh
         self.edge_rolloff = edge_rolloff

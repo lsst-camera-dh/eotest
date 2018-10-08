@@ -18,19 +18,19 @@ import lsst.afw.math as afwMath
 import lsst.pex.config as pexConfig
 import lsst.pipe.base as pipeBase
 
-def bias_subtracted_image(image, bias_image, overscan, bias_method='spline', median_stack=None):
+def bias_subtracted_image(image, bias_image, overscan, bias_method='spline'):
     # Make deep copies of image and bias image so that we can modify them.
     im_out = image.Factory(image)
     bias_sub = bias_image.Factory(bias_image)
     # Subtract overscans.
-    bias_sub -= imutils.bias_image(bias_image, overscan, bias_method, median_stack)
-    im_out -= imutils.bias_image(image, overscan, bias_method, median_stack)
+    bias_sub -= imutils.bias_image(bias_image, overscan, bias_method)
+    im_out -= imutils.bias_image(image, overscan, bias_method)
     # Subtract remaining strucutured bias.
     im_out -= bias_sub
     return im_out
 
 def superflat(files, bias_frame=None, outfile='superflat.fits', bitpix=-32,
-              bias_subtract=True, bias_method='spline', median_stack=None):
+              bias_subtract=True, bias_method='spline'):
     """
     The superflat is created by bias-offset correcting the input files
     and median-ing them together.
@@ -47,9 +47,9 @@ def superflat(files, bias_frame=None, outfile='superflat.fits', bitpix=-32,
                 if bias_frame:
                     bias_image = afwImage.ImageF(bias_frame,
                                                  imutils.dm_hdu(amp))
-                    image = bias_subtracted_image(image, bias_image, overscan, bias_method, median_stack)
+                    image = bias_subtracted_image(image, bias_image, overscan, bias_method)
                 else:
-                    image -= imutils.bias_image(image, overscan, bias_method, median_stack)
+                    image -= imutils.bias_image(image, overscan, bias_method)
             images.push_back(image)
         median_image = afwMath.statisticsStack(images, afwMath.MEDIAN)
         output[amp].data = median_image.getArray()
@@ -74,7 +74,7 @@ class CteTask(pipeBase.Task):
 
     @pipeBase.timeMethod
     def run(self, sensor_id, superflat_files, bias_frame=None,
-            flux_level='high', gains=None, mask_files=(), median_stack=None):
+            flux_level='high', gains=None, mask_files=()):
         if flux_level not in ('high', 'low'):
             raise RuntimeError('CteTask: flux_level must be "high" or "low"')
         if self.config.verbose:
@@ -87,7 +87,7 @@ class CteTask(pipeBase.Task):
         #
         outfile = '%(sensor_id)s_superflat_%(flux_level)s.fits' % locals()
         superflat_file = superflat(superflat_files, bias_frame=bias_frame,
-                                   outfile=outfile, bias_subtract=False, median_stack=median_stack)
+                                   outfile=outfile, bias_subtract=False)
         nframes = len(superflat_files)
         all_amps = imutils.allAmps(superflat_file)
         #

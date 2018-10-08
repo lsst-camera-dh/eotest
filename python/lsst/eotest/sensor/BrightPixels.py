@@ -41,7 +41,7 @@ class BrightPixels(object):
         """
         Find and return the bright pixels and bright columns.
         """
-        image = self.ccd.unbiased_and_trimmed_image(self.amp, median_stack=self.median_stack)
+        image = self.ccd.unbiased_and_trimmed_image(self.amp)
         #
         # Multiply e- threshold rate by exptime and convert to DN;
         # create Threshold object.

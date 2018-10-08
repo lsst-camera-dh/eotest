@@ -28,7 +28,7 @@ class PrnuTask(pipeBase.Task):
 
     @pipeBase.timeMethod
     def run(self, sensor_id, prnu_files, mask_files, gains, correction_image,
-            bias_frame=None, median_stack=None):
+            bias_frame=None):
         results = OrderedDict()
         line = "wl (nm)  pixel_stdev    pixel_mean    stdev/mean"
         if self.config.verbose:
@@ -43,8 +43,7 @@ class PrnuTask(pipeBase.Task):
                 self.log.info("Processing: wl = %i nm, %s" % (wl, wl_index[wl]))
                 pix_stdev, pix_mean = prnu(wl_index[wl], mask_files, gains,
                                            bias_frame=bias_frame,
-                                           correction_image=correction_image, 
-                                           median_stack=median_stack)
+                                           correction_image=correction_image) 
                 results[wl] = pix_stdev, pix_mean
                 line = "%6.1f  %12.4e  %12.4e  %12.4e" \
                     % (wl, pix_stdev, pix_mean, pix_stdev/pix_mean)

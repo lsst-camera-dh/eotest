@@ -12,8 +12,8 @@ from MaskedCCD import MaskedCCD
 import lsst.afw.image as afwImage
 import lsst.afw.math as afwMath
 
-def extract_unmasked_pixels(ccd, amp, gain, correction_image=None, median_stack=None):
-    subimage = ccd.unbiased_and_trimmed_image(amp, median_stack=median_stack)
+def extract_unmasked_pixels(ccd, amp, gain, correction_image=None):
+    subimage = ccd.unbiased_and_trimmed_image(amp)
     imarr = subimage.getImage().getArray()
     if correction_image is not None:
         correction = afwImage.ImageF(correction_image, imutils.dm_hdu(amp))
@@ -25,13 +25,12 @@ def extract_unmasked_pixels(ccd, amp, gain, correction_image=None, median_stack=
     indx = np.where(maskarr == 0)
     return [x*gain for x in imarr[indx].flat]
 
-def prnu(infile, mask_files, gains, bias_frame=None, correction_image=None, median_stack=None):
+def prnu(infile, mask_files, gains, bias_frame=None, correction_image=None):
     ccd = MaskedCCD(infile, mask_files=mask_files, bias_frame=bias_frame)
     active_pixels = []
     for amp in ccd:
         active_pixels.extend(extract_unmasked_pixels(ccd, amp, gains[amp],
-                                                     correction_image, 
-                                                     median_stack=median_stack))
+                                                     correction_image))
     active_pixels = np.array(active_pixels, dtype=np.float)
     flags = afwMath.MEAN | afwMath.STDEV
     stats = afwMath.makeStatistics(active_pixels, flags)

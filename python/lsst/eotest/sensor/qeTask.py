@@ -26,7 +26,7 @@ class QeTask(pipeBase.Task):
     @pipeBase.timeMethod
     def run(self, sensor_id, qe_files, pd_ratio_file, mask_files, gains,
             bias_frame=None, medians_file=None, vendor_data=False,
-            correction_image=None, median_stack=None):
+            correction_image=None):
         imutils.check_temperatures(qe_files, self.config.temp_set_point_tol,
                                    setpoint=self.config.temp_set_point,
                                    warn_only=True)
@@ -39,8 +39,7 @@ class QeTask(pipeBase.Task):
                                       mask_files=mask_files,
                                       bias_frame=bias_frame,
                                       clobber=True,
-                                      correction_image=correction_image, 
-                                      median_stack=median_stack)
+                                      correction_image=correction_image) 
 
         qe_data.read_medians(medians_file)
 

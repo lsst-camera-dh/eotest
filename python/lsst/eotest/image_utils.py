@@ -343,21 +343,28 @@ def stack(ims, statistic=afwMath.MEDIAN):
     return(summary)
 
 
-def super_bias(ims, oscan, statistic=afwMath.MEDIAN, **kwargs):
+def super_bias(files, oscan, hdu=2, statistic=afwMath.MEDIAN, **kwargs):
     """Generates a single stacked 'super' bias frame based on 
     a statistic. Images must be either all masked or all unmasked."""
 
-    try:
-        unmasked = ims[0].Factory(ims[0], oscan.serial_overscan).getArray()    
-        bias_frames = [unbias_and_trim(im, oscan.serial_overscan, 
+    ims = [afwImage.ImageF(f, hdu) for f in files]
+    bias_frames = [unbias_and_trim(im, oscan.serial_overscan, 
                        **kwargs) for im in ims]
-    
-    except AttributeError: # Dealing with masked images
-        bias_frames = [unbias_and_trim(im, oscan.serial_overscan, 
-                       **kwargs).getImage() for im in ims]
-    
+
     return(stack(bias_frames, statistic))
 
+def super_bias_file(files, oscan, outfile, bitpix=16, clobber=True, **kwargs):
+    output = fits.open(files[0])
+    for amp in allAmps(files[0]):
+        try:
+            del output[amp].header['BSCALE']
+            del output[amp].header['BZERO']
+        except KeyError:
+            pass
+        output[amp].data = super_bias(files, oscan, hdu=dm_hdu(amp), **kwargs).getArray()
+        if bitpix is not None:
+            set_bitpix(output[amp], bitpix)
+    fitsWriteto(output, outfile, clobber=clobber)
 
 def writeFits(images, outfile, template_file, bitpix=32):
     output = fits.open(template_file)

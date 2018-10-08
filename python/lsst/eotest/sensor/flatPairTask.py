@@ -18,7 +18,7 @@ import lsst.afw.math as afwMath
 import lsst.pex.config as pexConfig
 import lsst.pipe.base as pipeBase
 
-def pair_mean(flat1, flat2, amp, median_stack=None):
+def pair_mean(flat1, flat2, amp):
     """
     Compute the mean pixel value for a given segment, averaged between
     two exposures (assumed to have the same exposure time). The inputs
@@ -28,8 +28,8 @@ def pair_mean(flat1, flat2, amp, median_stack=None):
     #
     # Remove bias using fit to overscan region and trim to imaging region.
     #
-    im1 = flat1.unbiased_and_trimmed_image(amp, median_stack=median_stack)
-    im2 = flat2.unbiased_and_trimmed_image(amp, median_stack=median_stack)
+    im1 = flat1.unbiased_and_trimmed_image(amp)
+    im2 = flat2.unbiased_and_trimmed_image(amp)
     #
     # Compute the mean DN of the images.
     #
@@ -61,14 +61,13 @@ class FlatPairTask(pipeBase.Task):
     @pipeBase.timeMethod
     def run(self, sensor_id, infiles, mask_files, gains, detrespfile=None,
             bias_frame=None, max_pd_frac_dev=0.05,
-            linearity_spec_range=(1e3, 9e4), use_exptime=False, median_stack=None):
+            linearity_spec_range=(1e3, 9e4), use_exptime=False):
         self.sensor_id = sensor_id
         self.infiles = infiles
         self.mask_files = mask_files
         self.gains = gains
         self.bias_frame = bias_frame
         self.max_pd_frac_dev = max_pd_frac_dev
-        self.median_stack = median_stack
         if detrespfile is None:
             #
             # Compute detector response from flat pair files.
@@ -180,7 +179,7 @@ class FlatPairTask(pipeBase.Task):
             self.output[-1].data.field('FLUX')[row] = flux
 	    for amp in flat1:
                 # Convert to e- and write out for each segment.
-		signal = pair_mean(flat1, flat2, amp, self.median_stack)*self.gains[amp]
+		signal = pair_mean(flat1, flat2, amp)*self.gains[amp]
                 self.output[-1].data.field('AMP%02i_SIGNAL' % amp)[row] = signal
         self.output[0].header['NAMPS'] = len(flat1)
         fitsWriteto(self.output, outfile, clobber=True)

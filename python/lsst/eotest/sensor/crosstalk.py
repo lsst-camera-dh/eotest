@@ -34,11 +34,11 @@ def aggressor(ccd):
             max_pix_val = val
     return candidate, max_pix_val
 
-def column_mean(ccd, amp, col, median_stack=None):
+def column_mean(ccd, amp, col):
     imaging = ccd.amp_geom.imaging
     reg = afwGeom.Box2I(afwGeom.Point2I(col, imaging.getMinY()),
                         afwGeom.Extent2I(1, imaging.getHeight()))
-    image = ccd.unbiased_and_trimmed_image(amp, median_stack=median_stack)
+    image = ccd.unbiased_and_trimmed_image(amp)
     subim = image.Factory(image, reg)
     flags = afwMath.MEAN | afwMath.STDEV | afwMath.NPOINT
     stats = afwMath.makeStatistics(subim, flags, ccd.stat_ctrl)
@@ -47,7 +47,7 @@ def column_mean(ccd, amp, col, median_stack=None):
     sigma = stats.getValue(afwMath.STDEV)/np.sqrt(npts)
     return np.array((mean, sigma))
 
-def system_crosstalk(ccd, aggressor_amp, dnthresh=None, nsig=5, median_stack=None):
+def system_crosstalk(ccd, aggressor_amp, dnthresh=None, nsig=5):
     """
     Compute the system crosstalk.  dnthresh is the threshold in DN for
     detecting the illuminated column in the aggressor amplifier; if
@@ -66,7 +66,7 @@ def system_crosstalk(ccd, aggressor_amp, dnthresh=None, nsig=5, median_stack=Non
     exptime = 1
     gain = 1
     if dnthresh is None:
-        image = ccd.unbiased_and_trimmed_image(aggressor_amp, median_stack=median_stack)
+        image = ccd.unbiased_and_trimmed_image(aggressor_amp)
         median, stdev = get_stats(image, ccd.stat_ctrl)
         dnthresh = median + nsig*stdev
     bp = BrightPixels(ccd, aggressor_amp, exptime, gain, ethresh=dnthresh)
@@ -76,9 +76,9 @@ def system_crosstalk(ccd, aggressor_amp, dnthresh=None, nsig=5, median_stack=Non
         raise RuntimeError("More than one aggressor column found.")
 
     agg_col = columns[0]
-    agg_mean = column_mean(ccd, aggressor_amp, agg_coli, median_stack=median_stack)[0]
+    agg_mean = column_mean(ccd, aggressor_amp, agg_coli)[0]
 
-    ratios = dict([(amp, column_mean(ccd, amp, agg_col, median_stack=median_stack)/agg_mean)
+    ratios = dict([(amp, column_mean(ccd, amp, agg_col)/agg_mean)
                    for amp in ccd])
     return ratios
 
@@ -134,14 +134,14 @@ def extract_mean_signal(ccd, amp, footprint):
 
 def detector_crosstalk(ccd, aggressor_amp, dnthresh=None, nsig=5,
                        signal_extractor=extract_mean_signal,
-                       min_fp_size=50, median_stack=None):
+                       min_fp_size=50):
     """
     Compute detector crosstalk from a spot image in the aggressor
     amplifier. dnthresh is the threshold in DN for detecting the
     illuminated column in the aggressor amplifier; if set to None,
     then nsig*clipped_stdev above median is used for the threshold.
     """
-    image = ccd.unbiased_and_trimmed_image(aggressor_amp, median_stack=median_stack)
+    image = ccd.unbiased_and_trimmed_image(aggressor_amp)
     #
     # Extract footprint of spot image using nominal detection
     # threshold.
@@ -281,7 +281,7 @@ class CrosstalkMatrix(object):
         return result
 
 def make_crosstalk_matrix(file_list, mask_files=(),
-                          extractor=detector_crosstalk, verbose=True, median_stack=None):
+                          extractor=detector_crosstalk, verbose=True):
     det_xtalk = CrosstalkMatrix()
     try:
         os.path.isfile(file_list)
@@ -291,7 +291,7 @@ def make_crosstalk_matrix(file_list, mask_files=(),
             if verbose:
                 print "processing aggressor amp", agg_amp
             try:
-                det_ratios = extractor(ccd, agg_amp, median_stack=median_stack)
+                det_ratios = extractor(ccd, agg_amp)
                 det_xtalk.set_row(agg_amp, det_ratios)
             except RuntimeError, message:
                 print "Error extracting victim/aggressor ratios."
@@ -305,7 +305,7 @@ def make_crosstalk_matrix(file_list, mask_files=(),
             ccd = MaskedCCD(infile, mask_files=mask_files)
             agg_amp, max_dn = aggressor(ccd)
             try:
-                ratios = extractor(ccd, agg_amp, median_stack=median_stack)
+                ratios = extractor(ccd, agg_amp)
                 det_xtalk.set_row(agg_amp, ratios)
             except RuntimeError, message:
                 print "Error extracting victim/aggressor ratios:"
