@@ -18,22 +18,19 @@ import lsst.afw.math as afwMath
 import lsst.pex.config as pexConfig
 import lsst.pipe.base as pipeBase
 
-def bias_subtracted_image(image, bias_image, overscan, fit_order=1,
-                          statistic=np.median):
+def bias_subtracted_image(image, bias_image, overscan, bias_method='spline'):
     # Make deep copies of image and bias image so that we can modify them.
     im_out = image.Factory(image)
     bias_sub = bias_image.Factory(bias_image)
     # Subtract overscans.
-    bias_sub -= imutils.bias_image(bias_image, overscan, fit_order=fit_order,
-                                   statistic=statistic)
-    im_out -= imutils.bias_image(image, overscan, fit_order=fit_order,
-                                 statistic=statistic)
+    bias_sub -= imutils.bias_image(bias_image, overscan, bias_method)
+    im_out -= imutils.bias_image(image, overscan, bias_method)
     # Subtract remaining strucutured bias.
     im_out -= bias_sub
     return im_out
 
 def superflat(files, bias_frame=None, outfile='superflat.fits', bitpix=-32,
-              bias_subtract=True):
+              bias_subtract=True, bias_method='spline'):
     """
     The superflat is created by bias-offset correcting the input files
     and median-ing them together.
@@ -50,10 +47,9 @@ def superflat(files, bias_frame=None, outfile='superflat.fits', bitpix=-32,
                 if bias_frame:
                     bias_image = afwImage.ImageF(bias_frame,
                                                  imutils.dm_hdu(amp))
-                    image = bias_subtracted_image(image, bias_image, overscan)
+                    image = bias_subtracted_image(image, bias_image, overscan, bias_method)
                 else:
-                    image -= imutils.bias_image(image, overscan,
-                                                statistic=np.median)
+                    image -= imutils.bias_image(image, overscan, bias_method)
             images.push_back(image)
         median_image = afwMath.statisticsStack(images, afwMath.MEDIAN)
         output[amp].data = median_image.getArray()

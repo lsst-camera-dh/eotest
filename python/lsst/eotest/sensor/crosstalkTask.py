@@ -24,8 +24,7 @@ class CrosstalkTask(pipeBase.Task):
     _DefaultName = "CrosstalkTask"
 
     @pipeBase.timeMethod
-    def run(self, sensor_id, xtalk_files, mask_files,
-            system_xtalk_file=None):
+    def run(self, sensor_id, xtalk_files, mask_files, system_xtalk_file=None):
         imutils.check_temperatures(xtalk_files, self.config.temp_set_point_tol,
                                    setpoint=self.config.temp_set_point,
                                    warn_only=True)

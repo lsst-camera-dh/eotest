@@ -39,7 +39,7 @@ class QeTask(pipeBase.Task):
                                       mask_files=mask_files,
                                       bias_frame=bias_frame,
                                       clobber=True,
-                                      correction_image=correction_image)
+                                      correction_image=correction_image) 
 
         qe_data.read_medians(medians_file)
 

@@ -39,7 +39,7 @@ class DarkPixelsTask(pipeBase.Task):
     _DefaultName = "DarkPixelsTask"
 
     @pipeBase.timeMethod
-    def run(self, sensor_id, sflat_files, mask_files, bias_frame=None):
+    def run(self, sensor_id, sflat_files, mask_files, bias_frame=None): 
         medfile = os.path.join(self.config.output_dir,
                                '%s_median_sflat.fits' % sensor_id)
         superflat(sflat_files, outfile=medfile)

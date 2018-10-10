@@ -6,11 +6,13 @@ trimming, etc..
 import numpy as np
 import numpy.random as random
 import astropy.io.fits as fits
+from scipy import interpolate
 from fitsTools import fitsWriteto
 import lsst.afw.geom as afwGeom
 import lsst.afw.image as afwImage
 import lsst.afw.math as afwMath
 import lsst.pex.exceptions as pexExcept
+
 
 class Metadata(object):
     def __init__(self, infile, hdu):
@@ -57,57 +59,216 @@ def dm_hdu(hdu):
     """ Compute DM HDU from the actual FITS file HDU."""
     return hdu + 1
 
-def bias(im, overscan):
-    """Compute the bias from the mean of the pixels in the serial
-    overscan region."""
+def bias(im, overscan, **kwargs):
+    """Compute the offset from the mean of the pixels in the serial
+    overscan region.
+    
+    Args:
+        im: A masked (lsst.afw.image.imageLib.MaskedImageF) or unmasked 
+            (lsst.afw.image.imageLib.ImageF) afw image.
+        overscan: A bounding box for the serial overscan region.
+
+    Returns:
+        A single float value for the mean of the overscan region.
+    """
     return mean(im.Factory(im, overscan))
 
-def bias_func(im, overscan, fit_order=1, statistic=np.mean,
-              nskip_cols=5, num_cols=15):
-    """Compute the bias by fitting a polynomial (linear, by default)
-    to the mean of each row of the selected overscan region.  This
-    returns a numpy.poly1d object that returns the fitted bias as
-    function of pixel row."""
+def bias_row(im, overscan, dxmin=5, dxmax=2, statistic=np.mean, **kwargs):
+    """Compute the offset based on a statistic for each row in the serial 
+    overscan region for columns dxmin through dxmax.
+    
+    Args:
+        im: A masked (lsst.afw.image.imageLib.MaskedImageF) or unmasked 
+            (lsst.afw.image.imageLib.ImageF) afw image.
+        overscan: A bounding box for the serial overscan region.
+        dxmin: The number of columns to skip at the beginning of the serial 
+            overscan region.
+        dxmax: The number of columns to skip at the end of the serial overscan region.
+        statistic: The statistic to use to calculate the offset for each row.
+
+    Returns:
+        A numpy array with length equal to the number of rows in the serial overscan
+        region.
+    """
     try:
         imarr = im.Factory(im, overscan).getArray()
     except AttributeError: # Dealing with a MaskedImage
         imarr = im.Factory(im, overscan).getImage().getArray()
     ny, nx = imarr.shape
     rows = np.arange(ny)
-    if fit_order >= 0:
-        values = np.array([statistic(imarr[j]) for j in rows])
-        return np.poly1d(np.polyfit(rows, values, fit_order))
-    else:
-        # Use row-by-row bias level estimate, skipping initial columns
-        # to avoid possible trailed charge.
-        values = np.array([np.median(imarr[j][nskip_cols:nskip_cols+num_cols])
-                           for j in rows])
-        return lambda x: values[int(x)]
+    values = np.array([statistic(imarr[ii][dxmin:-dxmax]) for ii in rows])
+    return(values)
 
-def bias_image(im, overscan, fit_order=1, statistic=np.mean):
-    my_bias = bias_func(im, overscan, fit_order, statistic=statistic)
+def bias_func(im, overscan, nskip_cols=5, num_cols=15, **kwargs):
+    """Compute the offset by fitting a polynomial (linear, by default)
+    to the mean of each row of the serial overscan region.  This
+    returns a numpy.poly1d object with the fitted bias as function of pixel row. 
+    Allows the option to explicitly set the fit order and statistic to apply to 
+    each row using additional **kwargs.
+
+    Args:
+        im: A masked (lsst.afw.image.imageLib.MaskedImageF) or unmasked 
+            (lsst.afw.image.imageLib.ImageF) afw image.
+        overscan: A bounding box for the serial overscan region.
+        nskip_cols: The number of columns to skip at the beginning of the 
+            serial overscan region.
+        num_cols: The total number of columns to include in the offset level 
+            calculation.
+    
+    Keyword Arguments:
+        fit_statistic: The statistic applied to each row to be fit
+            by the polynomial. The default is: np.mean.
+        fit_order: The order of the polynomial. The default is: 1.
+
+    Returns:
+        A np.poly1d object containing the coefficients for the polynomial fit.
+    """
+    try:
+        imarr = im.Factory(im, overscan).getArray()
+    except AttributeError: # Dealing with a MaskedImage
+        imarr = im.Factory(im, overscan).getImage().getArray()
+    ny, nx = imarr.shape
+    rows = np.arange(ny)
+    values = np.array([kwargs.get('fit_statistic', np.mean)(imarr[j][nskip_cols:nskip_cols+num_cols]) for j in rows])
+    return np.poly1d(np.polyfit(rows, values, kwargs.get('fit_order', 1))) 
+
+def bias_spline(im, overscan, nskip_cols=5, num_cols=15, **kwargs):
+    """Compute the offset by fitting a spline to the mean of each row in the 
+    serial overscan region.
+
+    Args:
+        im: A masked (lsst.afw.image.imageLib.MaskedImageF) or unmasked
+            (lsst.afw.image.imageLib.ImageF) afw image.
+        overscan: A bounding box for the serial overscan region.
+        nskip_cols: The number of columns to skip at the beginning of the
+            overscan region.
+        num_cols: The total number of columns to include in the bias level
+            calculation.
+
+    Keyword Arguments:
+        k: The degree of the spline fit. The default is: 3.
+        s: The amount of smoothing to be applied to the fit. The default is: 8000.
+        t: The number of knots. If None, finds the number of knots to use 
+            for a given smoothing factor, s. The default is: None.
+
+    Returns:
+        A tuple (t,c,k) containing the vector of knots, the B-spline coefficients, 
+        and the degree of the spline.
+    """ 
+
+    try:
+        imarr = im.Factory(im, overscan).getArray()
+    except AttributeError: # Dealing with a MaskedImage
+        imarr = im.Factory(im, overscan).getImage().getArray() 
+    ny, nx = imarr.shape
+    rows = np.arange(ny)
+    values = np.array([kwargs.get('statistic', np.mean)(imarr[j][nskip_cols:nskip_cols+num_cols]) for j in rows])
+    rms = 7 # Expected read noise per pixel
+    weights = np.ones(ny) * (rms / np.sqrt(nx))
+    return(interpolate.splrep(rows, values, w=1/weights, k=kwargs.get('k', 3), s=kwargs.get('s', 8000), t=kwargs.get('t', None)))
+
+def bias_image(im, overscan, bias_method='spline', bias_frame=None, **kwargs):
+    """Generate a bias image containing the offset values calculated from 
+    bias(), bias_row(), bias_func() or bias_spline().
+    
+    Args:
+        im: A masked (lsst.afw.image.imageLib.MaskedImageF) or unmasked 
+            (lsst.afw.image.imageLib.ImageF) afw image.
+        overscan: A bounding box for the serial overscan region.
+        bias_method: Either 'mean', 'row', 'func' or 'spline'.
+        bias_frame: A single bias image containing a set of stacked oversan-corrected 
+            and trimmed bias frames.
+
+    Keyword Arguments:
+        fit_statistic: The statistic applied to each row to be fit by the polynomial. 
+            This only needs to be specified when using the 'func' method. 
+            The default is: np.mean.
+        fit_order: The order of the polynomial. This only needs to be specified when 
+            using the 'func' method. The default is: 1.
+        k: The degree of the spline fit. This only needs to be specified when using 
+            the 'spline' method. The default is: 3.
+        s: The amount of smoothing to be applied to the fit. This only needs to be 
+            specified when using the 'spline' method. The default is: 8000.
+        t: The number of knots. If None, finds the number of knots to use for a given 
+            smoothing factor, s. This only needs to be specified when using the 'spline' 
+            method. The default is: None.
+
+    Returns:
+        An image with size equal to the input image containing the offset level. 
+    """
     biasim = afwImage.ImageF(im.getDimensions())
     imarr = biasim.getArray()
     ny, nx = imarr.shape
+    if bias_method not in ['mean', 'row', 'func', 'spline']:
+        raise RuntimeError('Bias method must be either "mean", "row", "func" or "spline".')
+    # Number of rows in overscan must match number of rows in bias image
+    method = {'mean' : bias, 'row' : bias_row, 'func' : bias_func, 'spline' : bias_spline}
+    my_bias = method[bias_method](im, overscan, **kwargs)
+    if bias_method == 'func':
+        my_bias = my_bias(np.arange(ny))
+    elif bias_method == 'spline':
+        my_bias = interpolate.splev(np.arange(ny), my_bias)
+    elif isinstance(my_bias, float):
+        my_bias = np.full(ny, my_bias)
     for row in range(ny):
-        imarr[row] += my_bias(row)
+        imarr[row] += my_bias[row]
+    if bias_frame:
+        biasim -= bias_frame
     return biasim
 
 def trim(im, imaging):
-    "Trim the prescan and overscan regions."
+    """Trim the prescan and overscan regions.
+
+    Args:
+        im: A masked (lsst.afw.image.imageLib.MaskedImageF) or unmasked 
+            (lsst.afw.image.imageLib.ImageF) afw image.
+        imaging: A bounding box containing only the imaging section and 
+            excluding the prescan.
+    Returns:
+        An afw image. 
+    """
+
     return im.Factory(im, imaging)
 
-def unbias_and_trim(im, overscan, imaging,
-                    apply_trim=True, fit_order=1):
-    """Subtract bias calculated from overscan region and optionally trim 
-    prescan and overscan regions."""
-    im -= bias_image(im, overscan, fit_order)
-    if apply_trim:
+def unbias_and_trim(im, overscan, imaging=None, bias_method='spline', bias_frame=None, **kwargs):
+    """Subtract the offset calculated from the serial overscan region and optionally trim 
+    prescan and overscan regions. Includes the option to subtract the median of a stack of 
+    offset-subtracted bias frames to remove the bias level.
+    
+    Args:
+        im: A masked (lsst.afw.image.imageLib.MaskedImageF) or unmasked 
+            (lsst.afw.image.imageLib.ImageF) afw image.
+        overscan: A bounding box for the serial overscan region.
+        imaging: A bounding box containing only the imaging section and 
+            excluding the prescan.
+        bias_method: Either 'mean', 'row', 'func' or 'spline'.
+        bias_frame: A single bias image containing a set of stacked oversan-corrected
+            and trimmed bias frames.
+
+    Keyword Arguments:
+        fit_statistic: The statistic applied to each row to be fit by the polynomial. 
+            This only needs to be specified when using the 'func' method. The default is: np.mean.
+        fit_order: The order of the polynomial. This only needs to be specified when using 
+            the 'func' method. The default is: 1.
+        k: The degree of the spline fit. This only needs to be specified when using the 'spline' 
+            method. The default is: 3.
+        s: The amount of smoothing to be applied to the fit. This only needs to be specified when 
+            using the 'spline' method. The default is: 8000.
+        t: The number of knots. If None, finds the number of knots to use for a given smoothing 
+            factor, s. This only needs to be specified when using the 'spline' method. The default is: None.
+
+    tack: A single bias image containing a set of stacked oversan-corrected
+            and trimmed bias frames.eturns:
+        An afw image.
+    """
+    
+    im -= bias_image(im, overscan, bias_method, bias_frame, **kwargs)
+    if imaging is not None:
         return trim(im, imaging)
     return im
 
 def set_bitpix(hdu, bitpix):
-    dtypes = {16 : np.int16, -32 : np.float32}
+    dtypes = {16 : np.int16, 32 : np.float32}
     for keyword in 'BSCALE BZERO'.split():
         if keyword in hdu.header.keys():
             del hdu.header[keyword]
@@ -172,7 +333,40 @@ def fits_median(files, hdu=2, fix=True):
 
     return median_image
 
-def writeFits(images, outfile, template_file, bitpix=-32):
+def stack(ims, statistic=afwMath.MEDIAN):
+    """Stacks a list of images based on a statistic. The images must
+    be unmasked."""
+    images = afwImage.vectorImageF()
+    for image in ims:
+        images.push_back(image)
+    summary = afwMath.statisticsStack(images, statistic)
+    return(summary)
+
+
+def super_bias(files, oscan, hdu=2, statistic=afwMath.MEDIAN, **kwargs):
+    """Generates a single stacked 'super' bias frame based on 
+    a statistic. Images must be either all masked or all unmasked."""
+
+    ims = [afwImage.ImageF(f, hdu) for f in files]
+    bias_frames = [unbias_and_trim(im, oscan.serial_overscan, 
+                       **kwargs) for im in ims]
+
+    return(stack(bias_frames, statistic))
+
+def super_bias_file(files, oscan, outfile, bitpix=16, clobber=True, **kwargs):
+    output = fits.open(files[0])
+    for amp in allAmps(files[0]):
+        try:
+            del output[amp].header['BSCALE']
+            del output[amp].header['BZERO']
+        except KeyError:
+            pass
+        output[amp].data = super_bias(files, oscan, hdu=dm_hdu(amp), **kwargs).getArray()
+        if bitpix is not None:
+            set_bitpix(output[amp], bitpix)
+    fitsWriteto(output, outfile, clobber=clobber)
+
+def writeFits(images, outfile, template_file, bitpix=32):
     output = fits.open(template_file)
     output[0].header['FILENAME'] = outfile
     for amp in images:

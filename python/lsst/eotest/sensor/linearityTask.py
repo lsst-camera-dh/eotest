@@ -120,7 +120,7 @@ class LinearityTask(pipeBase.Task):
             self.output[-1].data.field('FLUX')[row] = flux
             for amp in flat1:
                 # Convert to e- and write out for each segment.
-                signal = pair_mean(flat1, flat2, amp)*self.gains[amp]
+		signal = pair_mean(flat1, flat2, amp)*self.gains[amp]
                 self.output[-1].data.field('AMP%02i_SIGNAL' % amp)[row] = signal
         self.output[0].header['NAMPS'] = len(flat1)
         fitsWriteto(self.output, outfile, clobber=True)

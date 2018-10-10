@@ -5,6 +5,7 @@ afwMath.makeStatistics object.
 
 @author J. Chiang <jchiang@slac.stanford.edu>
 """
+import numpy as np
 import astropy.io.fits as fits
 from lsst.eotest.fitsTools import fitsWriteto
 from AmplifierGeometry import makeAmplifierGeometry
@@ -89,18 +90,17 @@ class MaskedCCD(dict):
         self.stat_ctrl.setAndMask(mask_bits)
         return self.stat_ctrl
 
-    def bias_image_using_overscan(self, amp, overscan=None, fit_order=1):
+    def bias_image_using_overscan(self, amp, overscan=None, **kwargs):
         if overscan is None:
             overscan = self.amp_geom.serial_overscan
         try:
-            return imutils.bias_image(self[amp], overscan=overscan,
-                                      fit_order=fit_order)
+            return imutils.bias_image(self[amp], overscan=overscan,  **kwargs)
         except pexExcept.LSST_RUNTIME_EXCEPTION as eobj:
             raise MaskedCCDBiasImageException("DM stack error generating bias "
                                               + "image from overscan region:\n"
                                               + str(eobj))
 
-    def bias_image(self, amp, overscan=None, fit_order=1):
+    def bias_image(self, amp, overscan=None, **kwargs):
         """
         Use separately stored metadata to determine file-specified
         overscan region.
@@ -110,32 +110,29 @@ class MaskedCCD(dict):
             # Use bias frame, if available, instead of overscan region
             #
             return self.bias_frame[amp].getImage()
-        return self.bias_image_using_overscan(amp, overscan=overscan,
-                                              fit_order=fit_order)
+        return self.bias_image_using_overscan(amp, overscan=overscan, **kwargs)
 
-    def bias_subtracted_image(self, amp, overscan=None, fit_order=1):
+    def bias_subtracted_image(self, amp, overscan=None, **kwargs):
         if self.bias_frame is not None:
             # Make a deep copy of the bias frame.
             bias = self.bias_frame[amp].Factory(self.bias_frame[amp])
             # Subtract x-independent component using overscan.
             bias -= \
                 self.bias_frame.bias_image_using_overscan(amp,
-                                                          overscan=overscan,
-                                                          fit_order=fit_order)
+                                                          overscan=overscan, **kwargs)
             # Subtract x-independent component of image for this amp
             # using overscan.
             self[amp] -= \
-                self.bias_image_using_overscan(amp, overscan=overscan,
-                                               fit_order=fit_order)
+                self.bias_image_using_overscan(amp, overscan=overscan, **kwargs)
             # Subtract structured, x-dependent part.
             self[amp] -= bias
         else:
-            self[amp] -= self.bias_image(amp, overscan, fit_order)
+            self[amp] -= self.bias_image(amp, overscan, **kwargs)
         return self[amp]
 
     def unbiased_and_trimmed_image(self, amp, overscan=None,
-                                   imaging=None, fit_order=1):
-        unbiased_image = self.bias_subtracted_image(amp, overscan, fit_order)
+                                   imaging=None, **kwargs):
+        unbiased_image = self.bias_subtracted_image(amp, overscan, **kwargs)
         if imaging is None:
             imaging = self.amp_geom.imaging
         mi = imutils.trim(unbiased_image, imaging)

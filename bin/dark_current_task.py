@@ -13,6 +13,8 @@ parser.add_argument('-f', '--dark_files', type=str,
                     help='file pattern for darks')
 parser.add_argument('-F', '--dark_file_list', type=str,
                     help='file contain list of dark files')
+parser.add_argument('--median_stack', default=None, type=str,
+                    help='apply a bias correction')
 args = parser.parse_args()
 
 task = sensorTest.DarkCurrentTask()
@@ -27,4 +29,4 @@ if args.verbose:
 
 bias_frame = args.bias_frame('%s_dark_bias_frame.fits' % args.sensor_id)
 task.run(args.sensor_id, dark_files, args.mask_files(dark_files[0]), 
-         args.system_gains(), bias_frame=bias_frame)
+         args.system_gains(), bias_frame=bias_frame, median_stack=args.median_stack)

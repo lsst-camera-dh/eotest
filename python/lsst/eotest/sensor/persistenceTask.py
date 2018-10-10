@@ -101,7 +101,7 @@ class PersistenceTask(pipeBase.Task):
         # Compute reference dark current for each segment.
         dc_ref = {}
         for amp in ccd:
-            mi = imutils.unbias_and_trim(ccd[amp], overscan, imaging_reg)
+            mi = imutils.unbias_and_trim(ccd[amp], overscan, imaging_reg) 
             dc_ref[amp] = afwMath.makeStatistics(mi, afwMath.MEDIAN,
                                                  ccd.stat_ctrl).getValue()
             dc_ref[amp] *= gains[amp]/exptime
@@ -123,7 +123,7 @@ class PersistenceTask(pipeBase.Task):
             exptime = ccd.md.get('EXPTIME')
             charge = {}
             for amp in ccd:
-                mi = imutils.unbias_and_trim(ccd[amp], overscan, imaging_reg)
+                mi = imutils.unbias_and_trim(ccd[amp], overscan, imaging_reg) 
                 estimators = afwMath.MEDIAN | afwMath.STDEV
                 stats = afwMath.makeStatistics(mi, estimators, ccd.stat_ctrl)
                 value = (stats.getValue(afwMath.MEDIAN)*gains[amp] 
