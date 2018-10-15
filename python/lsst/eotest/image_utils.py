@@ -268,7 +268,7 @@ def unbias_and_trim(im, overscan, imaging=None, bias_method='spline', bias_frame
     return im
 
 def set_bitpix(hdu, bitpix):
-    dtypes = {16 : np.int16, 32 : np.float32}
+    dtypes = {16: np.int16, 32: np.int32, -32: np.float32}
     for keyword in 'BSCALE BZERO'.split():
         if keyword in hdu.header.keys():
             del hdu.header[keyword]
