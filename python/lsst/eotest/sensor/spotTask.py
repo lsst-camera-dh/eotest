@@ -2,7 +2,7 @@ import os
 import numpy as np
 from astropy.io import fits
 import lsst.eotest.image_utils as imutils
-from spot_psf import SpotMomentFit, SpotMomentFit2
+from spot_psf import SpotMomentFit
 from MaskedCCD import MaskedCCD
 from EOTestResults import EOTestResults
 
@@ -34,8 +34,7 @@ class SpotTask(pipeBase.Task):
 
     @pipeBase.timeMethod
     def run(self, sensor_id, infiles, mask_files, bias_frame=None,
-            spot_catalog=None, chiprob_min=0.1, accuracy_req=0,
-            oscan_fit_order=1, mosaic=False):
+            spot_catalog=None, oscan_fit_order=1):
 
         imutils.check_temperatures(infiles, self.config.temp_set_point_tol,
                                    setpoint=self.config.temp_set_point,
@@ -49,10 +48,7 @@ class SpotTask(pipeBase.Task):
         #
         # Detect and fit spots, accumulating the results by amplifier.
         #
-        if mosaic:
-            fitter = SpotMomentFit2(nsig=self.config.nsig)
-        else:
-            fitter = SpotMomentFit(nsig=self.config.nsig)
+        fitter = SpotMomentFit(nsig=self.config.nsig)
         if spot_catalog is None:
             for infile in infiles:
                 if self.config.verbose:
@@ -60,14 +56,9 @@ class SpotTask(pipeBase.Task):
 
                 ccd = MaskedCCD(infile, mask_files=mask_files,
                                 bias_frame=bias_frame)
-                if mosaic:
-                    fitter.process_image(ccd, infile, 
-                                         oscan_fit_order=oscan_fit_order)
-                else:
-                    for amp in ccd:
-                        if self.config.verbose:
-                            self.log.info("  amp %i" % amp)
-                        fitter.process_image(ccd, amp, oscan_fit_order=oscan_fit_order)
+
+                fitter.process_image(ccd, infile, 
+                                     oscan_fit_order=oscan_fit_order)
 
                 if self.config.output_file is None:
                     spot_results = os.path.join(self.config.output_dir,
@@ -79,9 +70,6 @@ class SpotTask(pipeBase.Task):
                     self.log.info("Writing spot results file to %s" % spot_results)
                 fitter.write_results(outfile=spot_results)
                 namps = len(ccd)
-        else:
-            fitter.read_spot_catalog(spot_catalog)
-            namps = fits.open(spot_catalog)[0].header['NAMPS']
 
 if __name__ == '__main__':
 
