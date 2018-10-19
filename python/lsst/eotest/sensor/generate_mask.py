@@ -10,9 +10,9 @@ import lsst.afw.image as afwImage
 import lsst.daf.base as dafBase
 from lsst.eotest.fitsTools import fitsWriteto
 import lsst.eotest.image_utils as imutils
-from .AmplifierGeometry import makeAmplifierGeometry
-from .MaskedCCD import MaskedCCD
-from .sim_tools import CCD
+from AmplifierGeometry import makeAmplifierGeometry
+from MaskedCCD import MaskedCCD
+from sim_tools import CCD
 
 def generate_mask(infile, outfile, mask_plane, pixels=None, columns=None,
                   temp_mask_image=None):

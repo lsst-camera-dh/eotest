@@ -12,9 +12,9 @@ import lsst.afw.image as afwImage
 import lsst.daf.base as dafBase
 
 import lsst.eotest.image_utils as imutils
-from .MaskedCCD import MaskedCCD
-from .AmplifierGeometry import makeAmplifierGeometry
-from .fits_headers import fits_headers
+from MaskedCCD import MaskedCCD
+from AmplifierGeometry import makeAmplifierGeometry
+from fits_headers import fits_headers
 
 class BrightPixels(object):
     """

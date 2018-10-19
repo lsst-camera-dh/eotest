@@ -44,10 +44,9 @@ class GlowingSources(object):
 
     Detected sources are saved in a FITs table.
     """
-    def __init__(self, nsig=10, npix_min=20, gain=1.0, outfile=None):
+    def __init__(self, nsig=10, npix_min=20, outfile=None):
 
         self.nsig = nsig
-        self.gain = gain
         self.npix_min = npix_min
 
         self.dn_fp = []
@@ -145,7 +144,7 @@ class GlowingSources(object):
                                                              columns))))
             self.output[-1].name = extname
 
-    def write_results(self, outfile='bright_defects_params.fits'):
+    def write_results(self, outfile='glowing_sources_params.fits'):
         """Write results to the corresponding output FITs file."""
         self.output[0].header['NAMPS'] = len(self.amp_set)
         fitsWriteto(self.output, outfile, overwrite=True, checksum=True)
@@ -166,7 +165,7 @@ if __name__ == '__main__':
     gain = 0.7
 
     ccd = MaskedCCD(dark_file)
-    glows = GlowingSources(nsig=nsig, npix_min=min_pixels, gain=gain)
+    glows = GlowingSources(nsig=nsig, npix_min=min_pixels)
     for amp in ccd:
         glows.find(ccd, amp)
     glows.write_results()

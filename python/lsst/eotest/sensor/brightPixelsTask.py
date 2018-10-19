@@ -10,10 +10,12 @@ bright column is specified via the --colthresh option.
 import os
 
 import lsst.eotest.image_utils as imutils
-from .MaskedCCD import MaskedCCD
-from .BrightPixels import BrightPixels
-from .EOTestResults import EOTestResults
-from .generate_mask import generate_mask
+from MaskedCCD import MaskedCCD
+from BrightPixels import BrightPixels
+from EOTestResults import EOTestResults
+from generate_mask import generate_mask
+
+from GlowingSources import GlowingSources
 
 import lsst.afw.image as afwImage
 import lsst.pex.config as pexConfig
@@ -35,6 +37,12 @@ class BrightPixelsConfig(pexConfig.Config):
     eotest_results_file = pexConfig.Field("EO test results filename",
                                           str, default=None)
     verbose = pexConfig.Field("Turn verbosity on", bool, default=True)
+    nsig = pexConfig.Field("Number of sigma for bright source identification",
+                           int, default=10)
+    npix_min = pexConfig.Field("Minimum number of pixels for an extended bright source to be identified",
+                               int, default=20)
+    glowing_sources_file = pexConfig.Field("Glowing sources results filename",
+                                           str, default='glowing_sources_params.fits')
 
 class BrightPixelsTask(pipeBase.Task):
     """Task to find bright pixels and columns."""
@@ -63,6 +71,7 @@ class BrightPixelsTask(pipeBase.Task):
             self.log.info("Amp         # bright pixels     # bright columns")
         #
         # Write bright pixel and column counts to results file.
+        # Extended sources are found and saved to separate file.
         #
         results_file = self.config.eotest_results_file
         if results_file is None:
@@ -72,6 +81,10 @@ class BrightPixelsTask(pipeBase.Task):
         results = EOTestResults(results_file, namps=len(ccd))
         pixels = {}
         columns = {}
+        nsig = self.config.nsig
+        npix_min = self.config.npix_min
+        outfile = self.config.glowing_sources_file
+        glowing_sources = GlowingSources(nsig, npix_min)
         for amp in ccd:
             bright_pixels = BrightPixels(ccd, amp, exptime, gains[amp])
             pixels[amp], columns[amp] = bright_pixels.find()
@@ -83,9 +96,13 @@ class BrightPixelsTask(pipeBase.Task):
             results.add_seg_result(amp, 'NUM_BRIGHT_COLUMNS', col_count)
             self.log.info("%2i          %i          %i" %
                           (amp, pix_count, col_count))
+
+            glowing_sources.find(ccd, amp)
+
         if self.config.verbose:
             self.log.info("Total bright pixels: %i" % total_bright_pixels)
             self.log.info("Total bright columns: %i" % total_bright_columns)
+        glowing_sources.write_results(outfile)
         results.write(clobber=True)
 
         # Generate the mask file based on the pixel and columns.
@@ -95,3 +112,28 @@ class BrightPixelsTask(pipeBase.Task):
             os.remove(mask_file)
         generate_mask(medfile, mask_file, self.config.mask_plane,
                       pixels=pixels, columns=columns)
+
+if __name__ == '__main__':
+
+    import argparse
+    
+    parser = argparse.ArgumentParser()
+    parser.add_argument('sensor_id', type=str, 
+                        help='Identifier for the sensor (e.g. S00, S01, etc)')
+    parser.add_argument('dark_files', nargs='+',
+                        help='Dark files to use for analysis.')
+    parser.add_argument('--bias_frame', '-b', type=str, default=None)
+    parser.add_argument('--eotest', '-e', type=str, default=None)
+    args = parser.parse_args()
+
+    sensor_id = args.sensor_id
+    dark_files = args.dark_files
+    mask_files = []
+    if args.eotest is None:
+        gains = dict((i, 1) for i in range(1, 17))
+    bias_frame = args.bias_frame
+
+    bright_pixels = BrightPixelsTask()
+    bright_pixels.run(sensor_id, dark_files, tuple(mask_files), 
+                      gains, bias_frame = bias_frame)
+        
