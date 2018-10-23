@@ -6,10 +6,10 @@ photon transfer curve and compute and write out the full well.
 """
 import os
 import glob
+from copy import deepcopy
 import numpy as np
 import scipy.optimize
 import astropy.io.fits as fits
-from copy import deepcopy
 from lsst.eotest.fitsTools import fitsTableFactory, fitsWriteto
 import lsst.eotest.image_utils as imutils
 from .MaskedCCD import MaskedCCD
@@ -174,7 +174,7 @@ class PtcTask(pipeBase.Task):
             pars = 2.7e-6, 0.75, 25
             try:
                 while index != index_old and count < 10:
-                    results = scipy.optimize.leastsq(residuals, pars, full_output=1, 
+                    results = scipy.optimize.leastsq(residuals, pars, full_output=1,
                                                      args=(mean[index], var[index]))
                     sig_resids = (var - ptc_func(pars, mean))/np.sqrt(var)
                     index_old = deepcopy(index)
@@ -201,7 +201,7 @@ class PtcTask(pipeBase.Task):
                 ptc_noise_error = -1.
                 ptc_turnoff = 0.
             # Write gain and error, a00 and its uncertainty, inferred noise and
-            # uncertainty, and the 'turnoff' level (in electrons) to EO test 
+            # uncertainty, and the 'turnoff' level (in electrons) to EO test
             # results file.
             ampnum = int(amp.split('Amp')[1])
             output.add_seg_result(ampnum, 'PTC_GAIN', ptc_gain)
@@ -211,7 +211,10 @@ class PtcTask(pipeBase.Task):
             output.add_seg_result(ampnum, 'PTC_NOISE', ptc_noise)
             output.add_seg_result(ampnum, 'PTC_NOISE_ERROR', ptc_noise_error)
             output.add_seg_result(ampnum, 'PTC_TURNOFF', ptc_turnoff)
-            self.log.info("%i  %f  %fi %f %f %f %f %f" % (ampnum, ptc_gain, 
-                          ptc_error, ptc_a00, ptc_a00_error,
-                          ptc_noise, ptc_noise_error, ptc_turnoff))
+            self.log.info("%i  %f  %fi %f %f %f %f %f" % (ampnum, ptc_gain,
+                                                          ptc_error, ptc_a00,
+                                                          ptc_a00_error,
+                                                          ptc_noise,
+                                                          ptc_noise_error,
+                                                          ptc_turnoff))
         output.write()

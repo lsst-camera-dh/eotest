@@ -1,17 +1,19 @@
 """
 Test code for PTC analysis.
 """
+
 from __future__ import print_function
 import os
 import unittest
-import itertools
+import sys
 import numpy as np
 import lsst.eotest.sensor as sensorTest
-from lsst.eotest.sensor.ptcTask import PtcTask
 import astropy.io.fits as fits
-import sys
 
 class PTCGainFitterTestCase(unittest.TestCase):
+    """
+    TestCase class for PTC gain fitting, plus k factor, noise, and turn-over
+    """
     def setUp(self):
         # Save current floating point error handling.
         self.np_fp_config = np.geterr()
@@ -23,13 +25,15 @@ class PTCGainFitterTestCase(unittest.TestCase):
         np.seterr(**self.np_fp_config)
 
     def test_ptc_fit(self):
+        # Run the fit using a canned file representing mean-var for a 
+        # single amplifier.
         infile = os.path.join(os.environ['EOTEST_DIR'], 'tests',
                               'PTC_mean_var_values.txt')
         data = np.loadtxt(infile)
-        mean = data[:,0]
-        var = data[:,1]
+        mean = data[:, 0]
+        var = data[:, 1]
         ptc_stats = {}
-        ptc_stats['Amp0'] = [mean,var]
+        ptc_stats['Amp0'] = [mean, var]
 
         # Fit mean-variance relation, compare to expected results
         # for gain, noise, k, rolloff
