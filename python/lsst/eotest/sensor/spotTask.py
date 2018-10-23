@@ -1,5 +1,5 @@
-from future import print_function
-from future import absolute_import
+from __future__ import print_function
+from __future__ import absolute_import
 import os
 import numpy as np
 from astropy.io import fits
