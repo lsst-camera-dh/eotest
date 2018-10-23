@@ -1,29 +1,32 @@
+from future import print_function
+from future import absolute_import
 import os
 import numpy as np
 from astropy.io import fits
-import lsst.eotest.image_utils as imutils
-from spot_psf import SpotMomentFit
-from MaskedCCD import MaskedCCD
-from EOTestResults import EOTestResults
 
+import lsst.eotest.image_utils as imutils
+import lsst.afw.image as afwImage
 import lsst.pex.config as pexConfig
 import lsst.pipe.base as pipeBase
-from AmplifierGeometry import parse_geom_kwd
+import lsst.meas.extensions.shapeHSM
+
+from .MaskedCCD import MaskedCCD
+from .AmplifierGeometry import parse_geom_kwd
+from lsst.pipe.tasks.characterizeImage import CharacterizeImageTask, CharacterizeImageConfig
+
 
 class SpotConfig(pexConfig.Config):
     """Configuration for Spot analysis task"""
-    chiprob_min = pexConfig.Field("Minimum chi-square probability for cluster fit",
-                                  float, default=0.1)
-    nsig = pexConfig.Field("Charge cluster footprint threshold in number of standard deviations of noise in bias section", float, default=2)
+    minpixels = pexConfig.Field("Minimum number of pixels above detection threshold", 
+                                int, default=10)
+    nsig = pexConfig.Field("Source footprint threshold in number of standard deviations of image section", 
+                           float, default=10)
     temp_set_point = pexConfig.Field("Required temperature (C) set point",
                                      float, default=-95.)
     temp_set_point_tol = pexConfig.Field("Required temperature set point tolerance (degrees C)",
                                          float, default=1.)
-
     output_dir = pexConfig.Field("Output directory", str, default='.')
     output_file = pexConfig.Field("Output filename", str, default=None)
-    eotest_results_file = pexConfig.Field("EO test results filename",
-                                          str, default=None)
     verbose = pexConfig.Field("Turn verbosity on", bool, default=True)
 
 class SpotTask(pipeBase.Task):
@@ -33,7 +36,7 @@ class SpotTask(pipeBase.Task):
     _DefaultName = "SpotTask"
 
     @pipeBase.timeMethod
-    def run(self, sensor_id, infiles, mask_files, bias_frame=None,
+    def run(self, sensor_id, infile, mask_files, bias_frame=None,
             spot_catalog=None, oscan_fit_order=1):
 
         imutils.check_temperatures(infiles, self.config.temp_set_point_tol,
@@ -42,38 +45,43 @@ class SpotTask(pipeBase.Task):
 
         if self.config.verbose and spot_catalog is None:
             self.log.info("Input files:")
-            for item in infiles:
-                self.log.info("  %s" % item)
+            self.log.info("  {0}".format(infile))
 
         #
         # Detect and fit spots, accumulating the results by amplifier.
         #
-        fitter = SpotMomentFit(nsig=self.config.nsig)
-        if spot_catalog is None:
-            for infile in infiles:
-                if self.config.verbose:
-                    self.log.info("processing %s" % infile)
+        charConfig = CharacterizeImageConfig()
+        charConfig.doMeasurePsf = False
+        charConfig.doApCorr = False
+        charConfig.repair.doCosmicRay = False
+        charConfig.detection.minPixels = self.config.minpixels
+        charConfig.detection.background.binSize = 10
+        charConfig.detection.thresholdType = "stdev"
+        charConfig.detection.thresholdValue = self.config.nsig
+        charConfig.measurement.plugins.names |= ["ext_shapeHSM_HsmSourceMoments"]
 
-                ccd = MaskedCCD(infile, mask_files=mask_files,
-                                bias_frame=bias_frame)
+        charTask = CharacterizeImageTask(config=charConfig)
+        if self.config.verbose:
+            self.log.info("processing {0}".format(infile))
 
-                fitter.process_image(ccd, infile, 
-                                     oscan_fit_order=oscan_fit_order)
+        image = make_ccd_mosaic(infile)
+        exposure = afwImage.ExposureF(image.getBBox())
+        exposure.setImage(image)
+                
+        result = charTask.characterize(exposure)
+        if self.config.verbose:
+            self.log.info("Detected {0} objects".format(len(result.sourceCat)))
 
-                if self.config.output_file is None:
-                    spot_results = os.path.join(self.config.output_dir,
-                                                '%s_spot_results_nsig%i.fits'
-                                                % (sensor_id, self.config.nsig))
-                else:
-                    spot_results = self.config.output_file
-                if self.config.verbose:
-                    self.log.info("Writing spot results file to %s" % spot_results)
-                fitter.write_results(outfile=spot_results)
-                namps = len(ccd)
+        if self.config.output_file is None:
+            output_file = os.path.join(self.config.output_dir,
+                                       '{0}_spot_results_nsig{1}.cat'.format(sensor_id, self.config.nsig))
         else:
-            fitter.read_spot_catalog(spot_catalog)
-            namps = fits.open(spot_catalog)[0].header['NAMPS']
-
+            output_file = self.config.output_file
+        if self.config.verbose:
+            self.log.info("Writing spot results file to {0}".format(spot_results))
+        src = result.sourceCat
+        src.writeFits(output_file)
+        
 if __name__ == '__main__':
 
     import glob
