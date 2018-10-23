@@ -14,6 +14,47 @@ from .MaskedCCD import MaskedCCD
 from .AmplifierGeometry import parse_geom_kwd
 from lsst.pipe.tasks.characterizeImage import CharacterizeImageTask, CharacterizeImageConfig
 
+def make_ccd_mosaic(infile, bias_frame=None, gains=None, fit_order=1):
+    
+    ccd = MaskedCCD(infile, bias_frame=bias_frame)
+
+    foo = fits.open(infile)
+    datasec = parse_geom_kwd(foo[1].header['DATASEC'])
+    nx_segments = 8
+    ny_segments = 2
+    nx = nx_segments*(datasec['xmax'] - datasec['xmin'] + 1)
+    ny = ny_segments*(datasec['ymax'] - datasec['ymin'] + 1)
+    mosaic = np.zeros((ny, nx), dtype=np.float32) # swap x/y to get to camera coordinates
+
+    for ypos in range(ny_segments):
+        for xpos in range(nx_segments):
+            amp = ypos*nx_segments + xpos + 1
+
+            detsec = parse_geom_kwd(foo[amp].header['DETSEC'])
+            xmin = nx - max(detsec['xmin'], detsec['xmax'])
+            xmax = nx - min(detsec['xmin'], detsec['xmax']) + 1
+            ymin = ny - max(detsec['ymin'], detsec['ymax'])
+            ymax = ny - min(detsec['ymin'], detsec['ymax']) + 1
+
+            # Extract bias-subtracted image for this segment 
+            segment_image = ccd.unbiased_and_trimmed_image(amp, fit_order=fit_order)
+            subarr = segment_image.getImage().getArray()
+
+            # Determine flips in x- and y- direction
+            if detsec['xmax'] > detsec['xmin']: # flip in x-direction
+                subarr = subarr[:, ::-1]
+            if detsec['ymax'] > detsec['ymin']: # flip in y-direction
+                subarr = subarr[::-1, :]
+
+            # Convert from ADU to e-
+            if gains is not None:
+                subarr *= gains[amp]
+
+            # Set sub-array to the mosaiced image
+            mosaic[ymin:ymax, xmin:xmax] = subarr
+
+    image = afwImage.ImageF(mosaic)
+    return image
 
 class SpotConfig(pexConfig.Config):
     """Configuration for Spot analysis task"""
@@ -36,8 +77,8 @@ class SpotTask(pipeBase.Task):
     _DefaultName = "SpotTask"
 
     @pipeBase.timeMethod
-    def run(self, sensor_id, infile, mask_files, bias_frame=None,
-            spot_catalog=None, oscan_fit_order=1):
+    def run(self, sensor_id, infile, mask_files, gains, bias_frame=None,
+            oscan_fit_order=1):
 
         imutils.check_temperatures(infiles, self.config.temp_set_point_tol,
                                    setpoint=self.config.temp_set_point,
@@ -46,9 +87,8 @@ class SpotTask(pipeBase.Task):
         if self.config.verbose and spot_catalog is None:
             self.log.info("Input files:")
             self.log.info("  {0}".format(infile))
-
         #
-        # Detect and fit spots, accumulating the results by amplifier.
+        # Set up characterize task configuration
         #
         charConfig = CharacterizeImageConfig()
         charConfig.doMeasurePsf = False
@@ -59,19 +99,22 @@ class SpotTask(pipeBase.Task):
         charConfig.detection.thresholdType = "stdev"
         charConfig.detection.thresholdValue = self.config.nsig
         charConfig.measurement.plugins.names |= ["ext_shapeHSM_HsmSourceMoments"]
-
         charTask = CharacterizeImageTask(config=charConfig)
+        #
+        # Process a mosaiced CCD image
+        #
         if self.config.verbose:
             self.log.info("processing {0}".format(infile))
-
-        image = make_ccd_mosaic(infile)
+        image = make_ccd_mosaic(infile, bias_frame=bias_frame, gains=gains,
+                                fit_order=oscan_fit_order)
         exposure = afwImage.ExposureF(image.getBBox())
         exposure.setImage(image)
-                
         result = charTask.characterize(exposure)
         if self.config.verbose:
             self.log.info("Detected {0} objects".format(len(result.sourceCat)))
-
+        #
+        # Save catalog results to file
+        #
         if self.config.output_file is None:
             output_file = os.path.join(self.config.output_dir,
                                        '{0}_spot_results_nsig{1}.cat'.format(sensor_id, self.config.nsig))
@@ -88,8 +131,8 @@ if __name__ == '__main__':
     import argparse
 
     parser = argparse.ArgumentParser()
-    parser.add_argument('sensor_id', help='Sensor name, e.g. S00')
-    parser.add_argument('image_files', nargs='+', help='List of spot images')
+    parser.add_argument('sensor_id', type=str, help='Sensor name, e.g. S00')
+    parser.add_argument('image_file', type=str, help='Spot image filename')
     parser.add_argument('-b', '--bias_frame', default=None, 
                         help='Bias frame to use')
     parser.add_argument('-o', '--output_dir', 
@@ -97,24 +140,17 @@ if __name__ == '__main__':
                         help='Output directory')
     parser.add_argument('-n', '--nsig', type=float, default=10.0,
                         help='Number of standard deviations to use when setting threshold.')
-    parser.add_argument('-m', '--mosaic', type=bool, default=False,
-                        help='Boolean to mosaic CCD before spot finding.')
     args = parser.parse_args()
 
     sensor_id = args.sensor_id
-    image_files = args.image_files
+    image_file = args.image_file
     bias_frame = args.bias_frame
     output_dir = args.output_dir
     nsig = args.nsig
-    mosaic = args.mosaic
     mask_files = tuple()
-
-    print image_files
-    print bias_frame
 
     spottask = SpotTask()
     spottask.config.verbose = False
     spottask.config.output_dir = output_dir
     spottask.config.nsig = nsig
-    spottask.run(sensor_id, image_files, mask_files, bias_frame=bias_frame,
-                 mosaic=mosaic)
+    spottask.run(sensor_id, image_files, mask_files, bias_frame=bias_frame)
