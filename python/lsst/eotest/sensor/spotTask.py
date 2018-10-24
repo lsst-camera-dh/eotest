@@ -15,9 +15,9 @@ from .AmplifierGeometry import parse_geom_kwd
 from lsst.pipe.tasks.characterizeImage import CharacterizeImageTask, CharacterizeImageConfig
 
 def make_ccd_mosaic(infile, bias_frame=None, gains=None, fit_order=1):
+    """Combine amplifier image arrays into a single mosaic CCD image array."""
     
     ccd = MaskedCCD(infile, bias_frame=bias_frame)
-
     foo = fits.open(infile)
     datasec = parse_geom_kwd(foo[1].header['DATASEC'])
     nx_segments = 8
@@ -35,22 +35,26 @@ def make_ccd_mosaic(infile, bias_frame=None, gains=None, fit_order=1):
             xmax = nx - min(detsec['xmin'], detsec['xmax']) + 1
             ymin = ny - max(detsec['ymin'], detsec['ymax'])
             ymax = ny - min(detsec['ymin'], detsec['ymax']) + 1
-
-            # Extract bias-subtracted image for this segment 
+            #
+            # Extract bias-subtracted image for this segment
+            #
             segment_image = ccd.unbiased_and_trimmed_image(amp, fit_order=fit_order)
             subarr = segment_image.getImage().getArray()
-
+            #
             # Determine flips in x- and y- direction
+            #
             if detsec['xmax'] > detsec['xmin']: # flip in x-direction
                 subarr = subarr[:, ::-1]
             if detsec['ymax'] > detsec['ymin']: # flip in y-direction
                 subarr = subarr[::-1, :]
-
+            #
             # Convert from ADU to e-
+            #
             if gains is not None:
                 subarr *= gains[amp]
-
+            #
             # Set sub-array to the mosaiced image
+            #
             mosaic[ymin:ymax, xmin:xmax] = subarr
 
     image = afwImage.ImageF(mosaic)
@@ -90,14 +94,16 @@ class SpotTask(pipeBase.Task):
         #
         # Set up characterize task configuration
         #
+        nsig = self.config.nsig
+        minpixels = self.config.minpixels
         charConfig = CharacterizeImageConfig()
         charConfig.doMeasurePsf = False
         charConfig.doApCorr = False
         charConfig.repair.doCosmicRay = False
-        charConfig.detection.minPixels = self.config.minpixels
+        charConfig.detection.minPixels = minpixels
         charConfig.detection.background.binSize = 10
         charConfig.detection.thresholdType = "stdev"
-        charConfig.detection.thresholdValue = self.config.nsig
+        charConfig.detection.thresholdValue = nsig
         charConfig.measurement.plugins.names |= ["ext_shapeHSM_HsmSourceMoments"]
         charTask = CharacterizeImageTask(config=charConfig)
         #
@@ -110,19 +116,20 @@ class SpotTask(pipeBase.Task):
         exposure = afwImage.ExposureF(image.getBBox())
         exposure.setImage(image)
         result = charTask.characterize(exposure)
+        src = result.sourceCat
         if self.config.verbose:
-            self.log.info("Detected {0} objects".format(len(result.sourceCat)))
+            self.log.info("Detected {0} objects".format(len(src)))
         #
         # Save catalog results to file
         #
+        output_dir = self.config.output_dir
         if self.config.output_file is None:
-            output_file = os.path.join(self.config.output_dir,
-                                       '{0}_spot_results_nsig{1}.cat'.format(sensor_id, self.config.nsig))
+            output_file = os.path.join(output_dir,
+                                       '{0}_source_catalog_nsig{1}.cat'.format(sensor_id, nsig))
         else:
-            output_file = self.config.output_file
+            output_file = os.path.join(output_dir, self.config.output_file)
         if self.config.verbose:
-            self.log.info("Writing spot results file to {0}".format(spot_results))
-        src = result.sourceCat
+            self.log.info("Writing spot results file to {0}".format(output_file))
         src.writeFits(output_file)
         
 if __name__ == '__main__':
