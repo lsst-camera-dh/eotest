@@ -61,7 +61,7 @@ class CrosstalkTask(pipeBase.Task):
     @pipeBase.timeMethod
     def run(self, sensor_id, xtalk_files, mask_files, bias_frame=None,
             gains=None, system_xtalk_file=None):
-        imutils.check_temperatures(xtalk_file, self.config.temp_set_point_tol,
+        imutils.check_temperatures(xtalk_files, self.config.temp_set_point_tol,
                                    setpoint=self.config.temp_set_point,
                                    warn_only=True)
 
@@ -79,5 +79,8 @@ class CrosstalkTask(pipeBase.Task):
             system_xtalk_matrix = CrosstalkMatrix(systtem_xtalk_file)
         xtalk = xtalk - system_xtalk_matrix
         xtalk.write_fits(os.path.join(self.config.output_dir, 
-                                      '%s_xtalk_matrix.fits' % sensor_id)
+                                      '%s_xtalk_matrix.fits' % sensor_id))
+
+        
+  
                                          
