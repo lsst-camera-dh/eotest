@@ -16,7 +16,6 @@ from lsst.pipe.tasks.characterizeImage import CharacterizeImageTask, Characteriz
 
 def make_ccd_mosaic(infile, bias_frame=None, gains=None, fit_order=1):
     """Combine amplifier image arrays into a single mosaic CCD image array."""
-    
     ccd = MaskedCCD(infile, bias_frame=bias_frame)
     foo = fits.open(infile)
     datasec = parse_geom_kwd(foo[1].header['DATASEC'])
@@ -81,9 +80,8 @@ class SpotTask(pipeBase.Task):
     _DefaultName = "SpotTask"
 
     @pipeBase.timeMethod
-    def run(self, sensor_id, infile, mask_files, gains, bias_frame=None,
+    def run(self, sensor_id, infile, gains, bias_frame=None,
             oscan_fit_order=1):
-
         imutils.check_temperatures(infiles, self.config.temp_set_point_tol,
                                    setpoint=self.config.temp_set_point,
                                    warn_only=True)
@@ -154,10 +152,10 @@ if __name__ == '__main__':
     bias_frame = args.bias_frame
     output_dir = args.output_dir
     nsig = args.nsig
-    mask_files = tuple()
+    gains = dict((i+1, 1.0) for i in range(16))
 
     spottask = SpotTask()
     spottask.config.verbose = False
     spottask.config.output_dir = output_dir
     spottask.config.nsig = nsig
-    spottask.run(sensor_id, image_files, mask_files, bias_frame=bias_frame)
+    spottask.run(sensor_id, image_files, gains, bias_frame=bias_frame)
