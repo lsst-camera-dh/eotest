@@ -9,6 +9,7 @@ import os
 import warnings
 import numpy as np
 import numpy.random as random
+from scipy import interpolate
 from astropy.io import fits
 from astropy.utils.exceptions import AstropyWarning, AstropyUserWarning
 from .fitsTools import fitsWriteto

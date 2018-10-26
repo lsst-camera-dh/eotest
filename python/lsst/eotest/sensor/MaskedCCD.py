@@ -5,9 +5,9 @@ afwMath.makeStatistics object.
 
 @author J. Chiang <jchiang@slac.stanford.edu>
 """
-import numpy as np
 from __future__ import print_function
 from __future__ import absolute_import
+import numpy as np
 import astropy.io.fits as fits
 from lsst.eotest.fitsTools import fitsWriteto
 from .AmplifierGeometry import makeAmplifierGeometry

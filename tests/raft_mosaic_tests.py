@@ -51,7 +51,7 @@ class RaftMosaicTestCase(unittest.TestCase):
                 for hdu in hdu_list[1:17]:
                     hdu.data = np.ones(hdu.data.shape, dtype=np.float32)*level
                     level += step
-                fitsWriteto(hdu_list, outfile, overwrite=True)
+                fitsWriteto(hdu_list, outfile)
             test_files[slot] = outfile
 
         raft_mosaic = raftTest.RaftMosaic(test_files, bias_subtract=False)

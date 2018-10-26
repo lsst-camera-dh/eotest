@@ -76,11 +76,10 @@ class BiasHandlingTestCase(unittest.TestCase):
                 self.assertEqual(bf_i(y), bf_m(y))
                 self.assertAlmostEqual(bias_func(y), bf_m(y))
             # Test that row-by-row median operates.
-            row_bias = imutils.bias_func(ccd[amp],
-                                         self.amp_geom.serial_overscan,
-                                         fit_order=-1)
+            row_bias = imutils.bias_row(ccd[amp],
+                                         self.amp_geom.serial_overscan)
             for y in range(2022):
-                self.assertAlmostEqual(bf_i(y), row_bias(y), places=6)
+                self.assertAlmostEqual(bf_i(y), row_bias[y], places=5)
 
     def test_bias_image(self):
         ccd = MaskedCCD(self.image_file)
@@ -88,11 +87,11 @@ class BiasHandlingTestCase(unittest.TestCase):
         ccd_mean = MaskedCCD(self.mean_image_file)
         overscan_mean = makeAmplifierGeometry(self.mean_image_file)
         for amp in ccd:
-            for method in ['mean', 'row', 'func']:
+            for method in ['mean', 'row', 'func', 'spline']:
                 if method == 'mean':
 		    my_bias_image = imutils.bias_image(ccd_mean[amp],
                                                     overscan_mean.serial_overscan,
-                                                    method, **self.kwargs)
+                                                    bias_method=method, **self.kwargs)
                     fracdiff = ((self.mean_bias_image.getArray() - my_bias_image.getArray())
                         /self.mean_bias_image.getArray())
                     self.assertTrue(max(np.abs(fracdiff.flat)) < 1.5e-3)
@@ -113,7 +112,7 @@ class BiasHandlingTestCase(unittest.TestCase):
         ccd = MaskedCCD(self.image_file)
         overscan = makeAmplifierGeometry(self.image_file)
         for amp in ccd:
-            for method in ['mean', 'row', 'func']:
+            for method in ['mean', 'row', 'func', 'spline']:
                 image = imutils.unbias_and_trim(ccd[amp], 
                                                  overscan.serial_overscan, bias_method=method, **self.kwargs)
                 imarr = image.getImage().getArray()
