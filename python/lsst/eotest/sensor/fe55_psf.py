@@ -5,6 +5,8 @@ compute the probability of the chi-square fit.
 
 @author J. Chiang <jchiang@slac.stanford.edu>
 """
+from __future__ import print_function
+from __future__ import absolute_import
 import numpy as np
 import warnings
 import itertools
@@ -24,6 +26,7 @@ import pdb
 
 _sqrt2 = np.sqrt(2)
 
+
 def psf_sigma_statistics(sigma, bins=50, range=(2, 6), frac=0.5):
     hist = np.histogram(sigma, bins=bins, range=range)
     y = hist[0]
@@ -33,6 +36,7 @@ def psf_sigma_statistics(sigma, bins=50, range=(2, 6), frac=0.5):
     median = my_sigma[int(frac*len(my_sigma))]
     mean = np.mean(sigma)
     return mode, median, mean
+
 
 def pixel_integral(x, y, x0, y0, sigmax, sigmay):
     """
@@ -47,13 +51,20 @@ def pixel_integral(x, y, x0, y0, sigmax, sigmay):
 
     return Fx*Fy
 
+
 def residuals_single(pars, pos, dn, errors):
     x0, y0, sigma, DN_tot = pars
     return (dn - psf_func(pos, x0, y0, sigma, sigma, DN_tot))/errors
 
+
 def residuals(pars, pos, dn, errors):
     x0, y0, sigmax, sigmay, DN_tot = pars
     return (dn - psf_func(pos, x0, y0, sigmax, sigmay, DN_tot))/errors
+
+
+def psf_func_single_sigma(pos, x0, y0, sigma, DN_tot):
+    return psf_func(pos, x0, y0, sigma, sigma, DN_tot)
+
 
 def psf_func(pos, x0, y0, sigmax, sigmay, DN_tot):
     """
@@ -67,10 +78,12 @@ def psf_func(pos, x0, y0, sigmax, sigmay, DN_tot):
     return DN_tot*np.array([pixel_integral(x[0], x[1], x0, y0,
                                            sigmax, sigmay) for x in pos])
 
+
 def chisq(pos, dn, x0, y0, sigmax, sigmay, dn_fit, dn_errors):
     "The chi-square of the fit of the data to psf_func."
     return sum((psf_func(pos, x0, y0, sigmax, sigmay, dn_fit)
                 - np.array(dn))**2/dn_errors**2)
+
 
 def p9_values(peak, imarr, x0, y0, sigmax, sigmay, DN_tot):
     x5, y5 = peak.getIx(), peak.getIy()
@@ -79,6 +92,7 @@ def p9_values(peak, imarr, x0, y0, sigmax, sigmay, DN_tot):
     p9_data = np.array([imarr[y][x] for x, y in pos])
     p9_model = psf_func(pos, x0, y0, sigmax, sigmay, DN_tot)
     return p9_data, p9_model
+
 
 def prect_values(peak, imarr, ixm=3, ixp=21, iym=3, iyp=3):
     xpeak, ypeak = peak.getIx(), peak.getIy()
@@ -96,6 +110,7 @@ def prect_values(peak, imarr, ixm=3, ixp=21, iym=3, iyp=3):
     if prect_data_flat.shape[0] == 0:
         pdb.set_trace()
     return prect_data_flat
+
 
 class PsfGaussFit(object):
     def __init__(self, nsig=3, min_npix=None, max_npix=20, gain_est=2,
@@ -133,11 +148,13 @@ class PsfGaussFit(object):
         else:
             # Append new data to existing file.
             self.output = fits.open(self.outfile)
+
     def _bg_image(self, ccd, amp, nx, ny):
         "Compute background image based on clipped local mean."
         bg_ctrl = afwMath.BackgroundControl(nx, ny, ccd.stat_ctrl)
         bg = afwMath.makeBackground(ccd[amp], bg_ctrl)
         return bg.getImageF()
+
     def process_image(self, ccd, amp, sigma0=0.36, dn0=1590./5.,
                       bg_reg=(10, 10), logger=None):
         """
@@ -148,9 +165,9 @@ class PsfGaussFit(object):
         try:
             image = ccd.bias_subtracted_image(amp)
         except MaskedCCDBiasImageException:
-            print "DM stack error encountered when generating bias image "
-            print "from inferred overscan region."
-            print "Skipping bias subtraction."
+            print("DM stack error encountered when generating bias image ")
+            print("from inferred overscan region.")
+            print("Skipping bias subtraction.")
             image = ccd[amp]
 
         image -= self._bg_image(ccd, amp, *bg_reg)
@@ -178,7 +195,7 @@ class PsfGaussFit(object):
         failed_curve_fits = 0
         num_fp = 0
         for fp in fpset.getFootprints():
-            if fp.getNpix() < self.min_npix or fp.getNpix() > self.max_npix:
+            if fp.getArea() < self.min_npix or fp.getArea() > self.max_npix:
                 continue
             num_fp += 1
             spans = fp.getSpans()
@@ -216,7 +233,7 @@ class PsfGaussFit(object):
                 dn_fp.append(dn_sum)
                 chi2 = chisq(positions, zvals, x0[-1], y0[-1],
                              sigmax[-1], sigmay[-1], dn[-1], dn_errors)
-                dof = fp.getNpix() - self.npars
+                dof = fp.getArea() - self.npars
                 chiprob.append(gammaincc(dof/2., chi2/2.))
                 chi2s.append(chi2)
                 dofs.append(dof)
@@ -254,6 +271,7 @@ class PsfGaussFit(object):
         self.dn_fp.extend(dn_fp)
         self.chiprob.extend(chiprob)
         self.amp.extend(np.ones(len(sigmax))*amp)
+
     def numGoodFits(self, chiprob_min=0.1):
         chiprob = np.array(self.chiprob)
         amps = np.sort(np.unique(np.array(self.amp)))
@@ -262,6 +280,7 @@ class PsfGaussFit(object):
             indx = np.where((self.chiprob > chiprob_min) & (self.amp == amp))
             my_numGoodFits[amp] = len(indx[0])
         return my_numGoodFits
+
     def _save_ext_data(self, amp, x0, y0, sigmax, sigmay, dn, dn_fp, chiprob,
                        chi2s, dofs, maxDNs, xpeak, ypeak, p9_data, p9_model, prect_data):
         """
@@ -326,6 +345,7 @@ class PsfGaussFit(object):
                                                               units,
                                                               columns))))
             self.output[-1].name = extname
+
     def read_fe55_catalog(self, psf_catalog, chiprob_min=0.1):
         catalog = fits.open(psf_catalog)
         for attr in 'sigmax sigmay dn dn_fp_sum chiprob amp'.split():
@@ -337,9 +357,11 @@ class PsfGaussFit(object):
             self.chiprob = np.concatenate((self.chiprob, chiprob[index]))
             self.amp = np.concatenate((self.amp, np.ones(len(index[0]))*amp))
             for attr in 'sigmax sigmay dn dn_fp_sum'.split():
-                command = 'self.%(attr)s = np.concatenate((self.%(attr)s, catalog["%(extname)s"].data.field("%(attr)s")[index]))' % locals()
+                command = 'self.%(attr)s = np.concatenate((self.%(attr)s, catalog["%(extname)s"].data.field("%(attr)s")[index]))' % locals(
+                )
                 exec(command)
             self.dn_fp = self.dn_fp_sum
+
     def results(self, min_prob=0.1, amp=None):
         """
         Return sigmax, sigmay, dn, chiprob for chiprob > min_prob for
@@ -359,13 +381,15 @@ class PsfGaussFit(object):
         my_results['chiprob'] = chiprob[indx]
         my_results['amps'] = amps[indx]
         return my_results
+
     def write_results(self, outfile='fe55_psf_params.fits'):
         self.output[0].header['NAMPS'] = len(self.amp_set)
-        fitsWriteto(self.output, outfile, clobber=True, checksum=True)
+        fitsWriteto(self.output, outfile, overwrite=True, checksum=True)
+
 
 if __name__ == '__main__':
     import os
-    import pylab_plotter as plot
+    from . import pylab_plotter as plot
     plot.pylab.ion()
 
     infile = os.path.join(os.environ['EOTESTDIR'],
@@ -379,14 +403,14 @@ if __name__ == '__main__':
     ccd = MaskedCCD(infile)
 
     fitter = PsfGaussFit(nsig=nsig, fit_xy=fit_xy)
-    for amp in ccd.keys()[:2]:
-        print 'processing amp:', amp
+    for amp in list(ccd.keys())[:2]:
+        print('processing amp:', amp)
         fitter.process_image(ccd, amp)
     fitter.write_results(outfile)
 
     fitter = PsfGaussFit(nsig=nsig, outfile=outfile, fit_xy=fit_xy)
-    for amp in ccd.keys()[2:]:
-        print "processing amp:", amp
+    for amp in list(ccd.keys())[2:]:
+        print("processing amp:", amp)
         fitter.process_image(ccd, amp)
     fitter.write_results(outfile)
 
@@ -406,7 +430,7 @@ if __name__ == '__main__':
 
     plot.xyplot(results['chiprob'], results['sigmax'],
                 xname='chi-square prob.', yname='sigma', ylog=1)
-                
+
     plot.xyplot(results['chiprob'], results['sigmay'], oplot=1, color='r')
 
     plot.xyplot(results['dn'], results['dn_fp'], xname='DN (fitted value)',

@@ -4,15 +4,18 @@ structured configuration file in the future.
 
 @author J. Chiang <jchiang@slac.stanford.edu>
 """
+from __future__ import absolute_import
 import os
 import numpy as np
-from PhotodiodeResponse import Interpolator
-from multiaggressor_tools import multiaggressor_amplifier_coords
-from sim_tools import CrosstalkPattern
+from .PhotodiodeResponse import Interpolator
+from .multiaggressor_tools import multiaggressor_amplifier_coords
+from .sim_tools import CrosstalkPattern
+
 
 class Params(object):
     def __init__(self, **kwargs):
         self.__dict__.update(kwargs)
+
     def __setattr__(self, key, value):
         """
         Perform validation by checking that a parameter name already
@@ -22,10 +25,11 @@ class Params(object):
             raise AttributeError("Cannot add a new attribute to 'Params' object.")
         self.__dict__[key] = value
 
+
 pd_area = 1e-4          # Sensitive area of photodiode
 pixel_area = 1e-10      # Nominal pixel area (10 micron x 10 micron)
 
-bitpix = 16             # Only bitpix = 16, -32 are supported. 
+bitpix = 16             # Only bitpix = 16, -32 are supported.
 
 sensor_id = '000-00'
 rootdir = '.'
@@ -52,7 +56,7 @@ detysize = 4044
 # If debug=true, then 'debug' will be used in place of the date and time
 # stamp strings in the directory and file names.
 #
-debug = True     
+debug = True
 
 #
 # Leave desired datasets uncommented to generate them.
@@ -68,7 +72,7 @@ datasets = [
     'system_read_noise',
     'system_crosstalk_dataset',
     'persistence_dataset'
-    ]
+]
 
 flat_fields = Params(test_type='flat',
                      min_charge=100,
@@ -105,13 +109,16 @@ fe55 = Params(test_type='fe55',
 # Determine the path to the qe subdirectory
 #
 _qe_dir = os.path.join(os.environ['EOTEST_DIR'], 'data', 'qe')
-qe_path = lambda x : os.path.join(_qe_dir, x)
+
+
+def qe_path(x): return os.path.join(_qe_dir, x)
+
 
 #qe = lambda wl_nm : 1   # 100% quantum efficiency
 qe_curve = np.recfromtxt(qe_path('sim/qe_curve.txt')).transpose()
 qe = Interpolator(*qe_curve)
 wavelength_scan = Params(test_type='lambda',
-                         wavelengths=range(320, 1110, 10),
+                         wavelengths=list(range(320, 1110, 10)),
                          exptime=1,
                          ccdtemp=ccdtemp,
                          pd_ratio_file=qe_path('BNL/pd_Cal_mar2013_v1.txt'),
@@ -142,9 +149,9 @@ spot = Params(test_type='spot',
               frac_scale=0.02,
               dn=200,
               radius=20,
-#              x=250, y=250, 
-#              multiaggressor=False,
-              x=xpos, y=ypos, 
+              #              x=250, y=250,
+              #              multiaggressor=False,
+              x=xpos, y=ypos,
               multiaggressor=True,
               )
 

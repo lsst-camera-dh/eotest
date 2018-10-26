@@ -20,6 +20,7 @@ import lsst.afw.image as afwImage
 import lsst.pex.config as pexConfig
 import lsst.pipe.base as pipeBase
 
+
 class DarkPixelsConfig(pexConfig.Config):
     """Configuration for bright pixels task"""
     thresh = pexConfig.Field("Fractional threshold of segment mean for identifying dark pixels",
@@ -33,6 +34,7 @@ class DarkPixelsConfig(pexConfig.Config):
                                           str, default=None)
     verbose = pexConfig.Field("Turn verbosity on", bool, default=True)
 
+
 class DarkPixelsTask(pipeBase.Task):
     """Task to find dark pixels and columns."""
     ConfigClass = DarkPixelsConfig
@@ -45,7 +47,7 @@ class DarkPixelsTask(pipeBase.Task):
         superflat(sflat_files, outfile=medfile)
 
         ccd = MaskedCCD(medfile, mask_files=mask_files, bias_frame=bias_frame)
-        md = imutils.Metadata(sflat_files[0], 1)
+        md = imutils.Metadata(sflat_files[0])
         outfile = os.path.join(self.config.output_dir,
                                '%s_dark_pixel_mask.fits' % sensor_id)
         if os.path.isfile(outfile):

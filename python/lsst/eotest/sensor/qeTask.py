@@ -3,11 +3,13 @@
 
 @author J. Chiang <jchiang@slac.stanford.edu>
 """
+from __future__ import absolute_import
 import os
-import QE
+from . import QE
 import lsst.eotest.image_utils as imutils
 import lsst.pex.config as pexConfig
 import lsst.pipe.base as pipeBase
+
 
 class QeConfig(pexConfig.Config):
     """Configuration for QE measurement task"""
@@ -17,6 +19,7 @@ class QeConfig(pexConfig.Config):
                                          float, default=1.)
     output_dir = pexConfig.Field("Output directory", str, default=".")
     verbose = pexConfig.Field("Turn verbosity on", bool, default=True)
+
 
 class QeTask(pipeBase.Task):
     """Task to compute QE curves from wavelength scan dataset"""
@@ -38,8 +41,8 @@ class QeTask(pipeBase.Task):
             qe_data.calculate_medians(qe_files, medians_file,
                                       mask_files=mask_files,
                                       bias_frame=bias_frame,
-                                      clobber=True,
-                                      correction_image=correction_image) 
+                                      overwrite=True,
+                                      correction_image=correction_image)
 
         qe_data.read_medians(medians_file)
 

@@ -5,12 +5,15 @@ the pixel mean, pixel mean, and pixel standard deviation.
 
 @author J. Chiang <jchiang@slac.stanford.edu>
 """
+from __future__ import print_function
+from __future__ import absolute_import
 import os
 import numpy as np
 import lsst.eotest.image_utils as imutils
-from MaskedCCD import MaskedCCD
+from .MaskedCCD import MaskedCCD
 import lsst.afw.image as afwImage
 import lsst.afw.math as afwMath
+
 
 def extract_unmasked_pixels(ccd, amp, gain, correction_image=None):
     subimage = ccd.unbiased_and_trimmed_image(amp)
@@ -25,6 +28,7 @@ def extract_unmasked_pixels(ccd, amp, gain, correction_image=None):
     indx = np.where(maskarr == 0)
     return [x*gain for x in imarr[indx].flat]
 
+
 def prnu(infile, mask_files, gains, bias_frame=None, correction_image=None):
     ccd = MaskedCCD(infile, mask_files=mask_files, bias_frame=bias_frame)
     active_pixels = []
@@ -38,6 +42,7 @@ def prnu(infile, mask_files, gains, bias_frame=None, correction_image=None):
     pix_stdev = stats.getValue(afwMath.STDEV)
     return pix_stdev, pix_mean
 
+
 if __name__ == '__main__':
     infile = 'work/sensorData/000-00/lambda/debug/000-00_lambda_0450.0_debug.fits'
     mask_files = ()
@@ -49,7 +54,7 @@ if __name__ == '__main__':
     pix_stdev, pix_mean = prnu(infile, mask_files, gains)
 
     excess_variance = pix_stdev**2 - pix_mean
-    print "Excess pixel variance/pixel mean:", excess_variance/pix_mean
+    print("Excess pixel variance/pixel mean:", excess_variance/pix_mean)
     if excess_variance > 0:
-        print "Fractional excess noise: %.2f" \
-            % (np.sqrt(excess_variance)/pix_mean*100, )
+        print("Fractional excess noise: %.2f" \
+            % (np.sqrt(excess_variance)/pix_mean*100, ))

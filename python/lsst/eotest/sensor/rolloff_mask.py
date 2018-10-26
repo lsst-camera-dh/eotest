@@ -24,6 +24,7 @@ from .BrightPixels import BrightPixels
 from .sim_tools import CCD
 from .generate_mask import generate_mask
 
+
 def rolloff_mask(infile, outfile,
                  mask_plane='ROLLOFF_DEFECTS',
                  tmp_mask_image=None,
@@ -68,11 +69,13 @@ def rolloff_mask(infile, outfile,
     # can append only image extensions (and not write to the PHDU).
     #
     hdulist = fits.HDUList()
-    hdulist.append(fits.open(infile)[0])
+    hdulist.append(fits.PrimaryHDU())
+    with fits.open(infile) as fd:
+        hdulist[0].header.update(fd[0].header)
     # Use the mask_plane value ('ROLLOFF_DEFECTS') to distinguish
     # this file from other mask files.
     hdulist[0].header['MASKTYPE'] = mask_plane
-    fitsWriteto(hdulist, outfile, clobber=True)
+    fitsWriteto(hdulist, outfile, overwrite=True)
     #
     # Amplifiers 1 (AMP10), 8 (AMP17), 9 (AMP07) and 16 (AMP00) are
     # along the perimeter.
@@ -107,7 +110,7 @@ def rolloff_mask(infile, outfile,
         imarr[0:outer_edge_width, :] += signal
 
         if amp_geom.amp_loc == amp_loc['E2V']:
-        #if True:
+            #if True:
             #
             # Set signal around blooming stop
             #
@@ -121,7 +124,10 @@ def rolloff_mask(infile, outfile,
     #
     # Use BrightPixels code to detect the mask regions and write the mask file.
     #
-    mask = afwImage.MaskU(image.getDimensions())
+    try:
+        mask = afwImage.Mask(image.getDimensions())
+    except AttributeError:
+        mask = afwImage.MaskU(image.getDimensions())
     mask.addMaskPlane(mask_plane)
     maskedCCD = MaskedCCD(tmp_mask_image)
     pixels, columns = {}, {}
@@ -132,6 +138,7 @@ def rolloff_mask(infile, outfile,
     generate_mask(infile, outfile, mask_plane, pixels=pixels, columns=columns)
     if cleanup:
         os.remove(tmp_mask_image)
+
 
 def pixel_counts(ccd_file, input_mask=None):
     """

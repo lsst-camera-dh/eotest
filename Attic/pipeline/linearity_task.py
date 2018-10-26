@@ -3,6 +3,8 @@
 
 @author J. Chiang <jchiang@slac.stanford.edu>
 """
+from __future__ import print_function
+from builtins import zip
 import os
 import sys
 import numpy as np
@@ -13,6 +15,7 @@ import lsst.afw.image as afwImage
 import image_utils as imUtils
 import pipeline.pipeline_utils as pipeUtils
 
+
 def glob_flats(pattern, outfile='flats.txt'):
     flats = glob.glob(pattern)
     flats.sort()
@@ -21,9 +24,11 @@ def glob_flats(pattern, outfile='flats.txt'):
         output.write('%s\n' % item)
     output.close()
 
+
 class MeanSignal(imUtils.SubRegionSampler):
     def __init__(self, dx=100, dy=100, nsamp=1000, imaging=imUtils.imaging):
         imUtils.SubRegionSampler.__init__(self, dx, dy, nsamp, imaging)
+
     def __call__(self, infile):
         signals = {}
         for amp in imUtils.allAmps:
@@ -37,6 +42,7 @@ class MeanSignal(imUtils.SubRegionSampler):
             signals[amp] = imUtils.median(samples)
         return signals
 
+
 def compute_mean_signal(flat_list, outfile='linearity_results.txt',
                         verbose=True):
     signal_estimator = MeanSignal()
@@ -46,7 +52,7 @@ def compute_mean_signal(flat_list, outfile='linearity_results.txt',
         if infile[-11:] != '_flat1.fits':
             continue
         if verbose:
-            print "processing", infile
+            print("processing", infile)
         md = afwImage.readMetadata(infile, 1)
         exptime = md.get('EXPTIME')
         kphot = np.abs(md.get('MONDIODE'))
@@ -58,6 +64,7 @@ def compute_mean_signal(flat_list, outfile='linearity_results.txt',
         output.flush()
     output.close()
 
+
 if __name__ == '__main__':
     if len(sys.argv) >= 3:
         flat_pattern = sys.argv[1].replace('\\', '')
@@ -68,12 +75,12 @@ if __name__ == '__main__':
         try:
             sensor_id = os.environ['SENSOR_ID']
             flat_list = '%s_FLAT.txt' % sensor_id
-            print flat_list
+            print(flat_list)
             outputdir = os.environ['OUTPUTDIR']
         except KeyError:
-            print "usage: python linearity_task.py <flats pattern> <output directory> [<gains>=5.5]"
+            print("usage: python linearity_task.py <flats pattern> <output directory> [<gains>=5.5]")
             sys.exit(1)
-            
+
     gains, sensor = pipeUtils.setup(sys.argv, 3)
 
     try:
@@ -91,7 +98,7 @@ if __name__ == '__main__':
     data = np.recfromtxt(linearity_file).transpose()
     exposure = data[0]
     lamp_current = data[1]
-    print "Segment    max. frac. deviation"
+    print("Segment    max. frac. deviation")
     maxdevs = []
     for amp in imUtils.allAmps:
         indx = np.where((data[amp+1] > 100.) & (data[amp+1] < 9e4))
@@ -104,5 +111,5 @@ if __name__ == '__main__':
         maxDeviation = max(np.abs(fvals - signal[indx])/fvals)
         maxdevs.append(maxDeviation)
         sensor.add_seg_result(amp, 'maxDeviation', maxDeviation)
-        print "%s         %.4f" % (imUtils.channelIds[amp], maxDeviation)
+        print("%s         %.4f" % (imUtils.channelIds[amp], maxDeviation))
     sensor.add_ccd_result('maxDeviation', max(maxdevs))
