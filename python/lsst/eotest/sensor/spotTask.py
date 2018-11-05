@@ -22,7 +22,7 @@ from .MaskedCCD import MaskedCCD
 from .AmplifierGeometry import parse_geom_kwd
 
 def make_ccd_mosaic(infile, bias_frame=None, gains=None, fit_order=1):
-    """Combine amplifier image arrays into a single mosaic CCD image array."""
+    """Combine amplifier image arrays into a single calibrated CCD image mosaic."""
     ccd = MaskedCCD(infile, bias_frame=bias_frame)
     foo = fits.open(infile)
     datasec = parse_geom_kwd(foo[1].header['DATASEC'])
@@ -59,7 +59,7 @@ def make_ccd_mosaic(infile, bias_frame=None, gains=None, fit_order=1):
             if gains is not None:
                 subarr *= gains[amp]
             #
-            # Set sub-array to the mosaiced image
+            # Set sub-array to the image mosaic
             #
             mosaic[ymin:ymax, xmin:xmax] = subarr
 
@@ -87,8 +87,7 @@ class SpotTask(pipeBase.Task):
     _DefaultName = "SpotTask"
 
     @pipeBase.timeMethod
-    def run(self, sensor_id, infile, gains, bias_frame=None,
-            oscan_fit_order=1):
+    def run(self, sensor_id, infile, gains, bias_frame=None, oscan_fit_order=1):
 
         if self.config.verbose:
             self.log.info("Input file:")
@@ -113,7 +112,7 @@ class SpotTask(pipeBase.Task):
                 self.log.info("HSM plugin not included, skipping measurement...")
         charTask = CharacterizeImageTask(config=charConfig)
         #
-        # Process a mosaiced CCD image
+        # Process a CCD image mosaic
         #
         if self.config.verbose:
             self.log.info("processing {0}".format(infile))
@@ -131,7 +130,7 @@ class SpotTask(pipeBase.Task):
         output_dir = self.config.output_dir
         if self.config.output_file is None:
             output_file = os.path.join(output_dir,
-                                       '{0}_source_catalog_nsig{1}.cat'.format(sensor_id, nsig))
+                                       '{0}_source_catalog.cat'.format(sensor_id))
         else:
             output_file = os.path.join(output_dir, self.config.output_file)
         if self.config.verbose:
