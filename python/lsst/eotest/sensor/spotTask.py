@@ -1,3 +1,7 @@
+"""
+@brief Source identification and characterization of
+spot images.
+"""
 from __future__ import print_function
 from __future__ import absolute_import
 import os
@@ -8,11 +12,14 @@ import lsst.eotest.image_utils as imutils
 import lsst.afw.image as afwImage
 import lsst.pex.config as pexConfig
 import lsst.pipe.base as pipeBase
-import lsst.meas.extensions.shapeHSM
+from lsst.pipe.tasks.characterizeImage import CharacterizeImageTask, CharacterizeImageConfig
+try:
+    import lsst.meas.extensions.shapeHSM
+except ModuleNotFoundError:
+    print("Missing meas_extensions_shapeHSM: lsst_distrib required")
 
 from .MaskedCCD import MaskedCCD
 from .AmplifierGeometry import parse_geom_kwd
-from lsst.pipe.tasks.characterizeImage import CharacterizeImageTask, CharacterizeImageConfig
 
 def make_ccd_mosaic(infile, bias_frame=None, gains=None, fit_order=1):
     """Combine amplifier image arrays into a single mosaic CCD image array."""
@@ -102,7 +109,10 @@ class SpotTask(pipeBase.Task):
         charConfig.detection.background.binSize = 10
         charConfig.detection.thresholdType = "stdev"
         charConfig.detection.thresholdValue = nsig
-        charConfig.measurement.plugins.names |= ["ext_shapeHSM_HsmSourceMoments"]
+        try:
+            charConfig.measurement.plugins.names |= ["ext_shapeHSM_HsmSourceMoments"]
+        except KeyError:
+            pass
         charTask = CharacterizeImageTask(config=charConfig)
         #
         # Process a mosaiced CCD image
@@ -129,33 +139,3 @@ class SpotTask(pipeBase.Task):
         if self.config.verbose:
             self.log.info("Writing spot results file to {0}".format(output_file))
         src.writeFits(output_file)
-        
-if __name__ == '__main__':
-
-    import glob
-    import argparse
-
-    parser = argparse.ArgumentParser()
-    parser.add_argument('sensor_id', type=str, help='Sensor name, e.g. S00')
-    parser.add_argument('image_file', type=str, help='Spot image filename')
-    parser.add_argument('-b', '--bias_frame', default=None, 
-                        help='Bias frame to use')
-    parser.add_argument('-o', '--output_dir', 
-                        default='/u/ec/elp25/private/spots_testing/',
-                        help='Output directory')
-    parser.add_argument('-n', '--nsig', type=float, default=10.0,
-                        help='Number of standard deviations to use when setting threshold.')
-    args = parser.parse_args()
-
-    sensor_id = args.sensor_id
-    image_file = args.image_file
-    bias_frame = args.bias_frame
-    output_dir = args.output_dir
-    nsig = args.nsig
-    gains = dict((i+1, 1.0) for i in range(16))
-
-    spottask = SpotTask()
-    spottask.config.verbose = False
-    spottask.config.output_dir = output_dir
-    spottask.config.nsig = nsig
-    spottask.run(sensor_id, image_files, gains, bias_frame=bias_frame)
