@@ -70,7 +70,7 @@ class SpotConfig(pexConfig.Config):
     """Configuration for Spot analysis task"""
     minpixels = pexConfig.Field("Minimum number of pixels above detection threshold", 
                                 int, default=10)
-    nsig = pexConfig.Field("Source footprint threshold in number of standard deviations of image section", 
+    nsig = pexConfig.Field("Source footprint threshold in number of standard deviations.", 
                            float, default=10)
     temp_set_point = pexConfig.Field("Required temperature (C) set point",
                                      float, default=-95.)
@@ -89,12 +89,9 @@ class SpotTask(pipeBase.Task):
     @pipeBase.timeMethod
     def run(self, sensor_id, infile, gains, bias_frame=None,
             oscan_fit_order=1):
-        imutils.check_temperatures(infiles, self.config.temp_set_point_tol,
-                                   setpoint=self.config.temp_set_point,
-                                   warn_only=True)
 
-        if self.config.verbose and spot_catalog is None:
-            self.log.info("Input files:")
+        if self.config.verbose:
+            self.log.info("Input file:")
             self.log.info("  {0}".format(infile))
         #
         # Set up characterize task configuration
@@ -111,8 +108,9 @@ class SpotTask(pipeBase.Task):
         charConfig.detection.thresholdValue = nsig
         try:
             charConfig.measurement.plugins.names |= ["ext_shapeHSM_HsmSourceMoments"]
-        except KeyError:
-            pass
+        except pexConfig.config.FieldValidationError:
+            if self.config.verbose:
+                self.log.info("HSM plugin not included, skipping measurement...")
         charTask = CharacterizeImageTask(config=charConfig)
         #
         # Process a mosaiced CCD image
