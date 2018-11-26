@@ -278,8 +278,7 @@ def unbias_and_trim(im, overscan, imaging=None, bias_method='spline', bias_frame
         t: The number of knots. If None, finds the number of knots to use for a given smoothing 
             factor, s. This only needs to be specified when using the 'spline' method. The default is: None.
 
-    tack: A single bias image containing a set of stacked oversan-corrected
-            and trimmed bias frames.eturns:
+    Returns:
         An afw image.
     """
     

@@ -127,7 +127,7 @@ class PtcTask(pipeBase.Task):
 
     @pipeBase.timeMethod
     def run(self, sensor_id, infiles, mask_files, gains, binsize=1,
-            bias_frame=None, median_stack=None):
+            bias_frame=None):
         outfile = os.path.join(self.config.output_dir,
                                '%s_ptc.fits' % sensor_id)
         all_amps = imutils.allAmps(infiles[0])
@@ -146,8 +146,7 @@ class PtcTask(pipeBase.Task):
             for amp in ccd1:
                 results = flat_pair_stats(ccd1, ccd2, amp,
                                           mask_files=mask_files,
-                                          bias_frame=bias_frame, 
-                                          median_stack=median_stack)
+                                          bias_frame=bias_frame) 
                 ptc_stats[amp][0].append(results.flat_mean)
                 ptc_stats[amp][1].append(results.flat_var)
         self._fit_curves(ptc_stats, sensor_id)
