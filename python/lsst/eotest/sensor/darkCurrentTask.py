@@ -60,8 +60,8 @@ class DarkCurrentTask(pipeBase.Task):
         for amp in ccd:
             imaging_region = ccd.amp_geom.imaging
             overscan = ccd.amp_geom.serial_overscan
-            image = imutils.unbias_and_trim(ccd[amp].getImage(),
-                                            overscan, imaging_region) 
+            image = imutils.unbias_and_trim(im=ccd[amp].getImage(),
+                                            overscan=overscan, imaging=imaging_region) 
             mask = imutils.trim(ccd[amp].getMask(), imaging_region)
             imarr = image.getArray()
             mskarr = mask.getArray()

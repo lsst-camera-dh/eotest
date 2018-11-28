@@ -120,10 +120,10 @@ def bias_row(im, overscan, dxmin=5, dxmax=2, statistic=np.mean, **kwargs):
     return(lambda x: values[x])
 
 def bias_func(im, overscan, dxmin=5, dxmax=2, statistic=np.mean,  **kwargs):
-    """Compute the offset by fitting a polynomial (linear, by default)
+    """Compute the offset by fitting a polynomial (order 1 by default)
     to the mean of each row of the serial overscan region.  This
     returns a numpy.poly1d object with the fitted bias as function of pixel row. 
-    Allows the option to explicitly set the fit order and statistic to apply to 
+    Allows the option to explicitly set the fit order to apply to 
     each row using additional **kwargs.
 
     Args:
@@ -165,7 +165,7 @@ def bias_spline(im, overscan, dxmin=5, dxmax=2, statistic=np.mean, **kwargs):
 
     Keyword Arguments:
         k: The degree of the spline fit. The default is: 3.
-        s: The amount of smoothing to be applied to the fit. The default is: 12000.
+        s: The amount of smoothing to be applied to the fit. The default is: 18000.
         t: The number of knots. If None, finds the number of knots to use 
             for a given smoothing factor, s. The default is: None.
 
@@ -183,7 +183,7 @@ def bias_spline(im, overscan, dxmin=5, dxmax=2, statistic=np.mean, **kwargs):
     values = np.array([statistic(imarr[j][dxmin:-dxmax]) for j in rows])
     rms = 7 # Expected read noise per pixel
     weights = np.ones(ny) * (rms / np.sqrt(nx))
-    return(interpolate.splrep(rows, values, w=1/weights, k=kwargs.get('k', 3), s=kwargs.get('s', 12000), t=kwargs.get('t', None)))
+    return(interpolate.splrep(rows, values, w=1/weights, k=kwargs.get('k', 3), s=kwargs.get('s', 18000), t=kwargs.get('t', None)))
 
 def bias_image(im, overscan, dxmin=5, dxmax=2, statistic=np.mean, bias_method='spline', **kwargs):
     """Generate a bias image containing the offset values calculated from 
@@ -205,7 +205,7 @@ def bias_image(im, overscan, dxmin=5, dxmax=2, statistic=np.mean, bias_method='s
         k: The degree of the spline fit. This only needs to be specified when using 
             the 'spline' method. The default is: 3.
         s: The amount of smoothing to be applied to the fit. This only needs to be 
-            specified when using the 'spline' method. The default is: 12000.
+            specified when using the 'spline' method. The default is: 18000.
         t: The number of knots. If None, finds the number of knots to use for a given 
             smoothing factor, s. This only needs to be specified when using the 'spline' 
             method. The default is: None.
@@ -270,7 +270,7 @@ def unbias_and_trim(im, overscan, imaging=None, dxmin=5, dxmax=2, bias_method='s
         k: The degree of the spline fit. This only needs to be specified when using the 'spline' 
             method. The default is: 3.
         s: The amount of smoothing to be applied to the fit. This only needs to be specified when 
-            using the 'spline' method. The default is: 12000.
+            using the 'spline' method. The default is: 18000.
         t: The number of knots. If None, finds the number of knots to use for a given smoothing 
             factor, s. This only needs to be specified when using the 'spline' method. The default is: None.
 
@@ -392,7 +392,7 @@ def super_bias(files, overscan, imaging=None, dxmin=5, dxmax=2, bias_method='spl
                        **kwargs) for im in ims]
     return(stack(bias_frames, statistic))
 
-def super_bias_file(files, overscan, outfile, imaging=None, bias_method='spline', bitpix=16, clobber=True, **kwargs):
+def super_bias_file(files, overscan, outfile, imaging=None, dxmin=5, dxmax=2, bias_method='spline', bitpix=16, clobber=True, **kwargs):
     output = fits.open(files[0])
     for amp in allAmps(files[0]):
         try:
@@ -400,7 +400,7 @@ def super_bias_file(files, overscan, outfile, imaging=None, bias_method='spline'
             del output[amp].header['BZERO']
         except KeyError:
             pass
-        output[amp].data = super_bias(files, overscan, imaging, bias_method, hdu=dm_hdu(amp), **kwargs).getArray()
+        output[amp].data = super_bias(files, overscan, imaging, dxmin, dxmax, bias_method, hdu=dm_hdu(amp), **kwargs).getArray()
         if bitpix is not None:
             set_bitpix(output[amp], bitpix)
     fitsWriteto(output, outfile, clobber=clobber)

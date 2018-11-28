@@ -79,7 +79,7 @@ class BiasHandlingTestCase(unittest.TestCase):
             row_bias = imutils.bias_row(ccd[amp],
                                          self.amp_geom.serial_overscan)
             for y in range(2022):
-                self.assertAlmostEqual(bf_i(y), row_bias[y], places=5)
+                self.assertAlmostEqual(bf_i(y), row_bias(y), places=5)
 
     def test_bias_image(self):
         ccd = MaskedCCD(self.image_file)
@@ -98,7 +98,7 @@ class BiasHandlingTestCase(unittest.TestCase):
                 else:
 		    my_bias_image = imutils.bias_image(ccd[amp],
                                                     overscan.serial_overscan,
-                                                    method, **self.kwargs)
+                                                    bias_method=method, **self.kwargs)
                     fracdiff = ((self.bias_image.getArray() - my_bias_image.getArray())
                             /self.bias_image.getArray())
                     self.assertTrue(max(np.abs(fracdiff.flat)) < 1e-6)
@@ -134,9 +134,8 @@ class BiasHandlingTestCase(unittest.TestCase):
             br_i = imutils.bias_row(ccd[amp].getImage(), overscan.serial_overscan)
             # Masked image
             br_m = imutils.bias_row(ccd[amp], overscan.serial_overscan)
-	    ny = len(br_i)
-	    for ii in range(ny):
-	        self.assertEqual(br_i[ii], br_m[ii])
+	    for ii in range(2022):
+	        self.assertEqual(br_i(ii), br_m(ii))
 
     def test_bias_spline(self):
         ccd = MaskedCCD(self.image_file)

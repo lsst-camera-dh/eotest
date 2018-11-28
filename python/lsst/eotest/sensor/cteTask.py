@@ -24,8 +24,8 @@ def bias_subtracted_image(image, bias_image, overscan, bias_method='spline'):
     im_out = image.Factory(image)
     bias_sub = bias_image.Factory(bias_image)
     # Subtract overscans.
-    bias_sub -= imutils.bias_image(bias_image, overscan, bias_method)
-    im_out -= imutils.bias_image(image, overscan, bias_method)
+    bias_sub -= imutils.bias_image(im=bias_image, overscan=overscan, bias_method=bias_method)
+    im_out -= imutils.bias_image(im=image, overscan=overscan, bias_method=bias_method)
     # Subtract remaining strucutured bias.
     im_out -= bias_sub
     return im_out
@@ -51,7 +51,7 @@ def superflat(files, bias_frame=None, outfile='superflat.fits', bitpix=-32,
                                                  imutils.dm_hdu(amp))
                     image = bias_subtracted_image(image, bias_image, overscan, bias_method)
                 else:
-                    image -= imutils.bias_image(image, overscan, bias_method, statistic=np.median)
+                    image -= imutils.bias_image(im=image, overscan=overscan, bias_method=bias_method)
             images.append(image)
         if lsst.afw.__version__.startswith('12.0'):
             images = afwImage.vectorImageF(images)
