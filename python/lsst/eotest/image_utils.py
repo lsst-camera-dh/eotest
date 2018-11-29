@@ -263,8 +263,6 @@ def unbias_and_trim(im, overscan, imaging=None, dxmin=5, dxmax=2, bias_method='s
             and trimmed bias frames.
 
     Keyword Arguments:
-        fit_statistic: The statistic applied to each row to be fit by the polynomial. 
-            This only needs to be specified when using the 'func' method. The default is: np.mean.
         fit_order: The order of the polynomial. This only needs to be specified when using 
             the 'func' method. The default is: 1.
         k: The degree of the spline fit. This only needs to be specified when using the 'spline' 
