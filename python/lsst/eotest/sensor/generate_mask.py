@@ -5,6 +5,7 @@ from __future__ import absolute_import, print_function
 import os
 import copy
 import tempfile
+import warnings
 import astropy.io.fits as fits
 import lsst.afw.detection as afwDetect
 import lsst.afw.image as afwImage
@@ -60,10 +61,13 @@ def generate_mask(infile, outfile, mask_plane, pixels=None, columns=None,
     # updated with the mask type info.
     hdulist = fits.HDUList()
     hdulist.append(fits.PrimaryHDU())
-    with fits.open(infile) as input_hdu_list:
-        hdulist[0].header.update(input_hdu_list[0].header)
-    hdulist[0].header['MASKTYPE'] = mask_plane
-    fitsWriteto(hdulist, outfile, overwrite=True)
+    with warnings.catch_warnings():
+        warnings.simplefilter('ignore')
+        with fits.open(infile) as input_hdu_list:
+            hdulist[0].header.update(input_hdu_list[0].header)
+        hdulist[0].header['MASKTYPE'] = mask_plane
+        fitsWriteto(hdulist, outfile, overwrite=True)
+
     # Loop over segments in the temporary file and add all pixels to
     # the mask with the inserted signal.
     maskedCCD = MaskedCCD(temp_mask_image)
