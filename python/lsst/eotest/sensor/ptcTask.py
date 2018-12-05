@@ -113,7 +113,7 @@ class PtcTask(pipeBase.Task):
     _DefaultName = "PtcTask"
 
     @pipeBase.timeMethod
-    def run(self, sensor_id, infiles, mask_files, gains, binsize=1,
+    def run(self, sensor_id, infiles, mask_files, binsize=1,
             bias_frame=None):
         outfile = os.path.join(self.config.output_dir,
                                '%s_ptc.fits' % sensor_id)
@@ -176,7 +176,8 @@ class PtcTask(pipeBase.Task):
                 while index != index_old and count < 10:
                     results = scipy.optimize.leastsq(residuals, pars, full_output=1,
                                                      args=(mean[index], var[index]))
-                    sig_resids = (var - ptc_func(pars, mean))/np.sqrt(var)
+                    #sig_resids = (var - ptc_func(pars, mean))/np.sqrt(var)
+                    sig_resids = residuals(pars, mean, var)
                     index_old = deepcopy(index)
                     index = list(np.where(np.abs(sig_resids) < sig_cut)[0])
                     pars, cov = results[:2]
@@ -203,15 +204,15 @@ class PtcTask(pipeBase.Task):
             # Write gain and error, a00 and its uncertainty, inferred noise and
             # uncertainty, and the 'turnoff' level (in electrons) to EO test
             # results file.
-            ampnum = int(amp.split('Amp')[1])
-            output.add_seg_result(ampnum, 'PTC_GAIN', ptc_gain)
-            output.add_seg_result(ampnum, 'PTC_GAIN_ERROR', ptc_error)
-            output.add_seg_result(ampnum, 'PTC_A00', ptc_a00)
-            output.add_seg_result(ampnum, 'PTC_A00_ERROR', ptc_a00_error)
-            output.add_seg_result(ampnum, 'PTC_NOISE', ptc_noise)
-            output.add_seg_result(ampnum, 'PTC_NOISE_ERROR', ptc_noise_error)
-            output.add_seg_result(ampnum, 'PTC_TURNOFF', ptc_turnoff)
-            self.log.info("%i  %f  %fi %f %f %f %f %f" % (ampnum, ptc_gain,
+            #ampnum = int(amp.split('Amp')[1])
+            output.add_seg_result(amp, 'PTC_GAIN', ptc_gain)
+            output.add_seg_result(amp, 'PTC_GAIN_ERROR', ptc_error)
+            output.add_seg_result(amp, 'PTC_A00', ptc_a00)
+            output.add_seg_result(amp, 'PTC_A00_ERROR', ptc_a00_error)
+            output.add_seg_result(amp, 'PTC_NOISE', ptc_noise)
+            output.add_seg_result(amp, 'PTC_NOISE_ERROR', ptc_noise_error)
+            output.add_seg_result(amp, 'PTC_TURNOFF', ptc_turnoff)
+            self.log.info("%i  %f  %fi %f %f %f %f %f" % (amp, ptc_gain,
                                                           ptc_error, ptc_a00,
                                                           ptc_a00_error,
                                                           ptc_noise,

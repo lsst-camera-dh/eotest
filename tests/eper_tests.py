@@ -20,11 +20,13 @@ class SerialEperTestCase(EperTestCase):
     """
     TestCase class for EPERTask implementation in the serial direction.
     """
+
     def setUp(self):
         """
         Create a CCD frame FITS file with known imaging and overscan
         values.
         """
+
         self.fits_file = 'eper_serial_test_frame.fits'
         ccd = sim_tools.CCD()
         for amp in ccd.segments:
