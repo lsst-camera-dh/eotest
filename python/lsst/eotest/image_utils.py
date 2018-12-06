@@ -377,9 +377,9 @@ def fits_median(files, hdu=2, fix=True):
 def stack(ims, statistic=afwMath.MEDIAN):
     """Stacks a list of images based on a statistic. The images must
     be unmasked."""
-    images = afwImage.vectorImageF()
+    images = []
     for image in ims:
-        images.push_back(image)
+        images.append(image)
     summary = afwMath.statisticsStack(images, statistic)
     return summary
 
