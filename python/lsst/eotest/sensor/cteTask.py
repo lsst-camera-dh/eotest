@@ -5,14 +5,12 @@
 """
 from __future__ import absolute_import
 import os
-import numpy as np
 import astropy.io.fits as fits
 from lsst.eotest.fitsTools import fitsWriteto
 import lsst.eotest.image_utils as imutils
 from .AmplifierGeometry import makeAmplifierGeometry
 from .EOTestResults import EOTestResults
 from .eperTask import EPERTask
-from .MaskedCCD import MaskedCCD
 import lsst.afw
 import lsst.afw.image as afwImage
 import lsst.afw.math as afwMath

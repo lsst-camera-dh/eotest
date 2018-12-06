@@ -15,7 +15,6 @@ import lsst.afw.geom as afwGeom
 import lsst.afw.image as afwImage
 import lsst.afw.math as afwMath
 import lsst.pex.config as pexConfig
-import lsst.pex.exceptions.wrappers as pexExceptWrap
 import lsst.pipe.base as pipeBase
 import datetime
 import astropy.time

@@ -6,7 +6,6 @@ These data are to be used for linearity measurments.
 """
 from __future__ import absolute_import
 import os
-import glob
 import numpy as np
 import astropy.io.fits as fits
 from lsst.eotest.fitsTools import fitsTableFactory, fitsWriteto
@@ -15,7 +14,6 @@ from .MaskedCCD import MaskedCCD
 from .EOTestResults import EOTestResults
 from .DetectorResponse import DetectorResponse
 
-import lsst.afw.math as afwMath
 import lsst.pex.config as pexConfig
 import lsst.pipe.base as pipeBase
 from .flatPairTask import pair_mean, find_flat2
@@ -125,7 +123,7 @@ class LinearityTask(pipeBase.Task):
             self.output[-1].data.field('FLUX')[row] = flux
             for amp in flat1:
                 # Convert to e- and write out for each segment.
-		signal = pair_mean(flat1, flat2, amp)*self.gains[amp]
+                signal = pair_mean(flat1, flat2, amp)*self.gains[amp]
                 self.output[-1].data.field('AMP%02i_SIGNAL' % amp)[row] = signal
         self.output[0].header['NAMPS'] = len(flat1)
         fitsWriteto(self.output, outfile, overwrite=True)
