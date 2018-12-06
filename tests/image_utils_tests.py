@@ -28,8 +28,7 @@ class BiasHandlingTestCase(unittest.TestCase):
     bias_intercept = 0.5
     exptime = 1
     gain = 1
-    kwargs = {'fit_order' : 1, 'fit_statistic' : np.mean, 'k' : 3, 's' : 8000, 't' : None, 
-        'imaging' : AmplifierGeometry().imaging}
+    kwargs = {'fit_order' : 1, 'fit_statistic' : np.mean, 'k' : 3, 's' : 8000, 't' : None, 'imaging' : AmplifierGeometry().imaging}
     image_file = 'test_image.fits'
     mean_image_file = 'test_mean_image.fits'
 
@@ -54,9 +53,8 @@ class BiasHandlingTestCase(unittest.TestCase):
         ny, nx = imarr.shape
         mu, sig = 27316.92, 6.53
         for x in range(nx):
-            imarr[:,x] += np.random.normal(mu, sig, ny)
-        ccd = sim_tools.CCD(exptime=cls.exptime, gain=cls.gain,
-                    geometry=cls.amp_geom)
+            imarr[:, x] += np.random.normal(mu, sig, ny)
+        ccd = sim_tools.CCD(exptime=cls.exptime, gain=cls.gain, geometry=cls.amp_geom)
         for amp in ccd.segments:
             ccd.segments[amp].image += cls.mean_bias_image
         ccd.writeto(cls.mean_image_file)
@@ -76,8 +74,7 @@ class BiasHandlingTestCase(unittest.TestCase):
                 self.assertEqual(bf_i(y), bf_m(y))
                 self.assertAlmostEqual(bias_func(y), bf_m(y))
             # Test that row-by-row median operates.
-            row_bias = imutils.bias_row(ccd[amp],
-                                         self.amp_geom.serial_overscan)
+            row_bias = imutils.bias_row(ccd[amp], self.amp_geom.serial_overscan)
             for y in range(2022):
                 self.assertAlmostEqual(bf_i(y), row_bias(y), places=5)
 
@@ -89,18 +86,14 @@ class BiasHandlingTestCase(unittest.TestCase):
         for amp in ccd:
             for method in ['mean', 'row', 'func', 'spline']:
                 if method == 'mean':
-		    my_bias_image = imutils.bias_image(ccd_mean[amp],
-                                                    overscan_mean.serial_overscan,
-                                                    bias_method=method, **self.kwargs)
+                    my_bias_image = imutils.bias_image(ccd_mean[amp], overscan_mean.serial_overscan, bias_method=method, **self.kwargs)
                     fracdiff = ((self.mean_bias_image.getArray() - my_bias_image.getArray())
-                        /self.mean_bias_image.getArray())
+                                /self.mean_bias_image.getArray())
                     self.assertTrue(max(np.abs(fracdiff.flat)) < 1.5e-3)
                 else:
-		    my_bias_image = imutils.bias_image(ccd[amp],
-                                                    overscan.serial_overscan,
-                                                    bias_method=method, **self.kwargs)
+                    my_bias_image = imutils.bias_image(ccd[amp], overscan.serial_overscan, bias_method=method, **self.kwargs)
                     fracdiff = ((self.bias_image.getArray() - my_bias_image.getArray())
-                            /self.bias_image.getArray())
+                                /self.bias_image.getArray())
                     self.assertTrue(max(np.abs(fracdiff.flat)) < 1e-6)
             my_bias_image = imutils.bias_image(ccd[amp],
                                                self.amp_geom.serial_overscan)
@@ -114,18 +107,18 @@ class BiasHandlingTestCase(unittest.TestCase):
         for amp in ccd:
             for method in ['mean', 'row', 'func', 'spline']:
                 image = imutils.unbias_and_trim(ccd[amp], 
-                                                 overscan.serial_overscan, bias_method=method, **self.kwargs)
+                                                overscan.serial_overscan, bias_method=method, **self.kwargs)
                 imarr = image.getImage().getArray()
                 if method == 'mean':
-		    self.assertTrue(max(np.abs(imarr.flat)) < 2)
-		else:
-		    self.assertTrue(max(np.abs(imarr.flat)) < 1e-6)
+                    self.assertTrue(max(np.abs(imarr.flat)) < 2)
+                else:
+                    self.assertTrue(max(np.abs(imarr.flat)) < 1e-6)
 	    	    #
             	    # Test of corresponding MaskedCCD method.
             	    #
-            	    image = ccd.unbiased_and_trimmed_image(amp, overscan.serial_overscan, **self.kwargs)
-            	    imarr = image.getImage().getArray()
-	    	    self.assertTrue(max(np.abs(imarr.flat)) < 1e-6)
+                    image = ccd.unbiased_and_trimmed_image(amp, overscan.serial_overscan, **self.kwargs)
+                    imarr = image.getImage().getArray()
+                    self.assertTrue(max(np.abs(imarr.flat)) < 1e-6)
     def test_bias_row(self):
         ccd = MaskedCCD(self.image_file)
         overscan = makeAmplifierGeometry(self.image_file)
@@ -134,8 +127,8 @@ class BiasHandlingTestCase(unittest.TestCase):
             br_i = imutils.bias_row(ccd[amp].getImage(), overscan.serial_overscan)
             # Masked image
             br_m = imutils.bias_row(ccd[amp], overscan.serial_overscan)
-	    for ii in range(2022):
-	        self.assertEqual(br_i(ii), br_m(ii))
+            for ii in range(2022):
+                self.assertEqual(br_i(ii), br_m(ii))
 
     def test_bias_spline(self):
         ccd = MaskedCCD(self.image_file)
@@ -152,17 +145,16 @@ class BiasHandlingTestCase(unittest.TestCase):
     def test_stack(self):
         ccd = MaskedCCD(self.image_file)
         overscan = makeAmplifierGeometry(self.image_file)
-        stats = []
         for method in ['mean', 'row', 'func']:
             corrected = []
             for image in ccd.values():
                 corrected.append(imutils.unbias_and_trim(image, overscan.serial_overscan, bias_method=method, **self.kwargs).getImage())
             stacked = imutils.stack(corrected)
-	    imarr = stacked.getArray()
-	    if method == 'mean':
-		self.assertTrue(max(np.abs(imarr.flat)) < 2)
-	    else:
-	    	self.assertTrue(max(np.abs(imarr.flat)) < 1e-6)
+            imarr = stacked.getArray()
+            if method == 'mean':
+                self.assertTrue(max(np.abs(imarr.flat)) < 2)
+            else:
+                self.assertTrue(max(np.abs(imarr.flat)) < 1e-6)
 
 
 class FitsMedianTestCase(unittest.TestCase):

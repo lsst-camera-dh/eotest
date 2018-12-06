@@ -17,7 +17,6 @@ import lsst.afw
 import lsst.afw.geom as afwGeom
 import lsst.afw.image as afwImage
 import lsst.afw.math as afwMath
-import lsst.pex.exceptions as pexExcept
 
 
 class Metadata(object):
@@ -117,9 +116,9 @@ def bias_row(im, overscan, dxmin=5, dxmax=2, statistic=np.mean, **kwargs):
     ny, nx = imarr.shape
     rows = np.arange(ny)
     values = np.array([statistic(imarr[j][dxmin:-dxmax]) for j in rows])
-    return(lambda x: values[x])
+    return lambda x: values[x]
 
-def bias_func(im, overscan, dxmin=5, dxmax=2, statistic=np.mean,  **kwargs):
+def bias_func(im, overscan, dxmin=5, dxmax=2, statistic=np.mean, **kwargs):
     """Compute the offset by fitting a polynomial (order 1 by default)
     to the mean of each row of the serial overscan region.  This
     returns a numpy.poly1d object with the fitted bias as function of pixel row. 
@@ -183,7 +182,8 @@ def bias_spline(im, overscan, dxmin=5, dxmax=2, statistic=np.mean, **kwargs):
     values = np.array([statistic(imarr[j][dxmin:-dxmax]) for j in rows])
     rms = 7 # Expected read noise per pixel
     weights = np.ones(ny) * (rms / np.sqrt(nx))
-    return(interpolate.splrep(rows, values, w=1/weights, k=kwargs.get('k', 3), s=kwargs.get('s', 18000), t=kwargs.get('t', None)))
+    return interpolate.splrep(rows, values, w=1/weights, k=kwargs.get('k', 3), 
+                              s=kwargs.get('s', 18000), t=kwargs.get('t', None))
 
 def bias_image(im, overscan, dxmin=5, dxmax=2, statistic=np.mean, bias_method='spline', **kwargs):
     """Generate a bias image containing the offset values calculated from 
@@ -228,7 +228,7 @@ def bias_image(im, overscan, dxmin=5, dxmax=2, statistic=np.mean, bias_method='s
         values = np.full(ny, my_bias)
     for row in range(ny):
         imarr[row] += values[row]
-    return(biasim)
+    return biasim
 
 def trim(im, imaging):
     """Trim the prescan and overscan regions.
@@ -244,7 +244,8 @@ def trim(im, imaging):
 
     return im.Factory(im, imaging)
 
-def unbias_and_trim(im, overscan, imaging=None, dxmin=5, dxmax=2, bias_method='spline', bias_frame=None, **kwargs):
+def unbias_and_trim(im, overscan, imaging=None, dxmin=5, dxmax=2, bias_method='spline', 
+                    bias_frame=None, **kwargs):
     """Subtract the offset calculated from the serial overscan region and optionally trim 
     prescan and overscan regions. Includes the option to subtract the median of a stack of 
     offset-subtracted bias frames to remove the bias level.
@@ -270,7 +271,8 @@ def unbias_and_trim(im, overscan, imaging=None, dxmin=5, dxmax=2, bias_method='s
         s: The amount of smoothing to be applied to the fit. This only needs to be specified when 
             using the 'spline' method. The default is: 18000.
         t: The number of knots. If None, finds the number of knots to use for a given smoothing 
-            factor, s. This only needs to be specified when using the 'spline' method. The default is: None.
+            factor, s. This only needs to be specified when using the 'spline' method. 
+            The default is: None.
 
     Returns:
         An afw image.
@@ -301,7 +303,7 @@ def fits_median_file(files, outfile, bitpix=16, overwrite=True):
     output.append(fits.PrimaryHDU())
     all_amps = allAmps()
     for amp in all_amps:
-        data  = fits_median(files, hdu=dm_hdu(amp)).getArray()
+        data = fits_median(files, hdu=dm_hdu(amp)).getArray()
         if bitpix < 0:
             output.append(fits.ImageHDU(data=data))
         else:
@@ -379,18 +381,20 @@ def stack(ims, statistic=afwMath.MEDIAN):
     for image in ims:
         images.push_back(image)
     summary = afwMath.statisticsStack(images, statistic)
-    return(summary)
+    return summary
 
 
-def super_bias(files, overscan, imaging=None, dxmin=5, dxmax=2, bias_method='spline', hdu=2, statistic=afwMath.MEDIAN, **kwargs):
+def super_bias(files, overscan, imaging=None, dxmin=5, dxmax=2, bias_method='spline', 
+               hdu=2, statistic=afwMath.MEDIAN, **kwargs):
     """Generates a single stacked 'super' bias frame based on 
     a statistic. Images must be either all masked or all unmasked."""
     ims = [afwImage.ImageF(f, hdu) for f in files]
     bias_frames = [unbias_and_trim(im, overscan, imaging, dxmin, dxmax, bias_method,
-                       **kwargs) for im in ims]
-    return(stack(bias_frames, statistic))
+                                   **kwargs) for im in ims]
+    return stack(bias_frames, statistic)
 
-def super_bias_file(files, overscan, outfile, imaging=None, dxmin=5, dxmax=2, bias_method='spline', bitpix=16, clobber=True, **kwargs):
+def super_bias_file(files, overscan, outfile, imaging=None, dxmin=5, dxmax=2, 
+                    bias_method='spline', bitpix=16, clobber=True, **kwargs):
     output = fits.open(files[0])
     for amp in allAmps(files[0]):
         try:
@@ -398,7 +402,8 @@ def super_bias_file(files, overscan, outfile, imaging=None, dxmin=5, dxmax=2, bi
             del output[amp].header['BZERO']
         except KeyError:
             pass
-        output[amp].data = super_bias(files, overscan, imaging, dxmin, dxmax, bias_method, hdu=dm_hdu(amp), **kwargs).getArray()
+        output[amp].data = super_bias(files, overscan, imaging, dxmin, dxmax, bias_method, 
+                                      hdu=dm_hdu(amp), **kwargs).getArray()
         if bitpix is not None:
             set_bitpix(output[amp], bitpix)
     fitsWriteto(output, outfile, clobber=clobber)

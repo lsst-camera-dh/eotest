@@ -7,13 +7,10 @@ afwMath.makeStatistics object.
 """
 from __future__ import print_function
 from __future__ import absolute_import
-import numpy as np
 import astropy.io.fits as fits
 from lsst.eotest.fitsTools import fitsWriteto
 from .AmplifierGeometry import makeAmplifierGeometry
 import lsst.daf.base as dafBase
-import lsst.afw
-import lsst.afw.geom as afwGeom
 import lsst.afw.image as afwImage
 import lsst.afw.math as afwMath
 import lsst.ip.isr as ipIsr
@@ -109,7 +106,7 @@ class MaskedCCD(dict):
         if overscan is None:
             overscan = self.amp_geom.serial_overscan
         try:
-            return imutils.bias_image(self[amp], overscan=overscan,  **kwargs)
+            return imutils.bias_image(self[amp], overscan=overscan, **kwargs)
         except pexExcept.LSST_RUNTIME_EXCEPTION as eobj:
             raise MaskedCCDBiasImageException("DM stack error generating bias "
                                               + "image from overscan region:\n"
