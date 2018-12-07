@@ -45,14 +45,15 @@ def find_flats(args):
 
 def ptc_func(pars, mean):
     """
-    Model for variance vs mean.
-    See Astier et al.
+    Model for variance vs mean.  See Astier et al.
     """
     a00, gain, intcpt = pars
     return 0.5/(a00*gain*gain)*(1 - np.exp(-2*a00*mean*gain)) + intcpt/(gain*gain)
 
 def residuals(pars, mean, var):
-    "Residuals function for least-squares fit of PTC curve."
+    """
+    Residuals function for least-squares fit of PTC curve.
+    """
     return (var - ptc_func(pars, mean))/np.sqrt(var)
 
 class FlatPairStats(object):
@@ -104,7 +105,6 @@ class PtcConfig(pexConfig.Config):
     output_dir = pexConfig.Field("Output directory", str, default='.')
     eotest_results_file = pexConfig.Field("EO test results filename",
                                           str, default=None)
-    max_frac_offset = pexConfig.Field("maximum fraction offset from median gain curve to omit points from PTC fit.", float, default=0.2)
     verbose = pexConfig.Field("Turn verbosity on", bool, default=True)
 
 class PtcTask(pipeBase.Task):
@@ -156,7 +156,7 @@ class PtcTask(pipeBase.Task):
         output[0].header['NAMPS'] = len(all_amps)
         fitsWriteto(output, outfile, overwrite=True)
 
-    def _fit_curves(self, ptc_stats, sensor_id):
+    def _fit_curves(self, ptc_stats, sensor_id, sig_cut=5):
         """
         Fit a model to the variance vs. mean
         """
@@ -168,19 +168,18 @@ class PtcTask(pipeBase.Task):
         for amp in ptc_stats:
             mean, var = np.array(ptc_stats[amp][0]), np.array(ptc_stats[amp][1])
             index_old = []
-            index = list(np.where(mean < 1e5)[0])
+            index = list(np.where(mean < 4e4)[0])
             count = 1
-            sig_cut = 5
+            # Initial guess for BF coeff, gain, and square of the read noise
             pars = 2.7e-6, 0.75, 25
             try:
                 while index != index_old and count < 10:
                     results = scipy.optimize.leastsq(residuals, pars, full_output=1,
                                                      args=(mean[index], var[index]))
-                    #sig_resids = (var - ptc_func(pars, mean))/np.sqrt(var)
+                    pars, cov = results[:2]
                     sig_resids = residuals(pars, mean, var)
                     index_old = deepcopy(index)
                     index = list(np.where(np.abs(sig_resids) < sig_cut)[0])
-                    pars, cov = results[:2]
                     count += 1
 
                 ptc_a00 = pars[0]
@@ -212,10 +211,10 @@ class PtcTask(pipeBase.Task):
             output.add_seg_result(amp, 'PTC_NOISE', ptc_noise)
             output.add_seg_result(amp, 'PTC_NOISE_ERROR', ptc_noise_error)
             output.add_seg_result(amp, 'PTC_TURNOFF', ptc_turnoff)
-            self.log.info("%i  %f  %fi %f %f %f %f %f" % (amp, ptc_gain,
-                                                          ptc_error, ptc_a00,
-                                                          ptc_a00_error,
-                                                          ptc_noise,
-                                                          ptc_noise_error,
-                                                          ptc_turnoff))
+            self.log.info("%i  %f  %f %f %f %f %f %f" % (amp, ptc_gain,
+                                                         ptc_error, ptc_a00,
+                                                         ptc_a00_error,
+                                                         ptc_noise,
+                                                         ptc_noise_error,
+                                                         ptc_turnoff))
         output.write()
