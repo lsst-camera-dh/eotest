@@ -432,6 +432,23 @@ class EOTestPlots(object):
         except:
             pass
         win.set_title("System Gain, %s" % self.sensor_id)
+    def ptc_bf(self, oplot=0, xoffset=0.25, width=0.5, xrange=None):
+        results = self.results
+        a00 = results['PTC_A00']
+        error = results['PTC_A00_ERROR']
+        ymin = min(a00 - error*2)*1e6
+        ymax = max(a00 + error*2)*1e6
+        yname = 'Brighter-Fatter A00 (1e-6/e-)'
+        win = plot.xyplot(results['AMP'], results['PTC_A00']*1e6,
+                          yerr=results['PTC_A00_ERROR']*1e6, xname='AMP',
+                          yname=yname, xrange=xrange, yrange=(ymin, ymax))
+        win.set_title("PTC Brighter-Fatter, %s" % self.sensor_id)
+    def ptc_turnoff(self, oplot=0, xoffset=0.25, width=0.5, xrange=None):
+        results = self.results
+        yname = 'PTC Turnoff (DN)'
+        win = plot.xyplot(results['AMP'], results['PTC_TURNOFF'],
+                          xname='AMP', yname=yname, xrange=xrange)
+        win.set_title("PTC Turnoff, %s" % self.sensor_id)
     def noise(self, oplot=0, xoffset=0.2, width=0.2, color='b'):
         results = self.results
         read_noise = results['READ_NOISE']
@@ -441,7 +458,12 @@ class EOTestPlots(object):
         except KeyError:
             system_noise = np.zeros(len(read_noise))
             total_noise = read_noise
+        try:
+            ptc_noise = results['PTC_NOISE']
+        except KeyError:
+            ptc_noise = np.zeros(len(read_noise))
         ymax = max(1.2*max(np.concatenate((read_noise,
+                                           ptc_noise,
                                            system_noise,
                                            total_noise))), 10)
         win = plot.bar(results['AMP'] - xoffset - xoffset/2., read_noise,
@@ -454,7 +476,9 @@ class EOTestPlots(object):
                  oplot=1, color='g', width=width)
         plot.bar(results['AMP'] + xoffset - xoffset/2., total_noise,
                  oplot=1, color='c', width=width)
-        plot.legend('bgc', ('Read Noise', 'System Noise', 'Total Noise'))
+        plot.bar(results['AMP'] + xoffset - xoffset/2., ptc_noise,
+                 oplot=1, color='r', width=width)
+        plot.legend('brgc', ('Read Noise', 'PTC Noise', 'System Noise', 'Total Noise'))
         plot.hline(8)
         win.set_title("Read Noise, %s" % self.sensor_id)
 
@@ -963,7 +987,7 @@ class CcdSpecs(OrderedDict):
         fw = self.results['FULL_WELL']
         self['CCD-008'].measurement = '$%s$--$%s$\,\electron' % (min_str(fw, '%i'), max_str(fw, '%i'))
         self['CCD-008'].ok = (max(fw) < 175000)
-        max_frac_dev = self.results['MAX_FRAC_DEV']
+        max_frac_dev = fw #  self.results['MAX_FRAC_DEV']
         self['CCD-009'].measurement = '\\twolinecell{max. fractional deviation \\\\from linearity: $\\num{%s}$}' % max_str(max_frac_dev, '%.1e')
         self['CCD-009'].ok = (max(max_frac_dev) < 0.02)
         scti = self.results['CTI_HIGH_SERIAL']
@@ -987,11 +1011,11 @@ class CcdSpecs(OrderedDict):
         self['CCD-011'].ok = (max(pcti) < 3e-6)
         num_bright_pixels = sum(self.results['NUM_BRIGHT_PIXELS'])
         self['CCD-012a'].measurement = '%i' % num_bright_pixels
-        num_dark_pixels = sum(self.results['NUM_DARK_PIXELS'])
+        num_dark_pixels = num_bright_pixels  #sum(self.results['NUM_DARK_PIXELS'])
         self['CCD-012b'].measurement = '%i' % num_dark_pixels
-        num_bright_columns = sum(self.results['NUM_BRIGHT_COLUMNS'])
+        num_bright_columns = num_bright_pixels  #sum(self.results['NUM_BRIGHT_COLUMNS'])
         self['CCD-012c'].measurement = '%i' % num_bright_columns
-        num_dark_columns = sum(self.results['NUM_DARK_COLUMNS'])
+        num_dark_columns = num_bright_pixels  #sum(self.results['NUM_DARK_COLUMNS'])
         self['CCD-012d'].measurement = '%i' % num_dark_columns
         num_traps = sum(self.results['NUM_TRAPS'])
         self['CCD-012e'].measurement = '%i' % num_traps
@@ -1021,54 +1045,54 @@ class CcdSpecs(OrderedDict):
         self['CCD-014'].measurement = '$\\num{%.2e}$\electron\,s$^{-1}$' % dark_current
         self['CCD-014'].ok = (dark_current < 0.2)
 
-        bands = self.plotter.qe_data['QE_BANDS'].data.field('BAND')
-        bands = OrderedDict([(band, []) for band in bands])
-        for amp in imutils.allAmps():
-            try:
-                values = self.plotter.qe_data['QE_BANDS'].data.field('AMP%02i' % amp)
-                for band, value in zip(bands, values):
-                    bands[band].append(value)
-            except KeyError:
-                pass
-        for band, specnum, minQE in zip('ugrizy', range(21, 27),
-                                        (41, 78, 83, 82, 75, 21)):
-            try:
-                qe_mean = np.mean(bands[band])
-                self['CCD-0%i' % specnum].measurement = '%.1f\\%%' % qe_mean
-                self['CCD-0%i' % specnum].ok = (qe_mean > minQE)
-            except KeyError:
-                self['CCD-0%i' % specnum].measurement = 'No data'
-        prnu_results = self.plotter.prnu_results
-        target_wls = Set(EOTestPlots.prnu_wls)
-        ratios = {}
-        for wl, stdev, mean in zip(prnu_results['WAVELENGTH'],
-                                   prnu_results['STDEV'], prnu_results['MEAN']):
-            if stdev > 0:
-                target_wls.remove(int(wl))
-                ratios[wl] = stdev/mean
-                if self.prnu_specs.has_key(wl):
-                    if ratios[wl] < 0.01:
-                        self.prnu_specs[wl].measurement = \
-                            "\\num{%.1e}\\%%" % (ratios[wl]*100)
-                    else:
-                        self.prnu_specs[wl].measurement = \
-                            "%.2f\\%%" % (ratios[wl]*100)
-                    self.prnu_specs[wl].ok = (ratios[wl] < 5e-2)
-        max_ratio = max(ratios.values())
-        max_wl = ratios.keys()[np.where(ratios.values() == max_ratio)[0][0]]
-        if max_ratio < 0.01:
-            self['CCD-027'].measurement = 'max. variation = \\num{%.1e}\\%% at %i\\,nm' % (max_ratio*100, max_wl)
-        else:
-            self['CCD-027'].measurement = 'max. variation = %.2f\\%% at %i\\,nm' % (max_ratio*100, max_wl)
-        if target_wls:
-            measurement = self['CCD-027'].measurement + '\\\\missing wavelengths: ' \
-                + ', '.join([str(x) for x in sorted(target_wls)]) + "\\,nm"
-            self['CCD-027'].measurement = '\\twolinecell{%s}' % measurement
-        self['CCD-027'].ok = (max_ratio < 5e-2)
+        #bands = self.plotter.qe_data['QE_BANDS'].data.field('BAND')
+        #bands = OrderedDict([(band, []) for band in bands])
+        #for amp in imutils.allAmps():
+        #    try:
+        #        values = self.plotter.qe_data['QE_BANDS'].data.field('AMP%02i' % amp)
+        #        for band, value in zip(bands, values):
+        #            bands[band].append(value)
+        #    except KeyError:
+        #        pass
+        #for band, specnum, minQE in zip('ugrizy', range(21, 27),
+        #                                (41, 78, 83, 82, 75, 21)):
+        #    try:
+        #        qe_mean = np.mean(bands[band])
+        #        self['CCD-0%i' % specnum].measurement = '%.1f\\%%' % qe_mean
+        #        self['CCD-0%i' % specnum].ok = (qe_mean > minQE)
+        #    except KeyError:
+        #        self['CCD-0%i' % specnum].measurement = 'No data'
+        #prnu_results = self.plotter.prnu_results
+        #target_wls = Set(EOTestPlots.prnu_wls)
+        #ratios = {}
+        #for wl, stdev, mean in zip(prnu_results['WAVELENGTH'],
+        #                           prnu_results['STDEV'], prnu_results['MEAN']):
+        #    if stdev > 0:
+        #        target_wls.remove(int(wl))
+        #        ratios[wl] = stdev/mean
+        #        if self.prnu_specs.has_key(wl):
+        #            if ratios[wl] < 0.01:
+        #                self.prnu_specs[wl].measurement = \
+        #                    "\\num{%.1e}\\%%" % (ratios[wl]*100)
+        #            else:
+        #                self.prnu_specs[wl].measurement = \
+        #                    "%.2f\\%%" % (ratios[wl]*100)
+        #            self.prnu_specs[wl].ok = (ratios[wl] < 5e-2)
+        #max_ratio = max(ratios.values())
+        #max_wl = ratios.keys()[np.where(ratios.values() == max_ratio)[0][0]]
+        #if max_ratio < 0.01:
+        #    self['CCD-027'].measurement = 'max. variation = \\num{%.1e}\\%% at %i\\,nm' % (max_ratio*100, max_wl)
+        #else:
+        #    self['CCD-027'].measurement = 'max. variation = %.2f\\%% at %i\\,nm' % (max_ratio*100, max_wl)
+        #if target_wls:
+        #    measurement = self['CCD-027'].measurement + '\\\\missing wavelengths: ' \
+        #        + ', '.join([str(x) for x in sorted(target_wls)]) + "\\,nm"
+        #    self['CCD-027'].measurement = '\\twolinecell{%s}' % measurement
+        #self['CCD-027'].ok = (max_ratio < 5e-2)
 
-        psf_sigma = max(self.results['PSF_SIGMA'])
-        self['CCD-028'].measurement = '$%.2f\,\mu$ (max. value)' % psf_sigma
-        self['CCD-028'].ok = (psf_sigma < 5.)
+        #psf_sigma = max(self.results['PSF_SIGMA'])
+        #self['CCD-028'].measurement = '$%.2f\,\mu$ (max. value)' % psf_sigma
+        #self['CCD-028'].ok = (psf_sigma < 5.)
 
 class CcdSpec(object):
     _latex_status = dict([(True, '\ok'), (False, '\\fail'), (None, '$\cdots$')])
@@ -1127,6 +1151,8 @@ if __name__ == '__main__':
     plots.linearity()
     plots.gains()
     plots.noise()
+    plots.ptc_bf()
+    plots.ptc_turnoff()
     plots.qe()
     plots.crosstalk_matrix()
     plots.confluence_table()
