@@ -185,7 +185,7 @@ def bias_spline(im, overscan, dxmin=5, dxmax=2, statistic=np.mean, **kwargs):
     return interpolate.splrep(rows, values, w=1/weights, k=kwargs.get('k', 3), 
                               s=kwargs.get('s', 18000), t=kwargs.get('t', None))
 
-def bias_image(im, overscan, dxmin=5, dxmax=2, statistic=np.mean, bias_method='spline', **kwargs):
+def bias_image(im, overscan, dxmin=5, dxmax=2, statistic=np.mean, bias_method='row', **kwargs):
     """Generate a bias image containing the offset values calculated from 
     bias(), bias_row(), bias_func() or bias_spline().
     
@@ -244,7 +244,7 @@ def trim(im, imaging):
 
     return im.Factory(im, imaging)
 
-def unbias_and_trim(im, overscan, imaging=None, dxmin=5, dxmax=2, bias_method='spline', 
+def unbias_and_trim(im, overscan, imaging=None, dxmin=5, dxmax=2, bias_method='row', 
                     bias_frame=None, **kwargs):
     """Subtract the offset calculated from the serial overscan region and optionally trim 
     prescan and overscan regions. Includes the option to subtract the median of a stack of 
@@ -375,16 +375,15 @@ def fits_median(files, hdu=2, fix=True):
     return median_image
 
 def stack(ims, statistic=afwMath.MEDIAN):
-    """Stacks a list of images based on a statistic. The images must
-    be unmasked."""
+    """Stacks a list of images based on a statistic."""
     images = []
     for image in ims:
-        images.append(image)
+        images.append(image)       
     summary = afwMath.statisticsStack(images, statistic)
     return summary
 
 
-def super_bias(files, overscan, imaging=None, dxmin=5, dxmax=2, bias_method='spline', 
+def superbias(files, overscan, imaging=None, dxmin=5, dxmax=2, bias_method='row', 
                hdu=2, statistic=afwMath.MEDIAN, **kwargs):
     """Generates a single stacked 'super' bias frame based on 
     a statistic. Images must be either all masked or all unmasked."""
@@ -393,8 +392,8 @@ def super_bias(files, overscan, imaging=None, dxmin=5, dxmax=2, bias_method='spl
                                    **kwargs) for im in ims]
     return stack(bias_frames, statistic)
 
-def super_bias_file(files, overscan, outfile, imaging=None, dxmin=5, dxmax=2, 
-                    bias_method='spline', bitpix=16, clobber=True, **kwargs):
+def superbias_file(files, overscan, outfile, imaging=None, dxmin=5, dxmax=2, 
+                    bias_method='row', bitpix=16, clobber=True, **kwargs):
     output = fits.open(files[0])
     for amp in allAmps(files[0]):
         try:
