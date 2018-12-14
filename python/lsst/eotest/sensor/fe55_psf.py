@@ -38,28 +38,54 @@ def psf_sigma_statistics(sigma, bins=50, range=(2, 6), frac=0.5):
     return mode, median, mean
 
 
+def cluster_moments(dn, pos):
+    """
+    Get the total counts, mean and standard deviation in x and y of a cluster.
+
+    These values can be used to seed the least squares fitter and to speed up the convergence.
+    """
+    sum_0 = np.sum(dn)
+    vx = pos.T[0]
+    vy = pos.T[1]
+    sum_x = np.sum(vx*dn)
+    sum_x2 = np.sum(vx*vx*dn)
+    sum_y = np.sum(vy*dn)
+    sum_y2 = np.sum(vy*vy*dn)
+    mean_x = sum_x / sum_0
+    mean_y = sum_y / sum_0
+    std_x = np.sqrt((sum_x2 / sum_0) - (mean_x * mean_x))
+    std_y = np.sqrt((sum_y2 / sum_0) - (mean_y * mean_y))
+    return (mean_x, mean_y, std_x, std_y, sum_0)
+
+
 def pixel_integral(x, y, x0, y0, sigmax, sigmay):
     """
-    Integrate 2D Gaussian centered at (x0, y0) with widths sigmax and
-    sigmay over a square pixel at (x, y) with unit width.
+    Integrate 2D Gaussian centered at (x0, y0) with scaled widths sqrt2sigmax and
+    sqrt2sigmay over a square pixel at (x, y) with unit width.
+
     """
-    x1, x2 = x - 0.5, x + 0.5
-    y1, y2 = y - 0.5, y + 0.5
+    x1 = x - 0.5
+    x2 = x + 0.5
+    y1 = y - 0.5
+    y2 = y + 0.5
 
-    Fx = 0.5*(erf((x2 - x0)/_sqrt2/sigmax) - erf((x1 - x0)/_sqrt2/sigmax))
-    Fy = 0.5*(erf((y2 - y0)/_sqrt2/sigmay) - erf((y1 - y0)/_sqrt2/sigmay))
+    sqrt2sigmax = _sqrt2 * sigmax
+    sqrt2sigmay = _sqrt2 * sigmay
 
-    return Fx*Fy
+    Fx = erf((x2 - x0)/sqrt2sigmax) - erf((x1 - x0)/sqrt2sigmax)
+    Fy = erf((y2 - y0)/sqrt2sigmay) - erf((y1 - y0)/sqrt2sigmay)
+
+    return 0.25*Fx*Fy
 
 
 def residuals_single(pars, pos, dn, errors):
     x0, y0, sigma, DN_tot = pars
-    return (dn - psf_func(pos, x0, y0, sigma, sigma, DN_tot))/errors
+    return (dn - psf_func(pos.T, x0, y0, sigma, sigma, DN_tot))/errors
 
 
 def residuals(pars, pos, dn, errors):
     x0, y0, sigmax, sigmay, DN_tot = pars
-    return (dn - psf_func(pos, x0, y0, sigmax, sigmay, DN_tot))/errors
+    return (dn - psf_func(pos.T, x0, y0, sigmax, sigmay, DN_tot))/errors
 
 
 def psf_func_single_sigma(pos, x0, y0, sigma, DN_tot):
@@ -75,22 +101,23 @@ def psf_func(pos, x0, y0, sigmax, sigmay, DN_tot):
     DN_tot: Gaussian normalization in ADU
     tie_xy: if True, then assume sigmax=sigmay in the fit.
     """
-    return DN_tot*np.array([pixel_integral(x[0], x[1], x0, y0,
-                                           sigmax, sigmay) for x in pos])
+    #return DN_tot*np.array([pixel_integral(x[0], x[1], x0, y0,
+    #                                       sigmax, sigmay) for x in pos])
+    return DN_tot*pixel_integral(pos[0], pos[1], x0, y0, sigmax, sigmay)
 
 
 def chisq(pos, dn, x0, y0, sigmax, sigmay, dn_fit, dn_errors):
     "The chi-square of the fit of the data to psf_func."
-    return sum((psf_func(pos, x0, y0, sigmax, sigmay, dn_fit)
+    return sum((psf_func(pos.T, x0, y0, sigmax, sigmay, dn_fit)
                 - np.array(dn))**2/dn_errors**2)
 
 
 def p9_values(peak, imarr, x0, y0, sigmax, sigmay, DN_tot):
     x5, y5 = peak.getIx(), peak.getIy()
-    pos = [(x5 + dyx[1], y5 + dyx[0]) for dyx in
-           itertools.product((-1, 0, 1), (-1, 0, 1))]
+    pos = np.array([(x5 + dyx[1], y5 + dyx[0]) for dyx in
+                    itertools.product((-1, 0, 1), (-1, 0, 1))])
     p9_data = np.array([imarr[y][x] for x, y in pos])
-    p9_model = psf_func(pos, x0, y0, sigmax, sigmay, DN_tot)
+    p9_model = psf_func(pos.T, x0, y0, sigmax, sigmay, DN_tot)
     return p9_data, p9_model
 
 
@@ -209,21 +236,25 @@ class PsfGaussFit(object):
                     positions.append((x, y))
                     zvals.append(imarr[y][x])
                     dn_sum += imarr[y][x]
+            pos_array = np.array(positions)
+            zvals_array = np.array(zvals)
+            dn_sum = zvals_array.sum()
             try:
                 # Use clipped stdev as DN error estimate for all pixels
                 dn_errors = stdev*np.ones(len(positions))
+                cluster_stats = cluster_moments(zvals_array, pos_array)
                 if self.npars == 5:
-                    p0 = (peak.getIx(), peak.getIy(), sigma0, sigma0, dn0)
-                    pars, _ = scipy.optimize.leastsq(residuals, p0,
-                                                     args=(positions, zvals,
+                    pars, _ = scipy.optimize.leastsq(residuals, cluster_stats,
+                                                     args=(pos_array, zvals_array,
                                                            dn_errors))
                     sigmax.append(pars[2])
                     sigmay.append(pars[3])
                     dn.append(pars[4])
                 else:
-                    p0 = (peak.getIx(), peak.getIy(), sigma0, dn0)
+                    sigma_xy = 0.5*(cluster_stats[2]+cluster_stats[3])
+                    p0 = (cluster_stats[0], cluster_stats[1], sigma_xy, cluster_stats[4])
                     pars, _ = scipy.optimize.leastsq(residuals_single, p0,
-                                                     args=(positions, zvals,
+                                                     args=(pos_array, zvals_array,
                                                            dn_errors))
                     sigmax.append(pars[2])
                     sigmay.append(pars[2])
@@ -231,7 +262,7 @@ class PsfGaussFit(object):
                 x0.append(pars[0])
                 y0.append(pars[1])
                 dn_fp.append(dn_sum)
-                chi2 = chisq(positions, zvals, x0[-1], y0[-1],
+                chi2 = chisq(pos_array, zvals_array, x0[-1], y0[-1],
                              sigmax[-1], sigmay[-1], dn[-1], dn_errors)
                 dof = fp.getArea() - self.npars
                 chiprob.append(gammaincc(dof/2., chi2/2.))
