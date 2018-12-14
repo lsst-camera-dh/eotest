@@ -401,7 +401,7 @@ def superbias_file(files, overscan, outfile, imaging=None, dxmin=5, dxmax=2,
             del output[amp].header['BZERO']
         except KeyError:
             pass
-        output[amp].data = super_bias(files, overscan, imaging, dxmin, dxmax, bias_method, 
+        output[amp].data = superbias(files, overscan, imaging, dxmin, dxmax, bias_method, 
                                       hdu=dm_hdu(amp), **kwargs).getArray()
         if bitpix is not None:
             set_bitpix(output[amp], bitpix)

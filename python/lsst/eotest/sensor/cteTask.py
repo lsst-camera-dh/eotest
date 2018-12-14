@@ -17,7 +17,7 @@ import lsst.afw.math as afwMath
 import lsst.pex.config as pexConfig
 import lsst.pipe.base as pipeBase
 
-def bias_subtracted_image(image, bias_image, overscan, bias_method='spline'):
+def bias_subtracted_image(image, bias_image, overscan, bias_method='row'):
     # Make deep copies of image and bias image so that we can modify them.
     im_out = image.Factory(image)
     bias_sub = bias_image.Factory(bias_image)
@@ -30,7 +30,7 @@ def bias_subtracted_image(image, bias_image, overscan, bias_method='spline'):
 
 
 def superflat(files, bias_frame=None, outfile='superflat.fits', bitpix=-32,
-              bias_subtract=True, bias_method='spline'):
+              bias_subtract=True, bias_method='row'):
     """
     The superflat is created by bias-offset correcting the input files
     and median-ing them together.

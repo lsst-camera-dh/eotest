@@ -12,7 +12,7 @@ from lsst.eotest.sensor import AmplifierGeometry
 
 class SegmentExposureTestCase(unittest.TestCase):
     amp_geom = AmplifierGeometry()
-    bias_method = 'spline'
+    bias_method = 'row'
 
     def setUp(self):
         self.seg = sim_tools.SegmentExposure(exptime=100, gain=1, ccdtemp=-100,

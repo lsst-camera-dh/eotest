@@ -103,6 +103,23 @@ class MaskedCCD(dict):
         return self.stat_ctrl
 
     def bias_image_using_overscan(self, amp, overscan=None, **kwargs):
+        """
+        Generate a bias image containing the offset values calculated from 
+        bias(), bias_row(), bias_func() or bias_spline(). The default bias method
+        is set to bias_row() in image_utils.py. Keyword arguments can be passed 
+        depending on which bias method is used.
+
+        Keyword Arguments:
+        fit_order: The order of the polynomial. This only needs to be specified when 
+            using the 'func' method. The default is: 1.
+        k: The degree of the spline fit. This only needs to be specified when using 
+            the 'spline' method. The default is: 3.
+        s: The amount of smoothing to be applied to the fit. This only needs to be 
+            specified when using the 'spline' method. The default is: 18000.
+        t: The number of knots. If None, finds the number of knots to use for a given 
+            smoothing factor, s. This only needs to be specified when using the 'spline' 
+            method. The default is: None. 
+        """
         if overscan is None:
             overscan = self.amp_geom.serial_overscan
         try:
@@ -115,7 +132,21 @@ class MaskedCCD(dict):
     def bias_image(self, amp, overscan=None, **kwargs):
         """
         Use separately stored metadata to determine file-specified
-        overscan region.
+        overscan region. If bias_frame is not given, then calculate
+        the bias image using bias(), bias_row(), bias_func() or bias_spline().
+        The default bias method is set to bias_row() in image_utils.py. 
+        Keyword arguments can be passed depending on which bias method is used.
+
+        Keyword Arguments:
+        fit_order: The order of the polynomial. This only needs to be specified when
+            using the 'func' method. The default is: 1.
+        k: The degree of the spline fit. This only needs to be specified when using
+            the 'spline' method. The default is: 3.
+        s: The amount of smoothing to be applied to the fit. This only needs to be
+            specified when using the 'spline' method. The default is: 18000.
+        t: The number of knots. If None, finds the number of knots to use for a given
+            smoothing factor, s. This only needs to be specified when using the 'spline'
+            method. The default is: None.
         """
         if self.bias_frame is not None:
             #
@@ -125,6 +156,24 @@ class MaskedCCD(dict):
         return self.bias_image_using_overscan(amp, overscan=overscan, **kwargs)
 
     def bias_subtracted_image(self, amp, overscan=None, **kwargs):
+        """
+        Subtract a bias image to correct for the bias level. If a bias_frame is given,
+        generate a bias image from the overscan of the bias_frame. If a bias_frame is 
+        not given, then calculate the bias image using bias(), bias_row(), bias_func() 
+        or bias_spline(). The default bias method is set to bias_row() in image_utils.py.  
+        Keyword arguments can be passed depending on which bias method is used.
+
+        Keyword Arguments:
+        fit_order: The order of the polynomial. This only needs to be specified when
+            using the 'func' method. The default is: 1.
+        k: The degree of the spline fit. This only needs to be specified when using
+            the 'spline' method. The default is: 3.
+        s: The amount of smoothing to be applied to the fit. This only needs to be
+            specified when using the 'spline' method. The default is: 18000.
+        t: The number of knots. If None, finds the number of knots to use for a given
+            smoothing factor, s. This only needs to be specified when using the 'spline'
+            method. The default is: None.
+        """
         if self.bias_frame is not None:
             # Make a deep copy of the bias frame.
             bias = self.bias_frame[amp].Factory(self.bias_frame[amp])
@@ -144,6 +193,9 @@ class MaskedCCD(dict):
 
     def unbiased_and_trimmed_image(self, amp, overscan=None,
                                    imaging=None, **kwargs):
+        """
+        
+        """
         unbiased_image = self.bias_subtracted_image(amp, overscan, **kwargs)
         if imaging is None:
             imaging = self.amp_geom.imaging
