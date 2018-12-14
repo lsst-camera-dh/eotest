@@ -60,8 +60,8 @@ def cluster_moments(dn, pos):
 
 def pixel_integral(x, y, x0, y0, sigmax, sigmay):
     """
-    Integrate 2D Gaussian centered at (x0, y0) with scaled widths sqrt2sigmax and
-    sqrt2sigmay over a square pixel at (x, y) with unit width.
+    Integrate 2D Gaussian centered at (x0, y0) with widths sigmax and
+    sigmay over a square pixel at (x, y) with unit width.
 
     """
     x1 = x - 0.5
