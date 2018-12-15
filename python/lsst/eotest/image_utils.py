@@ -396,7 +396,7 @@ def superbias_file(files, overscan, outfile, imaging=None, dxmin=5, dxmax=2,
                     bias_method='row', bitpix=16, clobber=True, **kwargs):
     images = {amp : superbias(files, overscan, imaging, dxmin, dxmax, bias_method,
                               hdu=dm_hdu(amp), **kwargs) for amp in allAmps(files[0])}     
-    imutils.writeFits(images, outfile, files[0], bitpix=bitpix) 
+    writeFits(images, outfile, files[0], bitpix=bitpix) 
 
 def writeFits(images, outfile, template_file, bitpix=32):
     output = fits.HDUList()
