@@ -17,7 +17,6 @@ import lsst.afw
 import lsst.afw.geom as afwGeom
 import lsst.afw.image as afwImage
 import lsst.afw.math as afwMath
-from astropy.stats import sigma_clip
 
 class Metadata(object):
     def __init__(self, infile, hdu=0):
