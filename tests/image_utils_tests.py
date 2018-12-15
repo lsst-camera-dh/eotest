@@ -28,7 +28,7 @@ class BiasHandlingTestCase(unittest.TestCase):
     bias_intercept = 0.5
     exptime = 1
     gain = 1
-    kwargs = {'fit_order' : 1, 'fit_statistic' : np.mean, 'k' : 3, 's' : 8000, 't' : None, 'imaging' : AmplifierGeometry().imaging}
+    kwargs = {'fit_order' : 1, 'k' : 3, 's' : 8000, 't' : None, 'imaging' : AmplifierGeometry().imaging}
     image_file = 'test_image.fits'
     mean_image_file = 'test_mean_image.fits'
 

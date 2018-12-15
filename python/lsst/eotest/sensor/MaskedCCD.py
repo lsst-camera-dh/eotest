@@ -104,7 +104,7 @@ class MaskedCCD(dict):
 
     def bias_image_using_overscan(self, amp, overscan=None, **kwargs):
         """
-        Generate a bias image containing the offset values calculated from 
+        Generate a bias image containing offset values calculated from 
         bias(), bias_row(), bias_func() or bias_spline(). The default bias method
         is set to bias_row() in image_utils.py. Keyword arguments can be passed 
         depending on which bias method is used.
@@ -157,10 +157,10 @@ class MaskedCCD(dict):
 
     def bias_subtracted_image(self, amp, overscan=None, **kwargs):
         """
-        Subtract a bias image to correct for the bias level. If a bias_frame is given,
-        generate a bias image from the overscan of the bias_frame. If a bias_frame is 
-        not given, then calculate the bias image using bias(), bias_row(), bias_func() 
-        or bias_spline(). The default bias method is set to bias_row() in image_utils.py.  
+        Subtract a bias image to correct for the offset. A bias correction is also 
+        applied if a base_frame is passed. The bias image with the offset values is
+        generated using either of the bias(), bias_row(), bias_func() or bias_spline()
+        methods from image_utils.py. The default bias method is set to bias_row().  
         Keyword arguments can be passed depending on which bias method is used.
 
         Keyword Arguments:
@@ -194,7 +194,21 @@ class MaskedCCD(dict):
     def unbiased_and_trimmed_image(self, amp, overscan=None,
                                    imaging=None, **kwargs):
         """
-        
+        Return an offset-corrected image where the offset values generated using 
+        either of the bias(), bias_row(), bias_func() or bias_spline() methods from 
+        image_utils.py. The default bias method is set to bias_row(). Keyword arguments 
+        can be passed depending on which bias method is used.
+
+        Keyword Arguments:
+        fit_order: The order of the polynomial. This only needs to be specified when
+            using the 'func' method. The default is: 1.
+        k: The degree of the spline fit. This only needs to be specified when using
+            the 'spline' method. The default is: 3.
+        s: The amount of smoothing to be applied to the fit. This only needs to be
+            specified when using the 'spline' method. The default is: 18000.
+        t: The number of knots. If None, finds the number of knots to use for a given
+            smoothing factor, s. This only needs to be specified when using the 'spline'
+            method. The default is: None. 
         """
         unbiased_image = self.bias_subtracted_image(amp, overscan, **kwargs)
         if imaging is None:

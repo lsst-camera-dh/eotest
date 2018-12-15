@@ -83,7 +83,7 @@ def system_crosstalk(ccd, aggressor_amp, dnthresh=None, nsig=5):
         raise RuntimeError("More than one aggressor column found.")
 
     agg_col = columns[0]
-    agg_mean = column_mean(ccd, aggressor_amp, agg_coli)[0]
+    agg_mean = column_mean(ccd, aggressor_amp, agg_col)[0]
 
     ratios = dict([(amp, column_mean(ccd, amp, agg_col)/agg_mean)
                    for amp in ccd])

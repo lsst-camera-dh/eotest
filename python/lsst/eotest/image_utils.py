@@ -17,7 +17,7 @@ import lsst.afw
 import lsst.afw.geom as afwGeom
 import lsst.afw.image as afwImage
 import lsst.afw.math as afwMath
-
+from astropy.stats import sigma_clip
 
 class Metadata(object):
     def __init__(self, infile, hdu=0):
@@ -394,18 +394,9 @@ def superbias(files, overscan, imaging=None, dxmin=5, dxmax=2, bias_method='row'
 
 def superbias_file(files, overscan, outfile, imaging=None, dxmin=5, dxmax=2, 
                     bias_method='row', bitpix=16, clobber=True, **kwargs):
-    output = fits.open(files[0])
-    for amp in allAmps(files[0]):
-        try:
-            del output[amp].header['BSCALE']
-            del output[amp].header['BZERO']
-        except KeyError:
-            pass
-        output[amp].data = superbias(files, overscan, imaging, dxmin, dxmax, bias_method, 
-                                      hdu=dm_hdu(amp), **kwargs).getArray()
-        if bitpix is not None:
-            set_bitpix(output[amp], bitpix)
-    fitsWriteto(output, outfile, clobber=clobber)
+    images = {amp : superbias(files, overscan, imaging, dxmin, dxmax, bias_method,
+                              hdu=dm_hdu(amp), **kwargs) for amp in allAmps(files[0])}     
+    imutils.writeFits(images, outfile, files[0], bitpix=bitpix) 
 
 def writeFits(images, outfile, template_file, bitpix=32):
     output = fits.HDUList()
