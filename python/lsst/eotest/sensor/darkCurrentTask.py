@@ -73,7 +73,7 @@ class DarkCurrentTask(pipeBase.Task):
             dark_curr_pixels.extend(unmasked)
             try:
                 dark95s[amp] = unmasked[int(len(unmasked)*0.95)]
-                median = unmasked[len(unmasked)/2]
+                median = unmasked[len(unmasked)//2]
             except IndexError as eobj:
                 print(str(eobj))
                 dark95s[amp] = -1.
