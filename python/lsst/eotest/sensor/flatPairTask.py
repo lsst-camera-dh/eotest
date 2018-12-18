@@ -65,13 +65,15 @@ class FlatPairTask(pipeBase.Task):
     @pipeBase.timeMethod
     def run(self, sensor_id, infiles, mask_files, gains, detrespfile=None,
             bias_frame=None, max_pd_frac_dev=0.05,
-            linearity_spec_range=(1e3, 9e4), use_exptime=False):
+            linearity_spec_range=(1e3, 9e4), use_exptime=False,
+            flat2_finder=find_flat2):
         self.sensor_id = sensor_id
         self.infiles = infiles
         self.mask_files = mask_files
         self.gains = gains
         self.bias_frame = bias_frame
         self.max_pd_frac_dev = max_pd_frac_dev
+        self.find_flat2 = flat2_finder
         if detrespfile is None:
             #
             # Compute detector response from flat pair files.
@@ -141,7 +143,7 @@ class FlatPairTask(pipeBase.Task):
         self._create_detresp_fits_output(len(file1s))
         for row, file1 in enumerate(file1s):
             try:
-                file2 = find_flat2(file1)
+                file2 = self.find_flat2(file1)
             except IndexError:
                 # Just use flat1 again since only average is taken and
                 # FPN subtraction isn't needed.
