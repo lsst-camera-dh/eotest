@@ -35,7 +35,7 @@ def bias_subtracted_image(image, bias_image, overscan, fit_order=1,
     return im_out
 
 
-def superflat(files, bias_frame=None, outfile='superflat.fits', bitpix=-32,
+def superflat(files, bias_frame=None, outfile='superflat.fits', bitpix=None,
               bias_subtract=True):
     """
     The superflat is created by bias-offset correcting the input files
@@ -43,8 +43,7 @@ def superflat(files, bias_frame=None, outfile='superflat.fits', bitpix=-32,
     """
     # Get overscan region.
     overscan = makeAmplifierGeometry(files[0]).serial_overscan
-    # Use the first file as a template for the fits output.
-    output = fits.open(files[0])
+    output_images = dict()
     for amp in imutils.allAmps(files[0]):
         images = []
         for infile in files:
@@ -60,11 +59,8 @@ def superflat(files, bias_frame=None, outfile='superflat.fits', bitpix=-32,
             images.append(image)
         if lsst.afw.__version__.startswith('12.0'):
             images = afwImage.vectorImageF(images)
-        median_image = afwMath.statisticsStack(images, afwMath.MEDIAN)
-        output[amp].data = median_image.getArray()
-        if bitpix is not None:
-            imutils.set_bitpix(output[amp], bitpix)
-    fitsWriteto(output, outfile, overwrite=True)
+        output_images[amp] = afwMath.statisticsStack(images, afwMath.MEDIAN)
+    imutils.writeFits(output_images, outfile, files[0])
     return outfile
 
 
