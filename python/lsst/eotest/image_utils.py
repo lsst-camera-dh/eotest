@@ -277,7 +277,7 @@ def unbias_and_trim(im, overscan, imaging=None, dxmin=5, dxmax=2, bias_method='r
         An afw image.
     """
     
-    im -= bias_image(im, overscan, dxmin=dxmin, dxmax=dxmax, bias_method=bias_method, bias_frame=bias_frame, **kwargs)
+    im -= bias_image(im, overscan, dxmin=dxmin, dxmax=dxmax, bias_method=bias_method, **kwargs)
     if bias_frame:
         im -= bias_frame
     if imaging is not None:
@@ -392,7 +392,7 @@ def superbias(files, overscan, imaging=None, dxmin=5, dxmax=2, bias_method='row'
     return stack(bias_frames, statistic)
 
 def superbias_file(files, overscan, outfile, imaging=None, dxmin=5, dxmax=2, 
-                    bias_method='row', bitpix=16, clobber=True, **kwargs):
+                    bias_method='row', bitpix=-32, clobber=True, **kwargs):
     images = {amp : superbias(files, overscan, imaging, dxmin, dxmax, bias_method,
                               hdu=dm_hdu(amp), **kwargs) for amp in allAmps(files[0])}     
     writeFits(images, outfile, files[0], bitpix=bitpix) 
