@@ -107,7 +107,9 @@ def rolloff_mask(infile, outfile,
         #
         # Set signal in row direction along perimeter.
         #
-        imarr[0:outer_edge_width, :] += signal
+        xmin = amp_geom.imaging.getMinX()
+        xmax = amp_geom.imaging.getMaxX()
+        imarr[0:outer_edge_width, xmin:xmax] += signal
 
         if amp_geom.amp_loc == amp_loc['E2V']:
             #if True:
