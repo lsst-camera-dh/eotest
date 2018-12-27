@@ -7,6 +7,7 @@ photon transfer curve and compute and write out the full well.
 import os
 import glob
 from copy import deepcopy
+import operator
 import numpy as np
 import scipy.optimize
 import astropy.io.fits as fits
@@ -190,7 +191,7 @@ class PtcTask(pipeBase.Task):
                 ptc_noise_error = 0.5/ptc_noise*np.sqrt(cov[2][2])
                 # Cannot assume that the mean values are sorted
                 ptc_turnoff = max(mean[index])
-            except StandardError as eobj:
+            except Exception as eobj:
                 self.log.info("Exception caught while fitting PTC:")
                 self.log.info(str(eobj))
                 ptc_gain = 0.
