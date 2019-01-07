@@ -15,7 +15,6 @@ from lsst.eotest.fitsTools import fitsWriteto
 import lsst.eotest.image_utils as imutils
 from .MaskedCCD import MaskedCCD
 from .EOTestResults import EOTestResults
-import lsst.afw.image as afwImage
 import lsst.pex.config as pexConfig
 import lsst.pipe.base as pipeBase
 
@@ -62,8 +61,8 @@ class DarkCurrentTask(pipeBase.Task):
         for amp in ccd:
             imaging_region = ccd.amp_geom.imaging
             overscan = ccd.amp_geom.serial_overscan
-            image = imutils.unbias_and_trim(ccd[amp].getImage(),
-                                            overscan, imaging_region)
+            image = imutils.unbias_and_trim(im=ccd[amp].getImage(),
+                                            overscan=overscan, imaging=imaging_region) 
             mask = imutils.trim(ccd[amp].getMask(), imaging_region)
             imarr = image.getArray()
             mskarr = mask.getArray()

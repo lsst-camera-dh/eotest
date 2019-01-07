@@ -16,11 +16,13 @@ import lsst.eotest.sensor.sim_tools as sim_tools
 
 class _FitsFile(dict):
     def __init__(self, infile):
+        amp_geom = makeAmplifierGeometry(infile)
+        xmin, xmax = amp_geom.imaging.getMinX(), amp_geom.imaging.getMaxX()
         super(_FitsFile, self).__init__()
         with fits.open(infile) as foo:
             amps = imutils.allAmps(infile)
             for amp in amps:
-                self[amp] = copy.deepcopy(foo[amp].data)
+                self[amp] = copy.deepcopy(foo[amp].data[:, xmin:xmax])
 
 
 class rolloff_mask_TestCase(unittest.TestCase):

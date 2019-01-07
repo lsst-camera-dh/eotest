@@ -6,7 +6,6 @@ These data are to be used for linearity measurments.
 """
 from __future__ import absolute_import
 import os
-import glob
 import numpy as np
 import astropy.io.fits as fits
 from lsst.eotest.fitsTools import fitsTableFactory, fitsWriteto
@@ -15,7 +14,6 @@ from .MaskedCCD import MaskedCCD
 from .EOTestResults import EOTestResults
 from .DetectorResponse import DetectorResponse
 
-import lsst.afw.math as afwMath
 import lsst.pex.config as pexConfig
 import lsst.pipe.base as pipeBase
 from .flatPairTask import pair_mean, find_flat2
