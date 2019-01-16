@@ -127,7 +127,7 @@ class PtcTask(pipeBase.Task):
 
     @pipeBase.timeMethod
     def run(self, sensor_id, infiles, mask_files, gains, binsize=1,
-            bias_frame=None):
+            bias_frame=None, flat2_finder=find_flat2):
         outfile = os.path.join(self.config.output_dir,
                                '%s_ptc.fits' % sensor_id)
         all_amps = imutils.allAmps(infiles[0])
@@ -135,7 +135,7 @@ class PtcTask(pipeBase.Task):
         exposure = []
         file1s = sorted([item for item in infiles if item.find('flat1') != -1])
         for flat1 in file1s:
-            flat2 = find_flat2(flat1)
+            flat2 = flat2_finder(flat1)
             if self.config.verbose:
                 self.log.info("processing %s" % flat1)
             exposure.append(exptime(flat1))
