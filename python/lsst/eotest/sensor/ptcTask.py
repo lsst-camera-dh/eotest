@@ -47,6 +47,7 @@ def find_flats(args):
 def ptc_func(pars, mean):
     """
     Model for variance vs mean.  See Astier et al.
+    https://confluence.slac.stanford.edu/pages/viewpage.action?pageId=242286867
     """
     a00, gain, intcpt = pars
     return 0.5/(a00*gain*gain)*(1 - np.exp(-2*a00*mean*gain)) + intcpt/(gain*gain)

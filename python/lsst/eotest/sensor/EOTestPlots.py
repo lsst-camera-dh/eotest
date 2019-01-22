@@ -458,12 +458,7 @@ class EOTestPlots(object):
         except KeyError:
             system_noise = np.zeros(len(read_noise))
             total_noise = read_noise
-        try:
-            ptc_noise = results['PTC_NOISE']
-        except KeyError:
-            ptc_noise = np.zeros(len(read_noise))
         ymax = max(1.2*max(np.concatenate((read_noise,
-                                           ptc_noise,
                                            system_noise,
                                            total_noise))), 10)
         win = plot.bar(results['AMP'] - xoffset - xoffset/2., read_noise,
@@ -476,9 +471,7 @@ class EOTestPlots(object):
                  oplot=1, color='g', width=width)
         plot.bar(results['AMP'] + xoffset - xoffset/2., total_noise,
                  oplot=1, color='c', width=width)
-        plot.bar(results['AMP'] + xoffset - xoffset/2., ptc_noise,
-                 oplot=1, color='r', width=width)
-        plot.legend('brgc', ('Read Noise', 'PTC Noise', 'System Noise', 'Total Noise'))
+        plot.legend('bgc', ('Read Noise', 'PTC Noise', 'System Noise', 'Total Noise'))
         plot.hline(8)
         win.set_title("Read Noise, %s" % self.sensor_id)
 

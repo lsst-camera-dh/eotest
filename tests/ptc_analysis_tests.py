@@ -42,13 +42,8 @@ class PTCGainFitterTestCase(unittest.TestCase):
         task._fit_curves(ptc_stats, 'TEST_ID')
 
         # Read the file and check the results
-        try:
-            hdu = fits.open('TEST_ID_eotest_results.fits')
-        except:
-            print('File not found:  TEST_ID_eotest_results.fits')
-            sys.exit()
+        hdu = fits.open('TEST_ID_eotest_results.fits')
 
-        #print(hdu[1].data['PTC_GAIN'][0], hdu[1].data['PTC_GAIN_ERROR'][0], hdu[1].data['PTC_A00'][0], hdu[1].data['PTC_A00_ERROR'][0], hdu[1].data['PTC_NOISE'][0], hdu[1].data['PTC_NOISE_ERROR'][0], hdu[1].data['PTC_TURNOFF'][0])
         self.assertAlmostEqual(hdu[1].data['PTC_GAIN'][0], 0.77132744, places=5)
         self.assertAlmostEqual(hdu[1].data['PTC_GAIN_ERROR'][0], 0.001864, places=5)
         self.assertAlmostEqual(hdu[1].data['PTC_A00'][0], 2.67726e-6, places=5)
