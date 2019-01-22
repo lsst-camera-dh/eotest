@@ -7,10 +7,7 @@ photon transfer curve and compute and write out the full well.
 from __future__ import print_function
 import os
 import glob
-<<<<<<< HEAD
 from copy import deepcopy
-=======
->>>>>>> master
 import operator
 import numpy as np
 import scipy.optimize
