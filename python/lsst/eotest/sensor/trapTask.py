@@ -5,13 +5,13 @@
 """
 from __future__ import absolute_import, print_function
 import os
-import lsst.eotest.image_utils as imutils
 from .MaskedCCD import MaskedCCD
 from .EOTestResults import EOTestResults
 from .Traps import Traps
 from .generate_mask import generate_mask
 import lsst.pex.config as pexConfig
 import lsst.pipe.base as pipeBase
+
 
 class TrapConfig(pexConfig.Config):
     """Configuration for TrapTask"""
@@ -27,10 +27,12 @@ class TrapConfig(pexConfig.Config):
                                           str, default=None)
     verbose = pexConfig.Field("Turn verbosity on", bool, default=True)
 
+
 class TrapTask(pipeBase.Task):
     """Configuration for task to find traps from pocket-pumped exposure"""
     ConfigClass = TrapConfig
     _DefaultName = "TrapTask"
+
     @pipeBase.timeMethod
     def run(self, sensor_id, pocket_pumped_file, mask_files, gains,
             cycles=100, threshold=200):
@@ -48,7 +50,7 @@ class TrapTask(pipeBase.Task):
                          C3_thresh=self.config.C3_thresh,
                          nx=self.config.nx, ny=self.config.ny,
                          edge_rolloff=self.config.edge_rolloff)
-        my_traps.write(outfile, clobber=True)
+        my_traps.write(outfile, overwrite=True)
         results_file = self.config.eotest_results_file
         if results_file is None:
             results_file = os.path.join(self.config.output_dir,

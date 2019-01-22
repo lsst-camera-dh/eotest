@@ -5,8 +5,12 @@ noise contribution from the electronics, must be provided.
 
 @author J. Chiang <jchiang@slac.stanford.edu>
 """
+from __future__ import print_function
+from builtins import zip
+from builtins import range
 import os
-import sys, traceback
+import sys
+import traceback
 import glob
 import argparse
 import numpy as np
@@ -17,6 +21,7 @@ from database.SensorDb import NullDbObject
 from database.SensorGains import SensorGains
 
 from read_noise import NoiseDists, median, stdev
+
 
 def write_read_noise_dists(outfile, Ntot, Nsys, gains, bias, sysnoise):
     output = pyfits.HDUList()
@@ -37,16 +42,17 @@ def write_read_noise_dists(outfile, Ntot, Nsys, gains, bias, sysnoise):
                                 median(sigsys))
     output.writeto(outfile, clobber=True)
 
+
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(\
-                      description='Compute Read Noise')
+    parser = argparse.ArgumentParser(
+        description='Compute Read Noise')
     parser.add_argument('-b', '--bias', help="input bias file pattern", type=str)
 #    parser.add_argument('-n', '--noise', help="input noise file pattern", type=str)
     parser.add_argument('-g', '--gain', help="input gain file", type=str)
     parser.add_argument('-i', '--id', help="sensor id", type=str)
     parser.add_argument('-o', '--outdir', help="output directory", type=str)
-    parser.add_argument('-v', '--verbose', help="turn verbosity on", \
-             action='store_true', default=False)
+    parser.add_argument('-v', '--verbose', help="turn verbosity on",
+                        action='store_true', default=False)
     args = parser.parse_args()
 
     if len(sys.argv) >= 4:
@@ -68,13 +74,13 @@ if __name__ == '__main__':
             outdir = os.environ['OUTPUTDIR']
             pipeline_task = True
         except KeyError:
-            print "usage: python read_noise_task.py <bias file pattern> <sysnoise file pattern> <sensor id> <output dir> [<gain>=5.5]"
+            print("usage: python read_noise_task.py <bias file pattern> <sysnoise file pattern> <sensor id> <output dir> [<gain>=5.5]")
             sys.exit(1)
 
     if pipeline_task:
         gains, sensor = pipeUtils.setup(sys.argv, 4)
     else:
-        g=[]
+        g = []
         sensor = NullDbObject()
         try:
             f = pyfits.open(gain_file)
@@ -82,9 +88,9 @@ if __name__ == '__main__':
             for amp in imUtils.allAmps:
                 g.append(hdr["GAIN%s" % imUtils.channelIds[amp]])
             gains = SensorGains(g)
-            print "Gains: ", gains
+            print("Gains: ", gains)
         except:
-            print 'Failed to access gains from: ', gain_file
+            print('Failed to access gains from: ', gain_file)
             traceback.print_exc(file=sys.stdout)
             sys.exit()
 
@@ -96,22 +102,22 @@ if __name__ == '__main__':
 
     outfiles = []
     Nread_dists = dict([(amp, []) for amp in imUtils.allAmps])
-    for i, bias in zip(range(len(bias_files)), bias_files):
+    for i, bias in zip(list(range(len(bias_files))), bias_files):
         outfile = "%s_read_noise_%03i.fits" % (sensor_id.replace('-', '_'), i)
         outfile = os.path.join(outdir, outfile)
         outfiles.append(outfile)
-        
-        print "Processing", bias, "->", outfile 
+
+        print("Processing", bias, "->", outfile)
         noise_dists = NoiseDists(gains)
-        
+
         Ntot = noise_dists(bias)
 #        #Nsys = noise_dists(sysnoise)
         Nsys = np.zeros(Ntot.shape)
         sysnoise = 0
-        
+
         write_read_noise_dists(outfile, Ntot, Nsys, gains, bias, sysnoise)
 
-    print "Segment    read noise"
+    print("Segment    read noise")
     for amp in imUtils.allAmps:
         var = median(Ntot[amp-1])**2 - median(Nsys[amp-1])**2
         if var >= 0:
@@ -119,4 +125,4 @@ if __name__ == '__main__':
         else:
             Nread = -1
         sensor.add_seg_result(amp, 'readNoise', Nread)
-        print "%s         %.4f" % (imUtils.channelIds[amp], Nread)
+        print("%s         %.4f" % (imUtils.channelIds[amp], Nread))

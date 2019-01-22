@@ -3,64 +3,59 @@
 
 @author J. Chiang <jchiang@slac.stanford.edu>
 """
+from __future__ import absolute_import
 import os
-import numpy as np
 import astropy.io.fits as fits
 from lsst.eotest.fitsTools import fitsWriteto
 import lsst.eotest.image_utils as imutils
-from AmplifierGeometry import makeAmplifierGeometry
-from EOTestResults import EOTestResults
-from eperTask import EPERTask
-from MaskedCCD import MaskedCCD
-
+from .AmplifierGeometry import makeAmplifierGeometry
+from .EOTestResults import EOTestResults
+from .eperTask import EPERTask
+import lsst.afw
 import lsst.afw.image as afwImage
 import lsst.afw.math as afwMath
 import lsst.pex.config as pexConfig
 import lsst.pipe.base as pipeBase
 
-def bias_subtracted_image(image, bias_image, overscan, fit_order=1,
-                          statistic=np.median):
+def bias_subtracted_image(image, bias_image, overscan, bias_method='row'):
     # Make deep copies of image and bias image so that we can modify them.
     im_out = image.Factory(image)
     bias_sub = bias_image.Factory(bias_image)
     # Subtract overscans.
-    bias_sub -= imutils.bias_image(bias_image, overscan, fit_order=fit_order,
-                                   statistic=statistic)
-    im_out -= imutils.bias_image(image, overscan, fit_order=fit_order,
-                                 statistic=statistic)
+    bias_sub -= imutils.bias_image(im=bias_image, overscan=overscan, bias_method=bias_method)
+    im_out -= imutils.bias_image(im=image, overscan=overscan, bias_method=bias_method)
     # Subtract remaining strucutured bias.
     im_out -= bias_sub
     return im_out
 
-def superflat(files, bias_frame=None, outfile='superflat.fits', bitpix=-32,
-              bias_subtract=True):
+
+def superflat(files, bias_frame=None, outfile='superflat.fits', bitpix=None,
+              bias_subtract=True, bias_method='row'):
     """
     The superflat is created by bias-offset correcting the input files
     and median-ing them together.
     """
     # Get overscan region.
     overscan = makeAmplifierGeometry(files[0]).serial_overscan
-    # Use the first file as a template for the fits output.
-    output = fits.open(files[0])
+    output_images = dict()
     for amp in imutils.allAmps(files[0]):
-        images = afwImage.vectorImageF()
+        images = []
         for infile in files:
             image = afwImage.ImageF(infile, imutils.dm_hdu(amp))
             if bias_subtract:
                 if bias_frame:
                     bias_image = afwImage.ImageF(bias_frame,
                                                  imutils.dm_hdu(amp))
-                    image = bias_subtracted_image(image, bias_image, overscan)
+                    image = bias_subtracted_image(image, bias_image, overscan, bias_method)
                 else:
-                    image -= imutils.bias_image(image, overscan,
-                                                statistic=np.median)
-            images.push_back(image)
-        median_image = afwMath.statisticsStack(images, afwMath.MEDIAN)
-        output[amp].data = median_image.getArray()
-        if bitpix is not None:
-            imutils.set_bitpix(output[amp], bitpix)
-    fitsWriteto(output, outfile, clobber=True)
+                    image -= imutils.bias_image(im=image, overscan=overscan, bias_method=bias_method)
+            images.append(image)
+        if lsst.afw.__version__.startswith('12.0'):
+            images = afwImage.vectorImageF(images)
+        output_images[amp] = afwMath.statisticsStack(images, afwMath.MEDIAN)
+    imutils.writeFits(output_images, outfile, files[0])
     return outfile
+
 
 class CteConfig(pexConfig.Config):
     """Configuration for charge transfer efficiency task"""
@@ -70,6 +65,7 @@ class CteConfig(pexConfig.Config):
     eotest_results_file = pexConfig.Field('EO test results filename',
                                           str, default=None)
     verbose = pexConfig.Field("Turn verbosity on", bool, default=True)
+
 
 class CteTask(pipeBase.Task):
     """Charge transfer efficiency task"""
@@ -127,16 +123,16 @@ class CteTask(pipeBase.Task):
             self.log.info('amp  parallel_cti  serial_cti')
         for amp in all_amps:
             line = '%i  %s  %s' % (amp, pcti[amp], scti[amp])
-            results.add_seg_result(amp, 'CTI_%s_SERIAL' % flux_level.upper(), 
+            results.add_seg_result(amp, 'CTI_%s_SERIAL' % flux_level.upper(),
                                    scti[amp].value)
             results.add_seg_result(amp, 'CTI_%s_PARALLEL' % flux_level.upper(),
                                    pcti[amp].value)
             results.add_seg_result(amp,
-                                   'CTI_%s_SERIAL_ERROR' % flux_level.upper(), 
+                                   'CTI_%s_SERIAL_ERROR' % flux_level.upper(),
                                    scti[amp].error)
-            results.add_seg_result(amp, 
+            results.add_seg_result(amp,
                                    'CTI_%s_PARALLEL_ERROR' % flux_level.upper(),
                                    pcti[amp].error)
             if self.config.verbose:
                 self.log.info(line)
-        results.write(clobber='yes')
+        results.write(clobber=True)

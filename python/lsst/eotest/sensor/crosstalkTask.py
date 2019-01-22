@@ -9,6 +9,7 @@ from lsst.eotest.sensor.crosstalk import make_crosstalk_matrix, CrosstalkMatrix
 import lsst.pex.config as pexConfig
 import lsst.pipe.base as pipeBase
 
+
 class CrosstalkConfig(pexConfig.Config):
     """Configuration for CrosstalkTask"""
     temp_set_point = pexConfig.Field("Required temperature (C) set point",
@@ -18,14 +19,14 @@ class CrosstalkConfig(pexConfig.Config):
     output_dir = pexConfig.Field("Output directory", str, default=".")
     verbose = pexConfig.Field("Turn verbosity on", bool, default=True)
 
+
 class CrosstalkTask(pipeBase.Task):
     """Task to evaluate crosstalk within a single CCD."""
     ConfigClass = CrosstalkConfig
     _DefaultName = "CrosstalkTask"
 
     @pipeBase.timeMethod
-    def run(self, sensor_id, xtalk_files, mask_files,
-            system_xtalk_file=None):
+    def run(self, sensor_id, xtalk_files, mask_files, system_xtalk_file=None):
         imutils.check_temperatures(xtalk_files, self.config.temp_set_point_tol,
                                    setpoint=self.config.temp_set_point,
                                    warn_only=True)

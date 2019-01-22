@@ -15,9 +15,9 @@ from .BrightPixels import BrightPixels
 from .EOTestResults import EOTestResults
 from .generate_mask import generate_mask
 
-import lsst.afw.image as afwImage
 import lsst.pex.config as pexConfig
 import lsst.pipe.base as pipeBase
+
 
 class BrightPixelsConfig(pexConfig.Config):
     """Configuration for bright pixels task"""
@@ -35,6 +35,7 @@ class BrightPixelsConfig(pexConfig.Config):
     eotest_results_file = pexConfig.Field("EO test results filename",
                                           str, default=None)
     verbose = pexConfig.Field("Turn verbosity on", bool, default=True)
+
 
 class BrightPixelsTask(pipeBase.Task):
     """Task to find bright pixels and columns."""
@@ -55,7 +56,6 @@ class BrightPixelsTask(pipeBase.Task):
         imutils.writeFits(median_images, medfile, dark_files[0])
 
         ccd = MaskedCCD(medfile, mask_files=mask_files, bias_frame=bias_frame)
-        md = imutils.Metadata(dark_files[0], 1)
         exptime = ccd.md.get('EXPTIME')
         total_bright_pixels = 0
         total_bright_columns = 0

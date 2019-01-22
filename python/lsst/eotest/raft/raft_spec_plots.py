@@ -11,6 +11,7 @@ import lsst.eotest.sensor as sensorTest
 
 __all__ = ['RaftSpecPlots']
 
+
 class RaftSpecPlots(object):
     """
     Class to produce plots of measured specifications in eotest
@@ -19,6 +20,7 @@ class RaftSpecPlots(object):
     _raft_slots = \
         OrderedDict([(slot, i) for i, slot in
                      enumerate('S00 S01 S02 S10 S11 S12 S20 S21 S22'.split())])
+
     def __init__(self, results_files):
         """
         Constructor.
@@ -29,7 +31,7 @@ class RaftSpecPlots(object):
         """
         self.results = dict()
         self.sensor_ids = dict()
-        for slot, filename in results_files.items():
+        for slot, filename in list(results_files.items()):
             self.sensor_ids[slot] = filename.split('_')[0]
             self.results[slot] = sensorTest.EOTestResults(filename)
 
@@ -83,11 +85,11 @@ class RaftSpecPlots(object):
         plt.rcParams['figure.figsize'] = figsize
         fig = plt.figure()
         ax = fig.add_subplot(1, 1, 1)
-        for slot, results in self.results.items():
+        for slot, results in list(self.results.items()):
             xoffset = self._raft_slots[slot]*step
             plt.plot(results['AMP'] + xoffset, yscaling*results[column], 'b.')
         xtick_values = [step*i + step/2 for i in range(len(self._raft_slots))]
-        plt.xticks(xtick_values, self._raft_slots.keys())
+        plt.xticks(xtick_values, list(self._raft_slots.keys()))
         if ylabel is None:
             ylabel = column
         plt.ylabel(ylabel)
@@ -171,7 +173,7 @@ class RaftSpecPlots(object):
         for icol, column in enumerate(columns):
             x, y = [], []
             yerr = []
-            for slot, results in self.results.items():
+            for slot, results in list(self.results.items()):
                 xoffset = self._raft_slots[slot]*step
                 x.extend(results['AMP'] + xoffset + icol*dx)
                 y.extend(yscaling*results[column])
@@ -182,7 +184,7 @@ class RaftSpecPlots(object):
             if yerrors:
                 plt.errorbar(x, y, fmt='.', yerr=yerr, color=color)
         xtick_values = [step*i + step/2 for i in range(len(self._raft_slots))]
-        plt.xticks(xtick_values, self._raft_slots.keys())
+        plt.xticks(xtick_values, list(self._raft_slots.keys()))
         if ylabel is None:
             ylabel = column
         plt.ylabel(ylabel)

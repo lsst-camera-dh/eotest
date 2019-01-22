@@ -4,13 +4,16 @@ linearity) from flat pairs data.
 
 @author J. Chiang <jchiang@slac.stanford.edu>
 """
+from __future__ import print_function
+from __future__ import absolute_import
 import sys
 import numpy as np
 import astropy.io.fits as fits
 import scipy.optimize
 import lsst.eotest.image_utils as imutils
 import pylab
-import pylab_plotter as plot
+from . import pylab_plotter as plot
+
 
 def _fwc_solve(f1_pars, f2_pars, g=0.1):
     """
@@ -22,8 +25,9 @@ def _fwc_solve(f1_pars, f2_pars, g=0.1):
     """
     a, b, c = f2_pars
     d, f = f1_pars
-    x = (-np.sqrt((b + d*g - d)**2 - 4.*a*(c + f*g - f)) - b - d*g +d)/2./a
+    x = (-np.sqrt((b + d*g - d)**2 - 4.*a*(c + f*g - f)) - b - d*g + d)/2./a
     return x
+
 
 class DetectorResponse(object):
     def __init__(self, infile, ptc=None, gain_range=None):
@@ -34,6 +38,7 @@ class DetectorResponse(object):
         self._sort_by_flux()
         self._index = {}
         #self._compute_gain_selection(ptc, gain_range)
+
     def _compute_gain_selection(self, ptc, gain_range):
         self._index = {}
         if ptc is None or gain_range is None:
@@ -47,11 +52,13 @@ class DetectorResponse(object):
             gain = mean/var
             self._index[amp] = np.where((gain >= gain_range[0]) &
                                         (gain <= gain_range[1]))
+
     def _sort_by_flux(self):
         index = np.argsort(self.flux)
         self.flux = self.flux[index]
         for amp in self.Ne:
             self.Ne[amp] = self.Ne[amp][index]
+
     def _read_from_fits(self, infile):
         all_amps = imutils.allAmps(infile)
         foo = fits.open(infile)
@@ -59,12 +66,14 @@ class DetectorResponse(object):
         self.flux = np.array(hdu.data.field('FLUX'), dtype=np.float)
         self.Ne = dict([(amp, np.array(hdu.data.field('AMP%02i_SIGNAL' % amp),
                                        dtype=np.float)) for amp in all_amps])
+
     def _read_from_text(self, infile):
         data = np.recfromtxt(infile)
         data = data.transpose()
         self.flux = data[0]
         self.Ne = dict([(amp, ne) for amp, ne in
                         zip(imutils.allAmps(), data[1:])])
+
     def full_well(self, amp, max_non_linearity=0.02,
                   frac_offset=0.1, make_plot=False, plotter=None,
                   multipanel=False, fit_range=(1e2, 5e4)):
@@ -108,6 +117,7 @@ class DetectorResponse(object):
         # Restore pylab interactive state.
         plotter.pylab.interactive(pylab_interactive_state)
         return full_well_est, f1
+
     def full_well_polyfit(self, amp, order=15, fit_range=(1e2, 5e4),
                           poly_fit_min=1e3, frac_offset=0.1, dfrac=None,
                           make_plot=False, plotter=None, multipanel=False):
@@ -145,7 +155,8 @@ class DetectorResponse(object):
         else:
             indxp = np.where((Ne > poly_fit_min))
         fp = np.poly1d(np.polyfit(flux[indxp], Ne[indxp], order))
-        df = lambda xx : 1 - fp(xx)/f1(xx) - frac_offset
+
+        def df(xx): return 1 - fp(xx)/f1(xx) - frac_offset
         x = flux[indxp]
         imin = np.where(x > 1e1)[0][0]
         flux0 = scipy.optimize.brentq(df, x[imin], x[-1])
@@ -171,12 +182,14 @@ class DetectorResponse(object):
         # Restore pylab interactive state.
         plotter.pylab.interactive(pylab_interactive_state)
         return full_well, fp
+
     def plot_diagnostics(self, flux, Ne, indxp, f1, fp):
         plot.pylab.ion()
         plot.xyplot(flux, Ne)
         plot.xyplot(flux[indxp], Ne[indxp], oplot=1, color='r')
         plot.curve(flux, f1(flux), oplot=1)
         plot.curve(flux, fp(flux), oplot=1, color='b')
+
     def linearity(self, amp, fit_range=None, spec_range=(1e3, 9e4)):
         flux, Ne = self.flux, self.Ne[amp]
         if self._index:
@@ -221,18 +234,19 @@ class DetectorResponse(object):
         bot_ax.set_ylabel('fractional residual flux')
         bot_ax.set_xlabel('e-/pixel')
 
+
 if __name__ == '__main__':
     infile = '000-00_det_response.txt'
     detResp = DetectorResponse(infile)
     make_plot = False
-    print "Amp       max. dev.   full well"
+    print("Amp       max. dev.   full well")
     for amp in imutils.allAmps():
         max_dev, fit_pars = detResp.linearity(amp, make_plot=make_plot)
         sys.stdout.write("%2i         %.3f       " % (amp, max_dev))
         try:
-            full_well =  detResp.full_well(amp, make_plot=make_plot)
-            print "%i" % full_well
+            full_well = detResp.full_well(amp, make_plot=make_plot)
+            print("%i" % full_well)
         except RuntimeError:
             full_well = detResp.full_well(amp, frac_offset=0.05,
                                           make_plot=make_plot)
-            print "%i (5%% dev)" % full_well
+            print("%i (5%% dev)" % full_well)

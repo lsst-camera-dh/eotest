@@ -10,6 +10,7 @@ import lsst.eotest.image_utils as imutils
 
 __all__ = ['total_noise_histograms']
 
+
 def total_noise_histograms(dark_curr_pixels, read_noise, dark95s, exptime=16,
                            title=None, bins=50, figsize=(10, 10)):
     """

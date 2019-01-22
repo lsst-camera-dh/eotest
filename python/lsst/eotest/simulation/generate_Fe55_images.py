@@ -9,11 +9,12 @@ import numpy as np
 from sim_inputs import *
 from sim_tools import *
 
+
 def generate_Fe55_images(exptimes, nxrays, outdir, sensorid, gain=gain,
                          bias_level=bias_level, sys_noise=sys_noise,
                          dark_current=dark_current):
     nexp = len(exptimes)
-    for i, exptime, nxray in zip(range(nexp), exptimes, nxrays):
+    for i, exptime, nxray in zip(list(range(nexp)), exptimes, nxrays):
         #
         # Bias images
         #
@@ -30,7 +31,7 @@ def generate_Fe55_images(exptimes, nxrays, outdir, sensorid, gain=gain,
         bias_output[0].header['BIASLVL'] = bias_level
         bias_output[0].header['SYSNOISE'] = sys_noise
         bias_output[0].header['RDNOISE'] = read_noise
-        bias_output.writeto(bias_file, clobber=True)
+        bias_output.writeto(bias_file, overwrite=True)
         #
         # Dark images
         #
@@ -49,7 +50,7 @@ def generate_Fe55_images(exptimes, nxrays, outdir, sensorid, gain=gain,
         dark_output[0].header['SYSNOISE'] = sys_noise
         dark_output[0].header['RDNOISE'] = read_noise
         dark_output[0].header['DARKCURR'] = dark_current
-        dark_output.writeto(dark_file, clobber=True)
+        dark_output.writeto(dark_file, overwrite=True)
         #
         # Fe55 exposures
         #
@@ -70,12 +71,13 @@ def generate_Fe55_images(exptimes, nxrays, outdir, sensorid, gain=gain,
         fe55_output[0].header['RDNOISE'] = read_noise
         fe55_output[0].header['DARKCURR'] = dark_current
         fe55_output[0].header['FE55HITS'] = nxray
-        fe55_output.writeto(Fe55_file, clobber=True)
+        fe55_output.writeto(Fe55_file, overwrite=True)
+
 
 if __name__ == '__main__':
     nexp = 10
 
     exptimes = np.linspace(1, 5, nexp)
-    nxrays = [int(x*1000) for x in exptimes] 
+    nxrays = [int(x*1000) for x in exptimes]
 
     generate_Fe55_images(exptimes, nxrays, '.', 'xxx-xx')

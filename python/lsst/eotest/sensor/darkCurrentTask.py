@@ -4,16 +4,20 @@ units of e-/sec/pixel.
 
 @author J. Chiang <jchiang@slac.stanford.edu>
 """
+from __future__ import print_function
+from __future__ import absolute_import
 import os
+import warnings
 import numpy as np
 import astropy.io.fits as fits
+from astropy.utils.exceptions import AstropyWarning, AstropyUserWarning
 from lsst.eotest.fitsTools import fitsWriteto
 import lsst.eotest.image_utils as imutils
-from MaskedCCD import MaskedCCD
-from EOTestResults import EOTestResults
-import lsst.afw.image as afwImage
+from .MaskedCCD import MaskedCCD
+from .EOTestResults import EOTestResults
 import lsst.pex.config as pexConfig
 import lsst.pipe.base as pipeBase
+
 
 class DarkCurrentConfig(pexConfig.Config):
     """Configuration for DarkCurrentTask"""
@@ -26,6 +30,7 @@ class DarkCurrentConfig(pexConfig.Config):
                                           str, default=None)
     verbose = pexConfig.Field("Turn verbosity on", bool, default=True)
 
+
 class DarkCurrentTask(pipeBase.Task):
     """Task to evaluate dark current quantiles."""
     ConfigClass = DarkCurrentConfig
@@ -37,7 +42,7 @@ class DarkCurrentTask(pipeBase.Task):
                                    setpoint=self.config.temp_set_point,
                                    warn_only=True)
         median_images = {}
-        md = imutils.Metadata(dark_files[0], 1)
+        md = imutils.Metadata(dark_files[0])
         for amp in imutils.allAmps(dark_files[0]):
             median_images[amp] = imutils.fits_median(dark_files,
                                                      imutils.dm_hdu(amp))
@@ -56,8 +61,8 @@ class DarkCurrentTask(pipeBase.Task):
         for amp in ccd:
             imaging_region = ccd.amp_geom.imaging
             overscan = ccd.amp_geom.serial_overscan
-            image = imutils.unbias_and_trim(ccd[amp].getImage(),
-                                            overscan, imaging_region)
+            image = imutils.unbias_and_trim(im=ccd[amp].getImage(),
+                                            overscan=overscan, imaging=imaging_region) 
             mask = imutils.trim(ccd[amp].getMask(), imaging_region)
             imarr = image.getArray()
             mskarr = mask.getArray()
@@ -70,9 +75,9 @@ class DarkCurrentTask(pipeBase.Task):
             dark_curr_pixels.extend(unmasked)
             try:
                 dark95s[amp] = unmasked[int(len(unmasked)*0.95)]
-                median = unmasked[len(unmasked)/2]
+                median = unmasked[len(unmasked)//2]
             except IndexError as eobj:
-                print str(eobj)
+                print(str(eobj))
                 dark95s[amp] = -1.
                 median = -1.
             if self.config.verbose:
@@ -83,7 +88,7 @@ class DarkCurrentTask(pipeBase.Task):
         #
         dark_curr_pixels = sorted(dark_curr_pixels)
         darkcurr95 = dark_curr_pixels[int(len(dark_curr_pixels)*0.95)]
-        dark95mean = np.mean(dark95s.values())
+        dark95mean = np.mean(list(dark95s.values()))
         if self.config.verbose:
             #self.log.info("CCD: mean 95 percentile value = %s" % dark95mean)
             self.log.info("CCD-wide 95 percentile value = %s" % darkcurr95)
@@ -97,14 +102,23 @@ class DarkCurrentTask(pipeBase.Task):
             results_file = os.path.join(self.config.output_dir,
                                         '%s_eotest_results.fits' % sensor_id)
         results = EOTestResults(results_file, namps=len(ccd))
-        output = fits.open(medfile)
-        for i, dark in enumerate(dark_files):
-            output[0].header['DARK%02i' % i] = os.path.basename(dark)
-        # Write overall dark current 95th percentile
-        results.output['AMPLIFIER_RESULTS'].header['DARK95'] = darkcurr95
-        for amp in ccd:
-            output[0].header['DARK95%s'%imutils.channelIds[amp]] = dark95s[amp]
-            results.add_seg_result(amp, 'DARK_CURRENT_95', dark95s[amp])
-        fitsWriteto(output, medfile, clobber=True, checksum=True)
-        results.write(clobber=True)
+        with warnings.catch_warnings():
+            warnings.filterwarnings('ignore', category=UserWarning, append=True)
+            warnings.filterwarnings('ignore', category=AstropyWarning,
+                                    append=True)
+            warnings.filterwarnings('ignore', category=AstropyUserWarning,
+                                    append=True)
+
+            with fits.open(medfile) as output:
+                for i, dark in enumerate(dark_files):
+                    output[0].header['DARK%02i' % i] = os.path.basename(dark)
+                # Write overall dark current 95th percentile
+                results.output['AMPLIFIER_RESULTS'].header['DARK95'] \
+                    = darkcurr95
+                for amp in ccd:
+                    output[0].header['DARK95%s'%imutils.channelIds[amp]] \
+                        = dark95s[amp]
+                    results.add_seg_result(amp, 'DARK_CURRENT_95', dark95s[amp])
+                fitsWriteto(output, medfile, overwrite=True, checksum=True)
+                results.write(clobber=True)
         return dark_curr_pixels_per_amp, dark95s

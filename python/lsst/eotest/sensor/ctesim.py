@@ -1,22 +1,26 @@
 """
 Simulate effects of CTE using cte_matrix.
 """
+from __future__ import print_function
+from __future__ import absolute_import
 import numpy as np
 import astropy.io.fits as fits
 import lsst.afw.image as afwImage
 import lsst.eotest.image_utils as imutils
-from AmplifierGeometry import makeAmplifierGeometry
-from cte_matrix import cte_matrix
-import sim_tools
+from .AmplifierGeometry import makeAmplifierGeometry
+from .cte_matrix import cte_matrix
+from . import sim_tools
 
 _dtypes = dict([(-32, np.float32), (16, np.int16)])
+
 
 def convert(imarr, bitpix):
     if bitpix > 0:
         my_round = np.round
     else:
-        my_round = lambda x : x
+        def my_round(x): return x
     return np.array(my_round(imarr), dtype=_dtypes[bitpix])
+
 
 def fitsFile(segments, input):
     output = fits.HDUList()
@@ -29,6 +33,7 @@ def fitsFile(segments, input):
         output[amp].header = input[amp].header
     return output
 
+
 def ctesim(infile, pcti=0, scti=0, verbose=False):
     input = fits.open(infile)
     amps = [i for i in range(1, len(input))
@@ -40,7 +45,7 @@ def ctesim(infile, pcti=0, scti=0, verbose=False):
     segments = {}
     for amp in amps:
         if verbose:
-            print "ctesim: working on amp", amp
+            print("ctesim: working on amp", amp)
         image = afwImage.ImageF(infile, imutils.dm_hdu(amp))
         geom = makeAmplifierGeometry(infile)
         #

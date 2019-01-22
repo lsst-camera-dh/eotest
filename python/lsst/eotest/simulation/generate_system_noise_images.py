@@ -8,6 +8,7 @@ import os
 import numpy as np
 from sim_inputs import *
 
+
 def generate_system_noise_images(nexp, outdir, sensorid, gain=gain,
                                  bias_level=bias_level, sys_noise=sys_noise):
     exptime = 0
@@ -22,7 +23,8 @@ def generate_system_noise_images(nexp, outdir, sensorid, gain=gain,
         output = fitsFile(noise_segs)
         output[0].header['BIASLVL'] = bias_level
         output[0].header['SYSNOISE'] = sys_noise
-        output.writeto(outfile, clobber=True)
+        output.writeto(outfile, overwrite=True)
+
 
 if __name__ == '__main__':
     nexp = 10

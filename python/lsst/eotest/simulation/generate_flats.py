@@ -1,7 +1,9 @@
+from __future__ import print_function
 import os
 import numpy as np
 from sim_tools import SegmentExposure, fitsFile
 from sim_inputs import gain, bias_level, sys_noise, read_noise, dark_current
+
 
 def simulateFlat(outfile, rate, gain, dark_curr, exptime, hdus=16):
     segments = []
@@ -19,6 +21,7 @@ def simulateFlat(outfile, rate, gain, dark_curr, exptime, hdus=16):
     output[0].header.update("DARKCURR", dark_curr)
     output[0].header.update("COUNTRTE", rate)
 
+
 if __name__ == '__main__':
     sensor_id = '000-00'
     outdir = '/nfs/farm/g/lsst/u1/testData/SIMData/%s/flats' % sensor_id
@@ -31,5 +34,5 @@ if __name__ == '__main__':
         for j in range(2):  # simulate flats in pairs in order to subtract FPN
             filename = 'flat_%s_%02i_%i.fits' % (sensor_id, i, j)
             outfile = os.path.join(outdir, filename)
-            print "generating", outfile
+            print("generating", outfile)
             simulateFlat(outfile, rate, gain, dark_current, exptime)

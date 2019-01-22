@@ -9,7 +9,7 @@ noise contribution from the electronics, must be provided.
 import lsst.eotest.sensor as sensorTest
 
 parser = sensorTest.TaskParser('Compute Read Noise')
-parser.add_argument('-n', '--noise', type=str, 
+parser.add_argument('-n', '--noise', type=str,
                     help='system noise file pattern', default=None)
 parser.add_argument('-N', '--noise_file_list', type=str,
                     help='list of system noise files', default=None)

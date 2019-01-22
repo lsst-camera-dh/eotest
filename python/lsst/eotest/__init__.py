@@ -2,6 +2,7 @@ import os
 import subprocess
 import lsst.utils
 
+
 def getVersion():
     import lsst.eotest
     try:

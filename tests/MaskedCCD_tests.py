@@ -13,11 +13,14 @@ import lsst.eotest.sensor.sim_tools as sim_tools
 import lsst.afw.image as afwImage
 import lsst.afw.math as afwMath
 
+
 class BiasFunc(object):
     def __init__(self, slope, intercept):
         self.pars = slope, intercept
+
     def __call__(self, x):
         return x*self.pars[0] + self.pars[1]
+
 
 class MaskedCCDTestCase(unittest.TestCase):
     gain = 1
@@ -26,7 +29,11 @@ class MaskedCCDTestCase(unittest.TestCase):
     xmin, xmax = 200, 250
     ymin, ymax = 1000, 1050
     mask_image = 'mask_image.fits'
-    mpd = dict(afwImage.MaskU().getMaskPlaneDict().items())
+    try:
+        mpd = dict(list(afwImage.Mask().getMaskPlaneDict().items()))
+    except AttributeError:
+        mpd = dict(list(afwImage.MaskU().getMaskPlaneDict().items()))
+
     @classmethod
     def setUpClass(cls):
         ccd = sim_tools.CCD(exptime=cls.exptime, gain=cls.gain)
@@ -35,7 +42,7 @@ class MaskedCCDTestCase(unittest.TestCase):
             imarr[cls.ymin:cls.ymax, cls.xmin:cls.xmax] += cls.signal
         ccd.writeto(cls.mask_image)
         cls.mask_files = []
-        for mask_plane, bit in cls.mpd.items():
+        for mask_plane, bit in list(cls.mpd.items()):
             mask_file = 'mask_file_%s.fits' % mask_plane
             cls.mask_files.append(mask_file)
             masked_ccd = MaskedCCD(cls.mask_image)
@@ -49,6 +56,7 @@ class MaskedCCDTestCase(unittest.TestCase):
                           pixels=pixels, columns=columns)
         cls.summed_mask_file = 'summed_mask_file.fits'
         add_mask_files(cls.mask_files, cls.summed_mask_file)
+
     @classmethod
     def tearDownClass(cls):
         os.remove(cls.mask_image)
@@ -56,12 +64,13 @@ class MaskedCCDTestCase(unittest.TestCase):
             os.remove(mask_file)
         os.remove(cls.summed_mask_file)
 #    @unittest.skip('skip test_add_masks')
+
     def test_add_masks(self):
         ccd = MaskedCCD(self.mask_image)
         ccd.add_masks(self.summed_mask_file)
         total_signal = (self.signal*(self.ymax - self.ymin)
-                        *(self.xmax - self.xmin))
-        ny, nx = ccd[ccd.keys()[0]].getImage().getArray().shape
+                        * (self.xmax - self.xmin))
+        ny, nx = ccd[list(ccd.keys())[0]].getImage().getArray().shape
         for amp in ccd:
             self.assertEqual(sum(ccd[amp].getImage().getArray().flat),
                              total_signal)
@@ -75,11 +84,13 @@ class MaskedCCDTestCase(unittest.TestCase):
             self.assertAlmostEqual(float(total_signal)/(nx*ny),
                                    stats.getValue(afwMath.MEAN), places=10)
 #    @unittest.skip('skip test_setMask')
+
     def test_setMask(self):
         ccd = MaskedCCD(self.mask_image)
-        for mp, bit in self.mpd.items():
+        for mp, bit in list(self.mpd.items()):
             sctrl = ccd.setMask(mask_name=mp, clear=True)
             self.assertEqual(sctrl.getAndMask(), 2**bit)
+
 
 class MaskedCCD_biasHandlingTestCase(unittest.TestCase):
     bias_slope = 1e-3
@@ -87,6 +98,7 @@ class MaskedCCD_biasHandlingTestCase(unittest.TestCase):
     exptime = 1
     gain = 1
     image_file = 'test_image.fits'
+
     @classmethod
     def setUpClass(cls):
         cls.amp_geom = AmplifierGeometry()
@@ -96,7 +108,7 @@ class MaskedCCD_biasHandlingTestCase(unittest.TestCase):
         yvals = np.arange(0, ny, dtype=np.float)
         bias_func = BiasFunc(cls.bias_slope, cls.bias_intercept)
         for x in range(nx):
-            imarr[:,x] += bias_func(yvals)
+            imarr[:, x] += bias_func(yvals)
         ccd = sim_tools.CCD(exptime=cls.exptime, gain=cls.gain)
         for amp in ccd.segments:
             ccd.segments[amp].image += cls.bias_image
@@ -111,8 +123,8 @@ class MaskedCCD_biasHandlingTestCase(unittest.TestCase):
         ccd = MaskedCCD(self.image_file)
         for amp in ccd:
             my_bias_image = ccd.bias_image(amp)
-            fracdiff = ( (self.bias_image.getArray()-my_bias_image.getArray())
-                         /self.bias_image.getArray() )
+            fracdiff = ((self.bias_image.getArray()-my_bias_image.getArray())
+                        / self.bias_image.getArray())
             self.assertTrue(max(np.abs(fracdiff.flat)) < 1e-6)
 
 #    @unittest.skip('skip test_unbias_and_trim')
@@ -128,7 +140,8 @@ class MaskedCCD_biasHandlingTestCase(unittest.TestCase):
 
     def test_bias_frame_subtraction(self):
         bias_file = 'bias_image.fits'
-        bias_func_x = lambda x: 100*(np.sin(x/509.*2.*np.pi) + 1)
+
+        def bias_func_x(x): return 100*(np.sin(x/509.*2.*np.pi) + 1)
         bias_func_y = BiasFunc(self.bias_slope, self.bias_intercept)
         bias_ccd = sim_tools.CCD(exptime=self.exptime, gain=self.gain)
         for amp in bias_ccd.segments:
@@ -147,7 +160,8 @@ class MaskedCCD_biasHandlingTestCase(unittest.TestCase):
             for x in range(imarr.shape[1]):
                 imarr[:, x] +=\
                     bias_func_x(x) + bias_func_y(yvals)
-            imaging_section = image_ccd.segments[amp].image.Factory(image_ccd.segments[amp].image, self.amp_geom.imaging)
+            imaging_section = image_ccd.segments[amp].image.Factory(
+                image_ccd.segments[amp].image, self.amp_geom.imaging)
             imaging_section += signal_level
         image_ccd.writeto(image_file)
 
@@ -163,6 +177,7 @@ class MaskedCCD_biasHandlingTestCase(unittest.TestCase):
 
         os.remove(bias_file)
         os.remove(image_file)
+
 
 if __name__ == '__main__':
     unittest.main()

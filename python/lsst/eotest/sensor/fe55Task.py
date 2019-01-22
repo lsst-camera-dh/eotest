@@ -4,23 +4,27 @@ Gaussian fit parameters to Fe55 data.
 
 @author J. Chiang <jchiang@slac.stanford.edu>
 """
+from __future__ import print_function
+from __future__ import absolute_import
 import os
 import numpy as np
 import astropy.io.fits as fits
 import lsst.eotest.image_utils as imutils
-from fe55_psf import PsfGaussFit, psf_sigma_statistics
-from MaskedCCD import MaskedCCD
-from EOTestResults import EOTestResults
-from Fe55GainFitter import Fe55GainFitter
+from .fe55_psf import PsfGaussFit, psf_sigma_statistics
+from .MaskedCCD import MaskedCCD
+from .EOTestResults import EOTestResults
+from .Fe55GainFitter import Fe55GainFitter
 
 import lsst.pex.config as pexConfig
 import lsst.pipe.base as pipeBase
+
 
 class Fe55Config(pexConfig.Config):
     """Configuration for Fe55 analysis task"""
     chiprob_min = pexConfig.Field("Minimum chi-square probability for cluster fit",
                                   float, default=0.1)
-    nsig = pexConfig.Field("Charge cluster footprint threshold in number of standard deviations of noise in bias section", float, default=4)
+    nsig = pexConfig.Field(
+        "Charge cluster footprint threshold in number of standard deviations of noise in bias section", float, default=4)
     temp_set_point = pexConfig.Field("Required temperature (C) set point",
                                      float, default=-95.)
     temp_set_point_tol = pexConfig.Field("Required temperature set point tolerance (degrees C)",
@@ -33,6 +37,7 @@ class Fe55Config(pexConfig.Config):
     fit_xy = pexConfig.Field("Fit sigmas in x- and y-directions separately",
                              bool, default=False)
     verbose = pexConfig.Field("Turn verbosity on", bool, default=True)
+
 
 class Fe55Task(pipeBase.Task):
     """Task to estimate PSF size and system gain from the distribution of
@@ -72,7 +77,7 @@ class Fe55Task(pipeBase.Task):
     @pipeBase.timeMethod
     def run(self, sensor_id, infiles, mask_files, bias_frame=None,
             fe55_catalog=None, minClustersPerAmp=None, chiprob_min=0.1,
-            accuracy_req=0, oscan_fit_order=1):
+            accuracy_req=0):
         imutils.check_temperatures(infiles, self.config.temp_set_point_tol,
                                    setpoint=self.config.temp_set_point,
                                    warn_only=True)
@@ -95,21 +100,20 @@ class Fe55Task(pipeBase.Task):
                 for amp in ccd:
                     if self.config.verbose:
                         self.log.info("  amp %i" % amp)
-                    if gain_errors.has_key(amp):
+                    if amp in gain_errors:
                         gain_accuracy = np.abs(gain_errors[amp]/gains[amp])
                         if self.config.verbose:
                             message = "  Relative gain accuracy, dgain/gain " \
-                                 + "= %.2e" % gain_accuracy
+                                + "= %.2e" % gain_accuracy
                             self.log.info(message)
                         if gain_accuracy < accuracy_req:
                             # Requested accuracy already obtained, so
                             # skip cluster fitting.
                             continue
-                    fitter.process_image(ccd, amp, logger=self.log,
-                                         oscan_fit_order=oscan_fit_order)
+                    fitter.process_image(ccd, amp, logger=self.log)
                     gains, gain_errors, sigma_modes = \
                         self.fit_gains(fitter, gains, gain_errors, sigma_modes,
-                                       amps=ccd.keys())
+                                       amps=list(ccd.keys()))
             if self.config.output_file is None:
                 psf_results = os.path.join(self.config.output_dir,
                                            '%s_psf_results_nsig%i.fits'

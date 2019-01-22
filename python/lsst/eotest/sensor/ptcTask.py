@@ -4,9 +4,13 @@ photon transfer curve and compute and write out the full well.
 
 @author J. Chiang <jchiang@slac.stanford.edu>
 """
+from __future__ import print_function
 import os
 import glob
+<<<<<<< HEAD
 from copy import deepcopy
+=======
+>>>>>>> master
 import operator
 import numpy as np
 import scipy.optimize
@@ -21,6 +25,7 @@ import lsst.afw.math as afwMath
 import lsst.pex.config as pexConfig
 import lsst.pipe.base as pipeBase
 
+
 def find_flat2(flat1):
     pattern = flat1.split('flat1')[0] + 'flat2*.fits'
     try:
@@ -29,7 +34,9 @@ def find_flat2(flat1):
     except IndexError:
         return flat1
 
-exptime = lambda x: imutils.Metadata(x, 1).get('EXPTIME')
+
+def exptime(x): return imutils.Metadata(x).get('EXPTIME')
+
 
 def glob_flats(full_path, outfile='ptc_flats.txt'):
     flats = glob.glob(os.path.join(full_path, '*_flat?.fits'))
@@ -38,11 +45,13 @@ def glob_flats(full_path, outfile='ptc_flats.txt'):
         output.write('%s\n' % item)
     output.close()
 
+
 def find_flats(args):
     files = args.files(args.flats, args.flats_file_list)
     file1s = sorted([item.strip() for item in files
                      if item.find('flat1') != -1])
     return [(f1, find_flat2(f1)) for f1 in file1s]
+
 
 def ptc_func(pars, mean):
     """
@@ -52,11 +61,13 @@ def ptc_func(pars, mean):
     a00, gain, intcpt = pars
     return 0.5/(a00*gain*gain)*(1 - np.exp(-2*a00*mean*gain)) + intcpt/(gain*gain)
 
+
 def residuals(pars, mean, var):
     """
     Residuals function for least-squares fit of PTC curve.
     """
     return (var - ptc_func(pars, mean))/np.sqrt(var)
+
 
 class FlatPairStats(object):
     def __init__(self, fmean, fvar):
@@ -71,15 +82,17 @@ def flat_pair_stats(ccd1, ccd2, amp, mask_files=(), bias_frame=None):
     # Mean and variance calculations that account for masks (via
     # ccd1.stat_ctrl, which is the same for both MaskedImages).
     #
-    mean = lambda im: afwMath.makeStatistics(im, afwMath.MEAN,
-                                             ccd1.stat_ctrl).getValue()
-    var = lambda im: afwMath.makeStatistics(im, afwMath.VARIANCE,
-                                            ccd1.stat_ctrl).getValue()
+
+    def mean(im): return afwMath.makeStatistics(im, afwMath.MEAN,
+                                                ccd1.stat_ctrl).getValue()
+
+    def var(im): return afwMath.makeStatistics(im, afwMath.VARIANCE,
+                                               ccd1.stat_ctrl).getValue()
     #
     # Extract imaging region for segments of both CCDs.
     #
-    image1 = ccd1.unbiased_and_trimmed_image(amp)
-    image2 = ccd2.unbiased_and_trimmed_image(amp)
+    image1 = ccd1.unbiased_and_trimmed_image(amp, bias_frame=bias_frame)
+    image2 = ccd2.unbiased_and_trimmed_image(amp, bias_frame=bias_frame)
     if ccd1.imfile == ccd2.imfile:
         # Don't have pairs of flats, so estimate noise and gain
         # from a single frame, ignoring FPN.
@@ -91,7 +104,7 @@ def flat_pair_stats(ccd1, ccd2, amp, mask_files=(), bias_frame=None):
         # would be altered in the ratio calculation.
         #
         fratio_im = afwImage.MaskedImageF(image1, True)
-        fratio_im /= image2
+        operator.itruediv(fratio_im, image2)
         fratio = mean(fratio_im)
         image2 *= fratio
         fmean = (mean(image1) + mean(image2))/2.
@@ -102,12 +115,16 @@ def flat_pair_stats(ccd1, ccd2, amp, mask_files=(), bias_frame=None):
 
     return FlatPairStats(fmean, fvar)
 
+
 class PtcConfig(pexConfig.Config):
     """Configuration for ptc task"""
     output_dir = pexConfig.Field("Output directory", str, default='.')
     eotest_results_file = pexConfig.Field("EO test results filename",
                                           str, default=None)
+    max_frac_offset = pexConfig.Field(
+        "maximum fraction offset from median gain curve to omit points from PTC fit.", float, default=0.2)
     verbose = pexConfig.Field("Turn verbosity on", bool, default=True)
+
 
 class PtcTask(pipeBase.Task):
     """Task to compute photon transfer curve from flat pair dataset"""
@@ -115,8 +132,8 @@ class PtcTask(pipeBase.Task):
     _DefaultName = "PtcTask"
 
     @pipeBase.timeMethod
-    def run(self, sensor_id, infiles, mask_files, binsize=1,
-            bias_frame=None):
+    def run(self, sensor_id, infiles, mask_files, gains, binsize=1,
+            bias_frame=None, flat2_finder=find_flat2):
         outfile = os.path.join(self.config.output_dir,
                                '%s_ptc.fits' % sensor_id)
         all_amps = imutils.allAmps(infiles[0])
@@ -124,7 +141,7 @@ class PtcTask(pipeBase.Task):
         exposure = []
         file1s = sorted([item for item in infiles if item.find('flat1') != -1])
         for flat1 in file1s:
-            flat2 = find_flat2(flat1)
+            flat2 = flat2_finder(flat1)
             if self.config.verbose:
                 self.log.info("processing %s" % flat1)
             exposure.append(exptime(flat1))
@@ -135,7 +152,7 @@ class PtcTask(pipeBase.Task):
             for amp in ccd1:
                 results = flat_pair_stats(ccd1, ccd2, amp,
                                           mask_files=mask_files,
-                                          bias_frame=bias_frame)
+                                          bias_frame=bias_frame) 
                 ptc_stats[amp][0].append(results.flat_mean)
                 ptc_stats[amp][1].append(results.flat_var)
         self._fit_curves(ptc_stats, sensor_id)
