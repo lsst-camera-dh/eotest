@@ -184,14 +184,21 @@ class PtcTask(pipeBase.Task):
         for amp in ptc_stats:
             mean, var = np.array(ptc_stats[amp][0]), np.array(ptc_stats[amp][1])
             index_old = []
-            index = list(np.where(mean < 4e4)[0])
+            index = list(np.where((mean < 4e4)*(var >0))[0])
             count = 1
             # Initial guess for BF coeff, gain, and square of the read noise
             pars = 2.7e-6, 0.75, 25
             try:
                 while index != index_old and count < 10:
-                    results = scipy.optimize.leastsq(residuals, pars, full_output=1,
-                                                     args=(mean[index], var[index]))
+                    try:
+                        results = scipy.optimize.leastsq(residuals, pars, 
+                                                         full_output=1,
+                                                         args=(mean[index],
+                                                         var[index]))
+                    except TypeError as err:
+                        print(err)
+                        print('Too few remaining mean-variance points:  %s' % len(index))
+
                     pars, cov = results[:2]
                     sig_resids = residuals(pars, mean, var)
                     index_old = deepcopy(index)

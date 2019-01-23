@@ -44,8 +44,8 @@ class PTCGainFitterTestCase(unittest.TestCase):
         # Read the file and check the results
         hdu = fits.open('TEST_ID_eotest_results.fits')
 
-        self.assertAlmostEqual(hdu[1].data['PTC_GAIN'][0], 0.77132744, places=5)
-        self.assertAlmostEqual(hdu[1].data['PTC_GAIN_ERROR'][0], 0.001864, places=5)
+        self.assertAlmostEqual(hdu[1].data['PTC_GAIN'][0], 0.77767229, places=5)
+        self.assertAlmostEqual(hdu[1].data['PTC_GAIN_ERROR'][0], 0.0016705386, places=5)
         self.assertAlmostEqual(hdu[1].data['PTC_A00'][0], 2.67726e-6, places=5)
         self.assertAlmostEqual(hdu[1].data['PTC_A00_ERROR'][0], 3.94e-8, places=3)
         self.assertAlmostEqual(hdu[1].data['PTC_NOISE'][0], 5.2091694, places=4)
