@@ -495,7 +495,7 @@ class EOTestPlots(object):
                  oplot=1, color='g', width=width)
         plot.bar(results['AMP'] + xoffset - xoffset/2., total_noise,
                  oplot=1, color='c', width=width)
-        plot.legend('bgc', ('Read Noise', 'PTC Noise', 'System Noise', 'Total Noise'))
+        plot.legend('bgc', ('Read Noise', 'System Noise', 'Total Noise'))
         plot.hline(8)
         win.set_title("Read Noise, %s" % self.sensor_id)
 

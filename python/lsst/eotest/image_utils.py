@@ -377,7 +377,9 @@ def stack(ims, statistic=afwMath.MEDIAN):
     """Stacks a list of images based on a statistic."""
     images = []
     for image in ims:
-        images.append(image)       
+        images.append(image)
+    if lsst.afw.__version__.startswith('12.0'):
+        images = afwImage.vectorImageF(images)
     summary = afwMath.statisticsStack(images, statistic)
     return summary
 

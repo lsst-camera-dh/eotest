@@ -62,6 +62,7 @@ class BiasHandlingTestCase(unittest.TestCase):
     @classmethod
     def tearDownClass(cls):
         os.remove(cls.image_file)
+        os.remove(cls.mean_image_file)
 
     def test_bias_func(self):
         bias_func = BiasFunc(self.bias_slope, self.bias_intercept)
