@@ -454,6 +454,25 @@ class EOTestPlots(object):
             pass
         win.set_title("System Gain, %s" % self.sensor_id)
 
+    def ptc_bf(self, oplot=0, xoffset=0.25, width=0.5, xrange=None):
+        results = self.results
+        a00 = results['PTC_A00']
+        error = results['PTC_A00_ERROR']
+        ymin = min(a00 - error*2)*1e6
+        ymax = max(a00 + error*2)*1e6
+        yname = 'Brighter-Fatter A00 (1e-6/e-)'
+        win = plot.xyplot(results['AMP'], results['PTC_A00']*1e6,
+                          yerr=results['PTC_A00_ERROR']*1e6, xname='AMP',
+                          yname=yname, xrange=xrange, yrange=(ymin, ymax))
+        win.set_title("PTC Brighter-Fatter, %s" % self.sensor_id)
+
+    def ptc_turnoff(self, oplot=0, xoffset=0.25, width=0.5, xrange=None):
+        results = self.results
+        yname = 'PTC Turnoff (DN)'
+        win = plot.xyplot(results['AMP'], results['PTC_TURNOFF'],
+                          xname='AMP', yname=yname, xrange=xrange)
+        win.set_title("PTC Turnoff, %s" % self.sensor_id)
+
     def noise(self, oplot=0, xoffset=0.2, width=0.2, color='b'):
         results = self.results
         read_noise = results['READ_NOISE']
@@ -476,7 +495,7 @@ class EOTestPlots(object):
                  oplot=1, color='g', width=width)
         plot.bar(results['AMP'] + xoffset - xoffset/2., total_noise,
                  oplot=1, color='c', width=width)
-        plot.legend('bgc', ('Read Noise', 'System Noise', 'Total Noise'))
+        plot.legend('bgc', ('Read Noise', 'PTC Noise', 'System Noise', 'Total Noise'))
         plot.hline(8)
         win.set_title("Read Noise, %s" % self.sensor_id)
 
@@ -1176,6 +1195,8 @@ if __name__ == '__main__':
     plots.linearity()
     plots.gains()
     plots.noise()
+    plots.ptc_bf()
+    plots.ptc_turnoff()
     plots.qe()
     plots.crosstalk_matrix()
     plots.confluence_table()
