@@ -4,7 +4,6 @@ photon transfer curve and compute and write out the full well.
 
 @author J. Chiang <jchiang@slac.stanford.edu>
 """
-from __future__ import print_function
 import os
 import glob
 from copy import deepcopy
@@ -191,13 +190,13 @@ class PtcTask(pipeBase.Task):
             try:
                 while index != index_old and count < 10:
                     try:
-                        results = scipy.optimize.leastsq(residuals, pars, 
+                        results = scipy.optimize.leastsq(residuals, pars,
                                                          full_output=1,
                                                          args=(mean[index],
                                                          var[index]))
                     except TypeError as err:
-                        print(err)
-                        print('Too few remaining mean-variance points:  %s' % len(index))
+                        self.log.info(err)
+                        self.log.info('Too few remaining mean-variance points:  %s' % len(index))
 
                     pars, cov = results[:2]
                     sig_resids = residuals(pars, mean, var)
