@@ -171,6 +171,52 @@ class PtcTask(pipeBase.Task):
         output[0].header['NAMPS'] = len(all_amps)
         fitsWriteto(output, outfile, overwrite=True)
 
+    @staticmethod
+    def fit_ptc_curve(mean, var, sig_cut=5):
+        """Fit the PTC curve for a set of mean-variance points."""
+        index_old = []
+        index = list(np.where((mean < 4e4)*(var >0))[0])
+        count = 1
+        # Initial guess for BF coeff, gain, and square of the read noise
+        pars = 2.7e-6, 0.75, 25
+        try:
+            while index != index_old and count < 10:
+                try:
+                    results = scipy.optimize.leastsq(residuals, pars,
+                                                     full_output=1,
+                                                     args=(mean[index],
+                                                           var[index]))
+                except TypeError as err:
+                    self.log.info(err)
+                    self.log.info('Too few remaining mean-variance points:  %s' % len(index))
+
+                pars, cov = results[:2]
+                sig_resids = residuals(pars, mean, var)
+                index_old = deepcopy(index)
+                index = list(np.where(np.abs(sig_resids) < sig_cut)[0])
+                count += 1
+
+            ptc_a00 = pars[0]
+            ptc_a00_error = np.sqrt(cov[0][0])
+            ptc_gain = pars[1]
+            ptc_error = np.sqrt(cov[1][1])
+            ptc_noise = np.sqrt(pars[2])
+            ptc_noise_error = 0.5/ptc_noise*np.sqrt(cov[2][2])
+            # Cannot assume that the mean values are sorted
+            ptc_turnoff = max(mean[index])
+        except Exception as eobj:
+            self.log.info("Exception caught while fitting PTC:")
+            self.log.info(str(eobj))
+            ptc_gain = 0.
+            ptc_error = -1.
+            ptc_a00 = 0.
+            ptc_a00_error = -1.
+            ptc_noise = 0.
+            ptc_noise_error = -1.
+            ptc_turnoff = 0.
+        return (ptc_gain, ptc_error, ptc_a00, ptc_a00_error, ptc_noise,
+                ptc_noise_error, ptc_turnoff)
+
     def _fit_curves(self, ptc_stats, sensor_id, sig_cut=5):
         """
         Fit a model to the variance vs. mean
@@ -180,52 +226,14 @@ class PtcTask(pipeBase.Task):
             outfile = os.path.join(self.config.output_dir,
                                    '%s_eotest_results.fits' % sensor_id)
         output = EOTestResults(outfile, namps=len(ptc_stats))
+        # Fit for gain and error, a00 and its uncertainty, inferred
+        # noise and uncertainty, and the 'turnoff' level (in
+        # electrons) and write to an EO test results file.
         for amp in ptc_stats:
             mean, var = np.array(ptc_stats[amp][0]), np.array(ptc_stats[amp][1])
-            index_old = []
-            index = list(np.where((mean < 4e4)*(var >0))[0])
-            count = 1
-            # Initial guess for BF coeff, gain, and square of the read noise
-            pars = 2.7e-6, 0.75, 25
-            try:
-                while index != index_old and count < 10:
-                    try:
-                        results = scipy.optimize.leastsq(residuals, pars,
-                                                         full_output=1,
-                                                         args=(mean[index],
-                                                         var[index]))
-                    except TypeError as err:
-                        self.log.info(err)
-                        self.log.info('Too few remaining mean-variance points:  %s' % len(index))
-
-                    pars, cov = results[:2]
-                    sig_resids = residuals(pars, mean, var)
-                    index_old = deepcopy(index)
-                    index = list(np.where(np.abs(sig_resids) < sig_cut)[0])
-                    count += 1
-
-                ptc_a00 = pars[0]
-                ptc_a00_error = np.sqrt(cov[0][0])
-                ptc_gain = pars[1]
-                ptc_error = np.sqrt(cov[1][1])
-                ptc_noise = np.sqrt(pars[2])
-                ptc_noise_error = 0.5/ptc_noise*np.sqrt(cov[2][2])
-                # Cannot assume that the mean values are sorted
-                ptc_turnoff = max(mean[index])
-            except Exception as eobj:
-                self.log.info("Exception caught while fitting PTC:")
-                self.log.info(str(eobj))
-                ptc_gain = 0.
-                ptc_error = -1.
-                ptc_a00 = 0.
-                ptc_a00_error = -1.
-                ptc_noise = 0.
-                ptc_noise_error = -1.
-                ptc_turnoff = 0.
-            # Write gain and error, a00 and its uncertainty, inferred noise and
-            # uncertainty, and the 'turnoff' level (in electrons) to EO test
-            # results file.
-            #ampnum = int(amp.split('Amp')[1])
+            (ptc_gain, ptc_error, ptc_a00, ptc_a00_error, ptc_noise,
+             ptc_noise_error, ptc_turnoff) \
+             = self.fit_ptc_curve(mean, var, sig_cut=sig_cut)
             output.add_seg_result(amp, 'PTC_GAIN', ptc_gain)
             output.add_seg_result(amp, 'PTC_GAIN_ERROR', ptc_error)
             output.add_seg_result(amp, 'PTC_A00', ptc_a00)
