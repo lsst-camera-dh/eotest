@@ -104,7 +104,7 @@ class BFTask(pipeBase.Task):
         BFResults = {}
 
         for amp in all_amps:
-            self.log.info('on amp', amp)
+            self.log.info('on amp %s', amp)
             xcorr_exp = []
             xcorr_exp_err = []
             ycorr_exp = []
@@ -117,7 +117,7 @@ class BFTask(pipeBase.Task):
                 ycorr_amp = []
                 ycorr_amp_err = []
                 mean_amp = []
-                dark_frame = None
+                dark_image = None
                 if dark_frame:
                     ccd_dark = MaskedCCD(dark_frame, mask_files=mask_files)
                     dark_image = ccd_dark.unbiased_and_trimmed_image(amp)
