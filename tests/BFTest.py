@@ -45,7 +45,7 @@ class BFTestCase(unittest.TestCase):
         ccd1 = MaskedCCD(self.flat_file1)
         ccd2 = MaskedCCD(self.flat_file2)
         for amp in ccd1:
-            xcorr, xcorr_err = crossCorrelate(ccd1.unbiased_and_trimmed_image(amp), ccd2.unbiased_and_trimmed_image(amp), self.maxLag, self.nPixBorder, self.nSigmaClip, self.backgroundBinSize )
+            xcorr, xcorr_err = crossCorrelate(ccd1.unbiased_and_trimmed_image(amp), ccd2.unbiased_and_trimmed_image(amp), self.maxLag, self.nSigmaClip, self.backgroundBinSize )
             self.assertTrue(1>xcorr[0][1] and 1>xcorr[1][0])
 
 
