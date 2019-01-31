@@ -22,7 +22,6 @@ class BFTestCase(unittest.TestCase):
         self.gain = 5
         self.ccdtemp = -100
         self.maxLag = 1
-        self.nPixBorder = 10
         self.nSigmaClip = 3
         self.backgroundBinSize = 128
         self.bias_level, self.bias_sigma = 1e2, 4
