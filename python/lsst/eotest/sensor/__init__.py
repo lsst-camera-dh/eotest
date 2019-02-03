@@ -47,7 +47,7 @@ from .linearityTask import LinearityTask
 from .ptcTask import PtcTask
 from .persistenceTask import PersistenceTask
 from .fe55CteTask import Fe55CteTask
-
+from .BFTask import BFTask
 #
 # Turn off debug messages emitted by LSST Stack
 #
