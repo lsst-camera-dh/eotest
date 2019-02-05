@@ -172,7 +172,7 @@ class PtcTask(pipeBase.Task):
         fitsWriteto(output, outfile, overwrite=True)
 
     @staticmethod
-    def fit_ptc_curve(mean, var, sig_cut=5):
+    def fit_ptc_curve(mean, var, sig_cut=5, logger=None):
         """Fit the PTC curve for a set of mean-variance points."""
         index_old = []
         index = list(np.where((mean < 4e4)*(var >0))[0])
@@ -187,8 +187,9 @@ class PtcTask(pipeBase.Task):
                                                      args=(mean[index],
                                                            var[index]))
                 except TypeError as err:
-                    self.log.info(err)
-                    self.log.info('Too few remaining mean-variance points:  %s' % len(index))
+                    if logger is not None:
+                        logger.info(err)
+                        logger.info('Too few remaining mean-variance points:  %s' % len(index))
 
                 pars, cov = results[:2]
                 sig_resids = residuals(pars, mean, var)
@@ -205,8 +206,9 @@ class PtcTask(pipeBase.Task):
             # Cannot assume that the mean values are sorted
             ptc_turnoff = max(mean[index])
         except Exception as eobj:
-            self.log.info("Exception caught while fitting PTC:")
-            self.log.info(str(eobj))
+            if logger is not None:
+                logger.info("Exception caught while fitting PTC:")
+                logger.info(str(eobj))
             ptc_gain = 0.
             ptc_error = -1.
             ptc_a00 = 0.
@@ -233,7 +235,7 @@ class PtcTask(pipeBase.Task):
             mean, var = np.array(ptc_stats[amp][0]), np.array(ptc_stats[amp][1])
             (ptc_gain, ptc_error, ptc_a00, ptc_a00_error, ptc_noise,
              ptc_noise_error, ptc_turnoff) \
-             = self.fit_ptc_curve(mean, var, sig_cut=sig_cut)
+             = self.fit_ptc_curve(mean, var, sig_cut=sig_cut, logger=self.log)
             output.add_seg_result(amp, 'PTC_GAIN', ptc_gain)
             output.add_seg_result(amp, 'PTC_GAIN_ERROR', ptc_error)
             output.add_seg_result(amp, 'PTC_A00', ptc_a00)
