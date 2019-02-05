@@ -61,11 +61,11 @@ class DetectorResponse(object):
 
     def _read_from_fits(self, infile):
         all_amps = imutils.allAmps(infile)
-        foo = fits.open(infile)
-        hdu = foo['DETECTOR_RESPONSE']
-        self.flux = np.array(hdu.data.field('FLUX'), dtype=np.float)
-        self.Ne = dict([(amp, np.array(hdu.data.field('AMP%02i_SIGNAL' % amp),
-                                       dtype=np.float)) for amp in all_amps])
+        with fits.open(infile) as foo:
+            hdu = foo['DETECTOR_RESPONSE']
+            self.flux = np.array(hdu.data.field('FLUX'), dtype=np.float)
+            self.Ne = dict([(amp, np.array(hdu.data.field('AMP%02i_SIGNAL' % amp),
+                                           dtype=np.float)) for amp in all_amps])
 
     def _read_from_text(self, infile):
         data = np.recfromtxt(infile)
