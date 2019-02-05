@@ -948,8 +948,9 @@ class CcdSpecs(OrderedDict):
         try:
             self._ingestResults(results_file, xtalk_file=xtalk_file)
         except Exception as eobj:
-            print("EOTestPlots.CcdSpecs: exception:")
-            print("  ", str(eobj))
+            pass
+#            print("EOTestPlots.CcdSpecs: exception:")
+#            print("  ", str(eobj))
 
     def add_job_ids(self, summary_files):
         for summary_lims_file in summary_files:
