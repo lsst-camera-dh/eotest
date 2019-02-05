@@ -7,6 +7,7 @@ import os
 import sys
 import glob
 import copy
+import warnings
 from collections import OrderedDict
 import json
 import numpy as np
@@ -151,6 +152,7 @@ def plot_flat(infile, nsig=3, cmap=pylab.cm.hot, win=None, subplot=(1, 1, 1),
         hdulist = fits.HDUList()
         hdulist.append(fits.PrimaryHDU())
         hdulist[0].data = mosaic[::-1, :]
+        warnings.filterwarnings('ignore', category=fits.verify.VerifyWarning, append=True)
         hdulist.writeto(outfile, overwrite=True)
     #
     # Set the color map to extend over the range median +/- stdev(clipped)
