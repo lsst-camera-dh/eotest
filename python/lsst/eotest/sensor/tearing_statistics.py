@@ -16,7 +16,7 @@ class TearingStats(OrderedDict):
     """
     Tearing statistics for a CCD, keyed by amp number, 1-17.
     """
-    def __init__(self, fitsfile, buf=10):
+    def __init__(self, fitsfile, buf=10, bias_frame=None):
         """
         Parameters
         ----------
@@ -25,10 +25,13 @@ class TearingStats(OrderedDict):
         buf: int [10]
             Number of pixels to avoid on leading and trailing edge of
             serial overscan to compute the bias level for each row.
+        bias_frame: str [None]
+            Name of bias frame file. If None, then overscan region
+            will be used.
         """
         super(TearingStats, self).__init__()
         self.fitsfile = fitsfile
-        ccd = MaskedCCD(fitsfile)
+        ccd = MaskedCCD(fitsfile, bias_frame=bias_frame)
         for amp in ccd:
             self[amp] = AmpTearingStats(ccd[amp], ccd.amp_geom, buf=buf)
 
