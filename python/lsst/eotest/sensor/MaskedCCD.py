@@ -7,7 +7,9 @@ afwMath.makeStatistics object.
 """
 from __future__ import print_function
 from __future__ import absolute_import
+import warnings
 import astropy.io.fits as fits
+from astropy.utils.exceptions import AstropyWarning, AstropyUserWarning
 from lsst.eotest.fitsTools import fitsWriteto
 from .AmplifierGeometry import makeAmplifierGeometry
 import lsst.daf.base as dafBase
@@ -101,6 +103,40 @@ class MaskedCCD(dict):
         mask_bits = 2**len(mpd) - 1
         self.stat_ctrl.setAndMask(mask_bits)
         return self.stat_ctrl
+
+    def write_bias_subtracted_MEF(self, outfile, gains=None, overwrite=True):
+        """
+        Write a bias-subtracted MEF file with the same format as
+        the original raw FITS file.
+
+        Parameters
+        ----------
+        outfile: str
+            Output filename.
+        gains: dict [None]
+            Gains to apply to pixel data.  If None, then pixel values are
+            written as ADUs.
+        overwrite: bool [True]
+            Flag to overwrite an existing output file.
+        """
+        hdulist = fits.HDUList()
+        with fits.open(self.imfile) as template:
+            hdulist.append(template[0])
+            hdulist[0].header['ORIGFILE'] = hdulist[0].header['FILENAME']
+            hdulist[0].header['FILENAME'] = outfile
+            for amp in self:
+                imarr = self.bias_subtracted_image(amp).getImage().getArray()
+                if gains is not None:
+                    imarr *= gains[amp]
+                hdulist.append(fits.CompImageHDU(data=gains[amp]*imarr,
+                                                 header=template[amp].header))
+            with warnings.catch_warnings():
+                for warning in (UserWarning, AstropyWarning,
+                                AstropyUserWarning):
+                    warnings.filterwarnings('ignore', category=warning,
+                                            append=True)
+                fitsWriteto(hdulist, outfile, overwrite=True)
+
 
     def bias_image_using_overscan(self, amp, overscan=None, **kwargs):
         """
