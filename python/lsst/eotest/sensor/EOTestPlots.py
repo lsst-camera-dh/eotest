@@ -7,6 +7,7 @@ import os
 import sys
 import glob
 import copy
+import warnings
 from collections import OrderedDict
 import json
 import numpy as np
@@ -151,6 +152,7 @@ def plot_flat(infile, nsig=3, cmap=pylab.cm.hot, win=None, subplot=(1, 1, 1),
         hdulist = fits.HDUList()
         hdulist.append(fits.PrimaryHDU())
         hdulist[0].data = mosaic[::-1, :]
+        warnings.filterwarnings('ignore', category=fits.verify.VerifyWarning, append=True)
         hdulist.writeto(outfile, overwrite=True)
     #
     # Set the color map to extend over the range median +/- stdev(clipped)
@@ -383,40 +385,40 @@ class EOTestPlots(object):
     def ptcs(self, xrange=None, yrange=None, figsize=(11, 8.5), ptc_file=None):
         if ptc_file is None:
             ptc_file = self._fullpath('%s_ptc.fits' % self.sensor_id)
-        ptc = fits.open(ptc_file)
-        for amp in imutils.allAmps(ptc_file):
-            mean = ptc[1].data.field('AMP%02i_MEAN' % amp)
-            var = ptc[1].data.field('AMP%02i_VAR' % amp)
-            subplot = self.subplot(amp)
-            if amp == 1:
-                win = plot.Window(subplot=subplot, figsize=figsize,
-                                  xlabel=r'mean (ADU)',
-                                  ylabel=r'variance (ADU$^2$)', size='large')
-                win.frameAxes.text(0.5, 1.08,
-                                   'Photon Transfer Curves, %s'
-                                   % self.sensor_id,
-                                   horizontalalignment='center',
-                                   verticalalignment='top',
-                                   transform=win.frameAxes.transAxes,
-                                   size='large')
-            else:
-                win.select_subplot(*subplot)
-            self._offset_subplot(win)
-            win = plot.xyplot(mean, var, xname='', yname='',
-                              xrange=xrange, yrange=yrange,
-                              xlog=1, ylog=1, new_win=False,)
-            axes = pylab.gca()
-            xrange = list(axes.get_xlim())
-            xrange[0] = max(xrange[0], 1e-1)
-            xx = np.logspace(np.log10(xrange[0]), np.log10(xrange[1]), 20)
-            # Plot PTC curves using gain measurements.
-            ptc_gain = self.results['PTC_GAIN'][amp-1]
-            ptc_gain_error = self.results['PTC_GAIN_ERROR'][amp-1]
-            plot.curve(xx, xx/ptc_gain, oplot=1, color='b', lineStyle=':')
-            note = 'Amp %i\nGain = %.2f +/- %.2f'\
-                % (amp, ptc_gain, ptc_gain_error)
-            pylab.annotate(note, (0.05, 0.9), xycoords='axes fraction',
-                           verticalalignment='top', size='x-small')
+        with fits.open(ptc_file) as ptc:
+            for amp in imutils.allAmps(ptc_file):
+                mean = ptc[1].data.field('AMP%02i_MEAN' % amp)
+                var = ptc[1].data.field('AMP%02i_VAR' % amp)
+                subplot = self.subplot(amp)
+                if amp == 1:
+                    win = plot.Window(subplot=subplot, figsize=figsize,
+                                      xlabel=r'mean (ADU)',
+                                      ylabel=r'variance (ADU$^2$)', size='large')
+                    win.frameAxes.text(0.5, 1.08,
+                                       'Photon Transfer Curves, %s'
+                                       % self.sensor_id,
+                                       horizontalalignment='center',
+                                       verticalalignment='top',
+                                       transform=win.frameAxes.transAxes,
+                                       size='large')
+                else:
+                    win.select_subplot(*subplot)
+                self._offset_subplot(win)
+                win = plot.xyplot(mean, var, xname='', yname='',
+                                  xrange=xrange, yrange=yrange,
+                                  xlog=1, ylog=1, new_win=False,)
+                axes = pylab.gca()
+                xrange = list(axes.get_xlim())
+                xrange[0] = max(xrange[0], 1e-1)
+                xx = np.logspace(np.log10(xrange[0]), np.log10(xrange[1]), 20)
+                # Plot PTC curves using gain measurements.
+                ptc_gain = self.results['PTC_GAIN'][amp-1]
+                ptc_gain_error = self.results['PTC_GAIN_ERROR'][amp-1]
+                plot.curve(xx, xx/ptc_gain, oplot=1, color='b', lineStyle=':')
+                note = 'Amp %i\nGain = %.2f +/- %.2f'\
+                    % (amp, ptc_gain, ptc_gain_error)
+                pylab.annotate(note, (0.05, 0.9), xycoords='axes fraction',
+                               verticalalignment='top', size='x-small')
 
     def _offset_subplot(self, win, xoffset=0.025, yoffset=0.025):
         bbox = win.axes[-1].get_position()
@@ -585,6 +587,8 @@ class EOTestPlots(object):
             except Exception as eObj:
                 print("EOTestPlots.linearity: amp %i" % amp)
                 print("  ", eObj)
+        if ptc is not None:
+            ptc.close()
         return self._linearity_results
 
     def linearity(self, gain_range=(1, 6), max_dev=0.02, figsize=(11, 8.5),
@@ -944,8 +948,9 @@ class CcdSpecs(OrderedDict):
         try:
             self._ingestResults(results_file, xtalk_file=xtalk_file)
         except Exception as eobj:
-            print("EOTestPlots.CcdSpecs: exception:")
-            print("  ", str(eobj))
+            pass
+#            print("EOTestPlots.CcdSpecs: exception:")
+#            print("  ", str(eobj))
 
     def add_job_ids(self, summary_files):
         for summary_lims_file in summary_files:

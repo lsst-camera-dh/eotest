@@ -9,6 +9,7 @@ https://confluence.slac.stanford.edu/x/DQvNBw
 @author J. Chiang <jchiang@slac.stanford.edu>
 """
 import os
+import warnings
 import tempfile
 import numpy as np
 import astropy.io.fits as fits
@@ -68,6 +69,7 @@ def rolloff_mask(infile, outfile,
     # Write the output file with a primary HDU so that the DMstack code
     # can append only image extensions (and not write to the PHDU).
     #
+    warnings.filterwarnings('ignore', category=fits.verify.VerifyWarning, append=True)
     hdulist = fits.HDUList()
     hdulist.append(fits.PrimaryHDU())
     with fits.open(infile) as fd:
