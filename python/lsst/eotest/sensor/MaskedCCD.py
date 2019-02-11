@@ -128,7 +128,7 @@ class MaskedCCD(dict):
                 imarr = self.bias_subtracted_image(amp).getImage().getArray()
                 if gains is not None:
                     imarr *= gains[amp]
-                hdulist.append(fits.CompImageHDU(data=gains[amp]*imarr,
+                hdulist.append(fits.CompImageHDU(data=imarr,
                                                  header=template[amp].header))
             with warnings.catch_warnings():
                 for warning in (UserWarning, AstropyWarning,
