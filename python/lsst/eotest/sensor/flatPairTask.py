@@ -162,16 +162,17 @@ class FlatPairTask(pipeBase.Task):
             exptime1 = flat1.md.get('EXPTIME')
             exptime2 = flat2.md.get('EXPTIME')
 
+            if exptime1 != exptime2:
+                raise RuntimeError("Exposure times do not match for:\n%s\n%s\n"
+                                   % (file1, file2))
+
             if self.mondiode_func is None:
                 pd1 = flat1.md.get('MONDIODE')
                 pd2 = flat2.md.get('MONDIODE')
             else:
-                pd1 = self.mondiode_func(file1, exptime)
-                pd2 = self.mondiode_func(file2, exptime)
+                pd1 = self.mondiode_func(file1, exptime1)
+                pd2 = self.mondiode_func(file2, exptime2)
 
-            if exptime1 != exptime2:
-                raise RuntimeError("Exposure times do not match for:\n%s\n%s\n"
-                                   % (file1, file2))
             if (use_exptime
                 or isinstance(pd1, str)
                 or isinstance(pd2, str)
