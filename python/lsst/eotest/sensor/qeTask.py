@@ -29,11 +29,12 @@ class QeTask(pipeBase.Task):
     @pipeBase.timeMethod
     def run(self, sensor_id, qe_files, pd_ratio_file, mask_files, gains,
             bias_frame=None, medians_file=None, vendor_data=False,
-            correction_image=None):
+            correction_image=None, mondiode_func=None):
         imutils.check_temperatures(qe_files, self.config.temp_set_point_tol,
                                    setpoint=self.config.temp_set_point,
                                    warn_only=True)
-        qe_data = QE.QE_Data(verbose=self.config.verbose, logger=self.log)
+        qe_data = QE.QE_Data(verbose=self.config.verbose, logger=self.log,
+                             mondiode_func=mondiode_func)
 
         if medians_file is None:
             medians_file = os.path.join(self.config.output_dir,
