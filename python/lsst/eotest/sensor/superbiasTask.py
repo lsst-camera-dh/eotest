@@ -43,43 +43,61 @@ class SuperbiasTask(pipeBase.Task):
         im = MaskedCCD(sflatL_files[0])[1]
         oscan = makeAmplifierGeometry(sflatL_files[0])
         dim = imutils.trim(im, oscan.imaging).getImage().getArray().shape
-        lo_num = np.empty((nl, dim[0], dim[1]), dtype=np.float32)
-        hi_den = np.empty((nh, dim[0], dim[1]), dtype=np.float32)      
+
+        namps = len(imutils.allAmps(sflatL_files[0]))
+
+        lo_num = np.empty((namps, nl, dim[0], dim[1]), dtype=np.float32)
+        hi_den = np.empty((namps, nh, dim[0], dim[1]), dtype=np.float32)      
         
-        ratio_images = {}
         every_superbias = MaskedCCD(bias_frame, mask_files=mask_files)
+
+        ## Calculate the numerator
+        for i in range(nl):
+            im_lo_all = MaskedCCD(sflatL_files[i], mask_files=mask_files)
+
+            for iamp, amp in enumerate(imutils.allAmps(sflatL_files[0])):
+                im_lo = im_lo_all[amp]
+                superbias = every_superbias[amp]                
+                im_lo_unbiased = imutils.unbias_and_trim(im=im_lo, overscan=oscan.serial_overscan, 
+                                                         imaging=oscan.imaging, bias_frame=superbias, 
+                                                         bias_method='row')
+                lo_num[iamp,i] = im_lo_unbiased.getImage().getArray()
+
+            ## Calculate the denominator
+        for j in range(nh):
+            im_hi_all = MaskedCCD(sflatH_files[j], mask_files=mask_files)
+
+            for iamp, amp in enumerate(imutils.allAmps(sflatL_files[0])):
+                im_hi = im_hi_all[amp]
+                superbias = every_superbias[amp]                
+                im_hi_unbiased = imutils.unbias_and_trim(im=im_hi, overscan=oscan.serial_overscan, 
+                                                         imaging=oscan.imaging, bias_frame=superbias,
+                                                         bias_method='row')
+                hi_den[iamp,j] = im_hi_unbiased.getImage().getArray()
 
         fig, axs = plt.subplots(4,4, figsize=(20,20))
         axs = axs.ravel()
 
-        for amp in imutils.allAmps(sflatL_files[0]):
+        lo_stack_images = {}
+        hi_stack_images = {}
+        ratio_images = {}
 
+        for iamp, amp in enumerate(imutils.allAmps(sflatL_files[0])):
             superbias = every_superbias[amp]
 
-            ## Calculate the numerator
-            for i in range(nl):
-                im_lo = MaskedCCD(sflatL_files[i], mask_files=mask_files)[amp]
-                im_lo_unbiased = imutils.unbias_and_trim(im=im_lo, overscan=oscan.serial_overscan, 
-                                            imaging=oscan.imaging, bias_frame=superbias, 
-                                            bias_method='row')
-                lo_num[i] = im_lo_unbiased.getImage().getArray()
-
-            ## Calculate the denominator
-            for j in range(nh):
-                im_hi = MaskedCCD(sflatH_files[j], mask_files=mask_files)[amp]
-                im_hi_unbiased = imutils.unbias_and_trim(im=im_hi, overscan=oscan.serial_overscan, 
-                                            imaging=oscan.imaging, bias_frame=superbias,
-                                            bias_method='row')
-                hi_den[j] = im_hi_unbiased.getImage().getArray()
-
             ## Take the average over all images    
-            num = np.mean(lo_num, axis=0) ## Could also try using median stack?
-            den = np.mean(hi_den, axis=0)
+            num = np.mean(lo_num[iamp], axis=0) ## Could also try using median stack?
+            den = np.mean(hi_den[iamp], axis=0)
             ratio = num / den
+
+            lo_stack_images[amp] = afwImage.ImageF(num)
+            hi_stack_images[amp] = afwImage.ImageF(den)
+
             ratio_images[amp] = afwImage.ImageF(ratio)
             trimmed_bias_frame = imutils.trim(superbias, oscan.imaging).getImage().getArray()
 
             ## Limit the range of the histogram to exclude values that fall within the lowest/highest 5% 
+            # EC, (this is trimming on the 0.05% extrema, not 5%, is that the intention?)
             lo_s, hi_s = np.percentile(trimmed_bias_frame, (0.05, 99.95))
             lo_r, hi_r = np.percentile(ratio, (0.05, 99.95))
 
@@ -105,8 +123,20 @@ class SuperbiasTask(pipeBase.Task):
                                 '%s_hist2d_plots.pdf' % sensor_id)
         plt.savefig(pdf_file)
 
+        ## File containing the lo stack for each amplifier
+        lo_stack_file = os.path.join(self.config.output_dir, 
+                                 '%s_lo_stack_images.fits' % sensor_id)
+        imutils.writeFits(lo_stack_images, lo_stack_file, sflatL_files[0], bitpix=-32)
+        
+        ## File containing the hi stack for each amplifier
+        hi_stack_file = os.path.join(self.config.output_dir, 
+                                 '%s_hi_stack_images.fits' % sensor_id)
+        imutils.writeFits(hi_stack_images, hi_stack_file, sflatL_files[0], bitpix=-32)
+        
         ## File containing the ratio data for each amplifier
         ratio_file = os.path.join(self.config.output_dir, 
                                  '%s_ratio_images.fits' % sensor_id)
         imutils.writeFits(ratio_images, ratio_file, sflatL_files[0], bitpix=-32)
 
+
+        
