@@ -49,6 +49,7 @@ from .persistenceTask import PersistenceTask
 from .fe55CteTask import Fe55CteTask
 from .superbiasTask import SuperbiasTask
 
+from .BFTask import BFTask
 #
 # Turn off debug messages emitted by LSST Stack
 #

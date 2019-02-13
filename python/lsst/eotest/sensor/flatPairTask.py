@@ -66,7 +66,7 @@ class FlatPairTask(pipeBase.Task):
     def run(self, sensor_id, infiles, mask_files, gains, detrespfile=None,
             bias_frame=None, max_pd_frac_dev=0.05,
             linearity_spec_range=(1e3, 9e4), use_exptime=False,
-            flat2_finder=find_flat2):
+            flat2_finder=find_flat2, mondiode_func=None):
         self.sensor_id = sensor_id
         self.infiles = infiles
         self.mask_files = mask_files
@@ -74,6 +74,7 @@ class FlatPairTask(pipeBase.Task):
         self.bias_frame = bias_frame
         self.max_pd_frac_dev = max_pd_frac_dev
         self.find_flat2 = flat2_finder
+        self.mondiode_func = mondiode_func
         if detrespfile is None:
             #
             # Compute detector response from flat pair files.
@@ -158,14 +159,20 @@ class FlatPairTask(pipeBase.Task):
             flat2 = MaskedCCD(file2, mask_files=self.mask_files,
                               bias_frame=self.bias_frame)
 
-            pd1 = flat1.md.get('MONDIODE')
-            pd2 = flat2.md.get('MONDIODE')
             exptime1 = flat1.md.get('EXPTIME')
             exptime2 = flat2.md.get('EXPTIME')
 
             if exptime1 != exptime2:
                 raise RuntimeError("Exposure times do not match for:\n%s\n%s\n"
                                    % (file1, file2))
+
+            if self.mondiode_func is None:
+                pd1 = flat1.md.get('MONDIODE')
+                pd2 = flat2.md.get('MONDIODE')
+            else:
+                pd1 = self.mondiode_func(file1, exptime1)
+                pd2 = self.mondiode_func(file2, exptime2)
+
             if (use_exptime
                 or isinstance(pd1, str)
                 or isinstance(pd2, str)

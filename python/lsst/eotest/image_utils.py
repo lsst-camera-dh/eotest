@@ -377,7 +377,9 @@ def stack(ims, statistic=afwMath.MEDIAN):
     """Stacks a list of images based on a statistic."""
     images = []
     for image in ims:
-        images.append(image)       
+        images.append(image)
+    if lsst.afw.__version__.startswith('12.0'):
+        images = afwImage.vectorImageF(images)
     summary = afwMath.statisticsStack(images, statistic)
     return summary
 
@@ -419,7 +421,6 @@ def writeFits(images, outfile, template_file, bitpix=32):
             for amp in all_amps:
                 output[amp].header.update(template[amp].header)
                 set_bitpix(output[amp], bitpix)
-                print(np.median(output[amp].data.ravel()))
             for i in (-3, -2, -1):
                 output.append(template[i])
             fitsWriteto(output, outfile, overwrite=True, checksum=True)
