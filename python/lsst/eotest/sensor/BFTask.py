@@ -46,10 +46,10 @@ def glob_flats(full_path, outfile='ptc_flats.txt'):
     output.close()
 
 
-def find_flats(flats):
+def find_flats(flats, flat2_finder=find_flat2):
     file1s = sorted([item.strip() for item in flats
                      if item.find('flat1') != -1])
-    return [[(f1, find_flat2(f1))] for f1 in file1s]
+    return [[(f1, flat2_finder(f1))] for f1 in file1s]
 
 
 class BFConfig(pexConfig.Config):
@@ -82,14 +82,16 @@ class BFTask(pipeBase.Task):
 
     @pipeBase.timeMethod
     def run(self, sensor_id, flat_files, meanidx=0, single_pairs=True,
-            dark_frame=None, mask_files=()):
+            dark_frame=None, mask_files=(), flat2_finder=None):
         """
         Compute the average nearest neighbor correlation coefficients for
         all flat pairs given for a particular exposure time.  Additionally
         store the flat means per amp.
         """
         if single_pairs:
-            flats = find_flats(flat_files)
+            if flat2_finder is None:
+                flat2_finder = find_flat2
+            flats = find_flats(flat_files, flat2_finder=flat2_finder)
         else:
             flats = split_flats(flat_files)
 
