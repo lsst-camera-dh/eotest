@@ -175,9 +175,9 @@ class BFTask(pipeBase.Task):
         units = []
         columns = []
         for amp in BFResults:
-            colnames.extend(['AMP%02i_xcorr' % amp, 'AMP%02i_xcorr_err' % amp,
-                             'AMP%02i_ycorr' % amp,
-                             'AMP%02i_ycorr_err' % amp, 'AMP%02i_MEAN' % amp])
+            colnames.extend(['AMP%02i_XCORR' % amp, 'AMP%02i_XCORR_ERR' % amp,
+                             'AMP%02i_YCORR' % amp, 'AMP%02i_YCORR_ERR' % amp,
+                             'AMP%02i_MEAN' % amp])
             units.extend(
                 ['Unitless', 'Unitless', 'Unitless', 'Unitless', 'ADU'])
             columns.extend([np.array(BFResults[amp][0], dtype=np.float),

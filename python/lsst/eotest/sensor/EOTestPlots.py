@@ -420,6 +420,40 @@ class EOTestPlots(object):
                 pylab.annotate(note, (0.05, 0.9), xycoords='axes fraction',
                                verticalalignment='top', size='x-small')
 
+    def bf_curves(self, xrange=None, yrange=None, figsize=(6, 8),
+                  bf_file=None):
+        if bf_file is None:
+            bf_file = self._fullpath('%s_bf.fits' % self.sensor_id)
+        fig = plt.figure(figsize=figsize)
+        with fits.open(bf_file) as bf:
+
+            fig.add_subplot(2, 1, 1)
+            for amp in imutils.allAmps(bf_file):
+                mean = bf[1].data.field('AMP%02i_MEAN' % amp)
+                xcorr = bf[1].data.field('AMP%02i_XCORR' % amp)
+                index = np.argsort(mean)
+                plt.plot(mean[index], xcorr[index], label='%s' % amp)
+            plt.xscale('log')
+            plt.xlabel('mean signal (ADU)', fontsize='small')
+            plt.ylabel('corr(1, 0)', fontsize='small')
+            plt.legend(fontsize='x-small', loc=2)
+            plt.title('Brighter-Fatter corr(1, 0), %s' % self.sensor_id,
+                      fontsize='small')
+
+            fig.add_subplot(2, 1, 2)
+            for amp in imutils.allAmps(bf_file):
+                mean = bf[1].data.field('AMP%02i_MEAN' % amp)
+                ycorr = bf[1].data.field('AMP%02i_YCORR' % amp)
+                index = np.argsort(mean)
+                plt.plot(mean[index], ycorr[index], label='%s' % amp)
+            plt.xscale('log')
+            plt.xlabel('mean signal (ADU)', fontsize='small')
+            plt.ylabel('corr(0, 1)', fontsize='small')
+            plt.legend(fontsize='x-small', loc=2)
+            plt.title('Brighter-Fatter corr(0, 1), %s' % self.sensor_id,
+                      fontsize='small')
+        plt.tight_layout()
+
     def _offset_subplot(self, win, xoffset=0.025, yoffset=0.025):
         bbox = win.axes[-1].get_position()
         points = bbox.get_points()
