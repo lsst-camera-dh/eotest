@@ -69,7 +69,7 @@ class BFTask(pipeBase.Task):
     @pipeBase.timeMethod
     def run(self, sensor_id, flat_files, single_pairs=True,
             dark_frame=None, mask_files=(), flat2_finder=None,
-            bias_frame=None):
+            bias_frame=None, meanidx=0):
         """
         Compute the average nearest neighbor correlation coefficients for
         all flat pairs given for a particular exposure time.  Additionally
@@ -127,11 +127,11 @@ class BFTask(pipeBase.Task):
                 BFResults[amp].ycorr_err.append(corr_err[0][1])
                 BFResults[amp].mean.append(avemean)
 
-        self.write_eotest_output(BFResults, sensor_id)
+        self.write_eotest_output(BFResults, sensor_id, meanidx=meanidx)
 
         return BFResults
 
-    def write_eotest_output(self, BFResults, sensor_id):
+    def write_eotest_output(self, BFResults, sensor_id, meanidx=0):
         """Write the correlation curves to a FITS file for plotting,
         and the BF results to the eotest results file."""
         outfile = os.path.join(self.config.output_dir,
@@ -171,11 +171,11 @@ class BFTask(pipeBase.Task):
         results = EOTestResults(results_file, namps=len(BFResults))
 
         for amp in BFResults:
-            results.add_seg_result(amp, 'BF_XCORR', BFResults[amp][0])
-            results.add_seg_result(amp, 'BF_XCORR_ERR', BFResults[amp][1])
-            results.add_seg_result(amp, 'BF_YCORR', BFResults[amp][2])
-            results.add_seg_result(amp, 'BF_YCORR_ERR', BFResults[amp][3])
-            results.add_seg_result(amp, 'BF_MEAN', BFResults[amp][4])
+            results.add_seg_result(amp, 'BF_XCORR', BFResults[amp][0][meanidx])
+            results.add_seg_result(amp, 'BF_XCORR_ERR', BFResults[amp][1][meanidx])
+            results.add_seg_result(amp, 'BF_YCORR', BFResults[amp][2][meanidx])
+            results.add_seg_result(amp, 'BF_YCORR_ERR', BFResults[amp][3][meanidx])
+            results.add_seg_result(amp, 'BF_MEAN', BFResults[amp][4][meanidx])
 
         results.write(clobber=True)
 
