@@ -5,19 +5,16 @@ coefficients per amp.
 """
 import os
 import glob
+from collections import namedtuple
 import numpy as np
-
 import astropy.io.fits as fits
-from lsst.eotest.fitsTools import fitsTableFactory, fitsWriteto
-import lsst.eotest.image_utils as imutils
-from lsst.eotest.sensor.MaskedCCD import MaskedCCD
-
 import lsst.afw.math as afwMath
 import lsst.pex.config as pexConfig
 import lsst.pipe.base as pipeBase
-
-from lsst.eotest.sensor import MaskedCCD
-from lsst.eotest.sensor.EOTestResults import EOTestResults
+from lsst.eotest import fitsTools
+import lsst.eotest.image_utils as imutils
+from .MaskedCCD import MaskedCCD
+from .EOTestResults import EOTestResults
 
 
 def find_flat2(flat1):
@@ -31,48 +28,37 @@ def find_flat2(flat1):
 
 
 def split_flats(flats):
-    """Given a set of flats, splits them into flat1s and flat2s consecutively.
+    """
+    Given a set of flats, splits them into flat1s and flat2s consecutively.
     """
     flat1s = [flats[i] for i in range(len(flats)) if i % 2 == 0]
     flat2s = [flats[i] for i in range(len(flats)) if i % 2 == 1]
     return [(flat1s[i], flat2s[i]) for i in range(len(flat1s))]
 
 
-def glob_flats(full_path, outfile='ptc_flats.txt'):
-    flats = glob.glob(os.path.join(full_path, '*_flat?.fits'))
-    output = open(outfile, 'w')
-    for item in flats:
-        output.write('%s\n' % item)
-    output.close()
-
-
-def find_flats(flats):
+def find_flats(flats, flat2_finder=find_flat2):
+    """Find flat pairs."""
     file1s = sorted([item.strip() for item in flats
                      if item.find('flat1') != -1])
-    return [[(f1, find_flat2(f1))] for f1 in file1s]
+    return [(f1, flat2_finder(f1)) for f1 in file1s]
 
 
 class BFConfig(pexConfig.Config):
     """Configuration for BFTask"""
-    maxLag = pexConfig.Field("Maximum lag",
-                             int, default=1)
+    maxLag = pexConfig.Field("Maximum lag", int, default=1)
     nPixBorder = pexConfig.Field("Number of pixels to clip on the border",
                                  int, default=10)
     nSigmaClip = pexConfig.Field("Number of sigma to clip for corr calc", int,
                                  default=3)
     output_dir = pexConfig.Field("Output directory", str, default=".")
-    eotest_results_file = pexConfig.Field("EO test results filename",
-                                          str, default=None)
+    eotest_results_file = pexConfig.Field("EO test results filename", str,
+                                          default=None)
     verbose = pexConfig.Field("Turn verbosity on", bool, default=True)
-    backgroundBinSize = pexConfig.Field(
-        "Background bin size", int, default=128)
+    backgroundBinSize = pexConfig.Field("Background bin size", int, default=128)
 
 
-class BFResults(object):
-    def __init__(self, xcorrs, ycorrs, means):
-        self.xcorrs = xcorrs
-        self.ycorrs = ycorrs
-        self.means = means
+BFAmpResults = namedtuple('BFAmpResults',
+                          'xcorr xcorr_err ycorr ycorr_err mean'.split())
 
 
 class BFTask(pipeBase.Task):
@@ -81,15 +67,21 @@ class BFTask(pipeBase.Task):
     _DefaultName = "BrighterFatterTask"
 
     @pipeBase.timeMethod
-    def run(self, sensor_id, flat_files, meanidx=0, single_pairs=True,
-            dark_frame=None, mask_files=()):
+    def run(self, sensor_id, flat_files, single_pairs=True,
+            dark_frame=None, mask_files=(), flat2_finder=None,
+            bias_frame=None, meanidx=0):
         """
         Compute the average nearest neighbor correlation coefficients for
         all flat pairs given for a particular exposure time.  Additionally
         store the flat means per amp.
         """
+        if dark_frame is not None:
+            ccd_dark = MaskedCCD(dark_frame, mask_files=mask_files)
+
         if single_pairs:
-            flats = find_flats(flat_files)
+            if flat2_finder is None:
+                flat2_finder = find_flat2
+            flats = find_flats(flat_files, flat2_finder=flat2_finder)
         else:
             flats = split_flats(flat_files)
 
@@ -98,70 +90,50 @@ class BFTask(pipeBase.Task):
         # List with some number of flat pairs per exposure
         # [[(flat1,flat2),(flat1,flat2)],[(flat1,flat2),(flat1,flat2)]]
 
-        xcorrs = {}
-        ycorrs = {}
-        means = {}
-        BFResults = {}
+        BFResults = {amp: BFAmpResults([], [], [], [], []) for amp in all_amps}
 
-        for amp in all_amps:
-            self.log.info('on amp %s', amp)
-            xcorr_exp = []
-            xcorr_exp_err = []
-            ycorr_exp = []
-            ycorr_exp_err = []
-            mean_exp = []
+        for flat_pair in flats:
+            self.log.info("%s\n%s", *flat_pair)
+            ccd1 = MaskedCCD(flat_pair[0], mask_files=mask_files,
+                             bias_frame=bias_frame)
+            ccd2 = MaskedCCD(flat_pair[1], mask_files=mask_files,
+                             bias_frame=bias_frame)
 
-            for exposure in range(len(flats)):
-                xcorr_amp = []
-                xcorr_amp_err = []
-                ycorr_amp = []
-                ycorr_amp_err = []
-                mean_amp = []
-                dark_image = None
-                if dark_frame:
-                    ccd_dark = MaskedCCD(dark_frame, mask_files=mask_files)
-                    dark_image = ccd_dark.unbiased_and_trimmed_image(amp)
-                for flat_pair in flats[exposure]:
-                    print(flat_pair)
-                    ccd1 = MaskedCCD(flat_pair[0], mask_files=mask_files)
-                    ccd2 = MaskedCCD(flat_pair[1], mask_files=mask_files)
+            for amp in all_amps:
+                self.log.info('on amp %s', amp)
+                dark_image = None if dark_frame is None \
+                             else ccd_dark.unbiased_and_trimmed_image(amp)
 
-                    image1 = ccd1.unbiased_and_trimmed_image(amp)
-                    image2 = ccd2.unbiased_and_trimmed_image(amp)
-                    prepped_image1, mean1 = self.prep_image(image1, dark_image)
-                    prepped_image2, mean2 = self.prep_image(image2, dark_image)
-                    # Calculate the average mean of the pair
-                    avemean = (mean1+mean2)/2
-                    print(avemean)
+                image1 = ccd1.unbiased_and_trimmed_image(amp)
+                image2 = ccd2.unbiased_and_trimmed_image(amp)
+                prepped_image1, mean1 = self.prep_image(image1, dark_image)
+                prepped_image2, mean2 = self.prep_image(image2, dark_image)
 
-                    # Compute the correlations
-                    corr, corr_err = crossCorrelate(prepped_image1, prepped_image2, self.config.maxLag,
-                                                    self.config.nSigmaClip,self.config.backgroundBinSize)
-                    xcorr_amp.append(corr[1][0]/corr[0][0])
-                    xcorr_amp_err.append(corr_err[1][0])
-                    ycorr_amp_err.append(corr_err[0][1])
-                    ycorr_amp.append(corr[0][1]/corr[0][0])
-                    mean_amp.append(avemean)
+                # Calculate the average mean of the pair.
+                avemean = (mean1 + mean2)/2
+                self.log.info('%s', avemean)
 
-                xcorr_exp.append(np.mean(xcorr_amp))
-                xcorr_exp_err.append(np.mean(xcorr_amp_err))
-                ycorr_exp.append(np.mean(ycorr_amp))
-                ycorr_exp_err.append(np.mean(ycorr_amp_err))
-                mean_exp.append(np.mean(mean_amp))
+                # Compute the correlations.
+                corr, corr_err = crossCorrelate(prepped_image1, prepped_image2,
+                                                self.config.maxLag,
+                                                self.config.nSigmaClip,
+                                                self.config.backgroundBinSize)
 
-            # Store cov/var
-            xcorrs[amp] = xcorr_exp
-            ycorrs[amp] = ycorr_exp
-            means[amp] = mean_exp
-            BFResults[amp] = [xcorr_exp, xcorr_exp_err,
-                              ycorr_exp, ycorr_exp_err, mean_exp]
+                # Append the per-amp values for this pair to the
+                # corresponding lists.
+                BFResults[amp].xcorr.append(corr[1][0]/corr[0][0])
+                BFResults[amp].xcorr_err.append(corr_err[1][0])
+                BFResults[amp].ycorr.append(corr[0][1]/corr[0][0])
+                BFResults[amp].ycorr_err.append(corr_err[0][1])
+                BFResults[amp].mean.append(avemean)
 
-        self.writeEotestOutput(BFResults, all_amps, sensor_id, meanidx)
+        self.write_eotest_output(BFResults, sensor_id, meanidx=meanidx)
 
         return BFResults
 
-    def writeEotestOutput(self, BFResults, all_amps, sensor_id, meanidx=0):
-
+    def write_eotest_output(self, BFResults, sensor_id, meanidx=0):
+        """Write the correlation curves to a FITS file for plotting,
+        and the BF results to the eotest results file."""
         outfile = os.path.join(self.config.output_dir,
                                '%s_bf.fits' % sensor_id)
         output = fits.HDUList()
@@ -169,9 +141,10 @@ class BFTask(pipeBase.Task):
         colnames = []
         units = []
         columns = []
-        for amp in all_amps:
-            colnames.extend(['AMP%02i_xcorr' % amp, 'AMP%02i_xcorr_err' % amp, 'AMP%02i_ycorr' % amp,
-                             'AMP%02i_ycorr_err' % amp, 'AMP%02i_MEAN' % amp])
+        for amp in BFResults:
+            colnames.extend(['AMP%02i_XCORR' % amp, 'AMP%02i_XCORR_ERR' % amp,
+                             'AMP%02i_YCORR' % amp, 'AMP%02i_YCORR_ERR' % amp,
+                             'AMP%02i_MEAN' % amp])
             units.extend(
                 ['Unitless', 'Unitless', 'Unitless', 'Unitless', 'ADU'])
             columns.extend([np.array(BFResults[amp][0], dtype=np.float),
@@ -183,26 +156,26 @@ class BFTask(pipeBase.Task):
         fits_cols = [fits.Column(name=colnames[i], format=formats[i],
                                  unit=units[i], array=columns[i])
                      for i in range(len(columns))]
-        output.append(fitsTableFactory(fits_cols))
+        output.append(fitsTools.fitsTableFactory(fits_cols))
         output[-1].name = 'BF_STATS'
-        output[0].header['NAMPS'] = len(all_amps)
-        fitsWriteto(output, outfile, clobber=True)
+        output[0].header['NAMPS'] = len(BFResults)
+        fitsTools.fitsWriteto(output, outfile, clobber=True)
+
         # Output a file of the coefficients at a given mean, given
         # as the index of the exposure in the list.
+        results_file = self.config.eotest_results_file
+        if results_file is None:
+            results_file = os.path.join(self.config.output_dir,
+                                        '%s_eotest_results.fits' % sensor_id)
 
-        results_file = os.path.join(self.config.output_dir,
-                                    '%s_eotest_results.fits' % sensor_id)
+        results = EOTestResults(results_file, namps=len(BFResults))
 
-        results = EOTestResults(results_file, namps=len(all_amps))
-
-        for amp in all_amps:
-            results.add_seg_result(amp, 'xcorr', BFResults[amp][0][meanidx])
-            results.add_seg_result(
-                amp, 'xcorr_err', BFResults[amp][1][meanidx])
-            results.add_seg_result(amp, 'ycorr', BFResults[amp][2][meanidx])
-            results.add_seg_result(
-                amp, 'ycorr_err', BFResults[amp][3][meanidx])
-            results.add_seg_result(amp, 'MEAN', BFResults[amp][4][meanidx])
+        for amp in BFResults:
+            results.add_seg_result(amp, 'BF_XCORR', BFResults[amp][0][meanidx])
+            results.add_seg_result(amp, 'BF_XCORR_ERR', BFResults[amp][1][meanidx])
+            results.add_seg_result(amp, 'BF_YCORR', BFResults[amp][2][meanidx])
+            results.add_seg_result(amp, 'BF_YCORR_ERR', BFResults[amp][3][meanidx])
+            results.add_seg_result(amp, 'BF_MEAN', BFResults[amp][4][meanidx])
 
         results.write(clobber=True)
 
