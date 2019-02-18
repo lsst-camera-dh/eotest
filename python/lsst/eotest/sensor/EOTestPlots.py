@@ -421,7 +421,7 @@ class EOTestPlots(object):
                                verticalalignment='top', size='x-small')
 
     def bf_curves(self, xrange=None, yrange=None, figsize=(6, 8),
-                  bf_file=None):
+                  bf_file=None, adu_max=1e5):
         if bf_file is None:
             bf_file = self._fullpath('%s_bf.fits' % self.sensor_id)
         fig = plt.figure(figsize=figsize)
@@ -432,6 +432,9 @@ class EOTestPlots(object):
                 mean = bf[1].data.field('AMP%02i_MEAN' % amp)
                 xcorr = bf[1].data.field('AMP%02i_XCORR' % amp)
                 index = np.argsort(mean)
+                mean = mean[index]
+                xcorr = xcorr[index]
+                index = np.where(mean < adu_max)
                 plt.plot(mean[index], xcorr[index], label='%s' % amp)
             plt.xscale('log')
             plt.xlabel('mean signal (ADU)', fontsize='small')
@@ -445,6 +448,9 @@ class EOTestPlots(object):
                 mean = bf[1].data.field('AMP%02i_MEAN' % amp)
                 ycorr = bf[1].data.field('AMP%02i_YCORR' % amp)
                 index = np.argsort(mean)
+                mean = mean[index]
+                xcorr = xcorr[index]
+                index = np.where(mean < adu_max)
                 plt.plot(mean[index], ycorr[index], label='%s' % amp)
             plt.xscale('log')
             plt.xlabel('mean signal (ADU)', fontsize='small')
