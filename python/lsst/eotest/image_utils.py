@@ -441,51 +441,6 @@ def check_temperatures(files, tol, setpoint=None, warn_only=False):
             else:
                 raise RuntimeError(what)
 
-def make_ccd_mosaic(infile, bias_frame=None, gains=None, fit_order=1):
-    """Combine amplifier image arrays into a single calibrated CCD image mosaic."""
-    ccd = MaskedCCD(infile, bias_frame=bias_frame)
-    foo = fits.open(infile)
-    datasec = parse_geom_kwd(foo[1].header['DATASEC'])
-    nx_segments = 8
-    ny_segments = 2
-    nx = nx_segments*(datasec['xmax'] - datasec['xmin'] + 1)
-    ny = ny_segments*(datasec['ymax'] - datasec['ymin'] + 1)
-    mosaic = np.zeros((ny, nx), dtype=np.float32)
-
-    for ypos in range(ny_segments):
-        for xpos in range(nx_segments):
-            amp = ypos*nx_segments + xpos + 1
-
-            detsec = parse_geom_kwd(foo[amp].header['DETSEC'])
-            xmin = nx - max(detsec['xmin'], detsec['xmax'])
-            xmax = nx - min(detsec['xmin'], detsec['xmax']) + 1
-            ymin = ny - max(detsec['ymin'], detsec['ymax'])
-            ymax = ny - min(detsec['ymin'], detsec['ymax']) + 1
-            #
-            # Extract bias-subtracted image for this segment
-            #
-            segment_image = ccd.unbiased_and_trimmed_image(amp, fit_order=fit_order)
-            subarr = segment_image.getImage().getArray()
-            #
-            # Determine flips in x- and y- direction
-            #
-            if detsec['xmax'] > detsec['xmin']: # flip in x-direction
-                subarr = subarr[:, ::-1]
-            if detsec['ymax'] > detsec['ymin']: # flip in y-direction
-                subarr = subarr[::-1, :]
-            #
-            # Convert from ADU to e-
-            #
-            if gains is not None:
-                subarr *= gains[amp]
-            #
-            # Set sub-array to the image mosaic
-            #
-            mosaic[ymin:ymax, xmin:xmax] = subarr
-
-    image = afwImage.ImageF(mosaic)
-    return image
-
 class SubRegionSampler(object):
     def __init__(self, dx, dy, nsamp, imaging):
         self.dx = dx

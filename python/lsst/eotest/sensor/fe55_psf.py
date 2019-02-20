@@ -20,7 +20,7 @@ import lsst.afw.image as afwImage
 import lsst.afw.math as afwMath
 
 import lsst.eotest.image_utils as imutils
-from MaskedCCD import MaskedCCD, MaskedCCDBiasImageException
+from .MaskedCCD import MaskedCCD, MaskedCCDBiasImageException
 
 import pdb
 
