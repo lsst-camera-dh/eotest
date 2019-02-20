@@ -13,58 +13,10 @@ import lsst.afw.image as afwImage
 import lsst.pex.config as pexConfig
 import lsst.pipe.base as pipeBase
 from lsst.pipe.tasks.characterizeImage import CharacterizeImageTask, CharacterizeImageConfig
-try:
-    import lsst.meas.extensions.shapeHSM
-except ModuleNotFoundError:
-    print("Missing meas_extensions_shapeHSM: lsst_distrib required")
+import lsst.meas.extensions.shapeHSM
 
 from .MaskedCCD import MaskedCCD
 from .AmplifierGeometry import parse_geom_kwd
-
-def make_ccd_mosaic(infile, bias_frame=None, gains=None, fit_order=1):
-    """Combine amplifier image arrays into a single calibrated CCD image mosaic."""
-    ccd = MaskedCCD(infile, bias_frame=bias_frame)
-    foo = fits.open(infile)
-    datasec = parse_geom_kwd(foo[1].header['DATASEC'])
-    nx_segments = 8
-    ny_segments = 2
-    nx = nx_segments*(datasec['xmax'] - datasec['xmin'] + 1)
-    ny = ny_segments*(datasec['ymax'] - datasec['ymin'] + 1)
-    mosaic = np.zeros((ny, nx), dtype=np.float32) # swap x/y to get to camera coordinates
-
-    for ypos in range(ny_segments):
-        for xpos in range(nx_segments):
-            amp = ypos*nx_segments + xpos + 1
-
-            detsec = parse_geom_kwd(foo[amp].header['DETSEC'])
-            xmin = nx - max(detsec['xmin'], detsec['xmax'])
-            xmax = nx - min(detsec['xmin'], detsec['xmax']) + 1
-            ymin = ny - max(detsec['ymin'], detsec['ymax'])
-            ymax = ny - min(detsec['ymin'], detsec['ymax']) + 1
-            #
-            # Extract bias-subtracted image for this segment
-            #
-            segment_image = ccd.unbiased_and_trimmed_image(amp, fit_order=fit_order)
-            subarr = segment_image.getImage().getArray()
-            #
-            # Determine flips in x- and y- direction
-            #
-            if detsec['xmax'] > detsec['xmin']: # flip in x-direction
-                subarr = subarr[:, ::-1]
-            if detsec['ymax'] > detsec['ymin']: # flip in y-direction
-                subarr = subarr[::-1, :]
-            #
-            # Convert from ADU to e-
-            #
-            if gains is not None:
-                subarr *= gains[amp]
-            #
-            # Set sub-array to the image mosaic
-            #
-            mosaic[ymin:ymax, xmin:xmax] = subarr
-
-    image = afwImage.ImageF(mosaic)
-    return image
 
 class SpotConfig(pexConfig.Config):
     """Configuration for Spot analysis task"""
@@ -87,11 +39,19 @@ class SpotTask(pipeBase.Task):
     _DefaultName = "SpotTask"
 
     @pipeBase.timeMethod
-    def run(self, sensor_id, infile, gains, bias_frame=None, oscan_fit_order=1):
+    def run(self, sensor_id, infile, gains, bias_frame=None):
 
         if self.config.verbose:
             self.log.info("Input file:")
             self.log.info("  {0}".format(infile))
+        #
+        # Process a CCD image mosaic
+        #
+        if self.config.verbose:
+            self.log.info("processing {0}".format(infile))
+        image = imutils.make_ccd_mosaic(infile, bias_frame=bias_frame, gains=gains)
+        exposure = afwImage.ExposureF(image.getBBox())
+        exposure.setImage(image)
         #
         # Set up characterize task configuration
         #
@@ -105,21 +65,8 @@ class SpotTask(pipeBase.Task):
         charConfig.detection.background.binSize = 10
         charConfig.detection.thresholdType = "stdev"
         charConfig.detection.thresholdValue = nsig
-        try:
-            charConfig.measurement.plugins.names |= ["ext_shapeHSM_HsmSourceMoments"]
-        except pexConfig.config.FieldValidationError:
-            if self.config.verbose:
-                self.log.info("HSM plugin not included, skipping measurement...")
+        charConfig.measurement.plugins.names |= ["ext_shapeHSM_HsmSourceMoments"]
         charTask = CharacterizeImageTask(config=charConfig)
-        #
-        # Process a CCD image mosaic
-        #
-        if self.config.verbose:
-            self.log.info("processing {0}".format(infile))
-        image = make_ccd_mosaic(infile, bias_frame=bias_frame, gains=gains,
-                                fit_order=oscan_fit_order)
-        exposure = afwImage.ExposureF(image.getBBox())
-        exposure.setImage(image)
         result = charTask.characterize(exposure)
         src = result.sourceCat
         if self.config.verbose:
