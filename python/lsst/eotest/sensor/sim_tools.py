@@ -339,7 +339,7 @@ def fitsFile(ccd_segments):
 
 def writeFits(ccd_segments, outfile, overwrite=True):
     output = fitsFile(ccd_segments)
-    if clobber:
+    if overwrite:
         try:
             os.remove(outfile)
         except OSError:
