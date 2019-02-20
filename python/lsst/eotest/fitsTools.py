@@ -18,9 +18,8 @@ def fitsWriteto(hdulist, outfile, **kwds):
         del kwds['overwrite']
     warnings.resetwarnings()
     warnings.filterwarnings('ignore', category=UserWarning, append=True)
+    warnings.filterwarnings('ignore', category=fits.verify.VerifyWarning, append=True)
     hdulist.writeto(outfile, **kwds)
-    warnings.resetwarnings()
-    warnings.filterwarnings('always', category=UserWarning, append=True)
 
 
 if __name__ == '__main__':
