@@ -18,7 +18,7 @@ import lsst.meas.extensions.shapeHSM
 from .MaskedCCD import MaskedCCD
 from .AmplifierGeometry import parse_geom_kwd
 
-def make_ccd_mosaic(infile, bias_frame=None, gains=None, fit_order=1):
+def make_ccd_mosaic(infile, bias_frame=None, gains=None):
     """Combine amplifier image arrays into a single calibrated CCD image mosaic."""
     ccd = MaskedCCD(infile, bias_frame=bias_frame)
     foo = fits.open(infile)
@@ -41,7 +41,7 @@ def make_ccd_mosaic(infile, bias_frame=None, gains=None, fit_order=1):
             #
             # Extract bias-subtracted image for this segment
             #
-            segment_image = ccd.unbiased_and_trimmed_image(amp, fit_order=fit_order)
+            segment_image = ccd.unbiased_and_trimmed_image(amp)
             subarr = segment_image.getImage().getArray()
             #
             # Determine flips in x- and y- direction
