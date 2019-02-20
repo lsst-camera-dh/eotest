@@ -68,7 +68,6 @@ class FlatPairStats(object):
         self.flat_mean = fmean
         self.flat_var = fvar
 
-
 def flat_pair_stats(ccd1, ccd2, amp, mask_files=(), bias_frame=None):
     if ccd1.md.get('EXPTIME') != ccd2.md.get('EXPTIME'):
         raise RuntimeError("Exposure times for files %s, %s do not match"
@@ -86,8 +85,8 @@ def flat_pair_stats(ccd1, ccd2, amp, mask_files=(), bias_frame=None):
     #
     # Extract imaging region for segments of both CCDs.
     #
-    image1 = ccd1.unbiased_and_trimmed_image(amp)
-    image2 = ccd2.unbiased_and_trimmed_image(amp)
+    image1 = ccd1.unbiased_and_trimmed_image(amp, bias_frame=bias_frame)
+    image2 = ccd2.unbiased_and_trimmed_image(amp, bias_frame=bias_frame)
     if ccd1.imfile == ccd2.imfile:
         # Don't have pairs of flats, so estimate noise and gain
         # from a single frame, ignoring FPN.
@@ -128,7 +127,7 @@ class PtcTask(pipeBase.Task):
 
     @pipeBase.timeMethod
     def run(self, sensor_id, infiles, mask_files, gains, binsize=1,
-            bias_frame=None):
+            bias_frame=None, flat2_finder=find_flat2):
         outfile = os.path.join(self.config.output_dir,
                                '%s_ptc.fits' % sensor_id)
         all_amps = imutils.allAmps(infiles[0])
@@ -136,7 +135,7 @@ class PtcTask(pipeBase.Task):
         exposure = []
         file1s = sorted([item for item in infiles if item.find('flat1') != -1])
         for flat1 in file1s:
-            flat2 = find_flat2(flat1)
+            flat2 = flat2_finder(flat1)
             if self.config.verbose:
                 self.log.info("processing %s" % flat1)
             exposure.append(exptime(flat1))
@@ -147,7 +146,7 @@ class PtcTask(pipeBase.Task):
             for amp in ccd1:
                 results = flat_pair_stats(ccd1, ccd2, amp,
                                           mask_files=mask_files,
-                                          bias_frame=bias_frame)
+                                          bias_frame=bias_frame) 
                 ptc_stats[amp][0].append(results.flat_mean)
                 ptc_stats[amp][1].append(results.flat_var)
         self._fit_curves(ptc_stats, sensor_id)

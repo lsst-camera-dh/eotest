@@ -89,48 +89,51 @@ def plot_flat(infile, nsig=3, cmap=pylab.cm.hot, win=None, subplot=(1, 1, 1),
               figsize=None, wl=None, gains=None, use_ds9=False, outfile=None,
               title=None, annotation=''):
     ccd = MaskedCCD(infile)
-    foo = fits.open(infile)
-    datasec = parse_geom_kwd(foo[1].header['DATASEC'])
-    # Specialize to science sensor or wavefront sensor geometries.
-    nx_segments = 8
-    ny_segments = len(ccd)//nx_segments
-    nx = nx_segments*(datasec['xmax'] - datasec['xmin'] + 1)
-    ny = ny_segments*(datasec['ymax'] - datasec['ymin'] + 1)
-    mosaic = np.zeros((ny, nx), dtype=np.float)
-    amp_coords = {}
-    for ypos in range(ny_segments):
-        for xpos in range(nx_segments):
-            amp = ypos*nx_segments + xpos + 1
-            #
-            # Determine subarray boundaries in the mosaicked image array
-            # from DETSEC keywords for each segment.
-            detsec = parse_geom_kwd(foo[amp].header['DETSEC'])
-            xmin = nx - max(detsec['xmin'], detsec['xmax'])
-            xmax = nx - min(detsec['xmin'], detsec['xmax']) + 1
-            ymin = ny - max(detsec['ymin'], detsec['ymax'])
-            ymax = ny - min(detsec['ymin'], detsec['ymax']) + 1
-            #
-            # Save coordinates of segment for later use
-            #
-            amp_coords[(xpos, ypos)] = xmin, xmax, ymin, ymax
-            #
-            # Extract the bias-subtracted masked image for this segment.
-            segment_image = ccd.unbiased_and_trimmed_image(amp)
-            subarr = segment_image.getImage().getArray()
-            #
-            # Determine flips in x- and y-directions in order to
-            # get the (1, 1) pixel in the lower right corner.
-            if detsec['xmax'] > detsec['xmin']:  # flip in x-direction
-                subarr = subarr[:, ::-1]
-            if detsec['ymax'] > detsec['ymin']:  # flip in y-direction
-                subarr = subarr[::-1, :]
-            #
-            # Convert from ADU to e-
-            if gains is not None:
-                subarr *= gains[amp]
-            #
-            # Set the subarray in the mosaicked image.
-            mosaic[ymin:ymax, xmin:xmax] = subarr
+    with fits.open(infile) as foo:
+        if wl is None:
+            # Extract wavelength from file
+            wl = foo[0].header['MONOWL']
+        datasec = parse_geom_kwd(foo[1].header['DATASEC'])
+        # Specialize to science sensor or wavefront sensor geometries.
+        nx_segments = 8
+        ny_segments = len(ccd)//nx_segments
+        nx = nx_segments*(datasec['xmax'] - datasec['xmin'] + 1)
+        ny = ny_segments*(datasec['ymax'] - datasec['ymin'] + 1)
+        mosaic = np.zeros((ny, nx), dtype=np.float)
+        amp_coords = {}
+        for ypos in range(ny_segments):
+            for xpos in range(nx_segments):
+                amp = ypos*nx_segments + xpos + 1
+                #
+                # Determine subarray boundaries in the mosaicked image array
+                # from DETSEC keywords for each segment.
+                detsec = parse_geom_kwd(foo[amp].header['DETSEC'])
+                xmin = nx - max(detsec['xmin'], detsec['xmax'])
+                xmax = nx - min(detsec['xmin'], detsec['xmax']) + 1
+                ymin = ny - max(detsec['ymin'], detsec['ymax'])
+                ymax = ny - min(detsec['ymin'], detsec['ymax']) + 1
+                #
+                # Save coordinates of segment for later use
+                #
+                amp_coords[(xpos, ypos)] = xmin, xmax, ymin, ymax
+                #
+                # Extract the bias-subtracted masked image for this segment.
+                segment_image = ccd.unbiased_and_trimmed_image(amp)
+                subarr = segment_image.getImage().getArray()
+                #
+                # Determine flips in x- and y-directions in order to
+                # get the (1, 1) pixel in the lower right corner.
+                if detsec['xmax'] > detsec['xmin']:  # flip in x-direction
+                    subarr = subarr[:, ::-1]
+                if detsec['ymax'] > detsec['ymin']:  # flip in y-direction
+                    subarr = subarr[::-1, :]
+                #
+                # Convert from ADU to e-
+                if gains is not None:
+                    subarr *= gains[amp]
+                #
+                # Set the subarray in the mosaicked image.
+                mosaic[ymin:ymax, xmin:xmax] = subarr
     #
     # Display the mosiacked image in ds9 using afwImage.
     if use_ds9:
@@ -161,9 +164,6 @@ def plot_flat(infile, nsig=3, cmap=pylab.cm.hot, win=None, subplot=(1, 1, 1),
     image = win.axes[-1].imshow(mosaic, interpolation='nearest', cmap=cmap)
     norm = mpl.colors.Normalize(vmin=vmin, vmax=vmax)
     image.set_norm(norm)
-    if wl is None:
-        # Extract wavelength from file
-        wl = foo[0].header['MONOWL']
     if title is None:
         title = '%i nm' % wl
     win.axes[-1].set_title(title)

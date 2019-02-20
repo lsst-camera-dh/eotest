@@ -11,7 +11,6 @@ import astropy.io.fits as fits
 from lsst.eotest.fitsTools import fitsTableFactory, fitsWriteto
 import lsst.eotest.image_utils as imutils
 from .prnu import prnu
-import lsst.afw.image as afwImage
 import lsst.pex.config as pexConfig
 import lsst.pipe.base as pipeBase
 
@@ -46,7 +45,7 @@ class PrnuTask(pipeBase.Task):
                 self.log.info("Processing: wl = %i nm, %s" % (wl, wl_index[wl]))
                 pix_stdev, pix_mean = prnu(wl_index[wl], mask_files, gains,
                                            bias_frame=bias_frame,
-                                           correction_image=correction_image)
+                                           correction_image=correction_image) 
                 results[wl] = pix_stdev, pix_mean
                 line = "%6.1f  %12.4e  %12.4e  %12.4e" \
                     % (wl, pix_stdev, pix_mean, pix_stdev/pix_mean)

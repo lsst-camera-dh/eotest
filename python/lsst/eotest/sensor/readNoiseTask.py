@@ -14,7 +14,6 @@ import lsst.eotest.image_utils as imutils
 from .MaskedCCD import MaskedCCD
 from .EOTestResults import EOTestResults
 from .read_noise import noise_dists, NoiseDistributions
-import lsst.afw.geom as afwGeom
 
 import lsst.pex.config as pexConfig
 import lsst.pipe.base as pipeBase
