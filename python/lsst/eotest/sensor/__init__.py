@@ -48,6 +48,7 @@ from .ptcTask import PtcTask
 from .persistenceTask import PersistenceTask
 from .fe55CteTask import Fe55CteTask
 from .BFTask import BFTask
+from .spotTask import SpotTask
 #
 # Turn off debug messages emitted by LSST Stack
 #

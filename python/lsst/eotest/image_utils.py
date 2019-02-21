@@ -441,7 +441,6 @@ def check_temperatures(files, tol, setpoint=None, warn_only=False):
             else:
                 raise RuntimeError(what)
 
-
 class SubRegionSampler(object):
     def __init__(self, dx, dy, nsamp, imaging):
         self.dx = dx
