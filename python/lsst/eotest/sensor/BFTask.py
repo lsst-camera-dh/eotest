@@ -7,7 +7,8 @@ import os
 import glob
 from collections import namedtuple
 import numpy as np
-import astropy.io.fits as fits
+from astropy.io import fits
+import lsst.afw.geom as afwGeom
 import lsst.afw.math as afwMath
 import lsst.pex.config as pexConfig
 import lsst.pipe.base as pipeBase
@@ -197,11 +198,14 @@ class BFTask(pipeBase.Task):
         if dark_image is not None:
             local_exp -= dark_image.getImage()
 
+        # Crop the image within a border region.
+        bbox = local_exp.getBBox()
+        bbox.grow(-border)
+        local_exp = local_exp[bbox]
+
         # Calculate the mean of the image.
-        mean = afwMath.makeStatistics(local_exp[border:-border, border:-border],
-                                      afwMath.MEAN, sctrl).getValue()
-        # Crop the image.
-        local_exp = local_exp[border:-border, border:-border]
+        mean = afwMath.makeStatistics(local_exp, afwMath.MEAN,
+                                      sctrl).getValue()
 
         return local_exp, mean
 
@@ -228,17 +232,24 @@ def crossCorrelate(maskedimage1, maskedimage2, maxLag, sigma, binsize):
     diff -= bgImg
 
     # Measure the correlations
-    dim0 = diff[0: -maxLag, : -maxLag]
+    x0, y0 = diff.getXY0()
+    width, height = diff.getDimensions()
+    bbox_extent = afwGeom.Extent2I(width - maxLag, height - maxLag)
+
+    bbox = afwGeom.Box2I(afwGeom.Point2I(x0, y0), bbox_extent)
+    dim0 = diff[bbox].clone()
     dim0 -= afwMath.makeStatistics(dim0, afwMath.MEANCLIP, sctrl).getValue()
-    width, height = dim0.getDimensions()
+
     xcorr = np.zeros((maxLag + 1, maxLag + 1), dtype=np.float64)
     xcorr_err = np.zeros((maxLag + 1, maxLag + 1), dtype=np.float64)
 
     for xlag in range(maxLag + 1):
         for ylag in range(maxLag + 1):
-            dim_xy = diff[xlag:xlag + width, ylag: ylag + height].clone()
-            dim_xy -= afwMath.makeStatistics(dim_xy,
-                                             afwMath.MEANCLIP, sctrl).getValue()
+            bbox_lag = afwGeom.Box2I(afwGeom.Point2I(x0 + xlag, y0 + ylag),
+                                     bbox_extent)
+            dim_xy = diff[bbox_lag].clone()
+            dim_xy -= afwMath.makeStatistics(dim_xy, afwMath.MEANCLIP,
+                                             sctrl).getValue()
             dim_xy *= dim0
             xcorr[xlag, ylag] = afwMath.makeStatistics(
                 dim_xy, afwMath.MEANCLIP, sctrl).getValue()
