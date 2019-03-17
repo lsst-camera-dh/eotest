@@ -1,6 +1,7 @@
 setupRequired(afw)
 setupRequired(pipe_tasks)
 setupRequired(ip_isr)
+setupRequired(meas_extensions_shapeHSM)
 
 envPrepend(PATH, ${PRODUCT_DIR}/bin)
 
