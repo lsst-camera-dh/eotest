@@ -59,6 +59,10 @@ except ModuleNotFoundError as eobj:
 #
 try:
     import lsst.log
-    lsst.log.setLevel(lsst.log.getDefaultLoggerName(), lsst.log.INFO)
 except ImportError:
     pass
+else:
+    try:
+        lsst.log.setLevel(lsst.log.getDefaultLoggerName(), lsst.log.INFO)
+    except AttributeError:
+        lsst.log.setLevel(lsst.log.getDefaultLogger().getName(), lsst.log.INFO)
