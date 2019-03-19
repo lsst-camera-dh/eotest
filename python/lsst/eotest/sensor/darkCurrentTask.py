@@ -7,13 +7,14 @@ units of e-/sec/pixel.
 from __future__ import print_function
 from __future__ import absolute_import
 import os
+import warnings
 import numpy as np
 import astropy.io.fits as fits
+from astropy.utils.exceptions import AstropyWarning, AstropyUserWarning
 from lsst.eotest.fitsTools import fitsWriteto
 import lsst.eotest.image_utils as imutils
 from .MaskedCCD import MaskedCCD
 from .EOTestResults import EOTestResults
-import lsst.afw.image as afwImage
 import lsst.pex.config as pexConfig
 import lsst.pipe.base as pipeBase
 
@@ -60,8 +61,8 @@ class DarkCurrentTask(pipeBase.Task):
         for amp in ccd:
             imaging_region = ccd.amp_geom.imaging
             overscan = ccd.amp_geom.serial_overscan
-            image = imutils.unbias_and_trim(ccd[amp].getImage(),
-                                            overscan, imaging_region)
+            image = imutils.unbias_and_trim(im=ccd[amp].getImage(),
+                                            overscan=overscan, imaging=imaging_region) 
             mask = imutils.trim(ccd[amp].getMask(), imaging_region)
             imarr = image.getArray()
             mskarr = mask.getArray()
@@ -74,7 +75,7 @@ class DarkCurrentTask(pipeBase.Task):
             dark_curr_pixels.extend(unmasked)
             try:
                 dark95s[amp] = unmasked[int(len(unmasked)*0.95)]
-                median = unmasked[len(unmasked)/2]
+                median = unmasked[len(unmasked)//2]
             except IndexError as eobj:
                 print(str(eobj))
                 dark95s[amp] = -1.
@@ -101,14 +102,23 @@ class DarkCurrentTask(pipeBase.Task):
             results_file = os.path.join(self.config.output_dir,
                                         '%s_eotest_results.fits' % sensor_id)
         results = EOTestResults(results_file, namps=len(ccd))
-        output = fits.open(medfile)
-        for i, dark in enumerate(dark_files):
-            output[0].header['DARK%02i' % i] = os.path.basename(dark)
-        # Write overall dark current 95th percentile
-        results.output['AMPLIFIER_RESULTS'].header['DARK95'] = darkcurr95
-        for amp in ccd:
-            output[0].header['DARK95%s'%imutils.channelIds[amp]] = dark95s[amp]
-            results.add_seg_result(amp, 'DARK_CURRENT_95', dark95s[amp])
-        fitsWriteto(output, medfile, overwrite=True, checksum=True)
-        results.write(clobber=True)
+        with warnings.catch_warnings():
+            warnings.filterwarnings('ignore', category=UserWarning, append=True)
+            warnings.filterwarnings('ignore', category=AstropyWarning,
+                                    append=True)
+            warnings.filterwarnings('ignore', category=AstropyUserWarning,
+                                    append=True)
+
+            with fits.open(medfile) as output:
+                for i, dark in enumerate(dark_files):
+                    output[0].header['DARK%02i' % i] = os.path.basename(dark)
+                # Write overall dark current 95th percentile
+                results.output['AMPLIFIER_RESULTS'].header['DARK95'] \
+                    = darkcurr95
+                for amp in ccd:
+                    output[0].header['DARK95%s'%imutils.channelIds[amp]] \
+                        = dark95s[amp]
+                    results.add_seg_result(amp, 'DARK_CURRENT_95', dark95s[amp])
+                fitsWriteto(output, medfile, overwrite=True, checksum=True)
+                results.write(clobber=True)
         return dark_curr_pixels_per_amp, dark95s

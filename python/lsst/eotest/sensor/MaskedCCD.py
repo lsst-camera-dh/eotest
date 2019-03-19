@@ -7,12 +7,12 @@ afwMath.makeStatistics object.
 """
 from __future__ import print_function
 from __future__ import absolute_import
+import warnings
 import astropy.io.fits as fits
+from astropy.utils.exceptions import AstropyWarning, AstropyUserWarning
 from lsst.eotest.fitsTools import fitsWriteto
 from .AmplifierGeometry import makeAmplifierGeometry
 import lsst.daf.base as dafBase
-import lsst.afw
-import lsst.afw.geom as afwGeom
 import lsst.afw.image as afwImage
 import lsst.afw.math as afwMath
 import lsst.ip.isr as ipIsr
@@ -104,53 +104,149 @@ class MaskedCCD(dict):
         self.stat_ctrl.setAndMask(mask_bits)
         return self.stat_ctrl
 
-    def bias_image_using_overscan(self, amp, overscan=None, fit_order=1):
+    def write_bias_subtracted_MEF(self, outfile, gains=None, overwrite=True):
+        """
+        Write a bias-subtracted MEF file with the same format as
+        the original raw FITS file.
+
+        Parameters
+        ----------
+        outfile: str
+            Output filename.
+        gains: dict [None]
+            Gains to apply to pixel data.  If None, then pixel values are
+            written as ADUs.
+        overwrite: bool [True]
+            Flag to overwrite an existing output file.
+        """
+        hdulist = fits.HDUList()
+        with fits.open(self.imfile) as template:
+            hdulist.append(template[0])
+            hdulist[0].header['ORIGFILE'] = hdulist[0].header['FILENAME']
+            hdulist[0].header['FILENAME'] = outfile
+            for amp in self:
+                imarr = self.bias_subtracted_image(amp).getImage().getArray()
+                if gains is not None:
+                    imarr *= gains[amp]
+                hdulist.append(fits.CompImageHDU(data=imarr,
+                                                 header=template[amp].header))
+            with warnings.catch_warnings():
+                for warning in (UserWarning, AstropyWarning,
+                                AstropyUserWarning):
+                    warnings.filterwarnings('ignore', category=warning,
+                                            append=True)
+                fitsWriteto(hdulist, outfile, overwrite=True)
+
+
+    def bias_image_using_overscan(self, amp, overscan=None, **kwargs):
+        """
+        Generate a bias image containing offset values calculated from 
+        bias(), bias_row(), bias_func() or bias_spline(). The default bias method
+        is set to bias_row() in image_utils.py. Keyword arguments can be passed 
+        depending on which bias method is used.
+
+        Keyword Arguments:
+        fit_order: The order of the polynomial. This only needs to be specified when 
+            using the 'func' method. The default is: 1.
+        k: The degree of the spline fit. This only needs to be specified when using 
+            the 'spline' method. The default is: 3.
+        s: The amount of smoothing to be applied to the fit. This only needs to be 
+            specified when using the 'spline' method. The default is: 18000.
+        t: The number of knots. If None, finds the number of knots to use for a given 
+            smoothing factor, s. This only needs to be specified when using the 'spline' 
+            method. The default is: None. 
+        """
         if overscan is None:
             overscan = self.amp_geom.serial_overscan
         try:
-            return imutils.bias_image(self[amp], overscan=overscan,
-                                      fit_order=fit_order)
+            return imutils.bias_image(self[amp], overscan=overscan, **kwargs)
         except pexExcept.LSST_RUNTIME_EXCEPTION as eobj:
             raise MaskedCCDBiasImageException("DM stack error generating bias "
                                               + "image from overscan region:\n"
                                               + str(eobj))
 
-    def bias_image(self, amp, overscan=None, fit_order=1):
+    def bias_image(self, amp, overscan=None, **kwargs):
         """
         Use separately stored metadata to determine file-specified
-        overscan region.
+        overscan region. If bias_frame is not given, then calculate
+        the bias image using bias(), bias_row(), bias_func() or bias_spline().
+        The default bias method is set to bias_row() in image_utils.py. 
+        Keyword arguments can be passed depending on which bias method is used.
+
+        Keyword Arguments:
+        fit_order: The order of the polynomial. This only needs to be specified when
+            using the 'func' method. The default is: 1.
+        k: The degree of the spline fit. This only needs to be specified when using
+            the 'spline' method. The default is: 3.
+        s: The amount of smoothing to be applied to the fit. This only needs to be
+            specified when using the 'spline' method. The default is: 18000.
+        t: The number of knots. If None, finds the number of knots to use for a given
+            smoothing factor, s. This only needs to be specified when using the 'spline'
+            method. The default is: None.
         """
         if self.bias_frame is not None:
             #
             # Use bias frame, if available, instead of overscan region
             #
             return self.bias_frame[amp].getImage()
-        return self.bias_image_using_overscan(amp, overscan=overscan,
-                                              fit_order=fit_order)
+        return self.bias_image_using_overscan(amp, overscan=overscan, **kwargs)
 
-    def bias_subtracted_image(self, amp, overscan=None, fit_order=1):
+    def bias_subtracted_image(self, amp, overscan=None, **kwargs):
+        """
+        Subtract a bias image to correct for the offset. A bias correction is also 
+        applied if a base_frame is passed. The bias image with the offset values is
+        generated using either of the bias(), bias_row(), bias_func() or bias_spline()
+        methods from image_utils.py. The default bias method is set to bias_row().  
+        Keyword arguments can be passed depending on which bias method is used.
+
+        Keyword Arguments:
+        fit_order: The order of the polynomial. This only needs to be specified when
+            using the 'func' method. The default is: 1.
+        k: The degree of the spline fit. This only needs to be specified when using
+            the 'spline' method. The default is: 3.
+        s: The amount of smoothing to be applied to the fit. This only needs to be
+            specified when using the 'spline' method. The default is: 18000.
+        t: The number of knots. If None, finds the number of knots to use for a given
+            smoothing factor, s. This only needs to be specified when using the 'spline'
+            method. The default is: None.
+        """
         if self.bias_frame is not None:
             # Make a deep copy of the bias frame.
             bias = self.bias_frame[amp].Factory(self.bias_frame[amp])
             # Subtract x-independent component using overscan.
             bias -= \
                 self.bias_frame.bias_image_using_overscan(amp,
-                                                          overscan=overscan,
-                                                          fit_order=fit_order)
+                                                          overscan=overscan, **kwargs)
             # Subtract x-independent component of image for this amp
             # using overscan.
             self[amp] -= \
-                self.bias_image_using_overscan(amp, overscan=overscan,
-                                               fit_order=fit_order)
+                self.bias_image_using_overscan(amp, overscan=overscan, **kwargs)
             # Subtract structured, x-dependent part.
             self[amp] -= bias
         else:
-            self[amp] -= self.bias_image(amp, overscan, fit_order)
+            self[amp] -= self.bias_image(amp, overscan, **kwargs)
         return self[amp]
 
     def unbiased_and_trimmed_image(self, amp, overscan=None,
-                                   imaging=None, fit_order=1):
-        unbiased_image = self.bias_subtracted_image(amp, overscan, fit_order)
+                                   imaging=None, **kwargs):
+        """
+        Return an offset-corrected image where the offset values generated using 
+        either of the bias(), bias_row(), bias_func() or bias_spline() methods from 
+        image_utils.py. The default bias method is set to bias_row(). Keyword arguments 
+        can be passed depending on which bias method is used.
+
+        Keyword Arguments:
+        fit_order: The order of the polynomial. This only needs to be specified when
+            using the 'func' method. The default is: 1.
+        k: The degree of the spline fit. This only needs to be specified when using
+            the 'spline' method. The default is: 3.
+        s: The amount of smoothing to be applied to the fit. This only needs to be
+            specified when using the 'spline' method. The default is: 18000.
+        t: The number of knots. If None, finds the number of knots to use for a given
+            smoothing factor, s. This only needs to be specified when using the 'spline'
+            method. The default is: None. 
+        """
+        unbiased_image = self.bias_subtracted_image(amp, overscan, **kwargs)
         if imaging is None:
             imaging = self.amp_geom.imaging
         mi = imutils.trim(unbiased_image, imaging)

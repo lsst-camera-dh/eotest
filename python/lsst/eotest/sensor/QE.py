@@ -40,10 +40,12 @@ class QE_Data(object):
     band_pass['y'] = (930, 1070)
     band_wls = np.array([sum(b)/2. for b in band_pass.values()])
 
-    def __init__(self, verbose=True, pd_scaling=1e-9, logger=None):
+    def __init__(self, verbose=True, pd_scaling=1e-9, logger=None,
+                 mondiode_func=None):
         self.verbose = verbose
         self.pd_scaling = pd_scaling
         self.logger = logger
+        self.mondiode_func = mondiode_func
 
     def read_medians(self, medians_file):
         data = np.recfromtxt(medians_file)
@@ -102,7 +104,11 @@ class QE_Data(object):
             if self.exptime[-1] == 0:
                 raise RuntimeError("Zero exposure time in ", item)
             try:
-                self.pd.append(np.abs(md.get('MONDIODE')*self.pd_scaling))
+                if self.mondiode_func is None:
+                    pd_value = md.get('MONDIODE')
+                else:
+                    pd_value = self.mondiode_func(item, exptime)
+                self.pd.append(np.abs(pd_value*self.pd_scaling))
             except TypeError as e:
                 if self.logger is not None:
                     self.logger.info('%s\n' % e)
