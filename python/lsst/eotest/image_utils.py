@@ -432,7 +432,11 @@ def check_temperatures(files, tol, setpoint=None, warn_only=False):
             ref_temp = setpoint
         else:
             ref_temp = md.get('TEMP_SET')
-        ccd_temp = md.get('CCDTEMP')
+        try:
+            ccd_temp = md.get('CCDTEMP')
+        except:
+            print("Missing CCDTEMP keyword:", infile)
+            return
         if np.abs(ccd_temp - ref_temp) > tol:
             what = "Measured operating temperature %(ccd_temp)s departs from expected temperature %(ref_temp)s by more than the %(tol)s tolerance for file %(infile)s" % locals(
             )
