@@ -51,7 +51,7 @@ from .fe55CteTask import Fe55CteTask
 from .BFTask import BFTask
 try:
     from .spotTask import SpotTask
-except ModuleNotFoundError as eobj:
+except Exception as eobj:
     message = '\nSpotTask import raised a ModuleNotFoundError:\n' + str(eobj)
     warnings.warn(message)
 #
