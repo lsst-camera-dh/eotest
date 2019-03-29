@@ -148,7 +148,7 @@ class PtcTask(pipeBase.Task):
             for amp in ccd1:
                 results = flat_pair_stats(ccd1, ccd2, amp,
                                           mask_files=mask_files,
-                                          bias_frame=bias_frame) 
+                                          bias_frame=bias_frame)
                 ptc_stats[amp][0].append(results.flat_mean)
                 ptc_stats[amp][1].append(results.flat_var)
         self._fit_curves(ptc_stats, sensor_id)
