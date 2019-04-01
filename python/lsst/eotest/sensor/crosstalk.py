@@ -29,7 +29,7 @@ def find_aggressors(ccd, threshold=100000, gf_sigma=50):
 
     return candidate_list
 
-def stamp(ccd, amp, y, x, l=300):
+def make_stamp(ccd, amp, y, x, l=200):
     """Get postage stamp for crosstalk calculations."""
 
     imarr = ccd.unbiased_and_trimmed_image(amp).getImage().getArray()
@@ -68,7 +68,7 @@ def crosstalk_model(coefficients, aggressor_array):
     model = crosstalk_signal*aggressor_array + tilty*Y + tiltx*X + bias
     return model
 
-def crosstalk_model_fit(aggressor_stamp, victim_stamp, num_iter=10, nsig=3.0):
+def crosstalk_model_fit(aggressor_stamp, victim_stamp, num_iter=5, nsig=2.0):
     """Perform a crosstalk model fit for given  aggressor and victim stamps."""
 
     coefficients = np.asarray([[0,0,0,0]])
@@ -108,7 +108,13 @@ def crosstalk_model_fit(aggressor_stamp, victim_stamp, num_iter=10, nsig=3.0):
         
 class CrosstalkMatrix():
 
-    def __init__(self, filename=None, namps=16):
+    def __init__(self, aggressor_sensor_id, victim_sensor_id=None, filename=None, namps=16):
+        self.header = fits.Header()
+        self.header.set('SENSOR1', aggressor_sensor_id)
+        if victim_sensor_id is not None:
+            self.header.set('SENSOR2', victim_sensor_id)
+        else:
+            self.header.set('SENSOR2', aggressor_sensor_id)
         self.filename = filename
         self.namps = namps
         self._set_matrix()
@@ -153,7 +159,7 @@ class CrosstalkMatrix():
         #
         # Save matrix results into separate HDUs
         #
-        xtalk_hdu = fits.PrimaryHDU(self.matrix[0,:,:])
+        xtalk_hdu = fits.PrimaryHDU(self.matrix[0,:,:], header=self.header)
         bias_hdu = fits.ImageHDU(self.matrix[1,:,:], name='BIAS')
         tilty_hdu = fits.ImageHDU(self.matrix[2,:,:], name='TILT_Y')
         tiltx_hdu = fits.ImageHDU(self.matrix[3,:,:], name='TILT_X')
