@@ -93,7 +93,10 @@ def plot_flat(infile, nsig=3, cmap=pylab.cm.hot, win=None, subplot=(1, 1, 1),
     with fits.open(infile) as foo:
         if wl is None:
             # Extract wavelength from file
-            wl = foo[0].header['MONOWL']
+            try:
+                wl = foo[0].header['MONOWL']
+            except KeyError:
+                wl = 0
         datasec = parse_geom_kwd(foo[1].header['DATASEC'])
         # Specialize to science sensor or wavefront sensor geometries.
         nx_segments = 8
