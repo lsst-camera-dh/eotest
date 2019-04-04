@@ -38,8 +38,8 @@ class EOTestResults(object):
                          "CTI_HIGH_SERIAL", "CTI_HIGH_PARALLEL",
                          "CTI_LOW_SERIAL", "CTI_LOW_PARALLEL",
                          "DARK_CURRENT_95", "NUM_BRIGHT_PIXELS", "NUM_TRAPS"]
-        formats = "IEEEEEEEEEII"
-        my_types = dict((("I", np.int), ("E", np.float)))
+        formats = "IEEEEEEEEEJJ"
+        my_types = dict((("I", np.int), ("J", np.int), ("E", np.float)))
         columns = [np.zeros(self.namps, dtype=my_types[fmt]) for fmt in formats]
         units = ["None", "Ne/DN", "Ne/DN", "rms e-/pixel", "e-/pixel",
                  "None", "None", "None", "None", "e-/s/pixel", "None", "None"]
@@ -63,7 +63,7 @@ class EOTestResults(object):
         """
         if colname in self.colnames:
             return
-        _types = dict(((int, 'I'), (float, 'E'), (np.float64, 'E')))
+        _types = dict(((int, 'J'), (float, 'E'), (np.float64, 'E')))
         if column is None:
             column = np.zeros(self.namps, dtype=dtype)
         new_cols = fits.ColDefs([fits.Column(name=colname,
