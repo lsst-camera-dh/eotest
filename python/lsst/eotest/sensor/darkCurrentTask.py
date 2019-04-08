@@ -53,7 +53,10 @@ class DarkCurrentTask(pipeBase.Task):
         ccd = MaskedCCD(medfile, mask_files=mask_files, bias_frame=bias_frame)
 
         dark95s = {}
-        exptime = md.get('EXPTIME')
+        try:
+            exptime = md.get('DARKTIME')
+        except KeyError:
+            exptime = md.get('EXPTIME')
         if self.config.verbose:
             self.log.info("Amp        95 percentile    median")
         dark_curr_pixels = []
