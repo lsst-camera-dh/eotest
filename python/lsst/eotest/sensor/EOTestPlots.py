@@ -269,7 +269,7 @@ class EOTestPlots(object):
             xtalk_file = os.path.join(self.rootdir,
                                       '%s_xtalk_matrix.fits' % self.sensor_id)
         foo = CrosstalkMatrix(xtalk_file)
-        win = foo.plot(title="Crosstalk, %s" % self.sensor_id)
+        foo.plot(title="Crosstalk, %s" % self.sensor_id)
         return foo
 
     def persistence(self, infile=None, figsize=(11, 8.5)):
@@ -417,9 +417,11 @@ class EOTestPlots(object):
                 # Plot PTC curves using gain measurements.
                 ptc_gain = self.results['PTC_GAIN'][amp-1]
                 ptc_gain_error = self.results['PTC_GAIN_ERROR'][amp-1]
+                ptc_a00 = self.results['PTC_A00'][amp-1]
+                ptc_a00_error = self.results['PTC_A00_ERROR'][amp-1]
                 plot.curve(xx, xx/ptc_gain, oplot=1, color='b', lineStyle=':')
-                note = 'Amp %i\nGain = %.2f +/- %.2f'\
-                    % (amp, ptc_gain, ptc_gain_error)
+                note = 'Amp %i\nGain = %.2f +/- %.2f\nA00 = %.1e +/- %.1e'\
+                    % (amp, ptc_gain, ptc_gain_error, ptc_a00, ptc_a00_error)
                 pylab.annotate(note, (0.05, 0.9), xycoords='axes fraction',
                                verticalalignment='top', size='x-small')
 
