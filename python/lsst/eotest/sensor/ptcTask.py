@@ -11,25 +11,15 @@ import operator
 import numpy as np
 import scipy.optimize
 import astropy.io.fits as fits
-from lsst.eotest.fitsTools import fitsTableFactory, fitsWriteto
-import lsst.eotest.image_utils as imutils
-from .MaskedCCD import MaskedCCD
-from .EOTestResults import EOTestResults
-
 import lsst.afw.image as afwImage
 import lsst.afw.math as afwMath
 import lsst.pex.config as pexConfig
 import lsst.pipe.base as pipeBase
-
-
-def find_flat2(flat1):
-    pattern = flat1.split('flat1')[0] + 'flat2*.fits'
-    try:
-        flat2 = glob.glob(pattern)[0]
-        return flat2
-    except IndexError:
-        return flat1
-
+from lsst.eotest.fitsTools import fitsTableFactory, fitsWriteto
+import lsst.eotest.image_utils as imutils
+from .MaskedCCD import MaskedCCD
+from .EOTestResults import EOTestResults
+from .flatPairTask import find_flat2
 
 def exptime(x): return imutils.Metadata(x).get('EXPTIME')
 
