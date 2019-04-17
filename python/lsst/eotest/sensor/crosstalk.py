@@ -160,7 +160,7 @@ def detector_crosstalk(ccd, aggressor_amp, dnthresh=None, nsig=5,
     if dnthresh is None:
         median, stdev = get_stats(image, ccd.stat_ctrl)
 #        dnthresh = median + nsig*stdev
-        dnthresh = (np.max(ccd[aggressor_amp].getImage().getArray())
+        dnthresh = (np.max(image.getImage().getArray())
                     + median)/2.
 #    print "dnthresh =", dnthresh
     threshold = afwDetect.Threshold(dnthresh)
