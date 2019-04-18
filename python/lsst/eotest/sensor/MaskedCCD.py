@@ -140,37 +140,40 @@ class MaskedCCD(dict):
 
     def bias_image_using_overscan(self, amp, overscan=None, **kwargs):
         """
-        Generate a bias image containing offset values calculated from 
+        Generate a bias image containing offset values calculated from
         bias(), bias_row(), bias_func() or bias_spline(). The default bias method
-        is set to bias_row() in image_utils.py. Keyword arguments can be passed 
+        is set to bias_row() in image_utils.py. Keyword arguments can be passed
         depending on which bias method is used.
 
         Keyword Arguments:
-        fit_order: The order of the polynomial. This only needs to be specified when 
+        fit_order: The order of the polynomial. This only needs to be specified when
             using the 'func' method. The default is: 1.
-        k: The degree of the spline fit. This only needs to be specified when using 
+        k: The degree of the spline fit. This only needs to be specified when using
             the 'spline' method. The default is: 3.
-        s: The amount of smoothing to be applied to the fit. This only needs to be 
+        s: The amount of smoothing to be applied to the fit. This only needs to be
             specified when using the 'spline' method. The default is: 18000.
-        t: The number of knots. If None, finds the number of knots to use for a given 
-            smoothing factor, s. This only needs to be specified when using the 'spline' 
-            method. The default is: None. 
+        t: The number of knots. If None, finds the number of knots to use for a given
+            smoothing factor, s. This only needs to be specified when using the 'spline'
+            method. The default is: None.
         """
         if overscan is None:
             overscan = self.amp_geom.serial_overscan
         try:
-            return imutils.bias_image(self[amp], overscan=overscan, **kwargs)
+            return imutils.bias_image(self._deep_copy(amp), overscan=overscan, **kwargs)
         except pexExcept.LSST_RUNTIME_EXCEPTION as eobj:
             raise MaskedCCDBiasImageException("DM stack error generating bias "
                                               + "image from overscan region:\n"
                                               + str(eobj))
+
+    def _deep_copy(self, amp):
+        return self[amp].Factory(self[amp], deep=True)
 
     def bias_image(self, amp, overscan=None, **kwargs):
         """
         Use separately stored metadata to determine file-specified
         overscan region. If bias_frame is not given, then calculate
         the bias image using bias(), bias_row(), bias_func() or bias_spline().
-        The default bias method is set to bias_row() in image_utils.py. 
+        The default bias method is set to bias_row() in image_utils.py.
         Keyword arguments can be passed depending on which bias method is used.
 
         Keyword Arguments:
@@ -188,15 +191,17 @@ class MaskedCCD(dict):
             #
             # Use bias frame, if available, instead of overscan region
             #
-            return self.bias_frame[amp].getImage()
+            # Return a deep copy.
+            my_image = self.bias_frame[amp].getImage()
+            return my_image.Factory(my_image, deep=True)
         return self.bias_image_using_overscan(amp, overscan=overscan, **kwargs)
 
     def bias_subtracted_image(self, amp, overscan=None, **kwargs):
         """
-        Subtract a bias image to correct for the offset. A bias correction is also 
+        Subtract a bias image to correct for the offset. A bias correction is also
         applied if a base_frame is passed. The bias image with the offset values is
         generated using either of the bias(), bias_row(), bias_func() or bias_spline()
-        methods from image_utils.py. The default bias method is set to bias_row().  
+        methods from image_utils.py. The default bias method is set to bias_row().
         Keyword arguments can be passed depending on which bias method is used.
 
         Keyword Arguments:
@@ -210,29 +215,31 @@ class MaskedCCD(dict):
             smoothing factor, s. This only needs to be specified when using the 'spline'
             method. The default is: None.
         """
+        # Make a local copy to process and return.
+        my_image = self._deep_copy(amp)
         if self.bias_frame is not None:
             # Make a deep copy of the bias frame.
-            bias = self.bias_frame[amp].Factory(self.bias_frame[amp])
+            bias = self.bias_frame[amp].Factory(self.bias_frame[amp], deep=True)
             # Subtract x-independent component using overscan.
             bias -= \
                 self.bias_frame.bias_image_using_overscan(amp,
                                                           overscan=overscan, **kwargs)
             # Subtract x-independent component of image for this amp
             # using overscan.
-            self[amp] -= \
+            my_image -= \
                 self.bias_image_using_overscan(amp, overscan=overscan, **kwargs)
             # Subtract structured, x-dependent part.
-            self[amp] -= bias
+            my_image -= bias
         else:
-            self[amp] -= self.bias_image(amp, overscan, **kwargs)
-        return self[amp]
+            my_image -= self.bias_image(amp, overscan, **kwargs)
+        return my_image
 
     def unbiased_and_trimmed_image(self, amp, overscan=None,
                                    imaging=None, **kwargs):
         """
-        Return an offset-corrected image where the offset values generated using 
-        either of the bias(), bias_row(), bias_func() or bias_spline() methods from 
-        image_utils.py. The default bias method is set to bias_row(). Keyword arguments 
+        Return an offset-corrected image where the offset values generated using
+        either of the bias(), bias_row(), bias_func() or bias_spline() methods from
+        image_utils.py. The default bias method is set to bias_row(). Keyword arguments
         can be passed depending on which bias method is used.
 
         Keyword Arguments:
@@ -244,7 +251,7 @@ class MaskedCCD(dict):
             specified when using the 'spline' method. The default is: 18000.
         t: The number of knots. If None, finds the number of knots to use for a given
             smoothing factor, s. This only needs to be specified when using the 'spline'
-            method. The default is: None. 
+            method. The default is: None.
         """
         unbiased_image = self.bias_subtracted_image(amp, overscan, **kwargs)
         if imaging is None:
