@@ -55,7 +55,10 @@ class RaftMosaic(object):
         self.fits_files = fits_files
         with fits.open(list(fits_files.values())[0]) as hdu_list:
             self.raft_name = hdu_list[0].header['RAFTNAME']
-            self.wl = hdu_list[0].header['MONOWL']
+            try:
+                self.wl = hdu_list[0].header['MONOWL']
+            except KeyError:
+                wl = 0
         self.image_array = np.zeros((nx, ny), dtype=np.float32)
         self.nx = nx
         self.ny = ny
