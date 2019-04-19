@@ -355,7 +355,8 @@ class EOTestPlots(object):
                 print("Exception raised in generating PSF sigma plot for amp", amp)
                 print(eobj)
 
-    def fe55_dists(self, chiprob_min=0.1, fe55_file=None, figsize=(11, 8.5)):
+    def fe55_dists(self, chiprob_min=0.1, fe55_file=None, figsize=(11, 8.5),
+                   hist_nsig=10, xrange_scale=1):
         if fe55_file is None:
             fe55_file = glob.glob(self._fullpath('%s_psf_results*.fits'
                                                  % self.sensor_id))[0]
@@ -367,13 +368,14 @@ class EOTestPlots(object):
             dn = fe55_catalog[amp].data.field('DN')[index]
             foo = Fe55GainFitter(dn)
             try:
-                foo.fit()
+                foo.fit(hist_nsig=hist_nsig)
             except:
                 continue
             if win is None:
                 win = foo.plot(interactive=self.interactive,
                                subplot=self.subplot(amp),
-                               figsize=figsize, frameLabels=True, amp=amp)
+                               figsize=figsize, frameLabels=True, amp=amp,
+                               xrange_scale=xrange_scale)
                 win.frameAxes.text(0.5, 1.08, 'Fe55, %s' % self.sensor_id,
                                    horizontalalignment='center',
                                    verticalalignment='top',
@@ -382,7 +384,7 @@ class EOTestPlots(object):
             else:
                 foo.plot(interactive=self.interactive,
                          subplot=self.subplot(amp), win=win,
-                         frameLabels=True, amp=amp)
+                         frameLabels=True, amp=amp, xrange_scale=xrange_scale)
             pylab.locator_params(axis='x', nbins=4, tight=True)
 
     def ptcs(self, xrange=None, yrange=None, figsize=(11, 8.5), ptc_file=None):
