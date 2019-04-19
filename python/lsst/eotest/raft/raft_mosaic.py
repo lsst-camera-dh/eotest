@@ -24,33 +24,35 @@ class RaftMosaic(object):
 
     def __init__(self, fits_files, gains=None, bias_subtract=True,
                  nx=12700, ny=12700, nx_segments=8, ny_segments=2,
-                 segment_processor=None):
+                 segment_processor=None, bias_frames=None):
         """
-        Constructor.
-
         Parameters
         ----------
         fits_files : dict
             Dictionary of single sensor FITS files, keyed by raft slot
             name.  These files should conform to LCA-13501.
-        gains : dict, optional
+        gains : dict [None]
             Dictionary (keyed by slot name) of dictionaries (one per
-            FITS file) of system gain values for each amp.  Default:
-            None (i.e., do not apply gain correction).
-        bias_subtract : bool, optional
-            Flag do to a bias subtraction based on the serial overscan.
-            Default: True
-        nx : int, optional
-            Number of pixels in the x (serial) direction.  Default: 12700
-        ny : int, optional
-            Number of pixels in the y (parallel) direction.  Default: 12700
-        nx_segments : int, optional
-            Number of segments in the x (serial) direction.  Default: 8
-        ny_segments : int, optional
-            Number of pixels in the y (parallel) direction.  Default: 2
-        segment_processor : function, optional
-            Function to apply to pixel data in each segment. If None (default),
+            FITS file) of system gain values for each amp.  If
+            None, then do not apply gain correction.
+        bias_subtract : bool [True]
+            Flag do to a bias subtraction based on the serial overscan
+            or provided bias frame.
+        nx : int [12700]
+            Number of pixels in the x (serial) direction.
+        ny : int, [12700]
+            Number of pixels in the y (parallel) direction.
+        nx_segments : int [8]
+            Number of segments in the x (serial) direction.
+        ny_segments : int [2]
+            Number of pixels in the y (parallel) direction.
+        segment_processor : function [None]
+            Function to apply to pixel data in each segment. If None,
             then set do the standard bias subtraction and gain correction.
+        bias_frames : dict [None]
+            Dictionary of single sensor bias frames, keyed by raft slot.
+            If None, then just do the bias level subtraction using
+            overscan region.
         """
         self.fits_files = fits_files
         with fits.open(list(fits_files.values())[0]) as hdu_list:
@@ -72,7 +74,8 @@ class RaftMosaic(object):
             gains = dict([(slot, unit_gains) for slot in fits_files])
         for slot, filename in list(fits_files.items()):
             #print("processing", os.path.basename(filename))
-            ccd = sensorTest.MaskedCCD(filename)
+            bias_frame = bias_frames[slot] if bias_frames is not None else None
+            ccd = sensorTest.MaskedCCD(filename, bias_frame=bias_frame)
             with fits.open(filename) as hdu_list:
                 for amp, hdu in zip(ccd, hdu_list[1:]):
                     self._set_segment(slot, ccd, amp, hdu, gains[slot][amp],
