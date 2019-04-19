@@ -123,7 +123,8 @@ class RaftMosaic(object):
                 self.segment_processor(slot, ccd, amp, xy_bounds=xy_bounds)
 
     def plot(self, title=None, cmap=plt.cm.hot, nsig=5, figsize=(10, 10),
-             binsize=10, flipx=True, textcolor='c', annotation=''):
+             binsize=10, flipx=True, textcolor='c', annotation='',
+             rotate180=False):
         """
         Render the raft mosaic.
 
@@ -151,6 +152,10 @@ class RaftMosaic(object):
         annotation : str, optional
             Description of the plot, e.g., pixel units (ADU or e-),
             gain-corrected, bias-subtracted.  Default: ''
+        rotate180 : bool [False]
+            Flag to rotate the mosaic by 180 degrees to match the
+            orientation of the focalplane mosiacs created for the
+            BOT-level plots.
         """
         plt.rcParams['figure.figsize'] = figsize
         fig = plt.figure()
@@ -159,6 +164,12 @@ class RaftMosaic(object):
                                            use_mean=True)
         if flipx:
             output_array = output_array[:, ::-1]
+        if rotate180:
+            ny, nx = output_array.shape
+            rotated_array = np.zeros((nx, ny), dtype=output_array.dtype)
+            for j in range(ny):
+                rotated_array[:, ny-1-j] = output_array[::-1, j]
+            output_array = rotated_array
         image = ax.imshow(output_array, interpolation='nearest', cmap=cmap)
         # Set range and normalization of color map based on sigma-clip
         # of pixel values.
@@ -181,6 +192,9 @@ class RaftMosaic(object):
             if flipx:
                 xx = 1 - xx
             yy = 1. - (float(ymax - ymin)*0.05 + ymin)/float(self.ny)
+            if rotate180:
+                xx = 1 - xx - 7*np.abs(xmax - xmin)/float(self.nx)
+                yy = 1 - yy + 1.9*np.abs(ymax - ymin)/float(self.ny)
             plt.annotate('%s' % slot,
                          (xx, yy), xycoords='axes fraction',
                          size='x-small', horizontalalignment='center',
@@ -194,6 +208,9 @@ class RaftMosaic(object):
                     yy = 1. - (float(ymax - ymin)*0.85 + ymin)/float(self.ny)
                 else:
                     yy = 1. - (float(ymax - ymin)*0.15 + ymin)/float(self.ny)
+                if rotate180:
+                    xx = 1 - xx
+                    yy = 1 - yy
                 plt.annotate('%s' % imutils.channelIds[amp],
                              (xx, yy), xycoords='axes fraction',
                              size='x-small', horizontalalignment='center',
