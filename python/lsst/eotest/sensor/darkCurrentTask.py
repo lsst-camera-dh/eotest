@@ -55,7 +55,7 @@ class DarkCurrentTask(pipeBase.Task):
         dark95s = {}
         try:
             exptime = md.get('DARKTIME')
-        except KeyError:
+        except:
             exptime = md.get('EXPTIME')
         if self.config.verbose:
             self.log.info("Amp        95 percentile    median")
