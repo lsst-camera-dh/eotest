@@ -9,11 +9,13 @@ from lsst.eotest.fitsTools import fitsWriteto
 
 def is_valid_aggressor(ccd, amp, ay, ax, threshold=100000., r=50):
     """Evaluate if identified spot is valid aggressor."""    
+    print(ay, ax)
     imarr = ccd[amp].getImage().getArray()
     ny, nx = imarr.shape
     y, x = np.ogrid[-ay:ny-ay, -ax:nx-ax]
     mask = x*x + y*y >= r*r
     spot_arr = np.ma.MaskedArray(imarr, mask)
+    print(np.mean(spot_arr))
 
     return np.mean(spot_arr) > threshold
     

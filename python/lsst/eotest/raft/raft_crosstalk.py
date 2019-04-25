@@ -1,81 +1,163 @@
 from __future__ import absolute_import, print_function
 
 import os
+import glob
 import lsst.eotest.image_utils as imutils
+import itertools
 from lsst.eotest.sensor import CrosstalkTask
+import argparse
 
 class CrosstalkData():
 
-    def __init__(self, sensor_id, image_dict, sensor_pos_keys, gains, 
-                 bias_frame=None):
+    def __init__(self, sensor_id, gains, bias_frame=None):
 
-        super(CrosstalkData, self).__init__()
         self.sensor_id = sensor_id
-        self.sensor_pos_keys = sensor_pos_keys
         self.gains = gains
         self.bias_frame = bias_frame
         self.image_dict = {}
-        self.make_dict(image_dict)
 
-    def make_dict(self, image_dict):
+    def add_image(self, central_sensor, infile):
 
-        for key in image_dict:
+        try:
+            self.image_dict[central_sensor].append(infile)
+        except KeyError:
+            self.image_dict[central_sensor] = [infile]
 
-            value = image_dict[key]
-            
-            if isinstance(value, list):
-                outfile = '{0}_{1}_median_stack.fits'.format(self.sensor_id, key)
-                imutils.fits_median_file(value)
-                self.image_dict[key] = outfile
-            else:
-                self.image_dict[key] = value
+    def infiles(self, sensor_id):
 
-class CrosstalkButler():
+        return self.image_dict[sensor_id]
 
-    def __init__(self, sensor_list, output_dir='./'):
+def get_central_sensor(xpos, ypos):
+    """Calculate the central CCD from given projector x and y positions."""
 
-        self.sensor_dict = {sensor:None for sensor in sensor_list}
-        self.output_dir = output_dir
+    intervals = [(x*127.0/3.-317.5, (x+1)*127.0/3.-317.5) for x in range(15)]
     
-    def sensor_ingest(self, sensor_id, sensor_pos_keys, image_dict, 
-                      gains, bias_frame=None):
+    for i, interval in enumerate(intervals):
+        if interval[0] < float(xpos) <= interval[1]:
+            raft_x = i // 3
+            sensor_x = i % 3
+        if interval[0] < float(ypos) <= interval[1]:
+            raft_y = i // 3
+            sensor_y = i % 3
 
-        data = CrosstalkData(sensor_id, image_dict, sensor_pos_keys, gains, 
-                             bias_frame)
-        self.sensor_dict[sensor_id] = data
+    sensor_id = 'R{0}{1}_S{2}{3}'.format(raft_x, raft_y, sensor_x, sensor_y)
 
-    def run_sensor(self, sensor_id, sensor_id2=None):
-        """Run crosstalk task for single sensor pair."""
+    return sensor_id      
 
-        print("Running crosstalk for {0} x {1}".format(sensor_id, sensor_id2))
+def BOT(main_dir, output_dir='./'):
+    ## For BOT testing
+    sensor_list = ['R22_S10', 'R22_S11', 'R22_S12', 'R22_S20', 'R22_S21', 'R22_S22',
+                   'R10_S10', 'R10_S11', 'R10_S12', 'R10_S20', 'R10_S21', 'R10_S22']
 
-        data = self.sensor_dict[sensor_id]
-        infiles = [data.image_dict[key] for key in data.sensor_pos_keys]
-        crosstalktask = CrosstalkTask()
-        crosstalktask.config.output_dir = self.output_dir
-        if sensor_id2 is not None:
-            data2 = self.sensor_dict[sensor_id2]
-            infiles2 = [data2.image_dict[key] for key in data.sensor_pos_keys]
-            crosstalktask.run(sensor_id, infiles, data.gains, bias_frame=data.bias_frame,
-                              sensor_id2=sensor_id2, infiles2=infiles2, gains2=data2.gains, 
-                              bias_frame2=data2.bias_frame)
-        else:
-            crosstalktask.run(sensor_id, infiles, data.gains, bias_frame=data.bias_frame)
+    gains = {i : 1.0 for i in range(1, 17)}
+    xtalk_data = {sensor_id : CrosstalkData(sensor_id, gains) for sensor_id in sensor_list}
 
-    def run_sensor_all(self, sensor_id):
-        """Run crosstalk task for all inter-sensor crosstalk for given aggressor."""
+    ## Get acquisition directories from the main directory
+    directory_list = [x.path for x in os.scandir(main_dir) if os.path.isdir(x.path)]
+    projector_positions = set()
+    for acquisition_dir in directory_list:
+        basename = os.path.basename(acquisition_dir)
+        if "xtalk" not in basename:
+            print("skipping...")
+            continue
+        xpos, ypos = basename.split('_')[-4:-2]
+        projector_positions.add((xpos, ypos))
 
-        for sensor_id2 in self.sensor_dict:
-            self.run_sensor(sensor_id, sensor_id2)
+    ## Find images for each unique position, per sensor
+    for xpos, ypos in projector_positions:
 
-    def run_all(self):
+        central_sensor = get_central_sensor(xpos, ypos)
 
-        for sensor_id in self.sensor_dict:
-            self.run_sensor_all(sensor_id)
+        for sensor_id in sensor_list:
+            infiles = glob.glob(os.path.join(main_dir, 'xtalk_{0}_{1}*'.format(xpos, ypos),
+                                             '*_{0}*.fits'.format(sensor_id)))
+            print(infiles)
+            outfile = os.path.join(output_dir, 
+                                   '{0}_{1}_{2}_median.fits'.format(sensor_id, xpos, ypos))
+            imutils.fits_median_file(infiles, outfile, bitpix=-32)
+            xtalk_data[sensor_id].add_image(central_sensor, outfile)
 
-## Assume 1 exposure per CCD
-# Corresponding images for all CCDs (list)
-# Name of aggressor CCD
-# Loop over all CCDs including aggressor with crosstalk task and output files.
-        
+    sensor_pairs = list(itertools.product(xtalk_data, xtalk_data))
+
+    for sensor_id, sensor_id2 in sensor_pairs:
+
+        print(sensor_id, sensor_id2)
+
+        gains = xtalk_data[sensor_id].gains
+        bias_frame = xtalk_data[sensor_id].bias_frame
+        infiles = xtalk_data[sensor_id].infiles(sensor_id)
+
+        gains2 = xtalk_data[sensor_id2].gains
+        bias_frame2 = xtalk_data[sensor_id2].bias_frame
+        infiles2 = xtalk_data[sensor_id2].infiles(sensor_id)
+
+        xtalktask = CrosstalkTask()
+        xtalktaks.config.threshold = 60000.
+        xtalktask.config.output_dir = output_dir
+        xtalktask.run(sensor_id, infiles, gains, bias_frame=bias_frame, 
+                      infiles2=infiles2, sensor_id2=sensor_id2, gains2=gains2, bias_frame2=bias_frame2)
+
+def TS8(eotest_dir, output_dir='./'):
+    ## For BOT testing
+    sensor_list = ['S10', 'S11', 'S12', 'S20', 'S21', 'S22',
+                   'S10', 'S11', 'S12', 'S20', 'S21', 'S22']
+
+    gains = {i : 1.0 for i in range(1, 17)}
+    xtalk_data = {sensor_id : CrosstalkData(sensor_id, gains) for sensor_id in sensor_list}
+
+    ## Get acquisition directories from the main directory
+    file_list = [f for f in os.listdir(os.path.join(main_dir, 'S00')) if os.isfile(f)]
+    projector_positions = set()
+    for filename in file_list:
+        xpos, ypos = basename.split('_')[-5:-3]
+        projector_positions.add((xpos, ypos))
+
+    ## Find images for each unique position, per sensor
+    for xpos, ypos in projector_positions:
+
+        central_sensor = get_central_sensor(xpos, ypos)
+
+        for sensor_id in sensor_list:
+            infiles = glob.glob(os.path.join(main_dir, sensor_id, 
+                                             '*_{0}_{1}_*.fits}'.format(xpos, ypos)))
+            outfile = os.path.join(output_dir, 
+                                   '{0}_{1}_{2}_median.fits'.format(sensor_id, xpos, ypos))
+            imutils.fits_median_file(infiles, outfile, bitpix=-32)
+            xtalk_data[sensor_id].add_image(central_sensor, infile)
+
+    sensor_pairs = list(itertools.product(xtalk_data, xtalk_data))
+
+    for sensor_id, sensor_id2 in sensor_pairs:
+
+        gains = xtalk_data[sensor_id].gains
+        bias_frame = xtalk_data[sensor_id].bias_frame
+        infiles = sorted(xtalk_data[sensor_id].infiles(sensor_id))
+
+        gains2 = xtalk_data[sensor_id2].gains
+        bias_frame2 = xtalk_data[sensor_id2].bias_frame
+        infiles2 = sorted(xtalk_data[sensor_id2].infiles(sensor_id))
+
+        xtalktask = CrosstalkTask()
+        xtalktaks.config.threshold = 60000.
+        xtalktask.config.output_dir = output_dir
+        xtalktask.run(sensor_id, infiles, gains, bias_frame=bias_frame, 
+                      infiles2=infiles2, sensor_id2=sensor_id2, gains2=gains2, bias_frame2=bias_frame2)
+
+if __name__ == '__main__':
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument('eotest_dir', type=str)
+    parser.add_argument('--output_dir', '-o', type=str, default='./')
+    args = parser.parse_args()
+
+    main_dir = args.eotest_dir
+    output_dir = args.output_dir
+
+    BOT(main_dir, output_dir=output_dir)
+
+
+
+
+
+
         
