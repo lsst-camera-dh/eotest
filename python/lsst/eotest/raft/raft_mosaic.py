@@ -24,7 +24,8 @@ class RaftMosaic(object):
 
     def __init__(self, fits_files, gains=None, bias_subtract=True,
                  nx=12700, ny=12700, nx_segments=8, ny_segments=2,
-                 segment_processor=None, bias_frames=None):
+                 segment_processor=None, bias_frames=None,
+                 dark_currents=None):
         """
         Parameters
         ----------
@@ -53,6 +54,10 @@ class RaftMosaic(object):
             Dictionary of single sensor bias frames, keyed by raft slot.
             If None, then just do the bias level subtraction using
             overscan region.
+        dark_currents : dict [None]
+            Dictionary of dictionaries of dark current values per amp
+            in e-/s, keyed by raft slot and by amp number. If None, then
+            dark current subtraction is not applied.
         """
         self.fits_files = fits_files
         with fits.open(list(fits_files.values())[0]) as hdu_list:
@@ -76,12 +81,22 @@ class RaftMosaic(object):
             #print("processing", os.path.basename(filename))
             bias_frame = bias_frames[slot] if bias_frames is not None else None
             ccd = sensorTest.MaskedCCD(filename, bias_frame=bias_frame)
+            if dark_currents is not None:
+                try:
+                    dark_time = ccd.md.get('DARKTIME')
+                except:
+                    dark_time = ccd.md.get('EXPTIME')
             with fits.open(filename) as hdu_list:
                 for amp, hdu in zip(ccd, hdu_list[1:]):
+                    if dark_currents:
+                        dark_correction = dark_time*dark_currents[slot][amp]
+                    else:
+                        dark_correction = 0
                     self._set_segment(slot, ccd, amp, hdu, gains[slot][amp],
-                                      bias_subtract)
+                                      bias_subtract, dark_correction)
 
-    def _set_segment(self, slot, ccd, amp, hdu, amp_gain, bias_subtract):
+    def _set_segment(self, slot, ccd, amp, hdu, amp_gain, bias_subtract,
+                     dark_correction):
         """
         Set the pixel values in the mosaic from the segment values.
         """
@@ -93,6 +108,8 @@ class RaftMosaic(object):
         # Apply gain correction.
         seg_array = np.array(amp_gain*copy.deepcopy(mi.getImage().getArray()),
                              dtype=np.float32)
+        # Apply dark current correction.
+        seg_array -= dark_correction
         # Determine flip in serial direction based on 1, 1 element of
         # transformation matrix.
         if hdu.header['PC1_1Q'] < 0:
