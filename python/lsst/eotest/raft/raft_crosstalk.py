@@ -58,7 +58,6 @@ def BOT(main_dir, output_dir='./'):
     for acquisition_dir in directory_list:
         basename = os.path.basename(acquisition_dir)
         if "xtalk" not in basename:
-            print("skipping...")
             continue
         xpos, ypos = basename.split('_')[-4:-2]
         projector_positions.add((xpos, ypos))
@@ -71,7 +70,6 @@ def BOT(main_dir, output_dir='./'):
         for sensor_id in sensor_list:
             infiles = glob.glob(os.path.join(main_dir, 'xtalk_{0}_{1}*'.format(xpos, ypos),
                                              '*_{0}*.fits'.format(sensor_id)))
-            print(infiles)
             outfile = os.path.join(output_dir, 
                                    '{0}_{1}_{2}_median.fits'.format(sensor_id, xpos, ypos))
             imutils.fits_median_file(infiles, outfile, bitpix=-32)
@@ -83,19 +81,23 @@ def BOT(main_dir, output_dir='./'):
 
         print(sensor_id, sensor_id2)
 
-        gains = xtalk_data[sensor_id].gains
-        bias_frame = xtalk_data[sensor_id].bias_frame
-        infiles = xtalk_data[sensor_id].infiles(sensor_id)
+        try:
+            gains = xtalk_data[sensor_id].gains
+            bias_frame = xtalk_data[sensor_id].bias_frame
+            infiles = xtalk_data[sensor_id].infiles(sensor_id)
 
-        gains2 = xtalk_data[sensor_id2].gains
-        bias_frame2 = xtalk_data[sensor_id2].bias_frame
-        infiles2 = xtalk_data[sensor_id2].infiles(sensor_id)
+            gains2 = xtalk_data[sensor_id2].gains
+            bias_frame2 = xtalk_data[sensor_id2].bias_frame
+            infiles2 = xtalk_data[sensor_id2].infiles(sensor_id)
 
-        xtalktask = CrosstalkTask()
-        xtalktaks.config.threshold = 60000.
-        xtalktask.config.output_dir = output_dir
-        xtalktask.run(sensor_id, infiles, gains, bias_frame=bias_frame, 
-                      infiles2=infiles2, sensor_id2=sensor_id2, gains2=gains2, bias_frame2=bias_frame2)
+            xtalktask = CrosstalkTask()
+            xtalktask.config.threshold = 60000.
+            xtalktask.config.output_dir = output_dir
+            xtalktask.run(sensor_id, infiles, gains, bias_frame=bias_frame, 
+                          infiles2=infiles2, sensor_id2=sensor_id2, gains2=gains2, bias_frame2=bias_frame2)
+        except Exception as e:
+            print("Error occurred, skipping...")
+            print(e)
 
 def TS8(eotest_dir, output_dir='./'):
     ## For BOT testing

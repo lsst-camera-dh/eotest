@@ -9,13 +9,11 @@ from lsst.eotest.fitsTools import fitsWriteto
 
 def is_valid_aggressor(ccd, amp, ay, ax, threshold=100000., r=50):
     """Evaluate if identified spot is valid aggressor."""    
-    print(ay, ax)
     imarr = ccd[amp].getImage().getArray()
     ny, nx = imarr.shape
     y, x = np.ogrid[-ay:ny-ay, -ax:nx-ax]
     mask = x*x + y*y >= r*r
     spot_arr = np.ma.MaskedArray(imarr, mask)
-    print(np.mean(spot_arr))
 
     return np.mean(spot_arr) > threshold
     
@@ -174,9 +172,74 @@ class CrosstalkMatrix():
                                xtalkerr_hdu, biaserr_hdu, tiltyerr_hdu, tiltxerr_hdu])
         fitsWriteto(output, outfile, overwrite=overwrite)
 
-    def write_yaml(self, outfile, overwrite=True):
+    def write_yaml(self, outfile, indent=2, crosstalkName='Unknown'):
         """Write crosstalk results to a YAML file."""
-        raise NotImplementedError
+
+        ampNames = [str(i) for i in range(self.matrix.shape[1])]
+        assert self.matrix.shape = (8, len(ampNames), len(ampNames))
+
+        dIndent = indent
+        indent = 0
+        with open(outfile, "w") as fd:
+            print(indent*" " + "crosstalk :", file=fd)
+            indent += dIndent
+            print(indent*" " + "%s :" % crosstalkName, file=fd)
+            indent += dIndent
+
+            for i, ampNameI in enumerate(ampNames):
+                print(indent*" " + "%s : {" % ampNameI, file=fd)
+                indent += dIndent
+                print(indent*" ", file=fd, end='')
+
+                for j, ampNameJ in enumerate(ampNames):
+                    print("%s : %11.4e, " % (ampNameJ, coeff[i, j]), file=fd,
+                          end='\n' + indent*" " if j%4 == 3 else '')
+                print("}", file=fd)
+
+                indent -= dIndent
+                                           
+
+
+ def writeCrosstalkCoeffs(outputFileName, coeff, amp_order, crosstalkName="Unknown", indent=2):
+    """Write a yaml file containing the crosstalk coefficients
+
+    The coeff array is indexed by [i, j] where i and j are amplifiers
+    corresponding to the amplifiers in det
+
+    Parameters
+    ----------
+    outputFileName : `str`
+        Name of output yaml file
+    coeff : `numpy.array(namp, namp)`
+        numpy array of coefficients
+    amp_order : 'list' of 'str'
+        List of string names for the amplifiers (e.g. C00)
+    ccdType : `str`
+        Name of CCD, used to index the yaml file
+        If all CCDs are identical could be the type (e.g. ITL)
+    indent : `int`
+        Indent width to use when writing the yaml file
+    """
+
+    dIndent = indent
+    indent = 0
+    with open(outputFileName, "w") as fd:
+        print(indent*" " + "crosstalk :", file=fd)
+        indent += dIndent
+        print(indent*" " + "%s :" % crosstalkName, file=fd)
+        indent += dIndent
+
+        for i, ampNameI in enumerate(ampNames):
+            print(indent*" " + "%s : {" % ampNameI, file=fd)
+            indent += dIndent
+            print(indent*" ", file=fd, end='')
+
+            for j, ampNameJ in enumerate(ampNames):
+                print("%s : %11.4e, " % (ampNameJ, coeff[i, j]), file=fd,
+                      end='\n' + indent*" " if j%4 == 3 else '')
+            print("}", file=fd)
+
+            indent -= dIndent
 
 
 

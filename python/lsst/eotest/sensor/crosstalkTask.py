@@ -61,7 +61,6 @@ class CrosstalkTask(pipeBase.Task):
             # Aggressor files may have multiple aggressor spots
             # 
             amp_info = find_aggressors(ccd, threshold=threshold)
-            print(amp_info) # debug
             for amp, y, x in amp_info:
 
                 row = dict()
