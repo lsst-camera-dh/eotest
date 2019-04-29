@@ -210,6 +210,11 @@ class PsfGaussFit(object):
             logger.info("PsfGaussFit.process_image: threshold= %s"
                         % threshold.getValue())
         fpset = afwDetect.FootprintSet(image, threshold)
+        # Grow the footprints to make the fit more robust for very broad
+        # PSFs in the presence of noisier data.
+        grow = 1
+        isotropic = False
+        fpset = afwDetect.FootprintSet(fpset, grow, isotropic)
 
         x0, y0 = [], []
         sigmax, sigmay, dn, dn_fp, chiprob = [], [], [], [], []

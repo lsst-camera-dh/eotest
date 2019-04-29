@@ -64,7 +64,8 @@ class EOTestResults(object):
         """
         if colname in self.colnames:
             return
-        _types = dict(((int, 'J'), (float, 'E'), (np.float64, 'E')))
+        _types = dict(((int, 'J'), (float, 'E'), (np.float32, 'E'),
+                       (np.float64, 'E')))
         if column is None:
             column = np.zeros(self.namps, dtype=dtype)
         new_cols = fits.ColDefs([fits.Column(name=colname,
