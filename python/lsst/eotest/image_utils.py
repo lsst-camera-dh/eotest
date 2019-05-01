@@ -212,9 +212,12 @@ def bias_image(im, overscan, dxmin=5, dxmax=2, statistic=np.mean, bias_method='r
     Returns:
         An image with size equal to the input image containing the offset level. 
     """
-    if bias_method not in ['mean', 'row', 'func', 'spline']:
-        raise RuntimeError('Bias method must be either "mean", "row", "func" or "spline".')    
-    method = {'mean' : bias, 'row' : bias_row, 'func' : bias_func, 'spline' : bias_spline}
+    if bias_method not in ['mean', 'row', 'func', 'spline', 'none']:
+        raise RuntimeError('Bias method must be either "none", "mean", "row", "func" or "spline".')  
+
+    def dummy_none(im, overscan, dxmin, dxmax, **kwargs):
+        return 0.0
+    method = {'mean' : bias, 'row' : bias_row, 'func' : bias_func, 'spline' : bias_spline, 'none' : dummy_none}
     my_bias = method[bias_method](im, overscan, dxmin=dxmin, dxmax=dxmax, **kwargs)
     biasim = afwImage.ImageF(im.getDimensions())
     imarr = biasim.getArray()
@@ -227,6 +230,7 @@ def bias_image(im, overscan, dxmin=5, dxmax=2, statistic=np.mean, bias_method='r
         values = np.full(ny, my_bias)
     for row in range(ny):
         imarr[row] += values[row]
+    biasim.setXY0(im.getX0(), im.getY0())
     return biasim
 
 def trim(im, imaging):
@@ -375,9 +379,16 @@ def fits_median(files, hdu=2, fix=True):
 
 def stack(ims, statistic=afwMath.MEDIAN):
     """Stacks a list of images based on a statistic."""
-    images = []
+    #images = []
+    try:
+        images = afwImage.vectorImageF()
+    except AttributeError:
+        images = []
     for image in ims:
-        images.append(image)       
+        try:
+            images.push_back(image)
+        except AttributeError:
+            images.append(image)
     summary = afwMath.statisticsStack(images, statistic)
     return summary
 
@@ -387,8 +398,10 @@ def superbias(files, overscan, imaging=None, dxmin=5, dxmax=2, bias_method='row'
     """Generates a single stacked 'super' bias frame based on 
     a statistic. Images must be either all masked or all unmasked."""
     ims = [afwImage.ImageF(f, hdu) for f in files]
-    bias_frames = [unbias_and_trim(im, overscan, imaging, dxmin, dxmax, bias_method,
-                                   **kwargs) for im in ims]
+    bias_frames = []
+    for im in ims:
+        bias_frame = unbias_and_trim(im, overscan, imaging, dxmin, dxmax, bias_method, **kwargs)
+        bias_frames.append(bias_frame)
     return stack(bias_frames, statistic)
 
 def superbias_file(files, overscan, outfile, imaging=None, dxmin=5, dxmax=2, 
