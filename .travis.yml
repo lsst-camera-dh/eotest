@@ -3,7 +3,7 @@ language: python
 sudo: required
 
 env:
-  - OS_TYPE=centos OS_VERSION=7 DOCKER_IMAGE=lsstsqre/centos:7-stack-lsst_distrib-v16_0
+  - OS_TYPE=centos OS_VERSION=7 DOCKER_IMAGE=lsstsqre/centos:7-stack-lsst_distrib-v17_0_1_rc1
 
 services:
   - docker

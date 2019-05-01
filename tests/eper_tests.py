@@ -28,6 +28,7 @@ class SerialEperTestCase(EperTestCase):
         Create a CCD frame FITS file with known imaging and overscan
         values.
         """
+
         self.fits_file = 'eper_serial_test_frame.fits'
         ccd = sim_tools.CCD()
         for amp in ccd.segments:

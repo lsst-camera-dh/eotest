@@ -118,7 +118,7 @@ image
             if col0[irow] < a1[-1]:
                 # We have a forward trap so increment y-coordinate by 1
                 iy[-1] += 1
-        ix = np.ones(len(index[0]))*(icol + self.prescan + 1)
+        ix = np.ones(len(index[0]), dtype=int)*(icol + self.prescan + 1)
         iy = np.array(iy)
         c2 = C2[index]
         c3 = C3[index]

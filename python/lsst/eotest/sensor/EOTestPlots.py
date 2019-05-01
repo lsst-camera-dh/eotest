@@ -7,6 +7,7 @@ import os
 import sys
 import glob
 import copy
+import warnings
 from collections import OrderedDict
 import json
 import numpy as np
@@ -151,6 +152,7 @@ def plot_flat(infile, nsig=3, cmap=pylab.cm.hot, win=None, subplot=(1, 1, 1),
         hdulist = fits.HDUList()
         hdulist.append(fits.PrimaryHDU())
         hdulist[0].data = mosaic[::-1, :]
+        warnings.filterwarnings('ignore', category=fits.verify.VerifyWarning, append=True)
         hdulist.writeto(outfile, overwrite=True)
     #
     # Set the color map to extend over the range median +/- stdev(clipped)
@@ -383,40 +385,80 @@ class EOTestPlots(object):
     def ptcs(self, xrange=None, yrange=None, figsize=(11, 8.5), ptc_file=None):
         if ptc_file is None:
             ptc_file = self._fullpath('%s_ptc.fits' % self.sensor_id)
-        ptc = fits.open(ptc_file)
-        for amp in imutils.allAmps(ptc_file):
-            mean = ptc[1].data.field('AMP%02i_MEAN' % amp)
-            var = ptc[1].data.field('AMP%02i_VAR' % amp)
-            subplot = self.subplot(amp)
-            if amp == 1:
-                win = plot.Window(subplot=subplot, figsize=figsize,
-                                  xlabel=r'mean (ADU)',
-                                  ylabel=r'variance (ADU$^2$)', size='large')
-                win.frameAxes.text(0.5, 1.08,
-                                   'Photon Transfer Curves, %s'
-                                   % self.sensor_id,
-                                   horizontalalignment='center',
-                                   verticalalignment='top',
-                                   transform=win.frameAxes.transAxes,
-                                   size='large')
-            else:
-                win.select_subplot(*subplot)
-            self._offset_subplot(win)
-            win = plot.xyplot(mean, var, xname='', yname='',
-                              xrange=xrange, yrange=yrange,
-                              xlog=1, ylog=1, new_win=False,)
-            axes = pylab.gca()
-            xrange = list(axes.get_xlim())
-            xrange[0] = max(xrange[0], 1e-1)
-            xx = np.logspace(np.log10(xrange[0]), np.log10(xrange[1]), 20)
-            # Plot PTC curves using gain measurements.
-            ptc_gain = self.results['PTC_GAIN'][amp-1]
-            ptc_gain_error = self.results['PTC_GAIN_ERROR'][amp-1]
-            plot.curve(xx, xx/ptc_gain, oplot=1, color='b', lineStyle=':')
-            note = 'Amp %i\nGain = %.2f +/- %.2f'\
-                % (amp, ptc_gain, ptc_gain_error)
-            pylab.annotate(note, (0.05, 0.9), xycoords='axes fraction',
-                           verticalalignment='top', size='x-small')
+        with fits.open(ptc_file) as ptc:
+            for amp in imutils.allAmps(ptc_file):
+                mean = ptc[1].data.field('AMP%02i_MEAN' % amp)
+                var = ptc[1].data.field('AMP%02i_VAR' % amp)
+                subplot = self.subplot(amp)
+                if amp == 1:
+                    win = plot.Window(subplot=subplot, figsize=figsize,
+                                      xlabel=r'mean (ADU)',
+                                      ylabel=r'variance (ADU$^2$)', size='large')
+                    win.frameAxes.text(0.5, 1.08,
+                                       'Photon Transfer Curves, %s'
+                                       % self.sensor_id,
+                                       horizontalalignment='center',
+                                       verticalalignment='top',
+                                       transform=win.frameAxes.transAxes,
+                                       size='large')
+                else:
+                    win.select_subplot(*subplot)
+                self._offset_subplot(win)
+                win = plot.xyplot(mean, var, xname='', yname='',
+                                  xrange=xrange, yrange=yrange,
+                                  xlog=1, ylog=1, new_win=False,)
+                axes = pylab.gca()
+                xrange = list(axes.get_xlim())
+                xrange[0] = max(xrange[0], 1e-1)
+                xx = np.logspace(np.log10(xrange[0]), np.log10(xrange[1]), 20)
+                # Plot PTC curves using gain measurements.
+                ptc_gain = self.results['PTC_GAIN'][amp-1]
+                ptc_gain_error = self.results['PTC_GAIN_ERROR'][amp-1]
+                plot.curve(xx, xx/ptc_gain, oplot=1, color='b', lineStyle=':')
+                note = 'Amp %i\nGain = %.2f +/- %.2f'\
+                    % (amp, ptc_gain, ptc_gain_error)
+                pylab.annotate(note, (0.05, 0.9), xycoords='axes fraction',
+                               verticalalignment='top', size='x-small')
+
+    def bf_curves(self, xrange=None, yrange=None, figsize=(6, 8),
+                  bf_file=None, adu_max=1e5):
+        if bf_file is None:
+            bf_file = self._fullpath('%s_bf.fits' % self.sensor_id)
+        fig = plt.figure(figsize=figsize)
+        with fits.open(bf_file) as bf:
+
+            fig.add_subplot(2, 1, 1)
+            for amp in imutils.allAmps(bf_file):
+                mean = bf[1].data.field('AMP%02i_MEAN' % amp)
+                xcorr = bf[1].data.field('AMP%02i_XCORR' % amp)
+                index = np.argsort(mean)
+                mean = mean[index]
+                xcorr = xcorr[index]
+                index = np.where(mean < adu_max)
+                plt.plot(mean[index], xcorr[index], label='%s' % amp)
+            plt.xscale('log')
+            plt.xlabel('mean signal (ADU)', fontsize='small')
+            plt.ylabel('corr(1, 0)', fontsize='small')
+            plt.legend(fontsize='x-small', loc=2)
+            plt.title('Brighter-Fatter corr(1, 0), %s' % self.sensor_id,
+                      fontsize='small')
+
+            fig.add_subplot(2, 1, 2)
+            for amp in imutils.allAmps(bf_file):
+                mean = bf[1].data.field('AMP%02i_MEAN' % amp)
+                ycorr = bf[1].data.field('AMP%02i_YCORR' % amp)
+                index = np.argsort(mean)
+                mean = mean[index]
+                xcorr = xcorr[index]
+                index = np.where(mean < adu_max)
+                plt.plot(mean[index], ycorr[index], label='%s' % amp)
+            plt.xscale('log')
+            plt.xlabel('mean signal (ADU)', fontsize='small')
+            plt.ylabel('corr(0, 1)', fontsize='small')
+            plt.legend(fontsize='x-small', loc=2)
+            plt.title('Brighter-Fatter corr(0, 1), %s' % self.sensor_id,
+                      fontsize='small')
+        plt.tight_layout()
 
     def _offset_subplot(self, win, xoffset=0.025, yoffset=0.025):
         bbox = win.axes[-1].get_position()
@@ -453,6 +495,25 @@ class EOTestPlots(object):
         except:
             pass
         win.set_title("System Gain, %s" % self.sensor_id)
+
+    def ptc_bf(self, oplot=0, xoffset=0.25, width=0.5, xrange=None):
+        results = self.results
+        a00 = results['PTC_A00']
+        error = results['PTC_A00_ERROR']
+        ymin = min(a00 - error*2)*1e6
+        ymax = max(a00 + error*2)*1e6
+        yname = 'Brighter-Fatter A00 (1e-6/e-)'
+        win = plot.xyplot(results['AMP'], results['PTC_A00']*1e6,
+                          yerr=results['PTC_A00_ERROR']*1e6, xname='AMP',
+                          yname=yname, xrange=xrange, yrange=(ymin, ymax))
+        win.set_title("PTC Brighter-Fatter, %s" % self.sensor_id)
+
+    def ptc_turnoff(self, oplot=0, xoffset=0.25, width=0.5, xrange=None):
+        results = self.results
+        yname = 'PTC Turnoff (DN)'
+        win = plot.xyplot(results['AMP'], results['PTC_TURNOFF'],
+                          xname='AMP', yname=yname, xrange=xrange)
+        win.set_title("PTC Turnoff, %s" % self.sensor_id)
 
     def noise(self, oplot=0, xoffset=0.2, width=0.2, color='b'):
         results = self.results
@@ -566,6 +627,8 @@ class EOTestPlots(object):
             except Exception as eObj:
                 print("EOTestPlots.linearity: amp %i" % amp)
                 print("  ", eObj)
+        if ptc is not None:
+            ptc.close()
         return self._linearity_results
 
     def linearity(self, gain_range=(1, 6), max_dev=0.02, figsize=(11, 8.5),
@@ -925,8 +988,9 @@ class CcdSpecs(OrderedDict):
         try:
             self._ingestResults(results_file, xtalk_file=xtalk_file)
         except Exception as eobj:
-            print("EOTestPlots.CcdSpecs: exception:")
-            print("  ", str(eobj))
+            pass
+#            print("EOTestPlots.CcdSpecs: exception:")
+#            print("  ", str(eobj))
 
     def add_job_ids(self, summary_files):
         for summary_lims_file in summary_files:
@@ -1176,6 +1240,8 @@ if __name__ == '__main__':
     plots.linearity()
     plots.gains()
     plots.noise()
+    plots.ptc_bf()
+    plots.ptc_turnoff()
     plots.qe()
     plots.crosstalk_matrix()
     plots.confluence_table()

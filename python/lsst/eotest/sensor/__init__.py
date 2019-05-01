@@ -2,6 +2,7 @@
 Modules to perform sensor characterization from laboratory data.
 """
 from __future__ import absolute_import
+import warnings
 #
 # Low-level classes and functions
 #
@@ -49,11 +50,23 @@ from .persistenceTask import PersistenceTask
 from .fe55CteTask import Fe55CteTask
 from .superbiasTask import SuperbiasTask
 
+from .BFTask import BFTask
+from .overscanTask import OverscanTask
+try:
+    from .spotTask import SpotTask
+except Exception as eobj:
+    message = '\nSpotTask import raised a ModuleNotFoundError:\n' + str(eobj)
+    warnings.warn(message)
+
 #
 # Turn off debug messages emitted by LSST Stack
 #
 try:
     import lsst.log
-    lsst.log.setLevel(lsst.log.getDefaultLoggerName(), lsst.log.INFO)
 except ImportError:
     pass
+else:
+    try:
+        lsst.log.setLevel(lsst.log.getDefaultLoggerName(), lsst.log.INFO)
+    except AttributeError:
+        lsst.log.setLevel(lsst.log.getDefaultLogger().getName(), lsst.log.INFO)
