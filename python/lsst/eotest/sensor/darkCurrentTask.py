@@ -53,7 +53,11 @@ class DarkCurrentTask(pipeBase.Task):
         ccd = MaskedCCD(medfile, mask_files=mask_files, bias_frame=bias_frame)
 
         dark95s = {}
-        exptime = md.get('EXPTIME')
+        dark_medians = {}
+        try:
+            exptime = md.get('DARKTIME')
+        except:
+            exptime = md.get('EXPTIME')
         if self.config.verbose:
             self.log.info("Amp        95 percentile    median")
         dark_curr_pixels = []
@@ -62,7 +66,7 @@ class DarkCurrentTask(pipeBase.Task):
             imaging_region = ccd.amp_geom.imaging
             overscan = ccd.amp_geom.serial_overscan
             image = imutils.unbias_and_trim(im=ccd[amp].getImage(),
-                                            overscan=overscan, imaging=imaging_region) 
+                                            overscan=overscan, imaging=imaging_region)
             mask = imutils.trim(ccd[amp].getMask(), imaging_region)
             imarr = image.getArray()
             mskarr = mask.getArray()
@@ -75,14 +79,14 @@ class DarkCurrentTask(pipeBase.Task):
             dark_curr_pixels.extend(unmasked)
             try:
                 dark95s[amp] = unmasked[int(len(unmasked)*0.95)]
-                median = unmasked[len(unmasked)//2]
+                dark_medians[amp] = unmasked[len(unmasked)//2]
             except IndexError as eobj:
                 print(str(eobj))
                 dark95s[amp] = -1.
-                median = -1.
+                dark_medians[amp] = -1.
             if self.config.verbose:
                 self.log.info("%2i         %.2e         %.2e"
-                              % (amp, dark95s[amp], median))
+                              % (amp, dark95s[amp], dark_medians[amp]))
         #
         # Compute 95th percentile dark current for CCD as a whole.
         #
@@ -119,6 +123,9 @@ class DarkCurrentTask(pipeBase.Task):
                     output[0].header['DARK95%s'%imutils.channelIds[amp]] \
                         = dark95s[amp]
                     results.add_seg_result(amp, 'DARK_CURRENT_95', dark95s[amp])
+                    results.add_seg_result(amp, 'DARK_CURRENT_MEDIAN',
+                                           dark_medians[amp])
                 fitsWriteto(output, medfile, overwrite=True, checksum=True)
                 results.write(clobber=True)
+
         return dark_curr_pixels_per_amp, dark95s

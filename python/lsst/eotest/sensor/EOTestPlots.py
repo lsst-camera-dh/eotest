@@ -93,7 +93,10 @@ def plot_flat(infile, nsig=3, cmap=pylab.cm.hot, win=None, subplot=(1, 1, 1),
     with fits.open(infile) as foo:
         if wl is None:
             # Extract wavelength from file
-            wl = foo[0].header['MONOWL']
+            try:
+                wl = foo[0].header['MONOWL']
+            except KeyError:
+                wl = 0
         datasec = parse_geom_kwd(foo[1].header['DATASEC'])
         # Specialize to science sensor or wavefront sensor geometries.
         nx_segments = 8
@@ -266,7 +269,7 @@ class EOTestPlots(object):
             xtalk_file = os.path.join(self.rootdir,
                                       '%s_xtalk_matrix.fits' % self.sensor_id)
         foo = CrosstalkMatrix(xtalk_file)
-        win = foo.plot(title="Crosstalk, %s" % self.sensor_id)
+        foo.plot(title="Crosstalk, %s" % self.sensor_id)
         return foo
 
     def persistence(self, infile=None, figsize=(11, 8.5)):
@@ -352,7 +355,8 @@ class EOTestPlots(object):
                 print("Exception raised in generating PSF sigma plot for amp", amp)
                 print(eobj)
 
-    def fe55_dists(self, chiprob_min=0.1, fe55_file=None, figsize=(11, 8.5)):
+    def fe55_dists(self, chiprob_min=0.1, fe55_file=None, figsize=(11, 8.5),
+                   hist_nsig=10, xrange_scale=1):
         if fe55_file is None:
             fe55_file = glob.glob(self._fullpath('%s_psf_results*.fits'
                                                  % self.sensor_id))[0]
@@ -364,13 +368,14 @@ class EOTestPlots(object):
             dn = fe55_catalog[amp].data.field('DN')[index]
             foo = Fe55GainFitter(dn)
             try:
-                foo.fit()
+                foo.fit(hist_nsig=hist_nsig)
             except:
                 continue
             if win is None:
                 win = foo.plot(interactive=self.interactive,
                                subplot=self.subplot(amp),
-                               figsize=figsize, frameLabels=True, amp=amp)
+                               figsize=figsize, frameLabels=True, amp=amp,
+                               xrange_scale=xrange_scale)
                 win.frameAxes.text(0.5, 1.08, 'Fe55, %s' % self.sensor_id,
                                    horizontalalignment='center',
                                    verticalalignment='top',
@@ -379,7 +384,7 @@ class EOTestPlots(object):
             else:
                 foo.plot(interactive=self.interactive,
                          subplot=self.subplot(amp), win=win,
-                         frameLabels=True, amp=amp)
+                         frameLabels=True, amp=amp, xrange_scale=xrange_scale)
             pylab.locator_params(axis='x', nbins=4, tight=True)
 
     def ptcs(self, xrange=None, yrange=None, figsize=(11, 8.5), ptc_file=None):
@@ -414,9 +419,11 @@ class EOTestPlots(object):
                 # Plot PTC curves using gain measurements.
                 ptc_gain = self.results['PTC_GAIN'][amp-1]
                 ptc_gain_error = self.results['PTC_GAIN_ERROR'][amp-1]
+                ptc_a00 = self.results['PTC_A00'][amp-1]
+                ptc_a00_error = self.results['PTC_A00_ERROR'][amp-1]
                 plot.curve(xx, xx/ptc_gain, oplot=1, color='b', lineStyle=':')
-                note = 'Amp %i\nGain = %.2f +/- %.2f'\
-                    % (amp, ptc_gain, ptc_gain_error)
+                note = 'Amp %i\nGain = %.2f +/- %.2f\nA00 = %.1e +/- %.1e'\
+                    % (amp, ptc_gain, ptc_gain_error, ptc_a00, ptc_a00_error)
                 pylab.annotate(note, (0.05, 0.9), xycoords='axes fraction',
                                verticalalignment='top', size='x-small')
 

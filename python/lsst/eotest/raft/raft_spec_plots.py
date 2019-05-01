@@ -43,7 +43,7 @@ class RaftSpecPlots(object):
 
     def make_plot(self, column, ylabel=None, spec=None, step=20, yscaling=1,
                   marker='r--', title=None, ylog=False, figsize=(8, 6),
-                  ymax=None):
+                  ybounds=None):
         """
         Make a plot for the specified column for all 9 sensors
         in a raft.
@@ -53,29 +53,28 @@ class RaftSpecPlots(object):
         column : str
             The name of the column to plot from the eotest results files,
             e.g., 'READ_NOISE'.
-        ylabel : str, optional
-            The y-axis label.  If None (default), then use the column name.
-        spec : float or sequence, optional
+        ylabel : str [None]
+            The y-axis label.  If None, then use the column name.
+        spec : float or sequence [None]
             The value(s) of the acceptance specification(s), which will be
             plotted as a line using the marker option.  If None, then
             no spec line will be plotted.
-        step : float, optional
-            The x-axis offset between amplifier results.  Default: 20
-        yscaling : float, optional
-            Scale factor to apply to y-values.  Default=1.
-        marker : str, optional
+        step : float [20]
+            The x-axis offset between amplifier results.
+        yscaling : float [1]
+            Scale factor to apply to y-values.
+        marker : str ['r--']
             The color and line style of the plotted specification line.
-            Default: 'r--'
-        title : str, optional
+        title : str [None]
             Title of the plot. If None, then leave blank.
-        ylog : bool, optional
-            If True, make the y-axis log scale. Default: False
-        figsize : tuple(float, float), optional
-            Figure size in inches. Default: (8, 6)
-        ymax : float, optional
-            Upper bound of plot in data coordinates.  If not None (default),
-            then use the max(plt.axis()[-1], ymax) as the upper bound
-            of the plotting area.
+        ylog : bool [False]
+            If True, make the y-axis log scale.
+        figsize : tuple(float, float) [(8, 6)]
+            Figure size in inches.
+        ybounds : tuple(float, float) [None]
+            Outer range of y-axis bounds.  If None, then default matplotlib
+            autoscaling is used; otherwise, these bounds are only enforced
+            if the corresponding autoscale bound exceeds this outer range.
 
         Returns
         ------
@@ -103,9 +102,10 @@ class RaftSpecPlots(object):
             plt.title(title)
         if ylog:
             ax.set_yscale('log', nonposy='clip')
-        if ymax is not None:
+        if ybounds is not None:
             axis = list(plt.axis())
-            axis[-1] = max(axis[-1], yscaling*ymax)
+            axis[-2] = max(axis[-2], yscaling*ybounds[0])
+            axis[-1] = min(axis[-1], yscaling*ybounds[1])
             plt.axis(axis)
         for slot in self.results:
             self._draw_slot_boundary(slot, step=step)
@@ -114,7 +114,7 @@ class RaftSpecPlots(object):
     def make_multi_column_plot(self, columns, ylabel=None, spec=None, step=20,
                                yscaling=1, yerrors=False, marker='r--',
                                title=None, add_legend=True, ylog=False,
-                               colors=None, figsize=(8, 6), ymax=None):
+                               colors=None, figsize=(8, 6), ybounds=None):
         """
         Make a plot for the specified columns for all 9 sensors
         in a raft.
@@ -124,37 +124,36 @@ class RaftSpecPlots(object):
         column : tuple(str)
             The names of the columns to plot from the eotest results files,
             e.g., ('GAIN', 'PTC_GAIN')
-        ylabel : str, optional
-            The y-axis label.  If None (default), then use the column name.
-        spec : float or sequence, optional
+        ylabel : str [None]
+            The y-axis label.  If None, then use the column name.
+        spec : float or sequence [None]
             The value(s) of the acceptance specification(s), which will be
             plotted as a line using the marker option.  If None, then
             no spec line will be plotted.
-        step : float, optional
-            The x-axis offset between amplifier results.  Default: 20
-        yscaling : float, optional
-            Scale factor to apply to y-values.  Default: 1.
-        yerrors : bool, optional
+        step : float [20]
+            The x-axis offset between amplifier results.
+        yscaling : float [1]
+            Scale factor to apply to y-values.
+        yerrors : bool [False]
             Flag to plot errors, assuming the column name is of the form
             <column>'_ERROR', e.g., 'GAIN_ERROR'.  Default: False
-        marker : str, optional
+        marker : str ['r--']
             The color and line style of the plotted specification line.
-            Default: 'r--'
-        title : str, optional
+        title : str [None]
             Title of the plot. If None, then leave blank.
-        add_legend : bool, optional
-            If True (default), then add a legend.
-        ylog : bool, optional
-            If True, make the y-axis log scale. Default: False
-        colors : tuple, optional
-            Colors to cycle over, e.g., 'krgbcym'.  If None (default),
-            then use the default color cycle.
-        figsize : tuple(float, float), optional
-            Figure size in inches. Default: (8, 6)
-        ymax : float, optional
-            Upper bound of plot in data coordinates.  If not None (default),
-            then use the max(plt.axis()[-1], ymax) as the upper bound
-            of the plotting area.
+        add_legend : bool [True]
+            If True, then add a legend.
+        ylog : bool [False]
+            If True, make the y-axis log scale.
+        colors : tuple [None]
+            Colors to cycle over, e.g., 'krgbcym'.  If None, then use
+            the default color cycle.
+        figsize : tuple(float, float) [(8, 6)]
+            Figure size in inches.
+        ybounds : tuple(float, float) [None]
+            Outer range of y-axis bounds.  If None, then default matplotlib
+            autoscaling is used; otherwise, these bounds are only enforced
+            if the corresponding autoscale bound exceeds this outer range.
 
         Returns
         ------
@@ -200,9 +199,10 @@ class RaftSpecPlots(object):
             plt.legend(loc=0)
         if ylog:
             ax.set_yscale('log', nonposy='clip')
-        if ymax is not None:
+        if ybounds is not None:
             axis = list(plt.axis())
-            axis[-1] = max(axis[-1], yscaling*ymax)
+            axis[-2] = max(axis[-2], yscaling*ybounds[0])
+            axis[-1] = min(axis[-1], yscaling*ybounds[1])
             plt.axis(axis)
         for slot in self.results:
             self._draw_slot_boundary(slot, step=step)
