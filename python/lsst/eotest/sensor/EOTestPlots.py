@@ -420,6 +420,48 @@ class EOTestPlots(object):
                 pylab.annotate(note, (0.05, 0.9), xycoords='axes fraction',
                                verticalalignment='top', size='x-small')
 
+    def cti_curves(self, overscan_file=None, figsize=(8, 6)):
+
+        if overscan_file is None:
+            overscan_file = self._fullpath('{0}_overscan_results.fits'.format(self.sensor_id))
+        fig = plt.figure(figsize=figsize)
+
+        with fits.open(overscan_file) as overscan:
+
+            datasec = overscan[0].header['DATASEC']
+            amp_geom = parse_geom_kwd(datasec)
+            xmax = amp_geom['xmax']
+
+            fig.add_subplot(1, 1, 1)
+            for amp in range(1, 17):
+
+                if amp > 10: marker='s'
+                else: marker = '^'
+                
+                meanrow = overscan[amp].data['MEANROW']
+                flux = overscan[amp].data['FLUX']
+                offset = np.mean(meanrow[:, -20:], axis=1)
+                overscan1 = meanrow[:, xmax] - offset
+                overscan2 = meanrow[:, xmax+1] - offset
+                lastpixel = meanrow[:, xmax-1] - offset
+                cti = (overscan1+overscan2)/(xmax*lastpixel)
+                index = np.argsort(flux)
+
+                plt.plot(flux[index], cti[index], label='{0}'.format(amp),
+                         marker=marker, markersize=4)
+
+            plt.axhline(y=5.0E-6, color='black', linestyle='--')
+
+            plt.ylim(bottom=5E-8, top=2E-4)
+            plt.xlim(left=50.0, right=240000.)
+            plt.xscale('log')
+            plt.yscale('log')
+            plt.grid(True, which='major', axis='both')
+            plt.xlabel('flux (e-)', fontsize='small')
+            plt.ylabel('cti', fontsize='small')
+            plt.legend(fontsize='x-small', loc=1, ncol=4)
+            plt.title('CTI from EPER, {0}'.format(self.sensor_id), fontsize='small')
+
     def bf_curves(self, xrange=None, yrange=None, figsize=(6, 8),
                   bf_file=None, adu_max=1e5):
         if bf_file is None:

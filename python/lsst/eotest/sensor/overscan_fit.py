@@ -57,15 +57,11 @@ class OverscanFit(object):
     def process_image(self, ccd, gains):
         """Process an image."""
       
-        if self.outfile is None:
-            if len(self.output[0].header) < 10:
-                self.output[0].header = fits.open(ccd.imfile)[0].header
-
         for amp in range(1, 17):
             image = ccd.bias_subtracted_image(amp)
 
-            ## get xmin, xmax, ymin, ymax here
-            amp_geom = parse_geom_kwd(ccd.amp_geom[1]['DATASEC'])
+            datasec = ccd.amp_geom[1]['DATASEC']
+            amp_geom = parse_geom_kwd(datasec)
             xmin = amp_geom['xmin']
             xmax = amp_geom['xmax']
             ymin = amp_geom['ymin']
@@ -112,6 +108,8 @@ class OverscanFit(object):
             self.signal_std[amp].append(signal_std)
             self.tau_std[amp].append(tau_std)
             self.cti_std[amp].append(cti_std)
+
+        self.output[0].header['DATASEC'] = datasec
 
     def build_output_dict(self):
         """Export the results as a dictionary of dictionaries"""
