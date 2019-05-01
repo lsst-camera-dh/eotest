@@ -37,6 +37,7 @@ class OverscanFit(object):
         self.minflux = minflux
         self.maxflux = maxflux
         self.outfile = outfile
+        self.xmax_val = None
         if outfile is None:
             self.output = fits.HDUList()
             self.output.append(fits.PrimaryHDU())
@@ -66,6 +67,8 @@ class OverscanFit(object):
             xmax = amp_geom['xmax']
             ymin = amp_geom['ymin']
             ymax = amp_geom['ymax']
+            if self.xmax_val is None:
+                self.xmax_val = xmax
 
             imarr = image.getImage().getArray()*gains[amp]
 
