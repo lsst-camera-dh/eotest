@@ -60,8 +60,8 @@ class OverscanFit(object):
         for amp in range(1, 17):
             image = ccd.bias_subtracted_image(amp)
 
-            ## get xmin, xmax, ymin, ymax here
-            amp_geom = parse_geom_kwd(ccd.amp_geom[1]['DATASEC'])
+            datasec = ccd.amp_geom[1]['DATASEC']
+            amp_geom = parse_geom_kwd(datasec)
             xmin = amp_geom['xmin']
             xmax = amp_geom['xmax']
             ymin = amp_geom['ymin']
@@ -108,6 +108,8 @@ class OverscanFit(object):
             self.signal_std[amp].append(signal_std)
             self.tau_std[amp].append(tau_std)
             self.cti_std[amp].append(cti_std)
+
+        self.output[0].header['DATASEC'] = datasec
 
     def write_results(self, outfile):
         """Export results as a FITs file."""
