@@ -109,6 +109,24 @@ class OverscanFit(object):
             self.tau_std[amp].append(tau_std)
             self.cti_std[amp].append(cti_std)
 
+    def build_output_dict(self):
+        """Export the results as a dictionary of dictionaries"""
+        out_dict = {}
+        for amp in range(1, 17):
+            extname = 'Amp{0:02d}'.format(amp)
+            out_dict[extname] = dict(MEANROW=self.meanrow[amp],
+                                     FLUX=self.flux[amp],
+                                     FLUX_STD=self.flux_std[amp],
+                                     NOISE=self.noise[amp],
+                                     SIGNAL=self.signal[amp],
+                                     SIGNAL_STD=self.signal_std[amp],
+                                     TAU=self.tau[amp],
+                                     TAU_STD=self.tau_std[amp],
+                                     CTI=self.cti[amp],
+                                     CTI_STD=self.cti_std[amp])
+        return out_dict
+
+
     def write_results(self, outfile):
         """Export results as a FITs file."""
         
