@@ -8,10 +8,12 @@ import os
 import numpy as np
 from astropy.io import fits
 
+
 import lsst.eotest.image_utils as imutils
 import lsst.afw.image as afwImage
 import lsst.pex.config as pexConfig
 import lsst.pipe.base as pipeBase
+import lsst.pipe.tasks
 from lsst.pipe.tasks.characterizeImage import CharacterizeImageTask, CharacterizeImageConfig
 import lsst.meas.extensions.shapeHSM
 
@@ -112,7 +114,10 @@ class SpotTask(pipeBase.Task):
                            "ext_shapeHSM_HsmPsfMoments"])  
         charConfig.measurement.plugins.names |= hsm_plugins
         charTask = CharacterizeImageTask(config=charConfig)
-        result = charTask.characterize(exposure)
+        if lsst.pipe.tasks.__version__.startswith('17.0'):
+            result = charTask.run(exposure)
+        else:
+            result = charTask.characterize(exposure)
         src = result.sourceCat
         if self.config.verbose:
             self.log.info("Detected {0} objects".format(len(src)))
