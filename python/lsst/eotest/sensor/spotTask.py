@@ -8,7 +8,6 @@ import os
 import numpy as np
 from astropy.io import fits
 
-
 import lsst.eotest.image_utils as imutils
 import lsst.afw.image as afwImage
 import lsst.pex.config as pexConfig
