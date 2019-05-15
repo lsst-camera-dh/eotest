@@ -41,6 +41,15 @@ class RaftSpecPlots(object):
         xbound = (step - namps)/2. + step*self._raft_slots[slot] + namps + 1
         plt.axvline(xbound, linestyle=marker[1:], color=marker[0])
 
+    @staticmethod
+    def _apply_ybounds(yvalues, ybounds):
+        if ybounds is None:
+            return yvalues
+        my_yvalues = np.zeros(len(yvalues))
+        for i, yy in enumerate(yvalues):
+            my_yvalues[i] = min(max(yy, ybounds[0]), ybounds[1])
+        return my_yvalues
+
     def make_plot(self, column, ylabel=None, spec=None, step=20, yscaling=1,
                   marker='r--', title=None, ylog=False, figsize=(8, 6),
                   ybounds=None):
@@ -86,7 +95,8 @@ class RaftSpecPlots(object):
         ax = fig.add_subplot(1, 1, 1)
         for slot, results in list(self.results.items()):
             xoffset = self._raft_slots[slot]*step
-            plt.plot(results['AMP'] + xoffset, yscaling*results[column], 'b.')
+            yvalues = self._apply_ybounds(yscaling*results[column], ybounds)
+            plt.plot(results['AMP'] + xoffset, yvalues, 'b.')
         xtick_values = [step*i + step/2 for i in range(len(self._raft_slots))]
         plt.xticks(xtick_values, list(self._raft_slots.keys()))
         if ylabel is None:
@@ -179,6 +189,7 @@ class RaftSpecPlots(object):
                 if yerrors:
                     yerr.extend(yscaling*results[column + '_ERROR'])
             color = next(color_cycler)['color']
+            y = self._apply_ybounds(y, ybounds)
             plt.plot(x, y, '.', label=column, color=color)
             if yerrors:
                 plt.errorbar(x, y, fmt='.', yerr=yerr, color=color)

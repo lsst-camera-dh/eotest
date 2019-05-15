@@ -930,7 +930,7 @@ class EOTestPlots(object):
                              horizontalalignment='right',
                              verticalalignment='bottom')
                 pylab.savefig('%s_%04inm_flat.png' % (self.sensor_id, wl))
-                pylab.clf()
+                pylab.close()
             except IndexError:
                 pass
 
