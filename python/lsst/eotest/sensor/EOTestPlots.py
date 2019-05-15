@@ -93,7 +93,10 @@ def plot_flat(infile, nsig=3, cmap=pylab.cm.hot, win=None, subplot=(1, 1, 1),
     with fits.open(infile) as foo:
         if wl is None:
             # Extract wavelength from file
-            wl = foo[0].header['MONOWL']
+            try:
+                wl = foo[0].header['MONOWL']
+            except KeyError:
+                wl = 0
         datasec = parse_geom_kwd(foo[1].header['DATASEC'])
         # Specialize to science sensor or wavefront sensor geometries.
         nx_segments = 8
@@ -266,7 +269,7 @@ class EOTestPlots(object):
             xtalk_file = os.path.join(self.rootdir,
                                       '%s_xtalk_matrix.fits' % self.sensor_id)
         foo = CrosstalkMatrix(xtalk_file)
-        win = foo.plot(title="Crosstalk, %s" % self.sensor_id)
+        foo.plot(title="Crosstalk, %s" % self.sensor_id)
         return foo
 
     def persistence(self, infile=None, figsize=(11, 8.5)):
@@ -352,7 +355,8 @@ class EOTestPlots(object):
                 print("Exception raised in generating PSF sigma plot for amp", amp)
                 print(eobj)
 
-    def fe55_dists(self, chiprob_min=0.1, fe55_file=None, figsize=(11, 8.5)):
+    def fe55_dists(self, chiprob_min=0.1, fe55_file=None, figsize=(11, 8.5),
+                   hist_nsig=10, xrange_scale=1):
         if fe55_file is None:
             fe55_file = glob.glob(self._fullpath('%s_psf_results*.fits'
                                                  % self.sensor_id))[0]
@@ -364,13 +368,14 @@ class EOTestPlots(object):
             dn = fe55_catalog[amp].data.field('DN')[index]
             foo = Fe55GainFitter(dn)
             try:
-                foo.fit()
+                foo.fit(hist_nsig=hist_nsig)
             except:
                 continue
             if win is None:
                 win = foo.plot(interactive=self.interactive,
                                subplot=self.subplot(amp),
-                               figsize=figsize, frameLabels=True, amp=amp)
+                               figsize=figsize, frameLabels=True, amp=amp,
+                               xrange_scale=xrange_scale)
                 win.frameAxes.text(0.5, 1.08, 'Fe55, %s' % self.sensor_id,
                                    horizontalalignment='center',
                                    verticalalignment='top',
@@ -379,7 +384,7 @@ class EOTestPlots(object):
             else:
                 foo.plot(interactive=self.interactive,
                          subplot=self.subplot(amp), win=win,
-                         frameLabels=True, amp=amp)
+                         frameLabels=True, amp=amp, xrange_scale=xrange_scale)
             pylab.locator_params(axis='x', nbins=4, tight=True)
 
     def ptcs(self, xrange=None, yrange=None, figsize=(11, 8.5), ptc_file=None):
@@ -414,11 +419,215 @@ class EOTestPlots(object):
                 # Plot PTC curves using gain measurements.
                 ptc_gain = self.results['PTC_GAIN'][amp-1]
                 ptc_gain_error = self.results['PTC_GAIN_ERROR'][amp-1]
+                ptc_a00 = self.results['PTC_A00'][amp-1]
+                ptc_a00_error = self.results['PTC_A00_ERROR'][amp-1]
                 plot.curve(xx, xx/ptc_gain, oplot=1, color='b', lineStyle=':')
-                note = 'Amp %i\nGain = %.2f +/- %.2f'\
-                    % (amp, ptc_gain, ptc_gain_error)
+                note = 'Amp %i\nGain = %.2f +/- %.2f\nA00 = %.1e +/- %.1e'\
+                    % (amp, ptc_gain, ptc_gain_error, ptc_a00, ptc_a00_error)
                 pylab.annotate(note, (0.05, 0.9), xycoords='axes fraction',
                                verticalalignment='top', size='x-small')
+
+    def cti_curves(self, overscan_file=None, figsize=(8, 6)):
+
+        if overscan_file is None:
+            overscan_file = self._fullpath('{0}_overscan_results.fits'.format(self.sensor_id))
+        fig = plt.figure(figsize=figsize)
+
+        with fits.open(overscan_file) as overscan:
+
+            datasec = overscan[0].header['DATASEC']
+            amp_geom = parse_geom_kwd(datasec)
+            xmax = amp_geom['xmax']
+
+            fig.add_subplot(1, 1, 1)
+            for amp in range(1, 17):
+
+                if amp > 10: marker='s'
+                else: marker = '^'
+                
+                meanrow = overscan[amp].data['MEANROW']
+                offset = np.mean(meanrow[:, -20:], axis=1)
+                flux = overscan[amp].data['FLUX']-offset
+                overscan1 = meanrow[:, xmax] - offset
+                overscan2 = meanrow[:, xmax+1] - offset
+                lastpixel = meanrow[:, xmax-1] - offset
+                cti = (overscan1+overscan2)/(xmax*lastpixel)
+                index = np.argsort(flux)
+
+                plt.plot(flux[index], cti[index], label='{0}'.format(amp),
+                         marker=marker, markersize=4)
+
+            plt.axhline(y=5.0E-6, color='black', linestyle='--')
+
+            plt.ylim(bottom=5E-8, top=2E-4)
+            plt.xlim(left=50.0, right=240000.)
+            plt.xscale('log')
+            plt.yscale('log')
+            plt.grid(True, which='major', axis='both')
+            plt.xlabel('flux (e-)', fontsize='small')
+            plt.ylabel('cti', fontsize='small')
+            plt.legend(fontsize='x-small', loc=1, ncol=4)
+            plt.title('CTI from EPER, {0}'.format(self.sensor_id), fontsize='small')
+
+    def overscan_curves(self, overscan_file, figsize=(10, 8)):
+        
+        if overscan_file is None:
+            overscan_file = self._fullpath('{0}_overscan_results.fits'.format(self.sensor_id))
+        fig, axes = plt.subplots(4, 4, sharey=True, sharex=True, figsize=figsize)
+        axes = axes.flatten()
+
+        with fits.open(overscan_file) as overscan:
+
+            datasec = overscan[0].header['DATASEC']
+            amp_geom = parse_geom_kwd(datasec)
+            xmax = amp_geom['xmax']
+
+            for amp in range(1, 17):
+
+                meanrow = overscan[amp].data['MEANROW']
+                offset = np.mean(meanrow[:, -20:], axis=1)
+                flux = overscan[amp].data['FLUX']-offset
+                overscan1 = meanrow[:, xmax] - offset
+                overscan2 = meanrow[:, xmax+1] - offset
+                index = np.argsort(flux)
+        
+                axes[amp-1].plot(flux[index], overscan1[index], label='overscan 1'.format(amp),
+                         marker='.', markersize=4)
+                axes[amp-1].plot(flux[index], overscan2[index], label='overscan 2'.format(amp),
+                         marker='.', markersize=4)  
+        
+                axes[amp-1].set_yscale('symlog', threshold=1.0)
+                axes[amp-1].set_xscale('log')
+                axes[amp-1].set_ylim(bottom=-1.0)
+                axes[amp-1].set_xlim(left=50, right=240000)
+                axes[amp-1].set_title('Amp{0}'.format(amp), fontsize='small')
+                axes[amp-1].grid(True, which='major', axis='both')
+                if (amp-1) >= 12: axes[amp-1].set_xlabel('flux (e-)', fontsize='small')
+                if (amp-1) % 4 == 0: axes[amp-1].set_ylabel('signal (e-)', fontsize='small')
+
+                axes[amp-1].legend(fontsize='x-small',  loc = 'upper left', ncol=1)
+
+            plt.suptitle('Signal in Overscan Pixels', fontsize='small')
+
+    def overscan_noise_curves(self, overscan_file, figsize=(8, 6)):
+        
+        if overscan_file is None:
+            overscan_file = self._fullpath('{0}_overscan_results.fits'.format(self.sensor_id))
+        fig = plt.figure(figsize=figsize)
+
+        with fits.open(overscan_file) as overscan:
+
+            datasec = overscan[0].header['DATASEC']
+            amp_geom = parse_geom_kwd(datasec)
+            xmax = amp_geom['xmax']
+
+            fig.add_subplot(1, 1, 1)
+            for amp in range(1, 17):
+        
+                if amp > 10: marker = 's'
+                else: marker = '^'
+
+                flux = overscan[amp].data['FLUX']
+                noise = overscan[amp].data['NOISE']
+                index = np.argsort(flux)
+        
+                plt.plot(flux[index], noise[index], label='{0}'.format(amp),
+                         linestyle='-', marker=marker, markersize=4)
+        
+            plt.xscale('log')
+            plt.xlim(left=50, right=240000)
+            plt.ylim(bottom=0.0, top=min(15.0, np.max(noise[index])+2.0))
+            plt.grid(True, which='major', axis='both')
+            plt.xlabel('flux (e-)', fontsize='small')
+            plt.ylabel('noise (e-)', fontsize='small')
+
+            plt.legend(fontsize='x-small',  loc = 'upper left', ncol=4)
+            plt.title('Noise in Overscan Pixels, {0}'.format(self.sensor_id), fontsize='small')
+
+    def overscan_sum_curves(self, overscan_file, figsize=(8, 6)):
+        
+        if overscan_file is None:
+            overscan_file = self._fullpath('{0}_overscan_results.fits'.format(self.sensor_id))
+        fig = plt.figure(figsize=figsize)
+
+        with fits.open(overscan_file) as overscan:
+
+            datasec = overscan[0].header['DATASEC']
+            amp_geom = parse_geom_kwd(datasec)
+            xmax = amp_geom['xmax']
+
+            fig.add_subplot(1, 1, 1)
+            for amp in range(1, 17):
+        
+                if amp > 10: marker = 's'
+                else: marker = '^'
+
+                meanrow = overscan[amp].data['MEANROW']
+                summed = np.sum(meanrow[:, xmax+8:xmax+18], axis=1)
+                flux = overscan[amp].data['FLUX']
+                index = np.argsort(flux)
+        
+                plt.plot(flux[index], summed[index], label='{0}'.format(amp),
+                         linestyle='-', marker=marker, markersize=4)
+        
+            plt.xscale('log')
+            plt.xlim(left=50.0, right=240000.0)
+            plt.ylim(bottom=-2.0, top=15.0)
+            plt.grid(True, which='major', axis='both')
+            plt.xlabel('flux (e-)', fontsize='small')
+            plt.ylabel('overscan sum (e-)', fontsize='small')
+
+            plt.legend(fontsize='x-small',  loc = 'upper left', ncol=4)
+            plt.title('Summed Signal in Overscan Pixels [8:18], {0}'.format(self.sensor_id), fontsize='small')
+
+    def eper_curves(self, overscan_file, figsize=(10, 8)):
+
+        if overscan_file is None:
+            overscan_file = self._fullpath('{0}_overscan_results.fits'.format(self.sensor_id))
+        fig, axes = plt.subplots(4, 4, sharey=True, sharex=True, figsize=figsize)
+        axes = axes.flatten()
+    
+        with fits.open(overscan_file) as overscan:
+
+            datasec = overscan[0].header['DATASEC']
+            amp_geom = parse_geom_kwd(datasec)
+            xmax = amp_geom['xmax']
+    
+            target_flux_levels = [100, 1000, 10000, 25000, 50000, 75000, 100000]
+            for amp in range(1, 17):
+        
+                target_flux_index = 0
+                flux = overscan[amp].data['FLUX']       
+                index = np.argsort(flux)
+                
+                for i in index:
+                    f = flux[i]
+            
+                    if f > target_flux_levels[target_flux_index]:
+
+                        meanrow = overscan[amp].data['MEANROW'][i, :]
+                        offset = np.mean(meanrow[-20:])
+                        oscan = meanrow[xmax:] - offset
+                        columns = np.arange(xmax, meanrow.shape[0])
+        
+                        axes[amp-1].plot(columns, oscan, label='{0:d} e-'.format(int(round(f, -2))))
+                        target_flux_index += 1
+                        if target_flux_index >= len(target_flux_levels): 
+                            break
+
+                axes[amp-1].set_yscale('symlog', linthreshy=1.0)
+                axes[amp-1].set_ylim(-2, 300)
+                axes[amp-1].set_yticklabels([r'$-1$', '0', '1', r'$10^{1}$', r'$10^{2}$'])
+                axes[amp-1].grid(True, which='major', axis='both')
+                axes[amp-1].set_title('Amp {0}'.format(amp), fontsize='small')
+                axes[amp-1].tick_params(axis='both', which='minor')
+                if (amp-1) >= 12: axes[amp-1].set_xlabel('pixel number', fontsize='small' )
+                if (amp-1) % 4 == 0: axes[amp-1].set_ylabel('signal (e-)', fontsize='small')
+                        
+            h, l = axes[-1].get_legend_handles_labels()
+            fig.subplots_adjust(bottom=0.12)
+            fig.legend(h, l, loc='lower center', ncol=len(target_flux_levels))
+            plt.suptitle('Mean Overscans, {0}'.format(self.sensor_id))
 
     def bf_curves(self, xrange=None, yrange=None, figsize=(6, 8),
                   bf_file=None, adu_max=1e5):

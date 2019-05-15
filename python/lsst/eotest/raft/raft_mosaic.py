@@ -24,38 +24,48 @@ class RaftMosaic(object):
 
     def __init__(self, fits_files, gains=None, bias_subtract=True,
                  nx=12700, ny=12700, nx_segments=8, ny_segments=2,
-                 segment_processor=None):
+                 segment_processor=None, bias_frames=None,
+                 dark_currents=None):
         """
-        Constructor.
-
         Parameters
         ----------
         fits_files : dict
             Dictionary of single sensor FITS files, keyed by raft slot
             name.  These files should conform to LCA-13501.
-        gains : dict, optional
+        gains : dict [None]
             Dictionary (keyed by slot name) of dictionaries (one per
-            FITS file) of system gain values for each amp.  Default:
-            None (i.e., do not apply gain correction).
-        bias_subtract : bool, optional
-            Flag do to a bias subtraction based on the serial overscan.
-            Default: True
-        nx : int, optional
-            Number of pixels in the x (serial) direction.  Default: 12700
-        ny : int, optional
-            Number of pixels in the y (parallel) direction.  Default: 12700
-        nx_segments : int, optional
-            Number of segments in the x (serial) direction.  Default: 8
-        ny_segments : int, optional
-            Number of pixels in the y (parallel) direction.  Default: 2
-        segment_processor : function, optional
-            Function to apply to pixel data in each segment. If None (default),
+            FITS file) of system gain values for each amp.  If
+            None, then do not apply gain correction.
+        bias_subtract : bool [True]
+            Flag do to a bias subtraction based on the serial overscan
+            or provided bias frame.
+        nx : int [12700]
+            Number of pixels in the x (serial) direction.
+        ny : int, [12700]
+            Number of pixels in the y (parallel) direction.
+        nx_segments : int [8]
+            Number of segments in the x (serial) direction.
+        ny_segments : int [2]
+            Number of pixels in the y (parallel) direction.
+        segment_processor : function [None]
+            Function to apply to pixel data in each segment. If None,
             then set do the standard bias subtraction and gain correction.
+        bias_frames : dict [None]
+            Dictionary of single sensor bias frames, keyed by raft slot.
+            If None, then just do the bias level subtraction using
+            overscan region.
+        dark_currents : dict [None]
+            Dictionary of dictionaries of dark current values per amp
+            in e-/s, keyed by raft slot and by amp number. If None, then
+            dark current subtraction is not applied.
         """
         self.fits_files = fits_files
         with fits.open(list(fits_files.values())[0]) as hdu_list:
             self.raft_name = hdu_list[0].header['RAFTNAME']
-            self.wl = hdu_list[0].header['MONOWL']
+            try:
+                self.wl = hdu_list[0].header['MONOWL']
+            except KeyError:
+                wl = 0
         self.image_array = np.zeros((nx, ny), dtype=np.float32)
         self.nx = nx
         self.ny = ny
@@ -69,13 +79,24 @@ class RaftMosaic(object):
             gains = dict([(slot, unit_gains) for slot in fits_files])
         for slot, filename in list(fits_files.items()):
             #print("processing", os.path.basename(filename))
-            ccd = sensorTest.MaskedCCD(filename)
+            bias_frame = bias_frames[slot] if bias_frames is not None else None
+            ccd = sensorTest.MaskedCCD(filename, bias_frame=bias_frame)
+            if dark_currents is not None:
+                try:
+                    dark_time = ccd.md.get('DARKTIME')
+                except:
+                    dark_time = ccd.md.get('EXPTIME')
             with fits.open(filename) as hdu_list:
                 for amp, hdu in zip(ccd, hdu_list[1:]):
+                    if dark_currents:
+                        dark_correction = dark_time*dark_currents[slot][amp]
+                    else:
+                        dark_correction = 0
                     self._set_segment(slot, ccd, amp, hdu, gains[slot][amp],
-                                      bias_subtract)
+                                      bias_subtract, dark_correction)
 
-    def _set_segment(self, slot, ccd, amp, hdu, amp_gain, bias_subtract):
+    def _set_segment(self, slot, ccd, amp, hdu, amp_gain, bias_subtract,
+                     dark_correction):
         """
         Set the pixel values in the mosaic from the segment values.
         """
@@ -87,6 +108,8 @@ class RaftMosaic(object):
         # Apply gain correction.
         seg_array = np.array(amp_gain*copy.deepcopy(mi.getImage().getArray()),
                              dtype=np.float32)
+        # Apply dark current correction.
+        seg_array -= dark_correction
         # Determine flip in serial direction based on 1, 1 element of
         # transformation matrix.
         if hdu.header['PC1_1Q'] < 0:
@@ -117,7 +140,8 @@ class RaftMosaic(object):
                 self.segment_processor(slot, ccd, amp, xy_bounds=xy_bounds)
 
     def plot(self, title=None, cmap=plt.cm.hot, nsig=5, figsize=(10, 10),
-             binsize=10, flipx=True, textcolor='c', annotation=''):
+             binsize=10, flipx=True, textcolor='c', annotation='',
+             rotate180=False):
         """
         Render the raft mosaic.
 
@@ -145,6 +169,10 @@ class RaftMosaic(object):
         annotation : str, optional
             Description of the plot, e.g., pixel units (ADU or e-),
             gain-corrected, bias-subtracted.  Default: ''
+        rotate180 : bool [False]
+            Flag to rotate the mosaic by 180 degrees to match the
+            orientation of the focalplane mosiacs created for the
+            BOT-level plots.
         """
         plt.rcParams['figure.figsize'] = figsize
         fig = plt.figure()
@@ -153,6 +181,12 @@ class RaftMosaic(object):
                                            use_mean=True)
         if flipx:
             output_array = output_array[:, ::-1]
+        if rotate180:
+            ny, nx = output_array.shape
+            rotated_array = np.zeros((nx, ny), dtype=output_array.dtype)
+            for j in range(ny):
+                rotated_array[:, ny-1-j] = output_array[::-1, j]
+            output_array = rotated_array
         image = ax.imshow(output_array, interpolation='nearest', cmap=cmap)
         # Set range and normalization of color map based on sigma-clip
         # of pixel values.
@@ -175,6 +209,9 @@ class RaftMosaic(object):
             if flipx:
                 xx = 1 - xx
             yy = 1. - (float(ymax - ymin)*0.05 + ymin)/float(self.ny)
+            if rotate180:
+                xx = 1 - xx - 7*np.abs(xmax - xmin)/float(self.nx)
+                yy = 1 - yy + 1.9*np.abs(ymax - ymin)/float(self.ny)
             plt.annotate('%s' % slot,
                          (xx, yy), xycoords='axes fraction',
                          size='x-small', horizontalalignment='center',
@@ -188,6 +225,9 @@ class RaftMosaic(object):
                     yy = 1. - (float(ymax - ymin)*0.85 + ymin)/float(self.ny)
                 else:
                     yy = 1. - (float(ymax - ymin)*0.15 + ymin)/float(self.ny)
+                if rotate180:
+                    xx = 1 - xx
+                    yy = 1 - yy
                 plt.annotate('%s' % imutils.channelIds[amp],
                              (xx, yy), xycoords='axes fraction',
                              size='x-small', horizontalalignment='center',

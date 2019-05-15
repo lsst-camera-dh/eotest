@@ -44,8 +44,16 @@ def pair_mean(flat1, flat2, amp):
 
 def find_flat2(flat1):
     pattern = flat1.split('flat1')[0] + 'flat2*.fits'
-    flat2 = glob.glob(pattern)[0]
-    return flat2
+    flat2_files = glob.glob(pattern)
+    if len(flat2_files) == 1:
+        return flat2_files[0]
+    with fits.open(flat1) as hdus:
+        exptime1 = hdus[0].header['EXPTIME']
+    for flat2 in flat2_files:
+        with fits.open(flat2) as hdus:
+            if hdus[0].header['EXPTIME'] == exptime1:
+                return flat2
+    raise RuntimeError("no flat2 file found for {}".format(flat1))
 
 
 class FlatPairConfig(pexConfig.Config):

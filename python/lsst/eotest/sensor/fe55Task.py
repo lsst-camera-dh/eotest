@@ -45,7 +45,8 @@ class Fe55Task(pipeBase.Task):
     ConfigClass = Fe55Config
     _DefaultName = "Fe55Task"
 
-    def fit_gains(self, fitter, gains, gain_errors, sigma_modes, amps=None):
+    def fit_gains(self, fitter, gains, gain_errors, sigma_modes, amps=None,
+                  hist_nsig=10):
         "Fit the DN distributions to obtain the system gain per amp."
         my_gains, my_gain_errors, my_sigma_modes = \
             gains, gain_errors, sigma_modes
@@ -57,7 +58,7 @@ class Fe55Task(pipeBase.Task):
             if len(dn) > 2:
                 try:
                     foo = Fe55GainFitter(dn)
-                    kalpha_peak, kalpha_sigma = foo.fit()
+                    kalpha_peak, kalpha_sigma = foo.fit(hist_nsig=hist_nsig)
                     my_gains[amp] = foo.gain
                     my_gain_errors[amp] = foo.gain_error
                 except RuntimeError as eobj:
@@ -77,7 +78,7 @@ class Fe55Task(pipeBase.Task):
     @pipeBase.timeMethod
     def run(self, sensor_id, infiles, mask_files, bias_frame=None,
             fe55_catalog=None, minClustersPerAmp=None, chiprob_min=0.1,
-            accuracy_req=0):
+            accuracy_req=0, hist_nsig=10):
         imutils.check_temperatures(infiles, self.config.temp_set_point_tol,
                                    setpoint=self.config.temp_set_point,
                                    warn_only=True)
@@ -113,7 +114,8 @@ class Fe55Task(pipeBase.Task):
                     fitter.process_image(ccd, amp, logger=self.log)
                     gains, gain_errors, sigma_modes = \
                         self.fit_gains(fitter, gains, gain_errors, sigma_modes,
-                                       amps=list(ccd.keys()))
+                                       amps=list(ccd.keys()),
+                                       hist_nsig=hist_nsig)
             if self.config.output_file is None:
                 psf_results = os.path.join(self.config.output_dir,
                                            '%s_psf_results_nsig%i.fits'

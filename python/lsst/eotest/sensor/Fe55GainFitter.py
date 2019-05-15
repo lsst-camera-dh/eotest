@@ -93,7 +93,7 @@ class Fe55GainFitter(object):
 
     def plot(self, xrange=None, interactive=False, bins=100,
              win=None, subplot=(1, 1, 1), figsize=None, add_labels=False,
-             frameLabels=False, amp=1, title=''):
+             frameLabels=False, amp=1, title='', xrange_scale=1):
         pylab_interactive_state = pylab.isinteractive()
         pylab.interactive(interactive)
         if win is None:
@@ -115,14 +115,18 @@ class Fe55GainFitter(object):
             win.axes[-1].set_position(bbox)
         if xrange is not None:
             self.xrange = xrange
+        # Expand x-axis scale.
+        xrange_mid = sum(self.xrange)/2.
+        xmin = (min(self.xrange) - xrange_mid)*xrange_scale + xrange_mid
+        xmax = (max(self.xrange) - xrange_mid)*xrange_scale + xrange_mid
         logscale = True
         if max(self.signals) <= 0:
             logscale = False
         try:
-            hist = pylab.hist(self.signals, bins=bins, range=self.xrange,
+            hist = pylab.hist(self.signals, bins=bins, range=(xmin, xmax),
                               histtype='bar', color='b', log=logscale)
             yrange = 1, max(hist[0])*1.5
-            plot.setAxis(self.xrange, yrange)
+            plot.setAxis((xmin, xmax), yrange)
         except:
             return win
         if add_labels:
@@ -130,8 +134,8 @@ class Fe55GainFitter(object):
             pylab.ylabel('Entries / bin')
         x = (hist[1][1:] + hist[1][:-1])/2.
         xx = np.linspace(x[0], x[-1], 1000)
-        pylab.plot(xx, fe55_lines(xx, *self.pars), 'r--', markersize=3,
-                   linewidth=1)
+        pylab.plot(xx, xrange_scale*fe55_lines(xx, *self.pars), 'r--',
+                   markersize=3, linewidth=1)
         pylab.annotate(("Amp %i\nGain=%.2f e-/DN") % (amp, self.gain),
                        (0.475, 0.8), xycoords='axes fraction',
                        size='x-small')

@@ -176,10 +176,10 @@ class PsfGaussFit(object):
             # Append new data to existing file.
             self.output = fits.open(self.outfile)
 
-    def _bg_image(self, ccd, amp, nx, ny):
+    def _bg_image(self, image, ccd, nx, ny):
         "Compute background image based on clipped local mean."
         bg_ctrl = afwMath.BackgroundControl(nx, ny, ccd.stat_ctrl)
-        bg = afwMath.makeBackground(ccd[amp], bg_ctrl)
+        bg = afwMath.makeBackground(image, bg_ctrl)
         return bg.getImageF()
 
     def process_image(self, ccd, amp, sigma0=0.36, dn0=1590./5.,
@@ -195,9 +195,9 @@ class PsfGaussFit(object):
             print("DM stack error encountered when generating bias image ")
             print("from inferred overscan region.")
             print("Skipping bias subtraction.")
-            image = ccd[amp]
+            image = ccd[amp].Factory(ccd[amp], deep=True)
 
-        image -= self._bg_image(ccd, amp, *bg_reg)
+        image -= self._bg_image(image, ccd, *bg_reg)
         imarr = image.getImage().getArray()
 
         flags = afwMath.MEDIAN | afwMath.STDEVCLIP
@@ -210,6 +210,11 @@ class PsfGaussFit(object):
             logger.info("PsfGaussFit.process_image: threshold= %s"
                         % threshold.getValue())
         fpset = afwDetect.FootprintSet(image, threshold)
+        # Grow the footprints to make the fit more robust for very broad
+        # PSFs in the presence of noisier data.
+        grow = 1
+        isotropic = False
+        fpset = afwDetect.FootprintSet(fpset, grow, isotropic)
 
         x0, y0 = [], []
         sigmax, sigmay, dn, dn_fp, chiprob = [], [], [], [], []
