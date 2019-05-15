@@ -7,7 +7,6 @@ from scipy.ndimage.filters import gaussian_filter
 
 from lsst.eotest.fitsTools import fitsWriteto
 
-<<<<<<< HEAD
 def is_valid_aggressor(ccd, amp, ay, ax, threshold=100000., r=50):
     """Evaluate if identified spot is valid aggressor."""    
     imarr = ccd[amp].getImage().getArray()
@@ -116,128 +115,6 @@ class CrosstalkMatrix():
             self.header.set('SENSOR2', victim_sensor_id)
         else:
             self.header.set('SENSOR2', aggressor_sensor_id)
-=======
-    This routine is optimized for system crosstalk input, i.e., for
-    which the aggressor amp has a single illuminated column.
-    """
-    #
-    # Find bright column of aggressor amplifier.
-    #
-    # Set exptime and gain to unity so that the e- threshold used by
-    # BrightPixels converts directly to DN.
-    #
-    exptime = 1
-    gain = 1
-    if dnthresh is None:
-        image = ccd.unbiased_and_trimmed_image(aggressor_amp)
-        median, stdev = get_stats(image, ccd.stat_ctrl)
-        dnthresh = median + nsig*stdev
-    bp = BrightPixels(ccd, aggressor_amp, exptime, gain, ethresh=dnthresh)
-    pixels, columns = bp.find()
-
-    if len(columns) > 1:
-        raise RuntimeError("More than one aggressor column found.")
-
-    agg_col = columns[0]
-    agg_mean = column_mean(ccd, aggressor_amp, agg_col)[0]
-
-    ratios = dict([(amp, column_mean(ccd, amp, agg_col)/agg_mean)
-                   for amp in ccd])
-    return ratios
-
-
-def get_footprint(fp_set, min_fp_size, threshold):
-    footprints = [fp for fp in fp_set.getFootprints()
-                  if fp.getArea() >= min_fp_size]
-    if len(footprints) > 1:
-        message = "More than one spot image found in aggressor amplifier.\n"
-        message += "      x     y     peak value  # pixels\n"
-        for i, fp in enumerate(footprints):
-            peak = [x for x in fp.getPeaks()][0]
-            message += ('%2i  %4i  %4i     %6i       %4i\n'
-                        % (i, peak.getIx(), peak.getIy(), peak.getPeakValue(),
-                           fp.getArea()))
-        message += "Threshold: %i\n" % threshold
-        raise RuntimeError(message)
-    fp = footprints[0]
-    peak_value = max([x.getPeakValue() for x in fp.getPeaks()])
-    return fp, peak_value
-
-
-def extract_mean_signal_2(ccd, amp, footprint):
-    masked_image = ccd.bias_subtracted_image(amp)
-    stdev = afwMath.makeStatistics(masked_image, afwMath.STDEVCLIP,
-                                   ccd.stat_ctrl).getValue()
-    signal = 0
-    npix = 0
-    for span in footprint.getSpans():
-        width = span.getX1() - span.getX0() + 1
-        bbox = afwGeom.Box2I(afwGeom.Point2I(span.getX0(), span.getY()),
-                             afwGeom.Extent2I(width, 1))
-        subim = masked_image.Factory(masked_image, bbox)
-        stats = afwMath.makeStatistics(subim, afwMath.SUM | afwMath.NPOINT,
-                                       ccd.stat_ctrl)
-        signal += stats.getValue(afwMath.SUM)
-        npix += stats.getValue(afwMath.NPOINT)
-    return np.array((signal/npix, stdev))
-
-
-def extract_mean_signal(ccd, amp, footprint):
-    maskarr = ccd[amp].getMask().getArray()
-    image = ccd.bias_subtracted_image(amp)
-    stdev = afwMath.makeStatistics(image, afwMath.STDEVCLIP,
-                                   ccd.stat_ctrl).getValue()
-    imarr = image.getImage().getArray()
-    signal = 0
-    npix = 0
-    for span in footprint.getSpans():
-        y = span.getY()
-        for x in range(span.getX0(), span.getX1()+1):
-            npix += 1
-            if maskarr[y][x] == 0:
-                signal += imarr[y][x]
-    return np.array((signal/float(npix), stdev))
-
-
-def detector_crosstalk(ccd, aggressor_amp, dnthresh=None, nsig=5,
-                       signal_extractor=extract_mean_signal,
-                       min_fp_size=50):
-    """
-    Compute detector crosstalk from a spot image in the aggressor
-    amplifier. dnthresh is the threshold in DN for detecting the
-    illuminated column in the aggressor amplifier; if set to None,
-    then nsig*clipped_stdev above median is used for the threshold.
-    """
-    image = ccd.unbiased_and_trimmed_image(aggressor_amp)
-    #
-    # Extract footprint of spot image using nominal detection
-    # threshold.
-    #
-    if dnthresh is None:
-        median, stdev = get_stats(image, ccd.stat_ctrl)
-#        dnthresh = median + nsig*stdev
-        dnthresh = (np.max(image.getImage().getArray())
-                    + median)/2.
-#    print "dnthresh =", dnthresh
-    threshold = afwDetect.Threshold(dnthresh)
-    fp_set = afwDetect.FootprintSet(image, threshold)
-    try:
-        footprint, peak_value = get_footprint(fp_set, min_fp_size, dnthresh)
-    except IndexError:
-        raise RuntimeError('index error in get_footprint')
-
-    agg_mean = signal_extractor(ccd, aggressor_amp, footprint)[0]
-    ratios = dict([(amp, signal_extractor(ccd, amp, footprint)
-                    / agg_mean) for amp in ccd])
-#    for amp in ratios:
-#        if ratios[amp][0] > 0.1:
-#            ratios[amp] = (0, 0)
-    return ratios
-
-
-class CrosstalkMatrix(object):
-    def __init__(self, filename=None, namps=16):
->>>>>>> master
         self.filename = filename
         self.namps = namps
         self._set_matrix()
