@@ -88,7 +88,7 @@ def cmap_range(image_array, nsig=5):
 def flatten_across_segments(ccd, border=50):
     medians = dict()
     for amp in ccd:
-        image = imutils.trim(ccd[amp], ccd.amp_geom.imaging)
+        image = ccd.unbiased_and_trimmed_image(amp)
         bbox = image.getBBox().grow(-border)
         subimage = image.Factory(image, bbox)
         medians[amp] \
@@ -100,8 +100,9 @@ def flatten_across_segments(ccd, border=50):
 
 def plot_flat(infile, nsig=3, cmap=pylab.cm.hot, win=None, subplot=(1, 1, 1),
               figsize=None, wl=None, gains=None, use_ds9=False, outfile=None,
-              title=None, annotation='', flatten=False, binsize=1):
-    ccd = MaskedCCD(infile)
+              title=None, annotation='', flatten=False, binsize=1,
+              bias_frame=None):
+    ccd = MaskedCCD(infile, bias_frame=bias_frame)
     if flatten:
         ccd = flatten_across_segments(ccd)
     with fits.open(infile) as foo:
@@ -579,7 +580,7 @@ class EOTestPlots(object):
             shot_noise = self.results['DARK_CURRENT_95']*exptime
         else:
             shot_noise = np.array([dark95s[x] for x in amp])*exptime
-        electronic_noise = np.sqrt(total_noise**2 + shot_noise**2)
+        electronic_noise = np.sqrt(total_noise**2 + shot_noise)
         color_cycler = plt.rcParams['axes.prop_cycle']()
         npts = len(total_noise)
         dx = 0.075

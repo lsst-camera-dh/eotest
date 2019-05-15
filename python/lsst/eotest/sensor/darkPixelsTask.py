@@ -43,7 +43,7 @@ class DarkPixelsTask(pipeBase.Task):
     def run(self, sensor_id, sflat_files, mask_files, bias_frame=None):
         medfile = os.path.join(self.config.output_dir,
                                '%s_median_sflat.fits' % sensor_id)
-        superflat(sflat_files, outfile=medfile)
+        superflat(sflat_files, outfile=medfile, bias_frame=bias_frame)
 
         ccd = MaskedCCD(medfile, mask_files=mask_files, bias_frame=bias_frame)
         outfile = os.path.join(self.config.output_dir,
