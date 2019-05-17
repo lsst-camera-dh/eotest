@@ -508,7 +508,7 @@ def rebin(image, binsize, use_mean=False):
     rebinned_array = rebin_array(image.getArray(), binsize, use_mean=use_mean)
     output_image = image.Factory(*rebinned_array.shape)
     out_array = output_image.getArray()
-    out_array += rebinned_array
+    out_array += rebinned_array.transpose()
     return output_image
 
 
