@@ -37,6 +37,7 @@ class OverscanFit(object):
         self.minflux = minflux
         self.maxflux = maxflux
         self.outfile = outfile
+        self.xmax_val = None
         if outfile is None:
             self.output = fits.HDUList()
             self.output.append(fits.PrimaryHDU())
@@ -56,16 +57,18 @@ class OverscanFit(object):
 
     def process_image(self, ccd, gains):
         """Process an image."""
-
+      
         for amp in range(1, 17):
             image = ccd.bias_subtracted_image(amp)
 
-            ## get xmin, xmax, ymin, ymax here
-            amp_geom = parse_geom_kwd(ccd.amp_geom[1]['DATASEC'])
+            datasec = ccd.amp_geom[1]['DATASEC']
+            amp_geom = parse_geom_kwd(datasec)
             xmin = amp_geom['xmin']
             xmax = amp_geom['xmax']
             ymin = amp_geom['ymin']
             ymax = amp_geom['ymax']
+            if self.xmax_val is None:
+                self.xmax_val = xmax
 
             imarr = image.getImage().getArray()*gains[amp]
 
@@ -108,6 +111,8 @@ class OverscanFit(object):
             self.signal_std[amp].append(signal_std)
             self.tau_std[amp].append(tau_std)
             self.cti_std[amp].append(cti_std)
+
+        self.output[0].header['DATASEC'] = datasec
 
     def build_output_dict(self):
         """Export the results as a dictionary of dictionaries"""

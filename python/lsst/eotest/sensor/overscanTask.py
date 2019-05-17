@@ -18,8 +18,6 @@ class OverscanConfig(pexConfig.Config):
     """Configuration for overscan analysis task"""
     output_dir = pexConfig.Field("Output directory", str, default='.')
     output_file = pexConfig.Field("Output filename", str, default=None)
-    smoothing = pexConfig.Field("Smoothing for spline overscan correction",
-                                int, default=11000)
     minflux = pexConfig.Field("Minimum flux for overscan fitting.", float,
                               default=10000.0)
     maxflux = pexConfig.Field("Maximum flux for overscan fitting.", float,
