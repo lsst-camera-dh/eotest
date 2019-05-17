@@ -57,7 +57,10 @@ class OverscanFit(object):
 
     def process_image(self, ccd, gains):
         """Process an image."""
-      
+        if self.outfile is None:
+            if len(self.output[0].header) < 10:
+                self.output[0].header = fits.open(ccd.imfile)[0].header
+
         for amp in range(1, 17):
             image = ccd.bias_subtracted_image(amp)
 
