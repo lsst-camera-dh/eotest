@@ -431,6 +431,10 @@ def writeFits(images, outfile, template_file, bitpix=32):
         with fits.open(template_file) as template:
             output[0].header.update(template[0].header)
             output[0].header['FILENAME'] = outfile
+            metadata = images.get('METADATA', None)
+            if metadata is not None:
+                for key, val in metadata.items():
+                    output[0].header[key] = val
             for amp in all_amps:
                 output[amp].header.update(template[amp].header)
                 set_bitpix(output[amp], bitpix)
