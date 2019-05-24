@@ -85,11 +85,26 @@ def cmap_range(image_array, nsig=5):
     vmax = min(max(pixel_data), median + nsig*stdev)
     return vmin, vmax
 
+def flatten_across_segments(ccd, border=50):
+    medians = dict()
+    for amp in ccd:
+        image = ccd.unbiased_and_trimmed_image(amp)
+        bbox = image.getBBox().grow(-border)
+        subimage = image.Factory(image, bbox)
+        medians[amp] \
+            = afwMath.makeStatistics(subimage, afwMath.MEDIAN).getValue()
+    med0 = np.median(list(medians.values()))
+    for amp in ccd:
+        ccd[amp] *= med0/medians[amp]
+    return ccd
 
 def plot_flat(infile, nsig=3, cmap=pylab.cm.hot, win=None, subplot=(1, 1, 1),
               figsize=None, wl=None, gains=None, use_ds9=False, outfile=None,
-              title=None, annotation=''):
-    ccd = MaskedCCD(infile)
+              title=None, annotation='', flatten=False, binsize=1,
+              bias_frame=None):
+    ccd = MaskedCCD(infile, bias_frame=bias_frame)
+    if flatten:
+        ccd = flatten_across_segments(ccd)
     with fits.open(infile) as foo:
         if wl is None:
             # Extract wavelength from file
@@ -138,6 +153,11 @@ def plot_flat(infile, nsig=3, cmap=pylab.cm.hot, win=None, subplot=(1, 1, 1),
                 #
                 # Set the subarray in the mosaicked image.
                 mosaic[ymin:ymax, xmin:xmax] = subarr
+
+    if binsize > 1:
+        my_image = afwImage.ImageF(*mosaic.shape)
+        my_image.array[:] = mosaic.transpose()
+        mosaic = imutils.rebin(my_image, binsize=binsize).array/binsize**2
     #
     # Display the mosiacked image in ds9 using afwImage.
     if use_ds9:
@@ -155,7 +175,8 @@ def plot_flat(infile, nsig=3, cmap=pylab.cm.hot, win=None, subplot=(1, 1, 1),
         hdulist = fits.HDUList()
         hdulist.append(fits.PrimaryHDU())
         hdulist[0].data = mosaic[::-1, :]
-        warnings.filterwarnings('ignore', category=fits.verify.VerifyWarning, append=True)
+        warnings.filterwarnings('ignore', category=fits.verify.VerifyWarning,
+                                append=True)
         hdulist.writeto(outfile, overwrite=True)
     #
     # Set the color map to extend over the range median +/- stdev(clipped)
@@ -761,7 +782,7 @@ class EOTestPlots(object):
             shot_noise = self.results['DARK_CURRENT_95']*exptime
         else:
             shot_noise = np.array([dark95s[x] for x in amp])*exptime
-        electronic_noise = np.sqrt(total_noise**2 + shot_noise**2)
+        electronic_noise = np.sqrt(total_noise**2 + shot_noise)
         color_cycler = plt.rcParams['axes.prop_cycle']()
         npts = len(total_noise)
         dx = 0.075
@@ -1111,7 +1132,7 @@ class EOTestPlots(object):
                              horizontalalignment='right',
                              verticalalignment='bottom')
                 pylab.savefig('%s_%04inm_flat.png' % (self.sensor_id, wl))
-                pylab.clf()
+                pylab.close()
             except IndexError:
                 pass
 

@@ -46,9 +46,11 @@ def superflat(files, bias_frame=None, outfile='superflat.fits', bitpix=None,
                 if bias_frame:
                     bias_image = afwImage.ImageF(bias_frame,
                                                  imutils.dm_hdu(amp))
-                    image = bias_subtracted_image(image, bias_image, overscan, bias_method)
+                    image = bias_subtracted_image(image, bias_image, overscan,
+                                                  bias_method)
                 else:
-                    image -= imutils.bias_image(im=image, overscan=overscan, bias_method=bias_method)
+                    image -= imutils.bias_image(im=image, overscan=overscan,
+                                                bias_method=bias_method)
             images.append(image)
         if lsst.afw.__version__.startswith('12.0'):
             images = afwImage.vectorImageF(images)
