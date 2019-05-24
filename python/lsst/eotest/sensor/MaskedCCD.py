@@ -55,7 +55,10 @@ class MaskedCCD(dict):
         if mask_files:
             self.setAllMasks()
         if bias_frame is not None:
-            self.bias_frame = MaskedCCD(bias_frame)
+            if isinstance(bias_frame, MaskedCCD):
+                self.bias_frame = bias_frame
+            else:
+                self.bias_frame = MaskedCCD(bias_frame)
         else:
             self.bias_frame = None
         self._applyMasks = applyMasks
