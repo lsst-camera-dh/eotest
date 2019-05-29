@@ -101,7 +101,7 @@ def crosstalk_model_fit(aggressor_stamp, victim_stamp, num_iter=5, nsig=2.0):
         #
         b = victim_array.compressed()/victim_array.std()
         A = np.vstack([aggressor_array, bias, Y, X]).T/victim_array.std()
-        coefficients = np.linalg.lstsq(A, b)
+        coefficients = np.linalg.lstsq(A, b, rcond=-1)
         covar = np.matrix(np.dot(A.T, A)).I
 
     return np.append(coefficients[0], np.sqrt(covar.diagonal()))
@@ -176,7 +176,7 @@ class CrosstalkMatrix():
         """Write crosstalk results to a YAML file."""
 
         ampNames = [str(i) for i in range(self.matrix.shape[1])]
-        assert self.matrix.shape = (8, len(ampNames), len(ampNames))
+        assert self.matrix.shape == (8, len(ampNames), len(ampNames))
 
         dIndent = indent
         indent = 0
@@ -197,65 +197,3 @@ class CrosstalkMatrix():
                 print("}", file=fd)
 
                 indent -= dIndent
-                                           
-
-
- def writeCrosstalkCoeffs(outputFileName, coeff, amp_order, crosstalkName="Unknown", indent=2):
-    """Write a yaml file containing the crosstalk coefficients
-
-    The coeff array is indexed by [i, j] where i and j are amplifiers
-    corresponding to the amplifiers in det
-
-    Parameters
-    ----------
-    outputFileName : `str`
-        Name of output yaml file
-    coeff : `numpy.array(namp, namp)`
-        numpy array of coefficients
-    amp_order : 'list' of 'str'
-        List of string names for the amplifiers (e.g. C00)
-    ccdType : `str`
-        Name of CCD, used to index the yaml file
-        If all CCDs are identical could be the type (e.g. ITL)
-    indent : `int`
-        Indent width to use when writing the yaml file
-    """
-
-    dIndent = indent
-    indent = 0
-    with open(outputFileName, "w") as fd:
-        print(indent*" " + "crosstalk :", file=fd)
-        indent += dIndent
-        print(indent*" " + "%s :" % crosstalkName, file=fd)
-        indent += dIndent
-
-        for i, ampNameI in enumerate(ampNames):
-            print(indent*" " + "%s : {" % ampNameI, file=fd)
-            indent += dIndent
-            print(indent*" ", file=fd, end='')
-
-            for j, ampNameJ in enumerate(ampNames):
-                print("%s : %11.4e, " % (ampNameJ, coeff[i, j]), file=fd,
-                      end='\n' + indent*" " if j%4 == 3 else '')
-            print("}", file=fd)
-
-            indent -= dIndent
-
-
-
-        
-    
-    
-                
-            
-
-        
-            
-            
-        
-        
-
-            
-            
-        
-        
