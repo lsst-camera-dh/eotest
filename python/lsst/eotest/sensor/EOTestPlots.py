@@ -666,7 +666,6 @@ class EOTestPlots(object):
                 xcorr = xcorr[index]
                 index = np.where(mean < adu_max)
                 plt.plot(mean[index], xcorr[index], label='%s' % amp)
-            plt.xscale('log')
             plt.xlabel('mean signal (ADU)', fontsize='small')
             plt.ylabel('corr(1, 0)', fontsize='small')
             plt.legend(fontsize='x-small', loc=2)
@@ -679,10 +678,9 @@ class EOTestPlots(object):
                 ycorr = bf[1].data.field('AMP%02i_YCORR' % amp)
                 index = np.argsort(mean)
                 mean = mean[index]
-                xcorr = xcorr[index]
+                ycorr = ycorr[index]
                 index = np.where(mean < adu_max)
                 plt.plot(mean[index], ycorr[index], label='%s' % amp)
-            plt.xscale('log')
             plt.xlabel('mean signal (ADU)', fontsize='small')
             plt.ylabel('corr(0, 1)', fontsize='small')
             plt.legend(fontsize='x-small', loc=2)
