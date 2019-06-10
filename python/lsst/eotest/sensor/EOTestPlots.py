@@ -617,24 +617,19 @@ class EOTestPlots(object):
             target_flux_levels = [100, 1000, 10000, 25000, 50000, 75000, 100000]
             for amp in range(1, 17):
         
-                target_flux_index = 0
                 flux = overscan[amp].data['FLUX']       
                 index = np.argsort(flux)
-                
-                for i in index:
-                    f = flux[i]
-            
-                    if f > target_flux_levels[target_flux_index]:
 
-                        meanrow = overscan[amp].data['MEANROW'][i, :]
-                        offset = np.mean(meanrow[-20:])
-                        oscan = meanrow[xmax:] - offset
-                        columns = np.arange(xmax, meanrow.shape[0])
+                for target_flux in target_flux_levels:
+
+                    i = min(range(flux.shape[0]), key=lambda i: abs(flux[i]-target_flux))
+
+                    meanrow = overscan[amp].data['MEANROW'][i, :]
+                    offset = np.mean(meanrow[-20:])
+                    oscan = meanrow[xmax:] - offset
+                    columns = np.arange(xmax, meanrow.shape[0])
         
-                        axes[amp-1].plot(columns, oscan, label='{0:d} e-'.format(int(round(f, -2))))
-                        target_flux_index += 1
-                        if target_flux_index >= len(target_flux_levels): 
-                            break
+                    axes[amp-1].plot(columns, oscan, label='{0:d} e-'.format(int(round(flux[i], -2))))
 
                 axes[amp-1].set_yscale('symlog', linthreshy=1.0)
                 axes[amp-1].set_ylim(-2, 300)
