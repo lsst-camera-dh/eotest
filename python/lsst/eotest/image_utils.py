@@ -400,10 +400,8 @@ def superbias(files, overscan, imaging=None, dxmin=5, dxmax=2, bias_method='row'
     """Generates a single stacked 'super' bias frame based on
     a statistic. Images must be either all masked or all unmasked."""
     ims = [afwImage.ImageF(f, hdu) for f in files]
-    bias_frames = []
-    for im in ims:
-        bias_frame = unbias_and_trim(im, overscan, imaging, dxmin, dxmax, bias_method, **kwargs)
-        bias_frames.append(bias_frame)
+    bias_frames = [unbias_and_trim(im, overscan, imaging, dxmin, dxmax, bias_method,
+                                   **kwargs) for im in ims]
     return stack(bias_frames, statistic)
 
 def superbias_file(files, overscan, outfile, imaging=None, dxmin=5, dxmax=2,
