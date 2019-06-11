@@ -382,11 +382,7 @@ def fits_median(files, hdu=2, fix=True):
 
 def stack(ims, statistic=afwMath.MEDIAN):
     """Stacks a list of images based on a statistic."""
-    #images = []
-    try:
-        images = afwImage.vectorImageF()
-    except AttributeError:
-        images = []
+    images = []
     for image in ims:
         images.append(image)
     if lsst.afw.__version__.startswith('12.0'):
