@@ -48,7 +48,6 @@ from .linearityTask import LinearityTask
 from .ptcTask import PtcTask
 from .persistenceTask import PersistenceTask
 from .fe55CteTask import Fe55CteTask
-from .superbiasTask import SuperbiasTask
 
 from .BFTask import BFTask
 from .overscanTask import OverscanTask
