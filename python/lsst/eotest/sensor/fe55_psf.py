@@ -7,6 +7,9 @@ compute the probability of the chi-square fit.
 """
 from __future__ import print_function
 from __future__ import absolute_import
+import os
+import logging
+import psutil
 import numpy as np
 import warnings
 import itertools
@@ -175,12 +178,26 @@ class PsfGaussFit(object):
         else:
             # Append new data to existing file.
             self.output = fits.open(self.outfile)
+        if os.environ.get('LCATR_LOG_MEM_INFO', False) == 'True':
+            self.process = psutil.Process(os.getpid())
+        else:
+            self.process = None
+        self.log = logging.getLogger('PsfGaussFit')
+        self.log.setLevel(logging.INFO)
 
     def _bg_image(self, image, ccd, nx, ny):
         "Compute background image based on clipped local mean."
         bg_ctrl = afwMath.BackgroundControl(nx, ny, ccd.stat_ctrl)
         bg = afwMath.makeBackground(image, bg_ctrl)
         return bg.getImageF()
+
+    def log_mem_info(self, message, amp=None):
+        if self.process is None:
+            return
+        rss_mem = self.process.memory_info().rss/1024.**3
+        amp_info = ", amp %d" % amp if amp is not None else ''
+        self.log.info('PsfGaussFit, %s: rss_mem=%.2f GB; %s',
+                      self.process.pid, rss_mem, message + amp_info)
 
     def process_image(self, ccd, amp, sigma0=0.36, dn0=1590./5.,
                       bg_reg=(10, 10), logger=None):
@@ -190,30 +207,40 @@ class PsfGaussFit(object):
         starting values used for each fit.
         """
         try:
+            self.log_mem_info("image = ccd.bias_subtracted_image", amp=amp)
             image = ccd.bias_subtracted_image(amp)
         except MaskedCCDBiasImageException:
             print("DM stack error encountered when generating bias image ")
             print("from inferred overscan region.")
             print("Skipping bias subtraction.")
+            self.log_mem_info("image = ccd[amp.Factory(...)", amp=amp)
             image = ccd[amp].Factory(ccd[amp], deep=True)
 
+        self.log_mem_info("image -= self._bg_image(...)", amp=amp)
         image -= self._bg_image(image, ccd, *bg_reg)
+        self.log_mem_info("imarr = image.getImage().getArray()",  amp=amp)
         imarr = image.getImage().getArray()
 
         flags = afwMath.MEDIAN | afwMath.STDEVCLIP
+        self.log_mem_info("statistics = ", amp=amp)
         statistics = afwMath.makeStatistics(image, flags, ccd.stat_ctrl)
+        self.log_mem_info("median = ", amp=amp)
         median = statistics.getValue(afwMath.MEDIAN)
+        self.log_mem_info("stdev = ", amp=amp)
         stdev = statistics.getValue(afwMath.STDEVCLIP)
 
+        self.log_mem_info("threshold = ", amp=amp)
         threshold = afwDetect.Threshold(median + self.nsig*stdev)
         if logger is not None:
             logger.info("PsfGaussFit.process_image: threshold= %s"
                         % threshold.getValue())
+        self.log_mem_info("fpset = afwDetect.FootprintSet", amp=amp)
         fpset = afwDetect.FootprintSet(image, threshold)
         # Grow the footprints to make the fit more robust for very broad
         # PSFs in the presence of noisier data.
         grow = 1
         isotropic = False
+        self.log_mem_info("fpset = afwDetect.FootprintSet(..., grow", amp=amp)
         fpset = afwDetect.FootprintSet(fpset, grow, isotropic)
 
         x0, y0 = [], []
@@ -249,6 +276,8 @@ class PsfGaussFit(object):
                 dn_errors = stdev*np.ones(len(positions))
                 cluster_stats = cluster_moments(zvals_array, pos_array)
                 if self.npars == 5:
+                    self.log_mem_info("pars, _ = scipy.optimize... (npars=5)",
+                                      amp=amp)
                     pars, _ = scipy.optimize.leastsq(residuals, cluster_stats,
                                                      args=(pos_array, zvals_array,
                                                            dn_errors))
@@ -258,6 +287,7 @@ class PsfGaussFit(object):
                 else:
                     sigma_xy = 0.5*(cluster_stats[2]+cluster_stats[3])
                     p0 = (cluster_stats[0], cluster_stats[1], sigma_xy, cluster_stats[4])
+                    self.log_mem_info("pars, _ = scipy.optimize...", amp=amp)
                     pars, _ = scipy.optimize.leastsq(residuals_single, p0,
                                                      args=(pos_array, zvals_array,
                                                            dn_errors))
@@ -267,6 +297,7 @@ class PsfGaussFit(object):
                 x0.append(pars[0])
                 y0.append(pars[1])
                 dn_fp.append(dn_sum)
+                self.log_mem_info("chi2 = chisq(...", amp=amp)
                 chi2 = chisq(pos_array, zvals_array, x0[-1], y0[-1],
                              sigmax[-1], sigmay[-1], dn[-1], dn_errors)
                 dof = fp.getArea() - self.npars
