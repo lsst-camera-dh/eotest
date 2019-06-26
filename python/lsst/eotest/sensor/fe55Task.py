@@ -7,6 +7,7 @@ Gaussian fit parameters to Fe55 data.
 from __future__ import print_function
 from __future__ import absolute_import
 import os
+import psutil
 import numpy as np
 import astropy.io.fits as fits
 import lsst.eotest.image_utils as imutils
@@ -48,16 +49,21 @@ class Fe55Task(pipeBase.Task):
     def fit_gains(self, fitter, gains, gain_errors, sigma_modes, amps=None,
                   hist_nsig=10):
         "Fit the DN distributions to obtain the system gain per amp."
+        self._set_process()
         my_gains, my_gain_errors, my_sigma_modes = \
             gains, gain_errors, sigma_modes
         if amps is None:
             amps = imutils.allAmps()
         for amp in amps:
+            self.log_mem_info("fit_gains: data = fitter.results", amp=amp)
             data = fitter.results(min_prob=self.config.chiprob_min, amp=amp)
             dn = data['dn']
             if len(dn) > 2:
                 try:
+                    self.log_mem_info("fit_gains: foo=Fe55GainFitter",amp=amp)
                     foo = Fe55GainFitter(dn)
+                    self.log_mem_info("fit_gains: kalpha_peak, kalpha_sigma =",
+                                      amp=amp)
                     kalpha_peak, kalpha_sigma = foo.fit(hist_nsig=hist_nsig)
                     my_gains[amp] = foo.gain
                     my_gain_errors[amp] = foo.gain_error
@@ -67,6 +73,7 @@ class Fe55Task(pipeBase.Task):
                 try:
                     sigma = sorted(np.concatenate((data['sigmax'],
                                                    data['sigmay']))*10)
+                    self.log_mem_info("calling psf_sigma_statistics", amp=amp)
                     mode, median, mean = psf_sigma_statistics(sigma, bins=50,
                                                               range=(2, 6))
                     my_sigma_modes[amp] = float(mode)
@@ -75,10 +82,26 @@ class Fe55Task(pipeBase.Task):
                     continue
         return my_gains, my_gain_errors, my_sigma_modes
 
+    def log_mem_info(self, message, amp=None):
+        if self.process is None:
+            return
+        rss_mem = self.process.memory_info().rss/1024.**3
+        amp_info = ", amp %d" % amp if amp is not None else ''
+        self.log.info('Fe55Task, %s: rss_mem=%.2f GB; %s',
+                      self.process.pid, rss_mem, message + amp_info)
+
+    def _set_process(self):
+        if os.environ.get('LCATR_LOG_MEM_INFO', False) == 'True':
+            self.process = psutil.Process(os.getpid())
+        else:
+            self.process = None
+
     @pipeBase.timeMethod
     def run(self, sensor_id, infiles, mask_files, bias_frame=None,
             fe55_catalog=None, minClustersPerAmp=None, chiprob_min=0.1,
             accuracy_req=0, hist_nsig=10):
+        self._set_process()
+        self.log_mem_info("entered_run_method")
         imutils.check_temperatures(infiles, self.config.temp_set_point_tol,
                                    setpoint=self.config.temp_set_point,
                                    warn_only=True)
@@ -90,6 +113,7 @@ class Fe55Task(pipeBase.Task):
         # Detect and fit 2D Gaussian to Fe55 charge clusters,
         # accumulating the results by amplifier.
         #
+        self.log_mem_info("fitter = PsfGaussFit")
         fitter = PsfGaussFit(nsig=self.config.nsig, fit_xy=self.config.fit_xy)
         gains, gain_errors, sigma_modes = {}, {}, {}
         if fe55_catalog is None:
@@ -111,11 +135,15 @@ class Fe55Task(pipeBase.Task):
                             # Requested accuracy already obtained, so
                             # skip cluster fitting.
                             continue
+                    self.log_mem_info("fitter.process_image", amp=amp)
                     fitter.process_image(ccd, amp, logger=self.log)
+                    self.log_mem_info("calling self.fit_gains", amp=amp)
+
                     gains, gain_errors, sigma_modes = \
                         self.fit_gains(fitter, gains, gain_errors, sigma_modes,
                                        amps=list(ccd.keys()),
                                        hist_nsig=hist_nsig)
+                    self.log_mem_info("returned from self.fit_gains", amp=amp)
             if self.config.output_file is None:
                 psf_results = os.path.join(self.config.output_dir,
                                            '%s_psf_results_nsig%i.fits'
