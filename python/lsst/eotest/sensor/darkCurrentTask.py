@@ -8,6 +8,7 @@ from __future__ import print_function
 from __future__ import absolute_import
 import os
 import warnings
+import psutil
 import numpy as np
 import astropy.io.fits as fits
 from astropy.utils.exceptions import AstropyWarning, AstropyUserWarning
@@ -36,20 +37,39 @@ class DarkCurrentTask(pipeBase.Task):
     ConfigClass = DarkCurrentConfig
     _DefaultName = "DarkCurrentTask"
 
+    def log_mem_info(self, message, amp=None):
+        if self.process is None:
+            return
+        rss_mem = self.process.memory_info().rss/1024.**3
+        amp_info = ", amp %d" % amp if amp is not None else ''
+        self.log.info('DarkCurrentTask, %s: rss_mem=%.2f GB; %s',
+                      self.process.pid, rss_mem, message + amp_info)
+
+    def _set_process(self):
+        if os.environ.get('LCATR_LOG_MEM_INFO', False) == 'True':
+            self.process = psutil.Process(os.getpid())
+        else:
+            self.process = None
+
     @pipeBase.timeMethod
     def run(self, sensor_id, dark_files, mask_files, gains, bias_frame=None):
         imutils.check_temperatures(dark_files, self.config.temp_set_point_tol,
                                    setpoint=self.config.temp_set_point,
                                    warn_only=True)
         median_images = {}
+        self._set_process()
+        self.log_mem_info("md = imutils.Metadata(...")
         md = imutils.Metadata(dark_files[0])
         for amp in imutils.allAmps(dark_files[0]):
+            self.log_mem_info("imutils.fits_median", amp=amp)
             median_images[amp] = imutils.fits_median(dark_files,
                                                      imutils.dm_hdu(amp))
         medfile = os.path.join(self.config.output_dir,
                                '%s_median_dark_current.fits' % sensor_id)
+        self.log_mem_info("imutils.writeFits(...")
         imutils.writeFits(median_images, medfile, dark_files[0])
 
+        self.log_mem_info("ccd = MaskedCCD(...")
         ccd = MaskedCCD(medfile, mask_files=mask_files, bias_frame=bias_frame)
 
         dark95s = {}
@@ -65,14 +85,19 @@ class DarkCurrentTask(pipeBase.Task):
         for amp in ccd:
             imaging_region = ccd.amp_geom.imaging
             overscan = ccd.amp_geom.serial_overscan
+            self.log_mem_info("image = imutils.unbias_and_trim", amp=amp)
             image = imutils.unbias_and_trim(im=ccd[amp].getImage(),
-                                            overscan=overscan, imaging=imaging_region)
+                                            overscan=overscan,
+                                            imaging=imaging_region)
+            self.log_mem_info("mask = imutils.trim", amp=amp)
             mask = imutils.trim(ccd[amp].getMask(), imaging_region)
-            imarr = image.getArray()
-            mskarr = mask.getArray()
-            pixels = imarr.reshape(1, imarr.shape[0]*imarr.shape[1])[0]
-            masked = mskarr.reshape(1, mskarr.shape[0]*mskarr.shape[1])[0]
-            unmasked = [pixels[i] for i in range(len(pixels)) if masked[i] == 0]
+            unmasked = []
+            self.log_mem_info("for im_pixel, mask_pixel in...", amp=amp)
+            for im_pixel, mask_pixel in zip(image.array.ravel(),
+                                            mask.array.ravel()):
+                if mask_pixel == 0:
+                    unmasked.append(im_pixel)
+            self.log_mem_info("unmasked.sort()", amp=amp)
             unmasked.sort()
             unmasked = np.array(unmasked)*gains[amp]/exptime
             dark_curr_pixels_per_amp[amp] = unmasked
@@ -92,6 +117,7 @@ class DarkCurrentTask(pipeBase.Task):
         #
         dark_curr_pixels = sorted(dark_curr_pixels)
         darkcurr95 = dark_curr_pixels[int(len(dark_curr_pixels)*0.95)]
+        self.log_mem_info("dark95mean =")
         dark95mean = np.mean(list(dark95s.values()))
         if self.config.verbose:
             #self.log.info("CCD: mean 95 percentile value = %s" % dark95mean)
