@@ -101,7 +101,7 @@ class Fe55Task(pipeBase.Task):
             fe55_catalog=None, minClustersPerAmp=None, chiprob_min=0.1,
             accuracy_req=0, hist_nsig=10):
         self._set_process()
-        self.log_mem_info("entered_run_method")
+        self.log_mem_info("entered_run_method, sensor_id {}".format(sensor_id))
         imutils.check_temperatures(infiles, self.config.temp_set_point_tol,
                                    setpoint=self.config.temp_set_point,
                                    warn_only=True)
@@ -151,6 +151,7 @@ class Fe55Task(pipeBase.Task):
                 psf_results = self.config.output_file
             if self.config.verbose:
                 self.log.info("Writing psf results file to %s" % psf_results)
+            self.log_mem_info("Writing psf results file to %s" % psf_results)
             fitter.write_results(outfile=psf_results)
             namps = len(ccd)
         else:
@@ -165,6 +166,8 @@ class Fe55Task(pipeBase.Task):
         if self.config.verbose:
             self.log.info("Writing gain and psf sigma results to %s"
                           % results_file)
+        self.log_mem_info("Writing gain and psf sigma results to %s"
+                          % results_file)
 
         results = EOTestResults(results_file, namps=namps)
         for amp in gains:
@@ -173,4 +176,5 @@ class Fe55Task(pipeBase.Task):
             results.add_seg_result(amp, 'PSF_SIGMA', sigma_modes[amp])
         results.write(clobber=True)
 
+        self.log_mem_info("returning gains" + str(gains))
         return gains
