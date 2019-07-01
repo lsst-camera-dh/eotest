@@ -141,8 +141,7 @@ class Fe55Task(pipeBase.Task):
 
                     gains, gain_errors, sigma_modes = \
                         self.fit_gains(fitter, gains, gain_errors, sigma_modes,
-                                       amps=list(ccd.keys()),
-                                       hist_nsig=hist_nsig)
+                                       amps=[amp], hist_nsig=hist_nsig)
                     self.log_mem_info("returned from self.fit_gains", amp=amp)
             if self.config.output_file is None:
                 psf_results = os.path.join(self.config.output_dir,
