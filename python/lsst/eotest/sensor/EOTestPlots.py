@@ -137,8 +137,9 @@ def plot_flat(infile, nsig=3, cmap=pylab.cm.hot, win=None, subplot=(1, 1, 1),
                 amp_coords[(xpos, ypos)] = xmin, xmax, ymin, ymax
                 #
                 # Extract the bias-subtracted masked image for this segment.
-                segment_image = ccd.unbiased_and_trimmed_image(amp)
-                subarr = segment_image.getImage().getArray()
+                segment_image = ccd.unbiased_and_trimmed_image(amp).getImage()
+                subarr = np.zeros(segment_image.array.shape)
+                subarr = segment_image.array
                 #
                 # Determine flips in x- and y-directions in order to
                 # get the (1, 1) pixel in the lower right corner.
