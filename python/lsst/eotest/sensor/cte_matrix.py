@@ -35,6 +35,7 @@ def cte_matrix(npix, cti):
     eqs. 5.2a,b.
 
     """
+    old_settings = np.seterr(invalid='ignore', under='ignore')
     # Fill CTE matrix using the exact expression
     my_matrix = np.zeros((npix, npix), dtype=np.float)
     for i in range(npix):
@@ -42,6 +43,8 @@ def cte_matrix(npix, cti):
         my_matrix[i, :i+1] = (scipy.special.binom(i, i - jvals)
                               *cti**(i - jvals)*(1 - cti)**(jvals + 1))
 
+    np.seterr(**old_settings)
+    np.seterr(under='ignore')
     # For a large number of transfers, the binomial coefficient
     # diverges while the cti**(1-jvals) factor underflows, and the
     # resulting element can be a nan.  Replace those entries with the
@@ -54,4 +57,5 @@ def cte_matrix(npix, cti):
         kval = ivals[index] - jvals[index]
         my_matrix[index] = (1 - cti)*(np.exp(-lamb)*lamb**(kval)
                                       /scipy.special.factorial(kval))
+    np.seterr(**old_settings)
     return my_matrix
