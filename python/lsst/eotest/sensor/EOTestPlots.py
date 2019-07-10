@@ -508,7 +508,6 @@ class EOTestPlots(object):
             plt.title('CTI from EPER, {0}'.format(self.sensor_id), fontsize='small')
 
     def overscan_curves(self, overscan_file, figsize=(10, 8)):
-        
         if overscan_file is None:
             overscan_file = self._fullpath('{0}_overscan_results.fits'.format(self.sensor_id))
         fig, axes = plt.subplots(4, 4, sharey=True, sharex=True, figsize=figsize)
@@ -528,12 +527,10 @@ class EOTestPlots(object):
                 overscan1 = meanrow[:, xmax] - offset
                 overscan2 = meanrow[:, xmax+1] - offset
                 index = np.argsort(flux)
-        
-                axes[amp-1].plot(flux[index], overscan1[index], label='overscan 1'.format(amp),
+                axes[amp-1].plot(flux[index], overscan1[index], label='overscan 1',
                          marker='.', markersize=4)
-                axes[amp-1].plot(flux[index], overscan2[index], label='overscan 2'.format(amp),
-                         marker='.', markersize=4)  
-        
+                axes[amp-1].plot(flux[index], overscan2[index], label='overscan 2',
+                         marker='.', markersize=4)
                 axes[amp-1].set_yscale('symlog', threshold=1.0)
                 axes[amp-1].set_xscale('log')
                 axes[amp-1].set_ylim(bottom=-1.0)
