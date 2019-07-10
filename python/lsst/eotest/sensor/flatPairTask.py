@@ -181,11 +181,7 @@ class FlatPairTask(pipeBase.Task):
                 pd1 = self.mondiode_func(file1, exptime1)
                 pd2 = self.mondiode_func(file2, exptime2)
 
-            if (use_exptime
-                or isinstance(pd1, str)
-                or isinstance(pd2, str)
-                or pd1 == 0
-                    or pd2 == 0):
+            if use_exptime:
                 flux = exptime1
             else:
                 flux = abs(pd1*exptime1 + pd2*exptime2)/2.
