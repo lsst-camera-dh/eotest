@@ -8,6 +8,7 @@ import sys
 import glob
 import copy
 import warnings
+import logging
 from collections import OrderedDict
 import json
 import numpy as np
@@ -102,6 +103,10 @@ def plot_flat(infile, nsig=3, cmap=pylab.cm.hot, win=None, subplot=(1, 1, 1),
               figsize=None, wl=None, gains=None, use_ds9=False, outfile=None,
               title=None, annotation='', flatten=False, binsize=1,
               bias_frame=None):
+    logger = logging.getLogger('EOTestPlots.plot_flat')
+    logger.setLevel(logging.INFO)
+    pid = os.getpid()
+
     ccd = MaskedCCD(infile, bias_frame=bias_frame)
     if flatten:
         ccd = flatten_across_segments(ccd)
@@ -122,6 +127,7 @@ def plot_flat(infile, nsig=3, cmap=pylab.cm.hot, win=None, subplot=(1, 1, 1),
         amp_coords = {}
         for ypos in range(ny_segments):
             for xpos in range(nx_segments):
+                logging.info('%s: ypos, xpos = %i, %i', pid, ypos, xpos)
                 amp = ypos*nx_segments + xpos + 1
                 #
                 # Determine subarray boundaries in the mosaicked image array
@@ -137,15 +143,23 @@ def plot_flat(infile, nsig=3, cmap=pylab.cm.hot, win=None, subplot=(1, 1, 1),
                 amp_coords[(xpos, ypos)] = xmin, xmax, ymin, ymax
                 #
                 # Extract the bias-subtracted masked image for this segment.
+                logging.info('%s, %d, %d: segment_image = ', pid, ypos, xpos)
                 segment_image = ccd.unbiased_and_trimmed_image(amp).getImage()
+                logging.info('%s, %d, %d: subarr = np.zeros', pid, ypos, xpos)
                 subarr = np.zeros(segment_image.array.shape)
-                subarr = segment_image.array
+                logging.info('%s, %d, %d: subarr += segment_image.array',
+                             pid, ypos, xpos)
+                subarr += segment_image.array
                 #
                 # Determine flips in x- and y-directions in order to
                 # get the (1, 1) pixel in the lower right corner.
                 if detsec['xmax'] > detsec['xmin']:  # flip in x-direction
+                    logging.info('%s, %d, %d: subarr = subarr[:, ::-1]',
+                                 pid, ypos, xpos)
                     subarr = subarr[:, ::-1]
                 if detsec['ymax'] > detsec['ymin']:  # flip in y-direction
+                    logging.info('%s, %d, %d: subarr = subarr[::-1, :]',
+                                 pid, ypos, xpos)
                     subarr = subarr[::-1, :]
                 #
                 # Convert from ADU to e-
@@ -153,6 +167,8 @@ def plot_flat(infile, nsig=3, cmap=pylab.cm.hot, win=None, subplot=(1, 1, 1),
                     subarr *= gains[amp]
                 #
                 # Set the subarray in the mosaicked image.
+                logging.info('%s, %d, %d: mosaic[ymin:ymax, xmin:xmax] =',
+                             pid, ypos, xpos)
                 mosaic[ymin:ymax, xmin:xmax] = subarr
 
     if binsize > 1:
