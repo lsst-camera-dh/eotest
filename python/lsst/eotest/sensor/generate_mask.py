@@ -57,32 +57,21 @@ def generate_mask(infile, outfile, mask_plane, pixels=None, columns=None,
         afwImage.Mask.addMaskPlane(mask_plane)
     except AttributeError:
         afwImage.MaskU.addMaskPlane(mask_plane)
-    # Create a primary HDU with the input file primary HDU metadata,
-    # updated with the mask type info.
-    hdulist = fits.HDUList()
-    hdulist.append(fits.PrimaryHDU())
-    with warnings.catch_warnings():
-        warnings.simplefilter('ignore')
-        with fits.open(infile) as input_hdu_list:
-            hdulist[0].header.update(input_hdu_list[0].header)
-        hdulist[0].header['MASKTYPE'] = mask_plane
-        fitsWriteto(hdulist, outfile, overwrite=True)
 
     # Loop over segments in the temporary file and add all pixels to
     # the mask with the inserted signal.
-    maskedCCD = MaskedCCD(temp_mask_image)
-    for amp in maskedCCD:
-        threshold = afwDetect.Threshold(signal/2.*exptime/gain)
-        fp_set = afwDetect.FootprintSet(maskedCCD[amp], threshold)
-        try:
-            mask = afwImage.Mask(maskedCCD[amp].getDimensions())
-        except AttributeError:
-            mask = afwImage.MaskU(maskedCCD[amp].getDimensions())
-        fp_set.setMask(mask, mask_plane)
-        md = dafBase.PropertySet()
-        md.set('EXTNAME', 'SEGMENT%s' % imutils.channelIds[amp])
-        md.set('DETSIZE', geometry[amp]['DETSIZE'])
-        md.set('DETSEC', geometry[amp]['DETSEC'])
-        md.set('DATASEC', geometry[amp]['DATASEC'])
-        mask.writeFits(outfile, md, 'a')
+    with fits.open(infile) as hdus:
+        hdus[0].header['MASKTYPE'] = mask_plane
+        hdus[0].header['FILENAME'] = outfile
+        maskedCCD = MaskedCCD(temp_mask_image)
+        for amp in maskedCCD:
+            threshold = afwDetect.Threshold(signal/2.*exptime/gain)
+            fp_set = afwDetect.FootprintSet(maskedCCD[amp], threshold)
+            try:
+                mask = afwImage.Mask(maskedCCD[amp].getDimensions())
+            except AttributeError:
+                mask = afwImage.MaskU(maskedCCD[amp].getDimensions())
+            fp_set.setMask(mask, mask_plane)
+            hdus[amp].data = mask.array
+        hdus.writeto(outfile, overwrite=True)
     os.remove(temp_mask_image)

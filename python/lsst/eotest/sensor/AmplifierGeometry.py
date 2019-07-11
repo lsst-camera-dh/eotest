@@ -52,7 +52,8 @@ def makeAmplifierGeometry(infile):
     myAmpGeom = AmplifierGeometry(prescan=prescan, nx=nx, ny=ny,
                                   detxsize=detsize['xmax'],
                                   detysize=detsize['ymax'],
-                                  amp_loc=amp_loc[vendor])
+                                  amp_loc=amp_loc[vendor],
+                                  vendor=vendor)
     myAmpGeom.compute_geometry(fitsfile=infile)
     foo.close()
     return myAmpGeom
@@ -62,12 +63,14 @@ class AmplifierGeometry(dict):
     nsegx, nsegy = 8, 2
 
     def __init__(self, prescan=10, nx=512, ny=2002,
-                 detxsize=4336, detysize=4044, amp_loc=amp_loc['E2V']):
+                 detxsize=4336, detysize=4044, amp_loc=amp_loc['E2V'],
+                 vendor='E2V'):
         super(AmplifierGeometry, self).__init__()
         self.prescan_width = prescan
         self.nx = nx
         self.ny = ny
         self.amp_loc = amp_loc
+        self.vendor = vendor
         self.compute_geometry(detxsize=detxsize, detysize=detysize)
 
     def compute_geometry(self, **kwds):

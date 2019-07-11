@@ -80,21 +80,23 @@ def rolloff_mask(infile, outfile,
     fitsWriteto(hdulist, outfile, overwrite=True)
     #
     # Amplifiers 1 (AMP10), 8 (AMP17), 9 (AMP07) and 16 (AMP00) are
-    # along the perimeter.
+    # along the perimeter, but have different edge rolloff pixels
+    # depending on the vendor.
     #
-    # Amps 8 & 16 have roll-off adjacent to the prescan:
-    #
+    # These amps have edge roll-off adjacent to the prescan.
+    amps = (8, 16) if amp_geom.vendor == 'E2V' else (8, 9)
     xmin = amp_geom.imaging.getMinX()
     xmax = xmin + outer_edge_width
-    for amp in (8, 16):
+    for amp in amps:
         imarr = ccd.segments[amp].image.getArray()
         imarr[:, xmin:xmax] += signal
     #
-    # Amps 1 & 9 have roll-off adjacent to the serial overscan:
+    # These amps have edge roll-off adjacent to the serial overscan:
     #
+    amps = (1, 9) if amp_geom.vendor == 'E2V' else (1, 16)
     xmax = amp_geom.imaging.getMaxX() + 1
     xmin = xmax - outer_edge_width
-    for amp in (1, 9):
+    for amp in amps:
         imarr = ccd.segments[amp].image.getArray()
         imarr[:, xmin:xmax] += signal
     #

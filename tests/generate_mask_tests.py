@@ -3,6 +3,8 @@ Unit tests for generate_mask code.
 """
 import os
 import unittest
+from astropy.io import fits
+import lsst.utils as lsstUtils
 import lsst.eotest.image_utils as imutils
 import lsst.eotest.sensor as sensorTest
 import lsst.eotest.sensor.sim_tools as sim_tools
@@ -28,7 +30,8 @@ class GenerateMaskTestCase(unittest.TestCase):
     def tearDown(self):
         "Clean up the temporary files."
         os.remove(self.template_file)
-        os.remove(self.mask_file)
+        if os.path.isfile(self.mask_file):
+            os.remove(self.mask_file)
 
     def test_generate_mask(self):
         "Test the generated mask for expected masked and unmasked pixels."
@@ -53,6 +56,20 @@ class GenerateMaskTestCase(unittest.TestCase):
             for ix in self.columns[amp]:
                 self.assertNotEqual(0, imarr[0][ix])
                 self.assertEqual(imarr[0][ix]*imarr.shape[0], sum(imarr[:, ix]))
+
+    def test_mask_file_wcs(self):
+        """Test that the mask file has the wcs keywords from the dedicated
+        template file."""
+        template_file = os.path.join(lsstUtils.getPackageDir('eotest'),
+                                     'data', 'ITL-3800C-244_median_sflat.fits')
+        mask_file = self.mask_file
+        mask_plane = 'BAD'
+        sensorTest.generate_mask(template_file, mask_file, mask_plane)
+        wcs_names = ['WCSNAME' + _ for _ in 'ACRFBQ']
+        with fits.open(mask_file) as hdus:
+            for wcs_name in wcs_names:
+                for hdu in hdus[1:17]:
+                    self.assertTrue(wcs_name in hdu.header)
 
 
 if __name__ == '__main__':
