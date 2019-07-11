@@ -6,7 +6,6 @@ coefficients per amp.
 import os
 import glob
 from collections import namedtuple
-import subprocess
 import psutil
 import numpy as np
 from astropy.io import fits
@@ -94,8 +93,6 @@ class BFTask(pipeBase.Task):
         """
         self._set_process()
         self.log_mem_info('entered run method')
-        command = '(ulimit -a) >& ulimit_info_{}.txt'.format(sensor_id)
-        subprocess.check_call(command, shell=True)
         if dark_frame is not None:
             self.log_mem_info('creating ccd_dark')
             ccd_dark = MaskedCCD(dark_frame, mask_files=mask_files)
