@@ -73,5 +73,8 @@ def generate_mask(infile, outfile, mask_plane, pixels=None, columns=None,
                 mask = afwImage.MaskU(maskedCCD[amp].getDimensions())
             fp_set.setMask(mask, mask_plane)
             hdus[amp].data = mask.array
+            # add mask plane keywords
+            for key, value in mask.getMaskPlaneDict().items():
+                hdus[amp].header['MP_' + key] = value
         hdus.writeto(outfile, overwrite=True)
     os.remove(temp_mask_image)
