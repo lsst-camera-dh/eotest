@@ -194,8 +194,13 @@ class FlatPairTask(pipeBase.Task):
                 pd1 = flat1.md.get('MONDIODE')
                 pd2 = flat2.md.get('MONDIODE')
             else:
-                pd1 = self.mondiode_func(file1, exptime1)
-                pd2 = self.mondiode_func(file2, exptime2)
+                try:
+                    pd1 = self.mondiode_func(file1, exptime1)
+                    pd2 = self.mondiode_func(file2, exptime2)
+                except KeyError as eobj:
+                    self.log.info("KeyError exception computing pd current:\n"
+                                  + str(eobj))
+                    continue
 
             if use_exptime:
                 flux = exptime1
