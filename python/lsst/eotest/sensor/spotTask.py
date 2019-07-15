@@ -19,11 +19,29 @@ import lsst.meas.extensions.shapeHSM
 from .MaskedCCD import MaskedCCD
 from .AmplifierGeometry import parse_geom_kwd
 
-def make_ccd_mosaic(infile, bias_frame=None, gains=None):
-    """Combine amplifier image arrays into a single calibrated CCD image mosaic."""
+def make_ccd_mosaic(infile, bias_frame=None, dark_frame=None, gains=None):
+    """Create a full CCD image mosaic.
+    
+    Combine the 16 amplifier arrays into a single array, performing
+    bias/offset subtraction and gain correction.
+    
+    Args:
+        infile: Image FITs filename.
+        bias_frame: Bias frame FITs filename.
+        dark_frame: Dark frame FITs filename.
+        gains: Dictionary mapping amplifier number to gain.
+        
+    Returns:
+        afwImage object containing mosaiced image.
+    """
+    
     ccd = MaskedCCD(infile, bias_frame=bias_frame)
+    if dark_frame is not None:
+        dark = MaskedCCD(dark_frame, bias_frame=bias_frame)
+        dark_exptime = dark.md.get('EXPTIME')
     foo = fits.open(infile)
     datasec = parse_geom_kwd(foo[1].header['DATASEC'])
+    exptime = float(foo[0].header['EXPTIME'])  # change to darktime for newer stuff
     nx_segments = 8
     ny_segments = 2
     nx = nx_segments*(datasec['xmax'] - datasec['xmin'] + 1)
@@ -44,6 +62,12 @@ def make_ccd_mosaic(infile, bias_frame=None, gains=None):
             #
             segment_image = ccd.unbiased_and_trimmed_image(amp)
             subarr = segment_image.getImage().getArray()
+            #
+            # Corresponding bias-subtracted dark image for this segment
+            #
+            if dark_frame is not None:
+                segment_dark = dark.unbiased_and_trimmed_image(amp)
+                subarr -= segment_dark.getImage().getArray()*exptime/dark_exptime
             #
             # Determine flips in x- and y- direction
             #
@@ -82,13 +106,14 @@ class SpotTask(pipeBase.Task):
     _DefaultName = "SpotTask"
 
     @pipeBase.timeMethod
-    def run(self, sensor_id, infile, gains, bias_frame=None):
+    def run(self, sensor_id, infile, gains, bias_frame=None, dark_frame=None):
         #
         # Process a CCD image mosaic
         #
         if self.config.verbose:
             self.log.info("processing {0}".format(infile))
-        image = make_ccd_mosaic(infile, bias_frame=bias_frame, gains=gains)
+        image = make_ccd_mosaic(infile, bias_frame=bias_frame, 
+                                dark_frame=dark_frame, gains=gains)
         exposure = afwImage.ExposureF(image.getBBox())
         exposure.setImage(image)
         #
