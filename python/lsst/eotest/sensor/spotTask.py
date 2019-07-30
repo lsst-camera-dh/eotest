@@ -19,7 +19,19 @@ import lsst.meas.extensions.shapeHSM
 from .MaskedCCD import MaskedCCD
 from .AmplifierGeometry import parse_geom_kwd
 
-def make_ccd_mosaic(infile, bias_frame=None, dark_frame=None, gains=None):
+def dark_corrected_image(ccd, dark_ccd, amp):
+
+    exptime = ccd.md.get('EXPTIME')
+    dark_exptime = dark_ccd.md.get('EXPTIME')
+
+    imarr = ccd.unbiased_and_trimmed_image(amp).getImage().getArray()
+    dark_imarr = dark_ccd.unbiased_and_trimmed_image(amp).getImage().getArray()
+
+    imarr = imarr - dark_imarr*exptime/dark_exptime
+
+    return imarr
+    
+def make_ccd_mosaic(infile, bias_frame=None, dark_frame=None, flat_frame=None, gains=None):
     """Create a full CCD image mosaic.
     
     Combine the 16 amplifier arrays into a single array, performing
@@ -36,16 +48,21 @@ def make_ccd_mosaic(infile, bias_frame=None, dark_frame=None, gains=None):
     """
     
     ccd = MaskedCCD(infile, bias_frame=bias_frame)
+
+    ## Additional images for calibration
     if dark_frame is not None:
         dark = MaskedCCD(dark_frame, bias_frame=bias_frame)
-        dark_exptime = dark.md.get('EXPTIME')
+    if flat_frame is not None:
+        flat = MaskedCCD(flat_frame, bias_frame=bias_frame)
+
+    ## Get amp geometry information
     foo = fits.open(infile)
     datasec = parse_geom_kwd(foo[1].header['DATASEC'])
-    exptime = float(foo[0].header['EXPTIME'])  # change to darktime for newer stuff
     nx_segments = 8
     ny_segments = 2
     nx = nx_segments*(datasec['xmax'] - datasec['xmin'] + 1)
     ny = ny_segments*(datasec['ymax'] - datasec['ymin'] + 1)
+
     mosaic = np.zeros((ny, nx), dtype=np.float32)
 
     for ypos in range(ny_segments):
@@ -57,32 +74,33 @@ def make_ccd_mosaic(infile, bias_frame=None, dark_frame=None, gains=None):
             xmax = nx - min(detsec['xmin'], detsec['xmax']) + 1
             ymin = ny - max(detsec['ymin'], detsec['ymax'])
             ymax = ny - min(detsec['ymin'], detsec['ymax']) + 1
-            #
-            # Extract bias-subtracted image for this segment
-            #
-            segment_image = ccd.unbiased_and_trimmed_image(amp)
-            subarr = segment_image.getImage().getArray()
-            #
-            # Corresponding bias-subtracted dark image for this segment
-            #
+
+            ## Dark correction
             if dark_frame is not None:
-                segment_dark = dark.unbiased_and_trimmed_image(amp)
-                subarr -= segment_dark.getImage().getArray()*exptime/dark_exptime
-            #
-            # Determine flips in x- and y- direction
-            #
+                subarr = dark_corrected_image(ccd, dark, amp)
+            else:
+                subarr = ccd.unbiased_and_trimmed_image(amp).getImage().getArray()
+
+            ## Flat field correction
+            if flat_frame is not None:
+                if dark_frame is not None:
+                    flatarr = dark_corrected_image(flat, dark, amp)
+                else:
+                    flatarr = flat.unbiased_and_trimmed_image(amp).getImage().getArray()
+                med = np.median(flatarr)
+                subarr = subarr*med/flatarr
+                    
+            ## Flip array orientation (if applicable)
             if detsec['xmax'] > detsec['xmin']: # flip in x-direction
                 subarr = subarr[:, ::-1]
             if detsec['ymax'] > detsec['ymin']: # flip in y-direction
                 subarr = subarr[::-1, :]
-            #
-            # Convert from ADU to e-
-            #
+
+            ## Gain correction
             if gains is not None:
                 subarr *= gains[amp]
-            #
-            # Set sub-array to the image mosaic
-            #
+
+            ## Assign to final array
             mosaic[ymin:ymax, xmin:xmax] = subarr
 
     image = afwImage.ImageF(mosaic)
