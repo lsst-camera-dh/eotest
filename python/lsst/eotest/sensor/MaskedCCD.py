@@ -38,7 +38,8 @@ class MaskedCCD(dict):
     by various methods.
     """
 
-    def __init__(self, imfile, mask_files=(), bias_frame=None, applyMasks=True):
+    def __init__(self, imfile, mask_files=(), bias_frame=None, applyMasks=True,
+                 linearity_correction=None):
         super(MaskedCCD, self).__init__()
         self.imfile = imfile
         self.md = imutils.Metadata(imfile)
@@ -59,6 +60,7 @@ class MaskedCCD(dict):
         else:
             self.bias_frame = None
         self._applyMasks = applyMasks
+        self._linearity_correction = linearity_correction
 
     def applyInterpolateFromMask(self, maskedImage, fwhm=0.001):
         for maskName in self._added_mask_types:
@@ -232,6 +234,12 @@ class MaskedCCD(dict):
             my_image -= bias
         else:
             my_image -= self.bias_image(amp, overscan, **kwargs)
+
+        # Apply any linearity correction.
+        if self._linearity_correction is not None:
+            my_image.getImage().array[:] \
+                = self._linearity_correction(amp, my_image.getImage().array)
+
         return my_image
 
     def unbiased_and_trimmed_image(self, amp, overscan=None,

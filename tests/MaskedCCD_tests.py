@@ -178,6 +178,39 @@ class MaskedCCD_biasHandlingTestCase(unittest.TestCase):
         os.remove(bias_file)
         os.remove(image_file)
 
+class LinearityCorrectionTestCase(unittest.TestCase):
+    """
+    unittest.TestCase subclass for linearity correction.
+    """
+    def setUp(self):
+        self.image_file = 'test_image_linearity_corr.fits'
+        exptime = 10.
+        gain = 0.8
+        bias_value = 1000
+        ccd = sim_tools.CCD(exptime=exptime, gain=gain)
+        ccd.add_bias(level=bias_value)
+        ccd.expose_flat(intensity=50)
+        ccd.writeto(self.image_file)
+
+    def tearDown(self):
+        if os.path.isfile(self.image_file):
+            os.remove(self.image_file)
+
+    def test_linearity_correction(self):
+        """Linearity correction test."""
+        def linearity_correction(amp, flux):
+            """Set the correction to be the amp number times the flux."""
+            return amp*flux
+
+        np.random.seed(1000)
+        ccd = MaskedCCD(self.image_file)
+        ccd_corr = MaskedCCD(self.image_file,
+                             linearity_correction=linearity_correction)
+        for amp in ccd:
+            # Check that the ratio of the corrected to uncorrected
+            # flux is (almost) equal to the amp number.
+            ratio = np.median(ccd_corr.unbiased_and_trimmed_image(amp).getImage().array)/np.median(ccd.unbiased_and_trimmed_image(amp).getImage().array)
+            self.assertAlmostEqual(amp, ratio, places=5)
 
 if __name__ == '__main__':
     unittest.main()

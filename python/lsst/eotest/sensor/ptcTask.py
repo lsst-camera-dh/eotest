@@ -119,7 +119,8 @@ class PtcTask(pipeBase.Task):
 
     @pipeBase.timeMethod
     def run(self, sensor_id, infiles, mask_files, gains, binsize=1,
-            bias_frame=None, flat2_finder=find_flat2):
+            bias_frame=None, flat2_finder=find_flat2,
+            linearity_correction=None):
         outfile = os.path.join(self.config.output_dir,
                                '%s_ptc.fits' % sensor_id)
         all_amps = imutils.allAmps(infiles[0])
@@ -132,9 +133,11 @@ class PtcTask(pipeBase.Task):
                 self.log.info("processing %s" % flat1)
             exposure.append(exptime(flat1))
             ccd1 = MaskedCCD(flat1, mask_files=mask_files,
-                             bias_frame=bias_frame)
+                             bias_frame=bias_frame,
+                             linearity_correction=linearity_correction)
             ccd2 = MaskedCCD(flat2, mask_files=mask_files,
-                             bias_frame=bias_frame)
+                             bias_frame=bias_frame,
+                             linearity_correction=linearity_correction)
             for amp in ccd1:
                 results = flat_pair_stats(ccd1, ccd2, amp,
                                           mask_files=mask_files,
