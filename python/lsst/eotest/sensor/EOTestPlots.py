@@ -412,6 +412,7 @@ class EOTestPlots(object):
     def ptcs(self, xrange=None, yrange=None, figsize=(11, 8.5), ptc_file=None):
         if ptc_file is None:
             ptc_file = self._fullpath('%s_ptc.fits' % self.sensor_id)
+        print(ptc_file)
         with fits.open(ptc_file) as ptc:
             for amp in imutils.allAmps(ptc_file):
                 mean = ptc[1].data.field('AMP%02i_MEAN' % amp)
@@ -441,6 +442,7 @@ class EOTestPlots(object):
                 # Plot PTC curves using gain measurements.
                 ptc_gain = self.results['PTC_GAIN'][amp-1]
                 ptc_gain_error = self.results['PTC_GAIN_ERROR'][amp-1]
+                ptc_noise = self.results['PTC_NOISE'][amp-1]
                 ptc_a00 = self.results['PTC_A00'][amp-1]
                 ptc_a00_error = self.results['PTC_A00_ERROR'][amp-1]
                 plot.curve(xx, ptc_func((ptc_a00, ptc_gain, ptc_noise), xx),
