@@ -412,7 +412,6 @@ class EOTestPlots(object):
     def ptcs(self, xrange=None, yrange=None, figsize=(11, 8.5), ptc_file=None):
         if ptc_file is None:
             ptc_file = self._fullpath('%s_ptc.fits' % self.sensor_id)
-        print(ptc_file)
         with fits.open(ptc_file) as ptc:
             for amp in imutils.allAmps(ptc_file):
                 mean = ptc[1].data.field('AMP%02i_MEAN' % amp)
