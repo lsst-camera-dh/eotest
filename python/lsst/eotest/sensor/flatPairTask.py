@@ -56,6 +56,22 @@ def find_flat2(flat1):
     raise RuntimeError("no flat2 file found for {}".format(flat1))
 
 
+def mondiode_value(fits_file, _, factor=5):
+    """Compute the effective monitoring diode current by integrating
+    over the pd current time history in the AMP0_MEAS_TIMES extension
+    and dividing by the EXPTIME value.
+    """
+    with fits.open(fits_file) as hdus:
+        x = hdus['AMP0.MEAS_TIMES'].data.field('AMP0_MEAS_TIMES')
+        y = -hdus['AMP0.MEAS_TIMES'].data.field('AMP0_A_CURRENT')*1e9
+        exptime = hdus[0].header['EXPTIME']
+    ythresh = (max(y) - min(y))/factor + min(y)
+    index = np.where(y < ythresh)
+    y0 = np.median(y[index])
+    y -= y0
+    return sum((y[1:] + y[:-1])/2.*(x[1:] - x[:-1]))/exptime
+
+
 class FlatPairConfig(pexConfig.Config):
     """Configuration for flat pair task"""
     output_dir = pexConfig.Field("Output directory", str, default='.')
@@ -74,7 +90,7 @@ class FlatPairTask(pipeBase.Task):
     def run(self, sensor_id, infiles, mask_files, gains, detrespfile=None,
             bias_frame=None, max_pd_frac_dev=0.05,
             linearity_spec_range=(1e3, 9e4), use_exptime=False,
-            flat2_finder=find_flat2, mondiode_func=None):
+            flat2_finder=find_flat2, mondiode_func=mondiode_value):
         self.sensor_id = sensor_id
         self.infiles = infiles
         self.mask_files = mask_files
@@ -178,14 +194,15 @@ class FlatPairTask(pipeBase.Task):
                 pd1 = flat1.md.get('MONDIODE')
                 pd2 = flat2.md.get('MONDIODE')
             else:
-                pd1 = self.mondiode_func(file1, exptime1)
-                pd2 = self.mondiode_func(file2, exptime2)
+                try:
+                    pd1 = self.mondiode_func(file1, exptime1)
+                    pd2 = self.mondiode_func(file2, exptime2)
+                except KeyError as eobj:
+                    self.log.info("KeyError exception computing pd current:\n"
+                                  + str(eobj))
+                    continue
 
-            if (use_exptime
-                or isinstance(pd1, str)
-                or isinstance(pd2, str)
-                or pd1 == 0
-                    or pd2 == 0):
+            if use_exptime:
                 flux = exptime1
             else:
                 flux = abs(pd1*exptime1 + pd2*exptime2)/2.

@@ -20,6 +20,7 @@ import lsst.afw.math as afwMath
 import lsst.afw.display.ds9 as ds9
 import lsst.eotest.image_utils as imutils
 from lsst.eotest.Estimator import Estimator
+from lsst.eotest.sensor.ptcTask import ptc_func
 from . import pylab_plotter as plot
 from .MaskedCCD import MaskedCCD
 from .EOTestResults import EOTestResults
@@ -440,9 +441,11 @@ class EOTestPlots(object):
                 # Plot PTC curves using gain measurements.
                 ptc_gain = self.results['PTC_GAIN'][amp-1]
                 ptc_gain_error = self.results['PTC_GAIN_ERROR'][amp-1]
+                ptc_noise = self.results['PTC_NOISE'][amp-1]
                 ptc_a00 = self.results['PTC_A00'][amp-1]
                 ptc_a00_error = self.results['PTC_A00_ERROR'][amp-1]
-                plot.curve(xx, xx/ptc_gain, oplot=1, color='b', lineStyle=':')
+                plot.curve(xx, ptc_func((ptc_a00, ptc_gain, ptc_noise*ptc_noise), xx),
+                           oplot=1, color='b', lineStyle=':')
                 note = 'Amp %i\nGain = %.2f +/- %.2f\nA00 = %.1e +/- %.1e'\
                     % (amp, ptc_gain, ptc_gain_error, ptc_a00, ptc_a00_error)
                 pylab.annotate(note, (0.05, 0.9), xycoords='axes fraction',
@@ -661,7 +664,6 @@ class EOTestPlots(object):
                 xcorr = xcorr[index]
                 index = np.where(mean < adu_max)
                 plt.plot(mean[index], xcorr[index], label='%s' % amp)
-            plt.xscale('log')
             plt.xlabel('mean signal (ADU)', fontsize='small')
             plt.ylabel('corr(1, 0)', fontsize='small')
             plt.legend(fontsize='x-small', loc=2)
@@ -674,10 +676,9 @@ class EOTestPlots(object):
                 ycorr = bf[1].data.field('AMP%02i_YCORR' % amp)
                 index = np.argsort(mean)
                 mean = mean[index]
-                xcorr = xcorr[index]
+                ycorr = ycorr[index]
                 index = np.where(mean < adu_max)
                 plt.plot(mean[index], ycorr[index], label='%s' % amp)
-            plt.xscale('log')
             plt.xlabel('mean signal (ADU)', fontsize='small')
             plt.ylabel('corr(0, 1)', fontsize='small')
             plt.legend(fontsize='x-small', loc=2)

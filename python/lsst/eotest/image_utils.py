@@ -33,7 +33,7 @@ class Metadata(object):
 
     def __call__(self, key):
         if self.header is None:
-            return self.md.get(key)
+            return self.md.getScalar(key)
         else:
             return self.header[key]
 
