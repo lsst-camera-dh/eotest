@@ -18,18 +18,6 @@ import lsst.meas.extensions.shapeHSM
 
 from .MaskedCCD import MaskedCCD
 from .AmplifierGeometry import parse_geom_kwd
-
-def dark_corrected_image(ccd, dark_ccd, amp):
-
-    exptime = ccd.md.get('EXPTIME')
-    dark_exptime = dark_ccd.md.get('EXPTIME')
-
-    imarr = ccd.unbiased_and_trimmed_image(amp).getImage().getArray()
-    dark_imarr = dark_ccd.unbiased_and_trimmed_image(amp).getImage().getArray()
-
-    imarr = imarr - dark_imarr*exptime/dark_exptime
-
-    return imarr
     
 def make_ccd_mosaic(infile, bias_frame=None, dark_frame=None, flat_frame=None, gains=None):
     """Create a full CCD image mosaic.
@@ -52,8 +40,6 @@ def make_ccd_mosaic(infile, bias_frame=None, dark_frame=None, flat_frame=None, g
     ## Additional images for calibration
     if dark_frame is not None:
         dark = MaskedCCD(dark_frame, bias_frame=bias_frame)
-    if flat_frame is not None:
-        flat = MaskedCCD(flat_frame, bias_frame=bias_frame)
 
     ## Get amp geometry information
     foo = fits.open(infile)
@@ -77,18 +63,14 @@ def make_ccd_mosaic(infile, bias_frame=None, dark_frame=None, flat_frame=None, g
 
             ## Dark correction
             if dark_frame is not None:
-                subarr = dark_corrected_image(ccd, dark, amp)
+                exptime = ccd.md.get('EXPTIME')
+                dark_exptime = dark.md.get('EXPTIME')
+
+                imarr = ccd.unbiased_and_trimmed_image(amp).getImage().getArray()
+                dark_imarr = dark.unbiased_and_trimmed_image(amp).getImage().getArray()
+                subarr = imarr - dark_imarr*exptime/dark_exptime
             else:
                 subarr = ccd.unbiased_and_trimmed_image(amp).getImage().getArray()
-
-            ## Flat field correction
-            if flat_frame is not None:
-                if dark_frame is not None:
-                    flatarr = dark_corrected_image(flat, dark, amp)
-                else:
-                    flatarr = flat.unbiased_and_trimmed_image(amp).getImage().getArray()
-                med = np.median(flatarr)
-                subarr = subarr*med/flatarr
                     
             ## Flip array orientation (if applicable)
             if detsec['xmax'] > detsec['xmin']: # flip in x-direction
@@ -124,7 +106,7 @@ class SpotTask(pipeBase.Task):
     _DefaultName = "SpotTask"
 
     @pipeBase.timeMethod
-    def run(self, sensor_id, infile, gains, bias_frame=None, dark_frame=None):
+    def run(self, sensor_id, infile, gains, bias_frame=None, flat_frame=None, dark_frame=None):
         #
         # Process a CCD image mosaic
         #
@@ -132,6 +114,12 @@ class SpotTask(pipeBase.Task):
             self.log.info("processing {0}".format(infile))
         image = make_ccd_mosaic(infile, bias_frame=bias_frame, 
                                 dark_frame=dark_frame, gains=gains)
+        if flat_frame is not None:
+            flat = make_ccd_mosaic(flat_frame, bias_frame=bias_frame,
+                                   dark_frame=dark_frame, gains=gains)
+            flatarr = flat.getArray()
+            imarr = image.getArray()
+            image = afwImage.ImageF(imarr*np.median(flatarr)/flatarr)
         exposure = afwImage.ExposureF(image.getBBox())
         exposure.setImage(image)
         #
@@ -156,10 +144,8 @@ class SpotTask(pipeBase.Task):
                            "ext_shapeHSM_HsmPsfMoments"])  
         charConfig.measurement.plugins.names |= hsm_plugins
         charTask = CharacterizeImageTask(config=charConfig)
-        if lsst.pipe.tasks.__version__.startswith('17.0'):
-            result = charTask.run(exposure)
-        else:
-            result = charTask.characterize(exposure)
+        result = charTask.run(exposure)
+
         src = result.sourceCat
         if self.config.verbose:
             self.log.info("Detected {0} objects".format(len(src)))
