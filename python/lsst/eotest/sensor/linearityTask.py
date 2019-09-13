@@ -35,12 +35,13 @@ class LinearityTask(pipeBase.Task):
 
     @pipeBase.timeMethod
     def run(self, sensor_id, infiles, mask_files, gains, detrespfile=None,
-            bias_frame=None):
+            bias_frame=None, linearity_correction=None):
         self.sensor_id = sensor_id
         self.infiles = infiles
         self.mask_files = mask_files
         self.gains = gains
         self.bias_frame = bias_frame
+        self.linearity_correction = linearity_correction
         if detrespfile is None:
             #
             # Compute detector response from flat pair files.
@@ -105,9 +106,11 @@ class LinearityTask(pipeBase.Task):
                 file2 = file1
 
             flat1 = MaskedCCD(file1, mask_files=self.mask_files,
-                              bias_frame=self.bias_frame)
+                              bias_frame=self.bias_frame,
+                              linearity_correction=self.linearity_correction)
             flat2 = MaskedCCD(file2, mask_files=self.mask_files,
-                              bias_frame=self.bias_frame)
+                              bias_frame=self.bias_frame,
+                              linearity_correction=self.linearity_correction)
 
             if flat1.md.get('EXPTIME') != flat2.md.get('EXPTIME'):
                 raise RuntimeError("Exposure times do not match for:\n%s\n%s\n"

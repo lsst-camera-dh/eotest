@@ -90,7 +90,8 @@ class FlatPairTask(pipeBase.Task):
     def run(self, sensor_id, infiles, mask_files, gains, detrespfile=None,
             bias_frame=None, max_pd_frac_dev=0.05,
             linearity_spec_range=(1e3, 9e4), use_exptime=False,
-            flat2_finder=find_flat2, mondiode_func=mondiode_value):
+            flat2_finder=find_flat2, mondiode_func=mondiode_value,
+            linearity_correction=None):
         self.sensor_id = sensor_id
         self.infiles = infiles
         self.mask_files = mask_files
@@ -99,6 +100,7 @@ class FlatPairTask(pipeBase.Task):
         self.max_pd_frac_dev = max_pd_frac_dev
         self.find_flat2 = flat2_finder
         self.mondiode_func = mondiode_func
+        self.linearity_correction = linearity_correction
         if detrespfile is None:
             #
             # Compute detector response from flat pair files.
@@ -179,9 +181,11 @@ class FlatPairTask(pipeBase.Task):
                               % (file1, file2))
 
             flat1 = MaskedCCD(file1, mask_files=self.mask_files,
-                              bias_frame=self.bias_frame)
+                              bias_frame=self.bias_frame,
+                              linearity_correction=self.linearity_correction)
             flat2 = MaskedCCD(file2, mask_files=self.mask_files,
-                              bias_frame=self.bias_frame)
+                              bias_frame=self.bias_frame,
+                              linearity_correction=self.linearity_correction)
 
             exptime1 = flat1.md.get('EXPTIME')
             exptime2 = flat2.md.get('EXPTIME')

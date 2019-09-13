@@ -76,7 +76,8 @@ class CteTask(pipeBase.Task):
 
     @pipeBase.timeMethod
     def run(self, sensor_id, superflat_files, bias_frame=None,
-            flux_level='high', gains=None, mask_files=()):
+            flux_level='high', gains=None, mask_files=(),
+            linearity_correction=None):
         if flux_level not in ('high', 'low'):
             raise RuntimeError('CteTask: flux_level must be "high" or "low"')
         if self.config.verbose:
@@ -101,7 +102,8 @@ class CteTask(pipeBase.Task):
         s_task.config.cti = True
         scti, bias_ests = s_task.run(superflat_file, nframes, all_amps,
                                      self.config.overscans, gains=gains,
-                                     mask_files=mask_files)
+                                     mask_files=mask_files,
+                                     linearity_correction=linearity_correction)
         #
         # Compute parallel CTE.
         #
@@ -111,7 +113,8 @@ class CteTask(pipeBase.Task):
         p_task.config.cti = True
         pcti, bias_ests = p_task.run(superflat_file, nframes, all_amps,
                                      self.config.overscans, gains=gains,
-                                     mask_files=mask_files)
+                                     mask_files=mask_files,
+                                     linearity_correction=linearity_correction)
         #
         # Write results to the output file.
         #

@@ -90,14 +90,15 @@ class EPERTask(pipeBase.Task):
 
     @pipeBase.timeMethod
     def run(self, infilename, nframes, amps, overscans, gains=None,
-            mask_files=()):
+            mask_files=(), linearity_correction=None):
         if not infilename:
             self.log.error("Please specify an input file path.")
             sys.exit(1)
         if gains is None:
             gains = dict([(amp, 1) for amp in amps])
 
-        ccd = MaskedCCD(infilename, mask_files=mask_files)
+        ccd = MaskedCCD(infilename, mask_files=mask_files,
+                        linearity_correction=linearity_correction)
         # iterate through amps
         cte = {}
         bias_estimates = {}
