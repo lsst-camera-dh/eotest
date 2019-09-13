@@ -37,9 +37,10 @@ def pair_mean(flat1, flat2, amp):
     stats1 = afwMath.makeStatistics(im1, afwMath.MEAN, flat1.stat_ctrl)
     stats2 = afwMath.makeStatistics(im2, afwMath.MEAN, flat2.stat_ctrl)
 
-    avg_mean_value = (stats1.getValue(afwMath.MEAN) +
-                      stats2.getValue(afwMath.MEAN))/2.
-    return avg_mean_value
+    flat1_value = stats1.getValue(afwMath.MEAN)
+    flat2_value = stats2.getValue(afwMath.MEAN)
+    avg_mean_value = (flat1_value + flat2_value)/2.
+    return np.array([avg_mean_value, flat1_value, flat2_value], dtype=float)
 
 
 def find_flat2(flat1):
@@ -146,9 +147,12 @@ class FlatPairTask(pipeBase.Task):
         self.output = fits.HDUList()
         self.output.append(fits.PrimaryHDU())
         all_amps = imutils.allAmps()
-        colnames = ['flux'] + ['AMP%02i_SIGNAL' % i for i in all_amps]
-        formats = 'E'*len(colnames)
-        units = ['None'] + ['e-']*len(all_amps)
+        colnames = ['flux'] + ['AMP%02i_SIGNAL' % i for i in all_amps] + \
+                   ['FLAT1_AMP%02i_SIGNAL' % i for i in all_amps] + \
+                   ['FLAT2_AMP%02i_SIGNAL' % i for i in all_amps] + \
+                   ['SEQNUM']
+        formats = 'E'*(len(colnames)-1) + 'J'
+        units = ['None'] + ['e-']*3*len(all_amps) + ['None']
         columns = [np.zeros(nrows, dtype=np.float) for fmt in formats]
         fits_cols = [fits.Column(name=colnames[i], format=formats[i],
                                  unit=units[i], array=columns[i])
@@ -175,13 +179,14 @@ class FlatPairTask(pipeBase.Task):
                 file2 = file1
 
             if self.config.verbose:
-                self.log.info("processing\n   %s as flat1 and\n   %s as flat2"
-                              % (file1, file2))
+                self.log.info("processing\n   %s as flat1 and\n   %s as flat2",
+                              file1, file2)
 
             flat1 = MaskedCCD(file1, mask_files=self.mask_files,
                               bias_frame=self.bias_frame)
             flat2 = MaskedCCD(file2, mask_files=self.mask_files,
                               bias_frame=self.bias_frame)
+            seqnum = flat1.md.get('SEQNUM')
 
             exptime1 = flat1.md.get('EXPTIME')
             exptime2 = flat2.md.get('EXPTIME')
@@ -207,21 +212,27 @@ class FlatPairTask(pipeBase.Task):
             else:
                 flux = abs(pd1*exptime1 + pd2*exptime2)/2.
                 if np.abs((pd1 - pd2)/((pd1 + pd2)/2.)) > max_pd_frac_dev:
-                    self.log.info("Skipping %s and %s since MONDIODE values do not agree to %.1f%%" %
-                                  (file1, file2, max_pd_frac_dev*100.))
+                    self.log.info("Skipping %s and %s since MONDIODE values "
+                                  "do not agree to %.1f%%",
+                                  file1, file2, max_pd_frac_dev*100.)
                     continue
             if self.config.verbose:
-                self.log.info('   row = %s' % row)
-                self.log.info('   pd1, pd2 = %s, %s' % (pd1, pd2))
-                self.log.info('   exptime1, exptime2 = %s, %s '
-                              % (exptime1, exptime2))
-                self.log.info('   flux = %s' % flux)
-                self.log.info('   flux/exptime = %s' % (flux/exptime1,))
+                self.log.info('   row = %s', row)
+                self.log.info('   pd1, pd2 = %s, %s', pd1, pd2)
+                self.log.info('   exptime1, exptime2 = %s, %s ',
+                              exptime1, exptime2)
+                self.log.info('   flux = %s', flux)
+                self.log.info('   flux/exptime = %s', flux/exptime1)
             self.output[-1].data.field('FLUX')[row] = flux
             for amp in flat1:
                 # Convert to e- and write out for each segment.
-                signal = pair_mean(flat1, flat2, amp)*self.gains[amp]
-                self.output[-1].data.field('AMP%02i_SIGNAL' % amp)[row] = signal
+                signal, sig1, sig2 \
+                    = pair_mean(flat1, flat2, amp)*self.gains[amp]
+                colname = 'AMP%02i_SIGNAL' % amp
+                self.output[-1].data.field(colname)[row] = signal
+                self.output[-1].data.field('FLAT1_' + colname)[row] = sig1
+                self.output[-1].data.field('FLAT2_' + colname)[row] = sig2
+                self.output[-1].data.field('SEQNUM')[row] = seqnum
         self.output[0].header['NAMPS'] = len(flat1)
         fitsWriteto(self.output, outfile, overwrite=True)
         return outfile
