@@ -97,7 +97,7 @@ class RaftSpecPlots(object):
             xoffset = self._raft_slots[slot]*step
             yvalues = self._apply_ybounds(yscaling*results[column],
                                           (yscaling*ybounds[0],
-                                           yscaling*ybounds[0]))
+                                           yscaling*ybounds[1]))
             plt.plot(results['AMP'] + xoffset, yvalues, 'b.')
         xtick_values = [step*i + step/2 for i in range(len(self._raft_slots))]
         plt.xticks(xtick_values, list(self._raft_slots.keys()))
