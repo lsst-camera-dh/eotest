@@ -45,6 +45,7 @@ class OverscanFit(object):
             self.output = fits.open(self.outfile)
 
         self.meanrow = {amp : [] for amp in range(1, 17)}
+        self.var = {amp : [] for amp in range(1, 17)}
         self.noise = {amp : [] for amp in range(1, 17)}
         self.flux = {amp : [] for amp in range(1, 17)}
         self.flux_std = {amp : [] for amp in range(1, 17)}
@@ -73,6 +74,7 @@ class OverscanFit(object):
             imarr = image.getImage().getArray()*gains[amp]
 
             meanrow = np.mean(imarr[ymin-1:ymax, :], axis=0)
+            var = np.var(imarr[ymin-1:ymax, :], axis=0)
             noise = np.mean(np.std(imarr[ymin-1:ymax, xmax+2:xmax+28], axis=1))
             flux = np.mean(imarr[ymin-1:ymax, xmin-1:xmax])
             flux_std = np.std(imarr[ymin-1:ymax, xmin-1:xmax])
@@ -102,6 +104,7 @@ class OverscanFit(object):
                     cti_std = np.sqrt(fit_covar[2, 2])
                 
             self.meanrow[amp].append(meanrow)
+            self.var[amp].append(var)
             self.flux[amp].append(flux)
             self.flux_std[amp].append(flux_std)
             self.noise[amp].append(noise)
@@ -120,6 +123,7 @@ class OverscanFit(object):
         for amp in range(1, 17):
             extname = 'Amp{0:02d}'.format(amp)
             out_dict[extname] = dict(MEANROW=self.meanrow[amp],
+                                     VAR=self.var[amp],
                                      FLUX=self.flux[amp],
                                      FLUX_STD=self.flux_std[amp],
                                      NOISE=self.noise[amp],
@@ -142,6 +146,8 @@ class OverscanFit(object):
 
             meanrow_col = fits.Column('MEANROW', format='{0}E'.format(ncols), unit='e-', 
                                       array=self.meanrow[amp])
+            var_col = fits.Column('VAR', format='{0}E'.format(ncols), unit='e-',
+                                  array=self.var[amp])
             flux_col = fits.Column('FLUX', format='E', unit='e-', array=self.flux[amp])
             flux_std_col = fits.Column('FLUX_STD', format='E', unit='e-', 
                                        array=self.flux_std[amp])
@@ -165,6 +171,7 @@ class OverscanFit(object):
                 nrows = row0+nrows1
                 table_hdu = fitsTableFactory(table_hdu.data, nrows=nrows)
                 table_hdu.data['MEANROW'][row0:] = meanrow_col
+                table_hdu.data['VAR'][row0:] = var_col
                 table_hdu.data['FLUX'][row0:] = flux_col
                 table_hdu.data['FLUX_STD'][row0:] = flux_std_col
                 table_hdu.data['NOISE'][row0:] = noise_col
@@ -178,6 +185,7 @@ class OverscanFit(object):
                 self.output[extname] = table_hdu
             except KeyError:
                 self.output.append(fitsTableFactory([meanrow_col, 
+                                                     var_col,
                                                      flux_col,
                                                      flux_std_col,
                                                      noise_col,
