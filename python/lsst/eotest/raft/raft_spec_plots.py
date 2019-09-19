@@ -95,7 +95,9 @@ class RaftSpecPlots(object):
         ax = fig.add_subplot(1, 1, 1)
         for slot, results in list(self.results.items()):
             xoffset = self._raft_slots[slot]*step
-            yvalues = self._apply_ybounds(yscaling*results[column], ybounds)
+            yvalues = self._apply_ybounds(yscaling*results[column],
+                                          (yscaling*ybounds[0],
+                                           yscaling*ybounds[1]))
             plt.plot(results['AMP'] + xoffset, yvalues, 'b.')
         xtick_values = [step*i + step/2 for i in range(len(self._raft_slots))]
         plt.xticks(xtick_values, list(self._raft_slots.keys()))
@@ -189,7 +191,8 @@ class RaftSpecPlots(object):
                 if yerrors:
                     yerr.extend(yscaling*results[column + '_ERROR'])
             color = next(color_cycler)['color']
-            y = self._apply_ybounds(y, ybounds)
+            y = self._apply_ybounds(y, (yscaling*ybounds[0],
+                                        yscaling*ybounds[1]))
             plt.plot(x, y, '.', label=column, color=color)
             if yerrors:
                 plt.errorbar(x, y, fmt='.', yerr=yerr, color=color)

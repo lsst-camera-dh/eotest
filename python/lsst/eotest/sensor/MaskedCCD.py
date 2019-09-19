@@ -61,12 +61,17 @@ class MaskedCCD(dict):
         self._applyMasks = applyMasks
 
     def applyInterpolateFromMask(self, maskedImage, fwhm=0.001):
-        for maskName in self._added_mask_types:
-            try:
-                ipIsr.interpolateFromMask(maskedImage, fwhm=fwhm,
-                                          maskName=maskName)
-            except pexExcept.InvalidParameterError:
-                pass
+        try:
+            for maskName in self._added_mask_types:
+                try:
+                    ipIsr.interpolateFromMask(maskedImage, fwhm=fwhm,
+                                              maskName=maskName)
+                except pexExcept.InvalidParameterError:
+                    pass
+        except TypeError:
+            # interface change in ip_isr/isrFunctions.py v18.1.0:
+            ipIsr.interpolateFromMask(maskedImage, fwhm=fwhm,
+                                      maskNameList=self._added_mask_types)
 
     def mask_plane_dict(self):
         amp = list(self.keys())[0]
