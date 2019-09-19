@@ -19,7 +19,7 @@ import lsst.meas.extensions.shapeHSM
 from .MaskedCCD import MaskedCCD
 from .AmplifierGeometry import parse_geom_kwd
     
-def make_ccd_mosaic(infile, bias_frame=None, dark_frame=None, flat_frame=None, gains=None):
+def make_ccd_mosaic(infile, bias_frame=None, dark_frame=None, gains=None):
     """Create a full CCD image mosaic.
     
     Combine the 16 amplifier arrays into a single array, performing
