@@ -9,6 +9,7 @@ from __future__ import absolute_import
 import numpy as np
 import scipy.stats
 import scipy.optimize
+import sklearn.mixture
 import pylab
 from . import pylab_plotter as plot
 import lsst.afw.math as afwMath
@@ -29,6 +30,23 @@ def fe55_lines(x, *args):
     return value
 
 
+def fit_gmm(x, n_components=2):
+    """
+    Fit an n_components Gaussian mixture model to sample data x.
+
+    Return an n_components length sequence of tuples containing
+    (weight, mean, sigma) for each Gaussian component, order by
+    weight, descending.
+    """
+    gmm = sklearn.mixture.GaussianMixture(n_components=n_components)
+    gmm = gmm.fit(x[:, np.newaxis])
+    component_pars = []
+    for weight, mean, covar in zip(gmm.weights_.ravel(), gmm.means_.ravel(),
+                                   gmm.covariances_.ravel()):
+        component_pars.append((weight, mean, np.sqrt(covar)))
+    return sorted(component_pars, key=lambda x: x[0], reverse=True)
+
+
 class Fe55GainFitter(object):
     def __init__(self, signals, ccdtemp=-95):
         self.signals = signals
@@ -40,18 +58,25 @@ class Fe55GainFitter(object):
             self._set_hist_range(dADU, bins, hist_nsig)
         else:
             self.xrange = xrange
-        hist = np.histogram(self.signals, bins=bins, range=self.xrange)
+        signals = self.signals[np.where((self.xrange[0] < self.signals) &
+                                        (self.signals < self.xrange[1]))]
+        weight, mean, sigma = fit_gmm(signals, n_components=2)[0]
+
+        hist = np.histogram(signals, bins=bins, range=self.xrange,
+                            density=True)
         x = (hist[1][1:] + hist[1][:-1])/2.
-        y = hist[0]
-        ntot = sum(y)
+        y = hist[0]*(hist[1][1] - hist[1][0])
         #
         # Starting values for two Gaussian fit. The relative
         # normalizations are initially set at the expected line ratio
         # of K-alpha/K-beta = 0.88/0.12.  The relative peak locations
         # and relative widths are fixed in fe55_lines(...) above.
         #
-        p0 = (ntot*0.88, self.median, self.stdev/2., ntot*0.12)
-        self.pars, pcov = scipy.optimize.curve_fit(fe55_lines, x, y, p0=p0)
+        p0 = (weight, mean, sigma, (1. - weight))
+        bounds = ((0.5*weight, 0.9*mean, 0.9*sigma, 0.5*(1 - weight),
+                  (1.5*weight, 1.1*mean, 1.1*sigma, 1.5*(1 - weight)))
+        self.pars, pcov = scipy.optimize.curve_fit(fe55_lines, x, y, p0=p0,
+                                                   bounds=bounds)
 
         kalpha_peak, kalpha_sigma = self.pars[1], self.pars[2]
         kalpha_peak_error = np.sqrt(pcov[1][1])
