@@ -60,21 +60,28 @@ class Fe55GainFitter(object):
             self.xrange = xrange
         signals = self.signals[np.where((self.xrange[0] < self.signals) &
                                         (self.signals < self.xrange[1]))]
+
+        hist = np.histogram(signals, bins=bins, range=self.xrange)
+        x = (hist[1][1:] + hist[1][:-1])/2.
+        y = hist[0]
+        ntot = sum(y)
+
+        # Use sklearn.mixture.GaussianMixture.fit to estimate the
+        # Gaussian function parameters for the K-alpha line in the
+        # Fe55 cluster DN distribution.
         weight, mean, sigma = fit_gmm(signals, n_components=2)[0]
 
-        hist = np.histogram(signals, bins=bins, range=self.xrange,
-                            density=True)
-        x = (hist[1][1:] + hist[1][:-1])/2.
-        y = hist[0]*(hist[1][1] - hist[1][0])
-        #
-        # Starting values for two Gaussian fit. The relative
-        # normalizations are initially set at the expected line ratio
-        # of K-alpha/K-beta = 0.88/0.12.  The relative peak locations
-        # and relative widths are fixed in fe55_lines(...) above.
-        #
-        p0 = (weight, mean, sigma, (1. - weight))
-        bounds = ((0.5*weight, 0.9*mean, 0.9*sigma, 0.5*(1 - weight),
-                  (1.5*weight, 1.1*mean, 1.1*sigma, 1.5*(1 - weight)))
+        # Starting values for two Gaussian fit. The K-alpha mean,
+        # sigma, and relative normalizations of the K-alpha and K-beta
+        # lines are initially set at the values found from the
+        # Gaussian mixture model 2 component fit.  The relative peak
+        # locations and widths are fixed as in fe55_lines(...) above.
+        p0 = (weight*ntot, mean, sigma, (1. - weight)*ntot)
+
+        # Put bounds on the K-alpha peak mean and sigma to prevent the
+        # fit from wandering off in parameter space.
+        bounds = ((0, 0.5*mean, 0.5*sigma, 0),
+                  (np.inf, 2*mean, 2*sigma, np.inf))
         self.pars, pcov = scipy.optimize.curve_fit(fe55_lines, x, y, p0=p0,
                                                    bounds=bounds)
 
@@ -83,9 +90,8 @@ class Fe55GainFitter(object):
         fe55_yield = Fe55Yield(self.ccdtemp)
         Ne, Ne_error = fe55_yield.alpha()
         self.gain = Ne/kalpha_peak
-#        self.gain_error = float(self.gain*np.sqrt((Ne_error/Ne)**2 +
-#                                                  (kalpha_peak_error/kalpha_peak)**2))
-        self.gain_error = float(self.gain*kalpha_peak_error/kalpha_peak)
+        self.gain_error = float(self.gain*np.sqrt((Ne_error/Ne)**2 +
+                                                  (kalpha_peak_error/kalpha_peak)**2))
 
         return kalpha_peak, kalpha_sigma
 
@@ -159,8 +165,8 @@ class Fe55GainFitter(object):
             pylab.ylabel('Entries / bin')
         x = (hist[1][1:] + hist[1][:-1])/2.
         xx = np.linspace(x[0], x[-1], 1000)
-        pylab.plot(xx, xrange_scale*fe55_lines(xx, *self.pars), 'r--',
-                   markersize=3, linewidth=1)
+        ydata = xrange_scale*fe55_lines(xx, *self.pars)
+        pylab.plot(xx, ydata, 'r--', markersize=3, linewidth=1)
         pylab.annotate(("Amp %i\nGain=%.2f e-/DN") % (amp, self.gain),
                        (0.475, 0.8), xycoords='axes fraction',
                        size='x-small')
