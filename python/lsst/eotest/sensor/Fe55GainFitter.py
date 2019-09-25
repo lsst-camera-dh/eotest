@@ -16,18 +16,28 @@ import lsst.afw.math as afwMath
 from .fe55_yield import Fe55Yield
 
 
-def fe55_lines(x, *args):
-    """
-    Two Gaussian model of Mn K-alpha and K-beta lines for Fe55 tests.
-    The ratio of peak locations is fixed at the line energy ratio, and
-    the line widths are assumed to be the same.
-    """
-    k1, m1, s1, k2 = args
-    m2 = 6.49/5.889*m1
-    s2 = s1
-    value = k1*scipy.stats.norm.pdf(x, loc=m1, scale=s1)
-    value += k2*scipy.stats.norm.pdf(x, loc=m2, scale=s2)
-    return value
+class Fe55Lines:
+    def __init__(self, ccdtemp):
+        fe55_yield = Fe55Yield(ccdtemp)
+        self.alpha_yield = fe55_yield.alpha()
+        self.beta_yield = fe55_yield.beta()
+        # Kalpha to Kbeta branching ratio
+        self.branching_ratio = 0.88/0.12
+
+    def __call__(self, x, *args):
+        """
+        Two Gaussian model of Mn K-alpha and K-beta lines for Fe55 tests.
+        The ratio of peak locations is fixed at the line energy ratio,
+        the line widths are assumed to be the same, and the branching ratio
+        of Kalpha to Kbeta x-rays is set in the constructor.
+        """
+        k1, m1, s1 = args
+        k2 = k1/self.branching_ratio
+        m2 = 6.49/5.889*m1
+        s2 = s1
+        value = k1*scipy.stats.norm.pdf(x, loc=m1, scale=s1)
+        value += k2*scipy.stats.norm.pdf(x, loc=m2, scale=s2)
+        return value
 
 
 def fit_gmm(x, n_components=2):
@@ -38,6 +48,9 @@ def fit_gmm(x, n_components=2):
     (weight, mean, sigma) for each Gaussian component, order by
     weight, descending.
     """
+    if len(x) < n_components:
+        # Use values correponding to a gain of unity.
+        return ((0.88, 1590, 40), (0.12, 1590*6.49/5.889, 40))
     gmm = sklearn.mixture.GaussianMixture(n_components=n_components)
     gmm = gmm.fit(x[:, np.newaxis])
     component_pars = []
@@ -50,7 +63,7 @@ def fit_gmm(x, n_components=2):
 class Fe55GainFitter(object):
     def __init__(self, signals, ccdtemp=-95):
         self.signals = signals
-        self.ccdtemp = ccdtemp
+        self.fe55_lines = Fe55Lines(ccdtemp)
         self._compute_stats()
 
     def fit(self, xrange=None, bins=100, hist_nsig=10, dADU=50):
@@ -75,23 +88,23 @@ class Fe55GainFitter(object):
         # sigma, and relative normalizations of the K-alpha and K-beta
         # lines are initially set at the values found from the
         # Gaussian mixture model 2 component fit.  The relative peak
-        # locations and widths are fixed as in fe55_lines(...) above.
-        p0 = (weight*ntot, mean, sigma, (1. - weight)*ntot)
+        # location, widths, and relative yields are fixed
+        p0 = (weight*ntot, mean, sigma)
 
         # Put bounds on the K-alpha peak mean and sigma to prevent the
         # fit from wandering off in parameter space.
-        bounds = ((0, 0.5*mean, 0.5*sigma, 0),
-                  (np.inf, 2*mean, 2*sigma, np.inf))
-        self.pars, pcov = scipy.optimize.curve_fit(fe55_lines, x, y, p0=p0,
-                                                   bounds=bounds)
+        bounds = ((0, 0.5*mean, 0.5*sigma),
+                  (np.inf, 2*mean, 2*sigma))
+        self.pars, pcov = scipy.optimize.curve_fit(self.fe55_lines, x, y,
+                                                   p0=p0, bounds=bounds)
 
         kalpha_peak, kalpha_sigma = self.pars[1], self.pars[2]
         kalpha_peak_error = np.sqrt(pcov[1][1])
-        fe55_yield = Fe55Yield(self.ccdtemp)
-        Ne, Ne_error = fe55_yield.alpha()
+        Ne, Ne_error = self.fe55_lines.alpha_yield
         self.gain = Ne/kalpha_peak
-        self.gain_error = float(self.gain*np.sqrt((Ne_error/Ne)**2 +
-                                                  (kalpha_peak_error/kalpha_peak)**2))
+        self.gain_error \
+            = self.gain*np.sqrt((Ne_error/Ne)**2 +
+                                (kalpha_peak_error/kalpha_peak)**2)
 
         return kalpha_peak, kalpha_sigma
 
@@ -165,7 +178,7 @@ class Fe55GainFitter(object):
             pylab.ylabel('Entries / bin')
         x = (hist[1][1:] + hist[1][:-1])/2.
         xx = np.linspace(x[0], x[-1], 1000)
-        ydata = xrange_scale*fe55_lines(xx, *self.pars)
+        ydata = xrange_scale*self.fe55_lines(xx, *self.pars)
         pylab.plot(xx, ydata, 'r--', markersize=3, linewidth=1)
         pylab.annotate(("Amp %i\nGain=%.2f e-/DN") % (amp, self.gain),
                        (0.475, 0.8), xycoords='axes fraction',
