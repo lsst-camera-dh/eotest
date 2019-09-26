@@ -21,18 +21,16 @@ class Fe55Lines:
         fe55_yield = Fe55Yield(ccdtemp)
         self.alpha_yield = fe55_yield.alpha()
         self.beta_yield = fe55_yield.beta()
-        # Kalpha to Kbeta branching ratio
-        self.branching_ratio = 0.88/0.12
 
     def __call__(self, x, *args):
         """
         Two Gaussian model of Mn K-alpha and K-beta lines for Fe55 tests.
-        The ratio of peak locations is fixed at the line energy ratio,
-        the line widths are assumed to be the same, and the branching ratio
-        of Kalpha to Kbeta x-rays is set in the constructor.
+        The ratio of peak locations is fixed at the line energy ratio and
+        the line widths are assumed to be the same.  The branching_ratio
+        is the ratio of Kalpha to Kbeta x-rays.
         """
-        k1, m1, s1 = args
-        k2 = k1/self.branching_ratio
+        k1, m1, s1, branching_ratio = args
+        k2 = k1/branching_ratio
         m2 = 6.49/5.889*m1
         s2 = s1
         value = k1*scipy.stats.norm.pdf(x, loc=m1, scale=s1)
@@ -66,18 +64,23 @@ class Fe55GainFitter(object):
         self.fe55_lines = Fe55Lines(ccdtemp)
         self._compute_stats()
 
-    def fit(self, xrange=None, bins=100, hist_nsig=10, dADU=50):
+    def fit(self, xrange=(1300, 2400), bins=50, hist_nsig=10, dADU=50):
         if xrange is None:
             self._set_hist_range(dADU, bins, hist_nsig)
         else:
             self.xrange = xrange
-        signals = self.signals[np.where((self.xrange[0] < self.signals) &
-                                        (self.signals < self.xrange[1]))]
+        if self.xrange is not None:
+            index = np.where((self.xrange[0] < self.signals) &
+                             (self.signals < self.xrange[1]))
+            signals = self.signals[index]
+        else:
+            signals = self.signals
 
         hist = np.histogram(signals, bins=bins, range=self.xrange)
         x = (hist[1][1:] + hist[1][:-1])/2.
         y = hist[0]
         ntot = sum(y)
+        yerr = np.sqrt(np.array([max(_, 1) for _ in y]))
 
         # Use sklearn.mixture.GaussianMixture.fit to estimate the
         # Gaussian function parameters for the K-alpha line in the
@@ -89,13 +92,14 @@ class Fe55GainFitter(object):
         # lines are initially set at the values found from the
         # Gaussian mixture model 2 component fit.  The relative peak
         # location, widths, and relative yields are fixed
-        p0 = (weight*ntot, mean, sigma)
+        p0 = (weight*ntot, mean, sigma, 7.)
 
         # Put bounds on the K-alpha peak mean and sigma to prevent the
         # fit from wandering off in parameter space.
-        bounds = ((0, 0.5*mean, 0.5*sigma),
-                  (np.inf, 2*mean, 2*sigma))
+        bounds = ((0, 0.5*mean, 0.5*sigma, 5 ),
+                  (np.inf, 2*mean, 5*sigma, 10))
         self.pars, pcov = scipy.optimize.curve_fit(self.fe55_lines, x, y,
+                                                   sigma=yerr,
                                                    p0=p0, bounds=bounds)
 
         kalpha_peak, kalpha_sigma = self.pars[1], self.pars[2]
@@ -135,7 +139,7 @@ class Fe55GainFitter(object):
         if self.xrange[1] <= self.xrange[0]:
             self.xrange = None
 
-    def plot(self, xrange=None, interactive=False, bins=100,
+    def plot(self, xrange=None, interactive=False, bins=50,
              win=None, subplot=(1, 1, 1), figsize=None, add_labels=False,
              frameLabels=False, amp=1, title='', xrange_scale=1):
         pylab_interactive_state = pylab.isinteractive()
