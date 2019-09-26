@@ -87,7 +87,7 @@ class AmplifierGeometryTestCase(unittest.TestCase):
         ccd0.writeto(self.e2v_test_file, bitpix=16)
 
         self.itl = AmplifierGeometry(prescan=3, nx=509, ny=2000,
-                                     amp_loc=amp_loc['ITL'])
+                                     amp_loc=amp_loc['ITL'], vendor='ITL')
         self.itl_test_file = 'test_itl_image.fits'
         ccd1 = sim_tools.CCD(geometry=self.itl)
         ccd1.writeto(self.itl_test_file, bitpix=16)
