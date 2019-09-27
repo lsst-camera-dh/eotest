@@ -1,5 +1,6 @@
 """
-Code to perform Divisadero tearing analysis, based on code by Aaron Roodman.
+Code to perform Divisadero tearing analysis.  This is slightly
+revised code originally from Aaron Roodman. See LSSTTD-1440.
 """
 import numpy as np
 from matplotlib import pyplot as plt
