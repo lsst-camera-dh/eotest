@@ -132,8 +132,7 @@ def ana_divisidero_tearing(sflat_files, raft_unit_id, run):
 
             ax = plt.Subplot(f, inner[j])
             ax.plot(xpixval[nskip_edge:ncol*8 - nskip_edge],
-                    avedict[slot][j][nskip_edge:ncol*8
-                                     - nskip_edge])
+                    avedict[slot][j][nskip_edge:ncol*8 - nskip_edge])
             ax.set_xlabel('Col #')
             ax.set_ylim(1.-plot_range, 1.+plot_range)
             for k in range(1, 8):
@@ -147,3 +146,4 @@ def ana_divisidero_tearing(sflat_files, raft_unit_id, run):
             f.add_subplot(ax)
 
     plt.suptitle('Run %s %s' % (str(run), raft_unit_id), fontsize=36)
+    return {slot: avedict[slot][2] for slot in dmslots}
