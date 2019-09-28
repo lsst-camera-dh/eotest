@@ -7,8 +7,7 @@ from matplotlib import pyplot as plt
 import matplotlib.gridspec as gridspec
 from astropy import stats
 import lsst.eotest.image_utils as imutils
-from .MaskedCCD import MaskedCCD
-from .AmplifierGeometry import makeAmplifierGeometry
+import lsst.eotest.sensor as sensorTest
 
 
 __all__ = ['ana_divisidero_tearing']
@@ -20,7 +19,7 @@ def normed_mean_response_vscol(sflat_file):
     mean flux vs. Col# for a group of Rows returns two arrays for
     the top and bottom section of the CCD
     """
-    amc = MaskedCCD(sflat_file)
+    amc = sensorTest.MaskedCCD(sflat_file)
     ncol = amc.amp_geom.nx
     sensor_type = amc.amp_geom.vendor.lower()
     imaging = amc.amp_geom.imaging
@@ -100,7 +99,7 @@ def ana_divisidero_tearing(sflat_files, raft_unit_id, run):
     run: str
         Run number
     """
-    amp_geom = makeAmplifierGeometry(sflat_files['S00'])
+    amp_geom = sensorTest.makeAmplifierGeometry(sflat_files['S00'])
     ncol = amp_geom.nx
 
     # make x pixel values
