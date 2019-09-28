@@ -30,7 +30,6 @@ from .generate_mask import generate_mask
 from .cte_matrix import cte_matrix
 from .total_noise_histograms import *
 from .tearing_statistics import *
-from .divisidero_tearing import *
 #
 # Pipe tasks
 #

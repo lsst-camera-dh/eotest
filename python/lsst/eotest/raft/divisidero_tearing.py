@@ -94,14 +94,13 @@ def ana_divisidero_tearing(sflat_files, raft_unit_id, run):
     Parameters
     ----------
     sflat_files: dict
-        Dictionary of lists of single CCD superflat files, keyed by
-        slot name.
+        Dictionary of single CCD superflat files, keyed by slot name.
     raft_unit_id: str
         Raft unit id, e.g., 'LCA-11021_RTM-019'
     run: str
         Run number
     """
-    amp_geom = makeAmplifierGeometry(sflat_files['S00'][0])
+    amp_geom = makeAmplifierGeometry(sflat_files['S00'])
     ncol = amp_geom.nx
 
     # make x pixel values
@@ -113,7 +112,7 @@ def ana_divisidero_tearing(sflat_files, raft_unit_id, run):
     # get row averages
     avedict = {}
     for slot in dmslots:
-        avedict[slot] = normed_mean_response_vscol(sflat_files[slot][0])
+        avedict[slot] = normed_mean_response_vscol(sflat_files[slot])
 
     # make a summary plot
     f = plt.figure(figsize=(20, 20))
