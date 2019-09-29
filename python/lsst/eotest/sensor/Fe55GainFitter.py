@@ -49,7 +49,10 @@ def fit_gmm(x, n_components=2):
     if len(x) < n_components:
         # Use values correponding to a gain of unity.
         return ((0.88, 1590, 40), (0.12, 1590*6.49/5.889, 40))
-    gmm = sklearn.mixture.GaussianMixture(n_components=n_components)
+    gmm = sklearn.mixture.GaussianMixture(n_components=n_components,
+                                          warm_start=True)
+    gmm = gmm.fit(x[:, np.newaxis])
+    gmm = gmm.fit(x[:, np.newaxis])
     gmm = gmm.fit(x[:, np.newaxis])
     component_pars = []
     for weight, mean, covar in zip(gmm.weights_.ravel(), gmm.means_.ravel(),
@@ -64,7 +67,8 @@ class Fe55GainFitter(object):
         self.fe55_lines = Fe55Lines(ccdtemp)
         self._compute_stats()
 
-    def fit(self, xrange=(1300, 2400), bins=50, hist_nsig=10, dADU=50):
+    def fit(self, xrange=None, bins=50, hist_nsig=10, dADU=150,
+            ythresh_frac=0.1):
         if xrange is None:
             self._set_hist_range(dADU, bins, hist_nsig)
         else:
@@ -78,10 +82,12 @@ class Fe55GainFitter(object):
 
         hist = np.histogram(signals, bins=bins, range=self.xrange)
         x = (hist[1][1:] + hist[1][:-1])/2.
+        dx = hist[1][1] - hist[1][0]
         y = hist[0]
         ntot = sum(y)
-        yerr = np.sqrt(np.array([max(_, 1) for _ in y]))
-
+        index = np.where(y > max(y)*ythresh_frac)
+        x = x[index]
+        y = y[index]
         # Use sklearn.mixture.GaussianMixture.fit to estimate the
         # Gaussian function parameters for the K-alpha line in the
         # Fe55 cluster DN distribution.
@@ -92,15 +98,18 @@ class Fe55GainFitter(object):
         # lines are initially set at the values found from the
         # Gaussian mixture model 2 component fit.  The relative peak
         # location, widths, and relative yields are fixed
-        p0 = (weight*ntot, mean, sigma, 7.)
+        p0 = (weight*ntot*dx, mean, sigma, 7.)
 
         # Put bounds on the K-alpha peak mean and sigma to prevent the
         # fit from wandering off in parameter space.
-        bounds = ((0, 0.5*mean, 0.5*sigma, 5 ),
-                  (np.inf, 2*mean, 5*sigma, 10))
-        self.pars, pcov = scipy.optimize.curve_fit(self.fe55_lines, x, y,
-                                                   sigma=yerr,
-                                                   p0=p0, bounds=bounds)
+        bounds = ((0, 0.99*mean, 0.99*sigma, 4),
+                  (np.inf, 1.01*mean, 1.2*sigma, 8))
+        try:
+            self.pars, pcov = scipy.optimize.curve_fit(self.fe55_lines, x, y,
+                                                       p0=p0, bounds=bounds)
+        except:
+            self.pars = p0
+            pcov = [[0, 0], [0, 0]]
 
         kalpha_peak, kalpha_sigma = self.pars[1], self.pars[2]
         kalpha_peak_error = np.sqrt(pcov[1][1])
