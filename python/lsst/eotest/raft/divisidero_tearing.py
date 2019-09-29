@@ -132,7 +132,13 @@ def ana_divisidero_tearing(sflat_files, raft_unit_id, run):
             ax.plot(xpixval[nskip_edge:ncol*8 - nskip_edge],
                     avedict[slot][j][nskip_edge:ncol*8 - nskip_edge])
             ax.set_xlabel('Col #')
-            ax.set_ylim(1.-plot_range, 1.+plot_range)
+            try:
+                ax.set_ylim(1.-plot_range, 1.+plot_range)
+            except ValueError as eobj:
+                # plot_range is probably inf or NaN because of bad pixel
+                # data for this sensor, so just skip this plot.
+                print('ValueError:', str(eobj))
+                continue
             for k in range(1, 8):
                 ax.axvline(x=ncol*k, color='red', ls='--', alpha=0.2)
             if j == 0:
