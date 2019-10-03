@@ -46,7 +46,7 @@ def makeAmplifierGeometry(infile):
             vendor = 'E2V'
         else:
             vendor = 'ITL'
-    except IndexError:
+    except (IndexError, KeyError):
         # We have a WFS, so set vendor='ITL'.
         vendor = 'ITL'
     myAmpGeom = AmplifierGeometry(prescan=prescan, nx=nx, ny=ny,

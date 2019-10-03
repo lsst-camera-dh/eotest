@@ -401,7 +401,7 @@ def superbias_file(files, overscan, outfile, imaging=None, dxmin=5, dxmax=2,
 def writeFits(images, outfile, template_file, bitpix=32):
     output = fits.HDUList()
     output.append(fits.PrimaryHDU())
-    all_amps = allAmps()
+    all_amps = allAmps(template_file)
     for amp in all_amps:
         if bitpix < 0:
             output.append(fits.ImageHDU(data=images[amp].getArray()))
