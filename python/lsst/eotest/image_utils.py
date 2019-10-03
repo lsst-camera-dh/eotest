@@ -43,7 +43,7 @@ def allAmps(fits_file=None):
     if fits_file is None:
         return all_amps
     with fits.open(fits_file) as f:
-        if len(f) <= 11:
+        if len(f) <= 12:
             return list(range(1, 9))
         else:
             return all_amps

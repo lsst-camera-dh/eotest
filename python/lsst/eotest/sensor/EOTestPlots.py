@@ -1060,7 +1060,7 @@ class EOTestPlots(object):
         if qe_file is not None:
             self._qe_file = qe_file
         if amp is None:
-            amps = imutils.allAmps()
+            amps = imutils.allAmps(self._qe_file)
         else:
             amps = (amp,)
         for amp in amps:
@@ -1359,7 +1359,7 @@ class CcdSpecs(OrderedDict):
 
         bands = self.plotter.qe_data['QE_BANDS'].data.field('BAND')
         bands = OrderedDict([(band, []) for band in bands])
-        for amp in imutils.allAmps():
+        for amp in self.results['AMP']:
             try:
                 values = self.plotter.qe_data['QE_BANDS'].data.field('AMP%02i' % amp)
                 for band, value in zip(bands, values):

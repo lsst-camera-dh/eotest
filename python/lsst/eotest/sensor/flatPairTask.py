@@ -143,10 +143,10 @@ class FlatPairTask(pipeBase.Task):
                 output.add_seg_result(amp, 'MAX_FRAC_DEV', float(maxdev))
         output.write()
 
-    def _create_detresp_fits_output(self, nrows):
+    def _create_detresp_fits_output(self, nrows, infile):
         self.output = fits.HDUList()
         self.output.append(fits.PrimaryHDU())
-        all_amps = imutils.allAmps()
+        all_amps = imutils.allAmps(infile)
         colnames = ['flux'] + ['AMP%02i_SIGNAL' % i for i in all_amps] + \
                    ['FLAT1_AMP%02i_SIGNAL' % i for i in all_amps] + \
                    ['FLAT2_AMP%02i_SIGNAL' % i for i in all_amps] + \
@@ -169,7 +169,7 @@ class FlatPairTask(pipeBase.Task):
                          if item.find('flat1') != -1])
         if self.config.verbose:
             self.log.info("writing to %s" % outfile)
-        self._create_detresp_fits_output(len(file1s))
+        self._create_detresp_fits_output(len(file1s), file1s[0])
         for row, file1 in enumerate(file1s):
             try:
                 file2 = self.find_flat2(file1)

@@ -63,7 +63,8 @@ def rolloff_mask(infile, outfile,
     amp_geom = makeAmplifierGeometry(infile)
     gain = 1
     exptime = 1
-    ccd = CCD(exptime=exptime, gain=gain, geometry=amp_geom)
+    all_amps = imutils.allAmps(infile)
+    ccd = CCD(exptime=exptime, gain=gain, geometry=amp_geom, amps=all_amps)
     #
     # Write the output file with a primary HDU so that the DMstack code
     # can append only image extensions (and not write to the PHDU).
@@ -87,6 +88,8 @@ def rolloff_mask(infile, outfile,
     xmin = amp_geom.imaging.getMinX()
     xmax = xmin + outer_edge_width
     for amp in amps:
+        if amp not in all_amps:
+            continue
         imarr = ccd.segments[amp].image.getArray()
         imarr[:, xmin:xmax] += signal
     #
@@ -96,6 +99,8 @@ def rolloff_mask(infile, outfile,
     xmax = amp_geom.imaging.getMaxX() + 1
     xmin = xmax - outer_edge_width
     for amp in amps:
+        if amp not in all_amps:
+            continue
         imarr = ccd.segments[amp].image.getArray()
         imarr[:, xmin:xmax] += signal
     #

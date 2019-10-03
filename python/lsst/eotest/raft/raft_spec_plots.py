@@ -17,10 +17,6 @@ class RaftSpecPlots(object):
     Class to produce plots of measured specifications in eotest
     results files.
     """
-    _raft_slots = \
-        OrderedDict([(slot, i) for i, slot in
-                     enumerate('S00 S01 S02 S10 S11 S12 S20 S21 S22'.split())])
-
     def __init__(self, results_files):
         """
         Constructor.
@@ -29,6 +25,14 @@ class RaftSpecPlots(object):
         ----------
         results_files : dict
         """
+        self._raft_slots \
+            = OrderedDict([(slot, i) for i, slot in
+                           enumerate('S00 S01 S02 S10 S11 S12 S20 S21 S22'.split())])
+        if 'S00' not in results_files.keys():
+            self._raft_slots \
+                = OrderedDict([(slot, i) for i, slot in
+                               enumerate('SW0 SW1 SG0 SG1'.split())])
+
         self.results = dict()
         self.sensor_ids = dict()
         for slot, filename in list(results_files.items()):
@@ -36,7 +40,7 @@ class RaftSpecPlots(object):
             self.results[slot] = sensorTest.EOTestResults(filename)
 
     def _draw_slot_boundary(self, slot, step=20, namps=16, marker='k:'):
-        if slot == 'S00':
+        if slot == list(self._raft_slots.keys())[0]:
             plt.axvline(-2, linestyle=marker[1:], color=marker[0])
         xbound = (step - namps)/2. + step*self._raft_slots[slot] + namps + 1
         plt.axvline(xbound, linestyle=marker[1:], color=marker[0])
@@ -221,5 +225,5 @@ class RaftSpecPlots(object):
             plt.axis(axis)
         for slot in self.results:
             self._draw_slot_boundary(slot, step=step)
-        self._draw_slot_boundary('S00', step=step)
+        self._draw_slot_boundary(list(self._raft_slots.keys())[0], step=step)
         return fig
