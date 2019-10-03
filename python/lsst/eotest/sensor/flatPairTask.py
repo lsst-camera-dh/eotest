@@ -190,6 +190,7 @@ class FlatPairTask(pipeBase.Task):
             flat2 = MaskedCCD(file2, mask_files=self.mask_files,
                               bias_frame=self.bias_frame,
                               linearity_correction=self.linearity_correction)
+
             seqnum = flat1.md.get('SEQNUM')
 
             exptime1 = flat1.md.get('EXPTIME')

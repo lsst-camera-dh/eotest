@@ -93,6 +93,8 @@ class RaftSpecPlots(object):
         plt.rcParams['figure.figsize'] = figsize
         fig = plt.figure()
         ax = fig.add_subplot(1, 1, 1)
+        if ybounds is not None:
+            ybounds = yscaling*ybounds[0], yscaling*ybounds[1]
         for slot, results in list(self.results.items()):
             xoffset = self._raft_slots[slot]*step
             yvalues = self._apply_ybounds(yscaling*results[column], ybounds)
@@ -114,8 +116,8 @@ class RaftSpecPlots(object):
             ax.set_yscale('log', nonposy='clip')
         if ybounds is not None:
             axis = list(plt.axis())
-            axis[-2] = max(axis[-2], yscaling*ybounds[0])
-            axis[-1] = min(axis[-1], yscaling*ybounds[1])
+            axis[-2] = max(axis[-2], ybounds[0])
+            axis[-1] = min(axis[-1], ybounds[1])
             plt.axis(axis)
         for slot in self.results:
             self._draw_slot_boundary(slot, step=step)
@@ -179,6 +181,8 @@ class RaftSpecPlots(object):
             color_cycler = cycler.cycler('color', colors)()
         else:
             color_cycler = plt.rcParams['axes.prop_cycle']()
+        if ybounds is not None:
+            ybounds = yscaling*ybounds[0], yscaling*ybounds[1]
         for icol, column in enumerate(columns):
             x, y = [], []
             yerr = []
@@ -212,8 +216,8 @@ class RaftSpecPlots(object):
             ax.set_yscale('log', nonposy='clip')
         if ybounds is not None:
             axis = list(plt.axis())
-            axis[-2] = max(axis[-2], yscaling*ybounds[0])
-            axis[-1] = min(axis[-1], yscaling*ybounds[1])
+            axis[-2] = max(axis[-2], ybounds[0])
+            axis[-1] = min(axis[-1], ybounds[1])
             plt.axis(axis)
         for slot in self.results:
             self._draw_slot_boundary(slot, step=step)
