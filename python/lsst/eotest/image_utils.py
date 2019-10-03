@@ -42,12 +42,11 @@ def allAmps(fits_file=None):
     all_amps = list(range(1, 17))
     if fits_file is None:
         return all_amps
-    try:
-        with fits.open(fits_file) as f:
-            namps = f[0].header['NAMPS']
-        return list(range(1, namps+1))
-    except KeyError:
-        return all_amps
+    with fits.open(fits_file) as f:
+        if len(f) <= 11:
+            return list(range(1, 9))
+        else:
+            return all_amps
 
 
 # Segment ID to HDU number in FITS dictionary
