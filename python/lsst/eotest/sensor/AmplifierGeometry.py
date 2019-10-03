@@ -99,25 +99,25 @@ class AmplifierGeometry(dict):
             self[amp] = self._segment_geometry(amp)
 
     def _make_bboxes(self):
-        import lsst.afw.geom as afwGeom
+        import lsst.geom as lsstGeom
         self.full_segment = \
-            afwGeom.Box2I(afwGeom.Point2I(0, 0),
-                          afwGeom.Point2I(self.naxis1 - 1, self.naxis2 - 1))
+            lsstGeom.Box2I(lsstGeom.Point2I(0, 0),
+                           lsstGeom.Point2I(self.naxis1 - 1, self.naxis2 - 1))
         self.prescan = \
-            afwGeom.Box2I(afwGeom.Point2I(0, 0),
-                          afwGeom.Point2I(self.prescan_width - 1,
-                                          self.naxis2 - 1))
+            lsstGeom.Box2I(lsstGeom.Point2I(0, 0),
+                           lsstGeom.Point2I(self.prescan_width - 1,
+                                            self.naxis2 - 1))
         self.imaging = \
-            afwGeom.Box2I(afwGeom.Point2I(self.prescan_width, 0),
-                          afwGeom.Point2I(self.nx + self.prescan_width - 1,
-                                          self.ny - 1))
+            lsstGeom.Box2I(lsstGeom.Point2I(self.prescan_width, 0),
+                           lsstGeom.Point2I(self.nx + self.prescan_width - 1,
+                                            self.ny - 1))
         self.serial_overscan = \
-            afwGeom.Box2I(afwGeom.Point2I(self.nx + self.prescan_width, 0),
-                          afwGeom.Point2I(self.naxis1 - 1, self.naxis2 - 1))
+            lsstGeom.Box2I(lsstGeom.Point2I(self.nx + self.prescan_width, 0),
+                           lsstGeom.Point2I(self.naxis1 - 1, self.naxis2 - 1))
         self.parallel_overscan = \
-            afwGeom.Box2I(afwGeom.Point2I(self.prescan_width, self.ny),
-                          afwGeom.Point2I(self.prescan_width + self.nx,
-                                          self.naxis2 - 1))
+            lsstGeom.Box2I(lsstGeom.Point2I(self.prescan_width, self.ny),
+                           lsstGeom.Point2I(self.prescan_width + self.nx,
+                                            self.naxis2 - 1))
 
     def _segment_geometry(self, amp):
         results = dict()

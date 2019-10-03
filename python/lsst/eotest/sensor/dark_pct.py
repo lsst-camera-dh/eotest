@@ -5,7 +5,6 @@ of pixels.
 from __future__ import print_function
 import numpy as np
 import lsst.afw.image as afwImage
-import lsst.afw.geom as afwGeom
 
 from image_utils import fits_median, unbias_and_trim
 

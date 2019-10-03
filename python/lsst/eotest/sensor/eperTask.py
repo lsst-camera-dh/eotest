@@ -10,7 +10,7 @@ import sys
 import numpy as np
 import argparse
 from .MaskedCCD import MaskedCCD
-import lsst.afw.geom as afwGeom
+import lsst.geom as lsstGeom
 import lsst.afw.math as afwMath
 
 from lsst.eotest.Estimator import Estimator
@@ -26,22 +26,22 @@ class SubImage(object):
         self.image = ccd[amp]   # This is the masked image for the desired amp.
         if task.config.direction == 'p':
             self._bbox = self._parallel_box
-            llc = afwGeom.Point2I(geom.parallel_overscan.getMinX(),
-                                  geom.parallel_overscan.getMinY() + overscans)
+            llc = lsstGeom.Point2I(geom.parallel_overscan.getMinX(),
+                                   geom.parallel_overscan.getMinY() + overscans)
             urc = geom.parallel_overscan.getCorners()[2]
-            self._bias_reg = afwGeom.Box2I(llc, urc)
+            self._bias_reg = lsstGeom.Box2I(llc, urc)
             self.lastpix = self.imaging.getMaxY()
         elif task.config.direction == 's':
             self._bbox = self._serial_box
-            llc = afwGeom.Point2I(geom.serial_overscan.getMinX() + overscans,
-                                  geom.serial_overscan.getMinY())
+            llc = lsstGeom.Point2I(geom.serial_overscan.getMinX() + overscans,
+                                   geom.serial_overscan.getMinY())
             urc = geom.serial_overscan.getCorners()[2]
             #
             # Omit the last 4 columns to avoid the bright column in the
             # last overscan column in the e2v vendor data.
             #
             urc[0] -= 4
-            self._bias_reg = afwGeom.Box2I(llc, urc)
+            self._bias_reg = lsstGeom.Box2I(llc, urc)
             self.lastpix = self.imaging.getMaxX()
         else:
             task.log.error("Unknown scan direction: " + str(direction))
@@ -64,14 +64,14 @@ class SubImage(object):
         return my_exp
 
     def _parallel_box(self, start, end):
-        llc = afwGeom.PointI(self.imaging.getMinX(), start)
-        urc = afwGeom.PointI(self.imaging.getMaxX(), end)
-        return afwGeom.BoxI(llc, urc)
+        llc = lsstGeom.PointI(self.imaging.getMinX(), start)
+        urc = lsstGeom.PointI(self.imaging.getMaxX(), end)
+        return lsstGeom.BoxI(llc, urc)
 
     def _serial_box(self, start, end):
-        llc = afwGeom.PointI(start, self.imaging.getMinY())
-        urc = afwGeom.PointI(end, self.imaging.getMaxY())
-        return afwGeom.BoxI(llc, urc)
+        llc = lsstGeom.PointI(start, self.imaging.getMinY())
+        urc = lsstGeom.PointI(end, self.imaging.getMaxY())
+        return lsstGeom.BoxI(llc, urc)
 
 
 class EPERConfig(pexConfig.Config):

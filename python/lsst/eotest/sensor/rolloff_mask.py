@@ -15,7 +15,6 @@ import numpy as np
 import astropy.io.fits as fits
 from lsst.eotest.fitsTools import fitsWriteto
 import lsst.afw.detection as afwDetect
-import lsst.afw.geom as afwGeom
 import lsst.afw.image as afwImage
 import lsst.daf.base as dafBase
 import lsst.eotest.image_utils as imutils

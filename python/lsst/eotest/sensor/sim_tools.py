@@ -14,7 +14,6 @@ import numpy.random as random
 import astropy.io.fits as fits
 from lsst.eotest.fitsTools import fitsWriteto
 
-import lsst.afw.geom as afwGeom
 import lsst.afw.image as afwImage
 import lsst.afw.display.ds9 as ds9
 
