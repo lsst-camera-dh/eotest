@@ -70,7 +70,7 @@ class PersistenceTask(pipeBase.Task):
 
     @pipeBase.timeMethod
     def run(self, sensor_id, pre_flat_darks, flat, post_flat_darks,
-            mask_files, gains):
+            mask_files, gains, linearity_correction=None):
         darks = list(pre_flat_darks) + list(post_flat_darks)
         imutils.check_temperatures(darks, self.config.temp_set_point_tol,
                                    setpoint=self.config.temp_set_point,
@@ -91,7 +91,8 @@ class PersistenceTask(pipeBase.Task):
         medfile = os.path.join(self.config.output_dir,
                                '%s_persistence_dark_median.fits' % sensor_id)
         imutils.writeFits(median_images, medfile, darks[0])
-        ccd = MaskedCCD(medfile, mask_files=mask_files)
+        ccd = MaskedCCD(medfile, mask_files=mask_files,
+                        linearity_correction=linearity_correction)
 
         # Define the sub-region for assessing the deferred charge.
         # This is the same bounding box for all segments, so use amp=1.
@@ -123,7 +124,8 @@ class PersistenceTask(pipeBase.Task):
         deferred_charges = []
         times = []
         for dark in post_flat_darks:
-            ccd = MaskedCCD(dark, mask_files=mask_files)
+            ccd = MaskedCCD(dark, mask_files=mask_files,
+                            linearity_correction=linearity_correction)
             dt = readout_time(dark) - tref
             times.append(dt.sec)
             exptime = ccd.md.get('EXPTIME')

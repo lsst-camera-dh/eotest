@@ -70,14 +70,15 @@ class BFTask(pipeBase.Task):
     @pipeBase.timeMethod
     def run(self, sensor_id, flat_files, single_pairs=True,
             dark_frame=None, mask_files=(), flat2_finder=None,
-            bias_frame=None, meanidx=0):
+            bias_frame=None, meanidx=0, linearity_correction=None):
         """
         Compute the average nearest neighbor correlation coefficients for
         all flat pairs given for a particular exposure time.  Additionally
         store the flat means per amp.
         """
         if dark_frame is not None:
-            ccd_dark = MaskedCCD(dark_frame, mask_files=mask_files)
+            ccd_dark = MaskedCCD(dark_frame, mask_files=mask_files,
+                                 linearity_correction=linearity_correction)
 
         if single_pairs:
             if flat2_finder is None:
@@ -96,9 +97,11 @@ class BFTask(pipeBase.Task):
         for flat_pair in flats:
             self.log.info("%s\n%s", *flat_pair)
             ccd1 = MaskedCCD(flat_pair[0], mask_files=mask_files,
-                             bias_frame=bias_frame)
+                             bias_frame=bias_frame,
+                             linearity_correction=linearity_correction)
             ccd2 = MaskedCCD(flat_pair[1], mask_files=mask_files,
-                             bias_frame=bias_frame)
+                             bias_frame=bias_frame,
+                             linearity_correction=linearity_correction)
 
             for amp in all_amps:
                 self.log.info('on amp %s', amp)
