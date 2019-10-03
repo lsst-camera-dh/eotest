@@ -56,7 +56,10 @@ class MaskedCCD(dict):
         if mask_files:
             self.setAllMasks()
         if bias_frame is not None:
-            self.bias_frame = MaskedCCD(bias_frame)
+            if isinstance(bias_frame, MaskedCCD):
+                self.bias_frame = bias_frame
+            else:
+                self.bias_frame = MaskedCCD(bias_frame)
         else:
             self.bias_frame = None
         self._applyMasks = applyMasks
@@ -289,7 +292,7 @@ def add_mask_files(mask_files, outfile, overwrite=True):
     for amp in masks:
         md = dafBase.PropertySet()
         md.set('EXTNAME', 'SEGMENT%s' % imutils.channelIds[amp])
-        masks[amp].writeFits(outfile, md, 'a')
+        masks[amp].writeFits(str(outfile), md, 'a')
     return masks
 
 

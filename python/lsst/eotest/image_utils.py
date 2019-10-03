@@ -212,6 +212,12 @@ def bias_image(im, overscan, dxmin=5, dxmax=2, statistic=np.mean, bias_method='r
     Returns:
         An image with size equal to the input image containing the offset level.
     """
+    if bias_method not in ['mean', 'row', 'func', 'spline', 'none']:
+        raise RuntimeError('Bias method must be either "none", "mean", "row", "func" or "spline".')  
+
+    def dummy_none(im, overscan, dxmin, dxmax, **kwargs):
+        return 0.0
+    method = {'mean' : bias, 'row' : bias_row, 'func' : bias_func, 'spline' : bias_spline, 'none' : dummy_none}
     if bias_method not in ['mean', 'row', 'func', 'spline']:
         raise RuntimeError('Bias method must be either "mean", "row", "func" or "spline".')
     method = {'mean' : bias, 'row' : bias_row, 'func' : bias_func, 'spline' : bias_spline}
@@ -227,6 +233,7 @@ def bias_image(im, overscan, dxmin=5, dxmax=2, statistic=np.mean, bias_method='r
         values = np.full(ny, my_bias)
     for row in range(ny):
         imarr[row] += values[row]
+    biasim.setXY0(im.getX0(), im.getY0())
     return biasim
 
 def trim(im, imaging):
@@ -418,6 +425,10 @@ def writeFits(images, outfile, template_file, bitpix=32):
         with fits.open(template_file) as template:
             output[0].header.update(template[0].header)
             output[0].header['FILENAME'] = outfile
+            metadata = images.get('METADATA', None)
+            if metadata is not None:
+                for key, val in metadata.items():
+                    output[0].header[key] = val
             for amp in all_amps:
                 output[amp].header.update(template[amp].header)
                 set_bitpix(output[amp], bitpix)

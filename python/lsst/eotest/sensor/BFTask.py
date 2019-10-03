@@ -217,12 +217,21 @@ def crossCorrelate(maskedimage1, maskedimage2, maxLag, sigma, binsize):
     """
     Calculate the correlation coefficients.
     """
+    return crossCorrelate_images(maskedimage1.getImage(),
+                                 maskedimage2.getImage(),
+                                 maxLag, sigma, binsize)
+
+
+def crossCorrelate_images(image1, image2, maxLag, sigma, binsize):
+    """
+    Calculate the correlation coefficients.
+    """
     sctrl = afwMath.StatisticsControl()
     sctrl.setNumSigmaClip(sigma)
 
     # Diff the images.
-    diff = maskedimage1.clone()
-    diff -= maskedimage2.getImage()
+    diff = image1.clone()
+    diff -= image2
 
     # Subtract background.
     nx = diff.getWidth()//binsize
@@ -256,7 +265,7 @@ def crossCorrelate(maskedimage1, maskedimage2, maxLag, sigma, binsize):
             dim_xy *= dim0
             xcorr[xlag, ylag] = afwMath.makeStatistics(
                 dim_xy, afwMath.MEANCLIP, sctrl).getValue()
-            dim_xy_array = dim_xy.getImage().getArray().flatten()/xcorr[0][0]
+            dim_xy_array = dim_xy.getArray().flatten()/xcorr[0][0]
             N = len(dim_xy_array.flatten())
             if xlag != 0 and ylag != 0:
                 f = (1+xcorr[xlag, ylag]/xcorr[0][0]) / \
@@ -266,3 +275,6 @@ def crossCorrelate(maskedimage1, maskedimage2, maxLag, sigma, binsize):
             else:
                 xcorr_err[xlag, ylag] = 0
     return xcorr, xcorr_err
+
+
+
