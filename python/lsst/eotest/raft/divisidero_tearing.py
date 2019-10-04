@@ -128,17 +128,14 @@ def ana_divisidero_tearing(sflat_files, raft_unit_id, run):
     nskip_edge = 20
 
     for i, slot in enumerate(dmslots):
+        max_divisidero = avedict[slot][2]
+        have_wf_sensor = (len(max_divisidero) == 7)
         inner = gridspec.GridSpecFromSubplotSpec(2, 1, subplot_spec=outer[i],
                                                  wspace=0.1, hspace=0.0)
         for j in range(2):
-
-            # use max of max_divisidero_tearing to set the range of plots
-            max_divisidero = avedict[slot][2]
-            if len(max_divisidero[j*7:j*7+8]) == 0:
-                have_wf_sensor = True
+            if have_wf_sensor and j==1:
                 continue
-            else:
-                have_wf_sensor = False
+            # use max of max_divisidero_tearing to set the range of plots
             plot_range = np.max(max_divisidero[j*7:j*7+8])
 
             ax = plt.Subplot(f, inner[j])
