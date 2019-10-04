@@ -43,10 +43,22 @@ def allAmps(fits_file=None):
     if fits_file is None:
         return all_amps
     with fits.open(fits_file) as f:
-        if len(f) <= 12:
-            return list(range(1, 9))
+        try:
+            # Get the number of amps from the FITS header if this is
+            # ptc or detector response file.
+            namps = f[0].header['NAMPS']
+        except KeyError:
+            # Otherwise, this is a raw image FITS file, so infer the
+            # number of amps from the number of extensions.
+            if len(f) <= 12:
+                # Wavefront sensor
+                return list(range(1, 9))
+            else:
+                # Full 16 amp sensor.
+                return all_amps
         else:
-            return all_amps
+            # Number of amps specified in the FITS file header.
+            return list(range(1, namps + 1))
 
 
 # Segment ID to HDU number in FITS dictionary
