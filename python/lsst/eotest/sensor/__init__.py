@@ -30,6 +30,7 @@ from .generate_mask import generate_mask
 from .cte_matrix import cte_matrix
 from .total_noise_histograms import *
 from .tearing_statistics import *
+from .nonlinearity_correction import NonlinearityCorrection
 #
 # Pipe tasks
 #
@@ -50,6 +51,7 @@ from .persistenceTask import PersistenceTask
 from .fe55CteTask import Fe55CteTask
 from .BFTask import BFTask
 from .overscanTask import OverscanTask
+from .nonlinearityTask import NonlinearityTask
 try:
     from .spotTask import SpotTask
 except Exception as eobj:
