@@ -7,7 +7,7 @@ import numpy as np
 import numpy.random as random
 
 import lsst.afw.image as afwImage
-import lsst.afw.geom as afwGeom
+import lsst.geom as lsstGeom
 
 from image_utils import fits_median, unbias_and_trim
 
@@ -24,8 +24,8 @@ def dark_curr(files, hdu=2, gain=1, count=1000, dx=100, dy=100, seed=None):
 
     signal = []
     for x, y in zip(xarr, yarr):
-        bbox = afwGeom.Box2I(afwGeom.Point2I(int(x), int(y)),
-                             afwGeom.Extent2I(dx, dy))
+        bbox = lsstGeom.Box2I(lsstGeom.Point2I(int(x), int(y)),
+                              lsstGeom.Extent2I(dx, dy))
         subim = im.Factory(im, bbox)
         signal.append(np.mean(subim.getArray()))
     dark_current = np.median(signal)*gain/exptime

@@ -42,12 +42,23 @@ def allAmps(fits_file=None):
     all_amps = list(range(1, 17))
     if fits_file is None:
         return all_amps
-    try:
-        with fits.open(fits_file) as f:
+    with fits.open(fits_file) as f:
+        try:
+            # Get the number of amps from the FITS header if this is
+            # ptc or detector response file.
             namps = f[0].header['NAMPS']
-        return list(range(1, namps+1))
-    except KeyError:
-        return all_amps
+        except KeyError:
+            # Otherwise, this is a raw image FITS file, so infer the
+            # number of amps from the number of extensions.
+            if len(f) <= 12:
+                # Wavefront sensor
+                return list(range(1, 9))
+            else:
+                # Full 16 amp sensor.
+                return all_amps
+        else:
+            # Number of amps specified in the FITS file header.
+            return list(range(1, namps + 1))
 
 
 # Segment ID to HDU number in FITS dictionary
@@ -402,7 +413,7 @@ def superbias_file(files, overscan, outfile, imaging=None, dxmin=5, dxmax=2,
 def writeFits(images, outfile, template_file, bitpix=32):
     output = fits.HDUList()
     output.append(fits.PrimaryHDU())
-    all_amps = allAmps()
+    all_amps = allAmps(template_file)
     for amp in all_amps:
         if bitpix < 0:
             output.append(fits.ImageHDU(data=images[amp].getArray()))

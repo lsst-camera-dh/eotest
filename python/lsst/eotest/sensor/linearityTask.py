@@ -71,10 +71,10 @@ class LinearityTask(pipeBase.Task):
                 output.add_seg_result(amp, 'MAX_FRAC_DEV', float(maxdev))
         output.write()
 
-    def _create_detresp_fits_output(self, nrows):
+    def _create_detresp_fits_output(self, nrows, infile):
         self.output = fits.HDUList()
         self.output.append(fits.PrimaryHDU())
-        all_amps = imutils.allAmps()
+        all_amps = imutils.allAmps(infile)
         colnames = ['flux'] + ['AMP%02i_SIGNAL' % i for i in all_amps]
         formats = 'E'*len(colnames)
         units = ['None'] + ['e-']*len(all_amps)
@@ -94,7 +94,7 @@ class LinearityTask(pipeBase.Task):
                          item.find('linearity_flat') != -1])
         if self.config.verbose:
             self.log.info("writing to %s" % outfile)
-        self._create_detresp_fits_output(len(file1s))
+        self._create_detresp_fits_output(len(file1s), files1[0])
         for row, file1 in enumerate(file1s):
             if self.config.verbose:
                 self.log.info("processing %s" % file1)

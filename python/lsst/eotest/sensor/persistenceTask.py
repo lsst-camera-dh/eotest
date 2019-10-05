@@ -11,7 +11,7 @@ import astropy.io.fits as fits
 from lsst.eotest.fitsTools import fitsTableFactory, fitsWriteto
 import lsst.eotest.image_utils as imutils
 from .MaskedCCD import MaskedCCD
-import lsst.afw.geom as afwGeom
+import lsst.geom as lsstGeom
 import lsst.afw.image as afwImage
 import lsst.afw.math as afwMath
 import lsst.pex.config as pexConfig
@@ -101,9 +101,9 @@ class PersistenceTask(pipeBase.Task):
                 - self.config.region_x_offset)
         yllc = ((image.getHeight() - self.config.region_size)/2.
                 - self.config.region_y_offset)
-        imaging_reg = afwGeom.Box2I(afwGeom.Point2I(int(xllc), int(yllc)),
-                                    afwGeom.Extent2I(self.config.region_size,
-                                                     self.config.region_size))
+        imaging_reg = lsstGeom.Box2I(lsstGeom.Point2I(int(xllc), int(yllc)),
+                                     lsstGeom.Extent2I(self.config.region_size,
+                                                       self.config.region_size))
         overscan = ccd.amp_geom.serial_overscan
         # Compute reference dark current for each segment.
         dc_ref = {}

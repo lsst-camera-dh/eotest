@@ -8,7 +8,7 @@ import glob
 from collections import namedtuple
 import numpy as np
 from astropy.io import fits
-import lsst.afw.geom as afwGeom
+import lsst.geom as lsstGeom
 import lsst.afw.math as afwMath
 import lsst.pex.config as pexConfig
 import lsst.pipe.base as pipeBase
@@ -237,9 +237,9 @@ def crossCorrelate(maskedimage1, maskedimage2, maxLag, sigma, binsize):
     # Measure the correlations
     x0, y0 = diff.getXY0()
     width, height = diff.getDimensions()
-    bbox_extent = afwGeom.Extent2I(width - maxLag, height - maxLag)
+    bbox_extent = lsstGeom.Extent2I(width - maxLag, height - maxLag)
 
-    bbox = afwGeom.Box2I(afwGeom.Point2I(x0, y0), bbox_extent)
+    bbox = lsstGeom.Box2I(lsstGeom.Point2I(x0, y0), bbox_extent)
     dim0 = diff[bbox].clone()
     dim0 -= afwMath.makeStatistics(dim0, afwMath.MEANCLIP, sctrl).getValue()
 
@@ -248,8 +248,8 @@ def crossCorrelate(maskedimage1, maskedimage2, maxLag, sigma, binsize):
 
     for xlag in range(maxLag + 1):
         for ylag in range(maxLag + 1):
-            bbox_lag = afwGeom.Box2I(afwGeom.Point2I(x0 + xlag, y0 + ylag),
-                                     bbox_extent)
+            bbox_lag = lsstGeom.Box2I(lsstGeom.Point2I(x0 + xlag, y0 + ylag),
+                                      bbox_extent)
             dim_xy = diff[bbox_lag].clone()
             dim_xy -= afwMath.makeStatistics(dim_xy, afwMath.MEANCLIP,
                                              sctrl).getValue()

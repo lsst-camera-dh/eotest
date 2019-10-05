@@ -53,7 +53,7 @@ class TaskNamespace(object):
     def system_gains(self):
         results = EOTestResults(self.args.gains)
         gains = results['GAIN']
-        return dict([(amp, gains[amp-1]) for amp in imutils.allAmps()])
+        return dict([(amp, gains[amp-1]) for amp in results['GAIN']])
 
     def mask_files(self, infile=None):
         """
