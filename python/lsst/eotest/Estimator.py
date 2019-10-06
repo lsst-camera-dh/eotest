@@ -1,6 +1,5 @@
 from __future__ import division
 import numpy as np
-import lsst.afw.geom as afwGeom
 import lsst.afw.image as afwImage
 import lsst.afw.math as afwMath
 
