@@ -163,7 +163,7 @@ def pixel_counts(ccd_file, input_mask=None):
     if input_mask is not None:
         mask_file = input_mask
     else:
-        mask_file = 'temp_rolloff_mask.fits'
+        mask_file = tempfile.mkstemp(suffix='.fits', dir='.')[-1]
         rolloff_mask(ccd_file, mask_file)
     ccd = MaskedCCD(mask_file)
     num_masked = 0
@@ -173,7 +173,7 @@ def pixel_counts(ccd_file, input_mask=None):
         imarr = imutils.trim(ccd[amp].getImage(), imaging).getArray()
         num_masked += len(np.where(imarr != 0)[0])
         num_total += imarr.shape[0]*imarr.shape[1]
-    if mask_file is None:
+    if input_mask is None:
         try:
             os.remove(mask_file)
         except OSError:
