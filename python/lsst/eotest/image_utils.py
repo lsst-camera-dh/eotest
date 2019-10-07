@@ -14,7 +14,7 @@ from astropy.io import fits
 from astropy.utils.exceptions import AstropyWarning, AstropyUserWarning
 from .fitsTools import fitsWriteto
 import lsst.afw
-import lsst.afw.geom as afwGeom
+import lsst.geom as lsstGeom
 import lsst.afw.image as afwImage
 import lsst.afw.math as afwMath
 
@@ -42,12 +42,23 @@ def allAmps(fits_file=None):
     all_amps = list(range(1, 17))
     if fits_file is None:
         return all_amps
-    try:
-        with fits.open(fits_file) as f:
+    with fits.open(fits_file) as f:
+        try:
+            # Get the number of amps from the FITS header if this is
+            # ptc or detector response file.
             namps = f[0].header['NAMPS']
-        return list(range(1, namps+1))
-    except KeyError:
-        return all_amps
+        except KeyError:
+            # Otherwise, this is a raw image FITS file, so infer the
+            # number of amps from the number of extensions.
+            if len(f) <= 12:
+                # Wavefront sensor
+                return list(range(1, 9))
+            else:
+                # Full 16 amp sensor.
+                return all_amps
+        else:
+            # Number of amps specified in the FITS file header.
+            return list(range(1, namps + 1))
 
 
 # Segment ID to HDU number in FITS dictionary
@@ -409,7 +420,7 @@ def superbias_file(files, overscan, outfile, imaging=None, dxmin=5, dxmax=2,
 def writeFits(images, outfile, template_file, bitpix=32):
     output = fits.HDUList()
     output.append(fits.PrimaryHDU())
-    all_amps = allAmps()
+    all_amps = allAmps(template_file)
     for amp in all_amps:
         if bitpix < 0:
             output.append(fits.ImageHDU(data=images[amp].getArray()))
@@ -469,8 +480,8 @@ class SubRegionSampler(object):
         self.imaging = imaging
 
     def bbox(self, x, y):
-        return afwGeom.Box2I(afwGeom.Point2I(int(x), int(y)),
-                             afwGeom.Extent2I(self.dx, self.dy))
+        return lsstGeom.Box2I(lsstGeom.Point2I(int(x), int(y)),
+                              lsstGeom.Extent2I(self.dx, self.dy))
 
     def subim(self, im, x, y):
         return im.Factory(im, self.bbox(x, y))

@@ -28,7 +28,8 @@ def generate_mask(infile, outfile, mask_plane, pixels=None, columns=None,
     exptime = 1
     gain = 1
     geometry = makeAmplifierGeometry(infile)
-    ccd = CCD(exptime=exptime, gain=gain, geometry=geometry)
+    amps = imutils.allAmps(infile)
+    ccd = CCD(exptime=exptime, gain=gain, geometry=geometry, amps=amps)
     # Account for prescan in x-coordinate since we want to mask
     # columns the full segment.
     prescan = geometry.prescan.getWidth()

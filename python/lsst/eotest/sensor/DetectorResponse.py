@@ -37,16 +37,16 @@ class DetectorResponse(object):
             self._read_from_text(infile)
         self._sort_by_flux()
         self._index = {}
-        #self._compute_gain_selection(ptc, gain_range)
+        #self._compute_gain_selection(ptc, gain_range, infile)
 
-    def _compute_gain_selection(self, ptc, gain_range):
+    def _compute_gain_selection(self, ptc, gain_range, infile):
         self._index = {}
         if ptc is None or gain_range is None:
             return
         if len(ptc[1].data.field('AMP01_MEAN')) != len(self.flux):
             raise RuntimeError('Number of measurements in PTC file ' +
                                'differs from detector response file.')
-        for amp in imutils.allAmps():
+        for amp in imutils.allAmps(infile):
             mean = ptc[1].data.field('AMP%02i_MEAN' % amp)
             var = ptc[1].data.field('AMP%02i_VAR' % amp)
             gain = mean/var

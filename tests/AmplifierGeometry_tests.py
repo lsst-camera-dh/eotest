@@ -8,7 +8,7 @@ import unittest
 
 from lsst.eotest.sensor import AmplifierGeometry, makeAmplifierGeometry, amp_loc
 import lsst.eotest.sensor.sim_tools as sim_tools
-import lsst.afw.geom as afwGeom
+import lsst.geom as lsstGeom
 
 e2v_amp_geom = dict(
     [(1, dict([('DATASEC', '[11:522,1:2002]'),
@@ -61,20 +61,20 @@ e2v_amp_geom = dict(
                 ('DETSIZE', '[1:4096,1:4004]')]))]
 )
 
-full_segment = afwGeom.Box2I(afwGeom.Point2I(0, 0),
-                             afwGeom.Point2I(541, 2021))
+full_segment = lsstGeom.Box2I(lsstGeom.Point2I(0, 0),
+                              lsstGeom.Point2I(541, 2021))
 
-prescan = afwGeom.Box2I(afwGeom.Point2I(0, 0),
-                        afwGeom.Point2I(9, 2021))
+prescan = lsstGeom.Box2I(lsstGeom.Point2I(0, 0),
+                         lsstGeom.Point2I(9, 2021))
 
-imaging = afwGeom.Box2I(afwGeom.Point2I(10, 0),
-                        afwGeom.Point2I(521, 2001))
+imaging = lsstGeom.Box2I(lsstGeom.Point2I(10, 0),
+                         lsstGeom.Point2I(521, 2001))
 
-serial_overscan = afwGeom.Box2I(afwGeom.Point2I(522, 0),
-                                afwGeom.Point2I(541, 2021))
+serial_overscan = lsstGeom.Box2I(lsstGeom.Point2I(522, 0),
+                                 lsstGeom.Point2I(541, 2021))
 
-parallel_overscan = afwGeom.Box2I(afwGeom.Point2I(10, 2002),
-                                  afwGeom.Point2I(522, 2021))
+parallel_overscan = lsstGeom.Box2I(lsstGeom.Point2I(10, 2002),
+                                   lsstGeom.Point2I(522, 2021))
 
 
 class AmplifierGeometryTestCase(unittest.TestCase):
