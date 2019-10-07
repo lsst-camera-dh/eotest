@@ -223,16 +223,13 @@ def bias_image(im, overscan, dxmin=5, dxmax=2, statistic=np.mean, bias_method='r
     Returns:
         An image with size equal to the input image containing the offset level.
     """
-    if bias_method not in ['mean', 'row', 'func', 'spline', 'none']:
+    if bias_method.lower() not in ['mean', 'row', 'func', 'spline', 'none']:
         raise RuntimeError('Bias method must be either "none", "mean", "row", "func" or "spline".')  
 
     def dummy_none(im, overscan, dxmin, dxmax, **kwargs):
         return 0.0
     method = {'mean' : bias, 'row' : bias_row, 'func' : bias_func, 'spline' : bias_spline, 'none' : dummy_none}
-    if bias_method not in ['mean', 'row', 'func', 'spline']:
-        raise RuntimeError('Bias method must be either "mean", "row", "func" or "spline".')
-    method = {'mean' : bias, 'row' : bias_row, 'func' : bias_func, 'spline' : bias_spline}
-    my_bias = method[bias_method](im, overscan, dxmin=dxmin, dxmax=dxmax, **kwargs)
+    my_bias = method[bias_method.lower()](im, overscan, dxmin=dxmin, dxmax=dxmax, **kwargs)
     biasim = afwImage.ImageF(im.getDimensions())
     imarr = biasim.getArray()
     ny, nx = imarr.shape

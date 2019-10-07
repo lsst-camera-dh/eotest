@@ -7,6 +7,8 @@ afwMath.makeStatistics object.
 """
 from __future__ import print_function
 from __future__ import absolute_import
+
+import copy
 import warnings
 import astropy.io.fits as fits
 from astropy.utils.exceptions import AstropyWarning, AstropyUserWarning
@@ -75,8 +77,11 @@ class MaskedCCD(dict):
                     pass
         except TypeError:
             # interface change in ip_isr/isrFunctions.py v18.1.0:
+            mask_types = copy.deepcopy(self._added_mask_types)
+            if 'SUMMED_MASKS' in mask_types:
+                mask_types.remove('SUMMED_MASKS')
             ipIsr.interpolateFromMask(maskedImage, fwhm=fwhm,
-                                      maskNameList=self._added_mask_types)
+                                      maskNameList=mask_types)
 
     def mask_plane_dict(self):
         amp = list(self.keys())[0]
@@ -260,7 +265,7 @@ class MaskedCCD(dict):
 
         Keyword Arguments:
         fit_order: The order of the polynomial. This only needs to be specified when
-            using the 'func' method. The default is: 1.
+            using the 'func' method. The default is: 1
         k: The degree of the spline fit. This only needs to be specified when using
             the 'spline' method. The default is: 3.
         s: The amount of smoothing to be applied to the fit. This only needs to be
