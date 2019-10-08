@@ -35,12 +35,13 @@ class LinearityTask(pipeBase.Task):
 
     @pipeBase.timeMethod
     def run(self, sensor_id, infiles, mask_files, gains, detrespfile=None,
-            bias_frame=None):
+            bias_frame=None, linearity_correction=None):
         self.sensor_id = sensor_id
         self.infiles = infiles
         self.mask_files = mask_files
         self.gains = gains
         self.bias_frame = bias_frame
+        self.linearity_correction = linearity_correction
         if detrespfile is None:
             #
             # Compute detector response from flat pair files.
@@ -70,10 +71,10 @@ class LinearityTask(pipeBase.Task):
                 output.add_seg_result(amp, 'MAX_FRAC_DEV', float(maxdev))
         output.write()
 
-    def _create_detresp_fits_output(self, nrows):
+    def _create_detresp_fits_output(self, nrows, infile):
         self.output = fits.HDUList()
         self.output.append(fits.PrimaryHDU())
-        all_amps = imutils.allAmps()
+        all_amps = imutils.allAmps(infile)
         colnames = ['flux'] + ['AMP%02i_SIGNAL' % i for i in all_amps]
         formats = 'E'*len(colnames)
         units = ['None'] + ['e-']*len(all_amps)
@@ -93,7 +94,7 @@ class LinearityTask(pipeBase.Task):
                          item.find('linearity_flat') != -1])
         if self.config.verbose:
             self.log.info("writing to %s" % outfile)
-        self._create_detresp_fits_output(len(file1s))
+        self._create_detresp_fits_output(len(file1s), files1[0])
         for row, file1 in enumerate(file1s):
             if self.config.verbose:
                 self.log.info("processing %s" % file1)
@@ -105,9 +106,11 @@ class LinearityTask(pipeBase.Task):
                 file2 = file1
 
             flat1 = MaskedCCD(file1, mask_files=self.mask_files,
-                              bias_frame=self.bias_frame)
+                              bias_frame=self.bias_frame,
+                              linearity_correction=self.linearity_correction)
             flat2 = MaskedCCD(file2, mask_files=self.mask_files,
-                              bias_frame=self.bias_frame)
+                              bias_frame=self.bias_frame,
+                              linearity_correction=self.linearity_correction)
 
             if flat1.md.get('EXPTIME') != flat2.md.get('EXPTIME'):
                 raise RuntimeError("Exposure times do not match for:\n%s\n%s\n"

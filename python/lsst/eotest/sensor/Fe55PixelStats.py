@@ -141,7 +141,7 @@ class Fe55PixelStats(object):
                        kalpha='self._kalpha_selection')
 
     def __init__(self, input_files, mask_files=(), sensor_id=None,
-                 logger=None, selection='amp'):
+                 logger=None, selection='amp', linearity_correction=None):
         """
         Extract record array from the record arrays for all of the
         input_files.
@@ -152,7 +152,8 @@ class Fe55PixelStats(object):
         for infile in input_files:
             if logger is not None:
                 logger.info("Processing %s" % infile)
-            ccd = MaskedCCD(infile, mask_files=mask_files)
+            ccd = MaskedCCD(infile, mask_files=mask_files,
+                            linearity_correction=linearity_correction)
             for amp in ccd:
                 rec_arrays.append(get_fp_pixels(ccd, amp))
         self.rec_array = nlr.stack_arrays(rec_arrays, usemask=False,

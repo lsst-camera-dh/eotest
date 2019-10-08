@@ -15,7 +15,6 @@ import numpy as np
 import astropy.io.fits as fits
 from lsst.eotest.fitsTools import fitsWriteto
 import lsst.afw.detection as afwDetect
-import lsst.afw.geom as afwGeom
 import lsst.afw.image as afwImage
 import lsst.daf.base as dafBase
 import lsst.eotest.image_utils as imutils
@@ -64,7 +63,8 @@ def rolloff_mask(infile, outfile,
     amp_geom = makeAmplifierGeometry(infile)
     gain = 1
     exptime = 1
-    ccd = CCD(exptime=exptime, gain=gain, geometry=amp_geom)
+    all_amps = imutils.allAmps(infile)
+    ccd = CCD(exptime=exptime, gain=gain, geometry=amp_geom, amps=all_amps)
     #
     # Write the output file with a primary HDU so that the DMstack code
     # can append only image extensions (and not write to the PHDU).
@@ -88,6 +88,8 @@ def rolloff_mask(infile, outfile,
     xmin = amp_geom.imaging.getMinX()
     xmax = xmin + outer_edge_width
     for amp in amps:
+        if amp not in all_amps:
+            continue
         imarr = ccd.segments[amp].image.getArray()
         imarr[:, xmin:xmax] += signal
     #
@@ -97,6 +99,8 @@ def rolloff_mask(infile, outfile,
     xmax = amp_geom.imaging.getMaxX() + 1
     xmin = xmax - outer_edge_width
     for amp in amps:
+        if amp not in all_amps:
+            continue
         imarr = ccd.segments[amp].image.getArray()
         imarr[:, xmin:xmax] += signal
     #
@@ -159,7 +163,7 @@ def pixel_counts(ccd_file, input_mask=None):
     if input_mask is not None:
         mask_file = input_mask
     else:
-        mask_file = 'temp_rolloff_mask.fits'
+        mask_file = tempfile.mkstemp(suffix='.fits', dir='.')[-1]
         rolloff_mask(ccd_file, mask_file)
     ccd = MaskedCCD(mask_file)
     num_masked = 0
@@ -169,7 +173,7 @@ def pixel_counts(ccd_file, input_mask=None):
         imarr = imutils.trim(ccd[amp].getImage(), imaging).getArray()
         num_masked += len(np.where(imarr != 0)[0])
         num_total += imarr.shape[0]*imarr.shape[1]
-    if mask_file is None:
+    if input_mask is None:
         try:
             os.remove(mask_file)
         except OSError:

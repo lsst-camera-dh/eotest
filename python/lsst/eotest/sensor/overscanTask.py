@@ -31,7 +31,8 @@ class OverscanTask(pipeBase.Task):
     ConfigClass = OverscanConfig
     _DefaultName = "OverscanTask"
 
-    def run(self, sensor_id, infiles, gains, bias_frame=None):
+    def run(self, sensor_id, infiles, gains, bias_frame=None,
+            linearity_correction=None):
 
         ## Calculate mean row for each flat file
         minflux = self.config.minflux
@@ -42,7 +43,8 @@ class OverscanTask(pipeBase.Task):
         for i, infile in enumerate(infiles):
             if self.config.verbose:
                 self.log.info("Processing {0}".format(infile))
-            ccd = MaskedCCD(infile, bias_frame=bias_frame)
+            ccd = MaskedCCD(infile, bias_frame=bias_frame,
+                            linearity_correction=linearity_correction)
             fitter.process_image(ccd, gains)
                 
         output_dir = self.config.output_dir

@@ -37,7 +37,8 @@ class DarkCurrentTask(pipeBase.Task):
     _DefaultName = "DarkCurrentTask"
 
     @pipeBase.timeMethod
-    def run(self, sensor_id, dark_files, mask_files, gains, bias_frame=None):
+    def run(self, sensor_id, dark_files, mask_files, gains, bias_frame=None,
+            linearity_correction=None):
         imutils.check_temperatures(dark_files, self.config.temp_set_point_tol,
                                    setpoint=self.config.temp_set_point,
                                    warn_only=True)
@@ -50,7 +51,8 @@ class DarkCurrentTask(pipeBase.Task):
                                '%s_median_dark_current.fits' % sensor_id)
         imutils.writeFits(median_images, medfile, dark_files[0])
 
-        ccd = MaskedCCD(medfile, mask_files=mask_files, bias_frame=bias_frame)
+        ccd = MaskedCCD(medfile, mask_files=mask_files, bias_frame=bias_frame,
+                        linearity_correction=linearity_correction)
 
         dark95s = {}
         dark_medians = {}

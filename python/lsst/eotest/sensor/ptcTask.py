@@ -119,12 +119,14 @@ class PtcTask(pipeBase.Task):
 
     @pipeBase.timeMethod
     def run(self, sensor_id, infiles, mask_files, gains, binsize=1,
-            bias_frame=None, flat2_finder=find_flat2):
+            bias_frame=None, flat2_finder=find_flat2,
+            linearity_correction=None):
         outfile = os.path.join(self.config.output_dir,
                                '%s_ptc.fits' % sensor_id)
         all_amps = imutils.allAmps(infiles[0])
         ptc_stats = dict([(amp, ([], [])) for amp in all_amps])
         exposure = []
+        seqnums = []
         file1s = sorted([item for item in infiles if item.find('flat1') != -1])
         for flat1 in file1s:
             flat2 = flat2_finder(flat1)
@@ -132,15 +134,18 @@ class PtcTask(pipeBase.Task):
                 self.log.info("processing %s" % flat1)
             exposure.append(exptime(flat1))
             ccd1 = MaskedCCD(flat1, mask_files=mask_files,
-                             bias_frame=bias_frame)
+                             bias_frame=bias_frame,
+                             linearity_correction=linearity_correction)
             ccd2 = MaskedCCD(flat2, mask_files=mask_files,
-                             bias_frame=bias_frame)
+                             bias_frame=bias_frame,
+                             linearity_correction=linearity_correction)
             for amp in ccd1:
                 results = flat_pair_stats(ccd1, ccd2, amp,
                                           mask_files=mask_files,
                                           bias_frame=bias_frame)
                 ptc_stats[amp][0].append(results.flat_mean)
                 ptc_stats[amp][1].append(results.flat_var)
+            seqnums.append(ccd1.md.get('SEQNUM'))
         self._fit_curves(ptc_stats, sensor_id)
         output = fits.HDUList()
         output.append(fits.PrimaryHDU())
@@ -152,7 +157,10 @@ class PtcTask(pipeBase.Task):
             units.extend(['ADU', 'ADU**2'])
             columns.extend([np.array(ptc_stats[amp][0], dtype=np.float),
                             np.array(ptc_stats[amp][1], dtype=np.float)])
-        formats = 'E'*len(colnames)
+        colnames.append('SEQNUM')
+        units.append('None')
+        columns.append(seqnums)
+        formats = 'E'*(len(colnames) - 1) + 'J'
         fits_cols = [fits.Column(name=colnames[i], format=formats[i],
                                  unit=units[i], array=columns[i])
                      for i in range(len(columns))]

@@ -17,10 +17,6 @@ class RaftSpecPlots(object):
     Class to produce plots of measured specifications in eotest
     results files.
     """
-    _raft_slots = \
-        OrderedDict([(slot, i) for i, slot in
-                     enumerate('S00 S01 S02 S10 S11 S12 S20 S21 S22'.split())])
-
     def __init__(self, results_files):
         """
         Constructor.
@@ -29,6 +25,14 @@ class RaftSpecPlots(object):
         ----------
         results_files : dict
         """
+        self._raft_slots \
+            = OrderedDict([(slot, i) for i, slot in
+                           enumerate('S00 S01 S02 S10 S11 S12 S20 S21 S22'.split())])
+        if 'S00' not in results_files.keys():
+            self._raft_slots \
+                = OrderedDict([(slot, i) for i, slot in
+                               enumerate('SW0 SW1 SG0 SG1'.split())])
+
         self.results = dict()
         self.sensor_ids = dict()
         for slot, filename in list(results_files.items()):
@@ -36,7 +40,7 @@ class RaftSpecPlots(object):
             self.results[slot] = sensorTest.EOTestResults(filename)
 
     def _draw_slot_boundary(self, slot, step=20, namps=16, marker='k:'):
-        if slot == 'S00':
+        if slot == list(self._raft_slots.keys())[0]:
             plt.axvline(-2, linestyle=marker[1:], color=marker[0])
         xbound = (step - namps)/2. + step*self._raft_slots[slot] + namps + 1
         plt.axvline(xbound, linestyle=marker[1:], color=marker[0])
@@ -93,6 +97,8 @@ class RaftSpecPlots(object):
         plt.rcParams['figure.figsize'] = figsize
         fig = plt.figure()
         ax = fig.add_subplot(1, 1, 1)
+        if ybounds is not None:
+            ybounds = yscaling*ybounds[0], yscaling*ybounds[1]
         for slot, results in list(self.results.items()):
             xoffset = self._raft_slots[slot]*step
             yvalues = self._apply_ybounds(yscaling*results[column], ybounds)
@@ -114,8 +120,8 @@ class RaftSpecPlots(object):
             ax.set_yscale('log', nonposy='clip')
         if ybounds is not None:
             axis = list(plt.axis())
-            axis[-2] = max(axis[-2], yscaling*ybounds[0])
-            axis[-1] = min(axis[-1], yscaling*ybounds[1])
+            axis[-2] = max(axis[-2], ybounds[0])
+            axis[-1] = min(axis[-1], ybounds[1])
             plt.axis(axis)
         for slot in self.results:
             self._draw_slot_boundary(slot, step=step)
@@ -179,6 +185,8 @@ class RaftSpecPlots(object):
             color_cycler = cycler.cycler('color', colors)()
         else:
             color_cycler = plt.rcParams['axes.prop_cycle']()
+        if ybounds is not None:
+            ybounds = yscaling*ybounds[0], yscaling*ybounds[1]
         for icol, column in enumerate(columns):
             x, y = [], []
             yerr = []
@@ -212,10 +220,10 @@ class RaftSpecPlots(object):
             ax.set_yscale('log', nonposy='clip')
         if ybounds is not None:
             axis = list(plt.axis())
-            axis[-2] = max(axis[-2], yscaling*ybounds[0])
-            axis[-1] = min(axis[-1], yscaling*ybounds[1])
+            axis[-2] = max(axis[-2], ybounds[0])
+            axis[-1] = min(axis[-1], ybounds[1])
             plt.axis(axis)
         for slot in self.results:
             self._draw_slot_boundary(slot, step=step)
-        self._draw_slot_boundary('S00', step=step)
+        self._draw_slot_boundary(list(self._raft_slots.keys())[0], step=step)
         return fig

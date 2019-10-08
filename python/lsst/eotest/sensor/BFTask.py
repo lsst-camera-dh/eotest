@@ -8,7 +8,7 @@ import glob
 from collections import namedtuple
 import numpy as np
 from astropy.io import fits
-import lsst.afw.geom as afwGeom
+import lsst.geom as lsstGeom
 import lsst.afw.math as afwMath
 import lsst.pex.config as pexConfig
 import lsst.pipe.base as pipeBase
@@ -70,14 +70,15 @@ class BFTask(pipeBase.Task):
     @pipeBase.timeMethod
     def run(self, sensor_id, flat_files, single_pairs=True,
             dark_frame=None, mask_files=(), flat2_finder=None,
-            bias_frame=None, meanidx=0):
+            bias_frame=None, meanidx=0, linearity_correction=None):
         """
         Compute the average nearest neighbor correlation coefficients for
         all flat pairs given for a particular exposure time.  Additionally
         store the flat means per amp.
         """
         if dark_frame is not None:
-            ccd_dark = MaskedCCD(dark_frame, mask_files=mask_files)
+            ccd_dark = MaskedCCD(dark_frame, mask_files=mask_files,
+                                 linearity_correction=linearity_correction)
 
         if single_pairs:
             if flat2_finder is None:
@@ -96,9 +97,11 @@ class BFTask(pipeBase.Task):
         for flat_pair in flats:
             self.log.info("%s\n%s", *flat_pair)
             ccd1 = MaskedCCD(flat_pair[0], mask_files=mask_files,
-                             bias_frame=bias_frame)
+                             bias_frame=bias_frame,
+                             linearity_correction=linearity_correction)
             ccd2 = MaskedCCD(flat_pair[1], mask_files=mask_files,
-                             bias_frame=bias_frame)
+                             bias_frame=bias_frame,
+                             linearity_correction=linearity_correction)
 
             for amp in all_amps:
                 self.log.info('on amp %s', amp)
@@ -243,9 +246,9 @@ def crossCorrelate_images(image1, image2, maxLag, sigma, binsize):
     # Measure the correlations
     x0, y0 = diff.getXY0()
     width, height = diff.getDimensions()
-    bbox_extent = afwGeom.Extent2I(width - maxLag, height - maxLag)
+    bbox_extent = lsstGeom.Extent2I(width - maxLag, height - maxLag)
 
-    bbox = afwGeom.Box2I(afwGeom.Point2I(x0, y0), bbox_extent)
+    bbox = lsstGeom.Box2I(lsstGeom.Point2I(x0, y0), bbox_extent)
     dim0 = diff[bbox].clone()
     dim0 -= afwMath.makeStatistics(dim0, afwMath.MEANCLIP, sctrl).getValue()
 
@@ -254,8 +257,8 @@ def crossCorrelate_images(image1, image2, maxLag, sigma, binsize):
 
     for xlag in range(maxLag + 1):
         for ylag in range(maxLag + 1):
-            bbox_lag = afwGeom.Box2I(afwGeom.Point2I(x0 + xlag, y0 + ylag),
-                                     bbox_extent)
+            bbox_lag = lsstGeom.Box2I(lsstGeom.Point2I(x0 + xlag, y0 + ylag),
+                                      bbox_extent)
             dim_xy = diff[bbox_lag].clone()
             dim_xy -= afwMath.makeStatistics(dim_xy, afwMath.MEANCLIP,
                                              sctrl).getValue()

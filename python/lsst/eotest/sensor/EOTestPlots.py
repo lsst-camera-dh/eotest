@@ -20,6 +20,7 @@ import lsst.afw.math as afwMath
 import lsst.afw.display.ds9 as ds9
 import lsst.eotest.image_utils as imutils
 from lsst.eotest.Estimator import Estimator
+from lsst.eotest.sensor.ptcTask import ptc_func
 from . import pylab_plotter as plot
 from .MaskedCCD import MaskedCCD
 from .EOTestResults import EOTestResults
@@ -131,6 +132,11 @@ def plot_flat(infile, nsig=3, cmap=pylab.cm.hot, win=None, subplot=(1, 1, 1),
                 xmax = nx - min(detsec['xmin'], detsec['xmax']) + 1
                 ymin = ny - max(detsec['ymin'], detsec['ymax'])
                 ymax = ny - min(detsec['ymin'], detsec['ymax']) + 1
+                if ny_segments == 1:
+                    # We have a wavefront sensor, so only the "top"
+                    # half of the sensor is available.
+                    ymin += ny
+                    ymax += ny
                 #
                 # Save coordinates of segment for later use
                 #
@@ -200,12 +206,17 @@ def plot_flat(infile, nsig=3, cmap=pylab.cm.hot, win=None, subplot=(1, 1, 1),
     # Label each segment by segment id.
     for ypos in range(ny_segments):
         for xpos in range(nx_segments):
-            amp = ypos*nx_segments + xpos + 1
             xmin, xmax, ymin, ymax = amp_coords[(xpos, ypos)]
             xx = float(xmax + xmin)/2./float(nx)
             yy = 1. - (float(ymax)/float(ny) - 0.05)
             if yy > 0.5:
                 yy = 1 - (yy - 0.5)
+            amp = ypos*nx_segments + xpos + 1
+            if ny_segments == 1:
+                # We have a wavefront sensor which just has the
+                # "lower" half of the CCD, so shift the amp number by
+                # 8 segments.
+                amp += 8
             seg_id = imutils.channelIds[amp]
             pylab.annotate('%s' % seg_id, (xx, yy), xycoords='axes fraction',
                            size='x-small', horizontalalignment='center')
@@ -440,9 +451,11 @@ class EOTestPlots(object):
                 # Plot PTC curves using gain measurements.
                 ptc_gain = self.results['PTC_GAIN'][amp-1]
                 ptc_gain_error = self.results['PTC_GAIN_ERROR'][amp-1]
+                ptc_noise = self.results['PTC_NOISE'][amp-1]
                 ptc_a00 = self.results['PTC_A00'][amp-1]
                 ptc_a00_error = self.results['PTC_A00_ERROR'][amp-1]
-                plot.curve(xx, xx/ptc_gain, oplot=1, color='b', lineStyle=':')
+                plot.curve(xx, ptc_func((ptc_a00, ptc_gain, ptc_noise*ptc_noise), xx),
+                           oplot=1, color='b', lineStyle=':')
                 note = 'Amp %i\nGain = %.2f +/- %.2f\nA00 = %.1e +/- %.1e'\
                     % (amp, ptc_gain, ptc_gain_error, ptc_a00, ptc_a00_error)
                 pylab.annotate(note, (0.05, 0.9), xycoords='axes fraction',
@@ -1057,7 +1070,7 @@ class EOTestPlots(object):
         if qe_file is not None:
             self._qe_file = qe_file
         if amp is None:
-            amps = imutils.allAmps()
+            amps = imutils.allAmps(self._qe_file)
         else:
             amps = (amp,)
         for amp in amps:
@@ -1356,7 +1369,7 @@ class CcdSpecs(OrderedDict):
 
         bands = self.plotter.qe_data['QE_BANDS'].data.field('BAND')
         bands = OrderedDict([(band, []) for band in bands])
-        for amp in imutils.allAmps():
+        for amp in self.results['AMP']:
             try:
                 values = self.plotter.qe_data['QE_BANDS'].data.field('AMP%02i' % amp)
                 for band, value in zip(bands, values):

@@ -23,7 +23,7 @@ class Fe55CteTask(pipeBase.Task):
     _DefaultName = "Fe55CteTask"
 
     @pipeBase.timeMethod
-    def run(self, sensor_id, fe55_files, mask_files):
+    def run(self, sensor_id, fe55_files, mask_files, linearity_correction=None):
         "Run the Fe55 pixel asymmetry analysis"
         if self.config.direction == 'serial':
             pixel_coord, pix0, pix1 = 'x', 'p3', 'p5'
@@ -35,7 +35,8 @@ class Fe55CteTask(pipeBase.Task):
 
         pixel_stats = Fe55PixelStats(fe55_files, mask_files=mask_files,
                                      sensor_id=sensor_id, logger=self.log,
-                                     selection=self.config.selection)
+                                     selection=self.config.selection,
+                                     linearity_correction=linearity_correction)
 
         # Plot the histograms of cluster DN values
         pixel_stats.dn_hists()

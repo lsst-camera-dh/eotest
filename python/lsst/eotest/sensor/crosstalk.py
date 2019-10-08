@@ -14,7 +14,12 @@ from lsst.eotest.fitsTools import fitsWriteto
 import pylab
 from . import pylab_plotter as plot
 import lsst.afw.detection as afwDetect
-import lsst.afw.geom as afwGeom
+<<<<<<< Updated upstream
+import lsst.geom as lsstGeom
+=======
+#import lsst.afw.geom as afwGeom
+import lsst.geom as afwGeom
+>>>>>>> Stashed changes
 import lsst.afw.math as afwMath
 import lsst.eotest.image_utils as imutils
 from .MaskedCCD import MaskedCCD
@@ -42,8 +47,8 @@ def aggressor(ccd):
 
 def column_mean(ccd, amp, col):
     imaging = ccd.amp_geom.imaging
-    reg = afwGeom.Box2I(afwGeom.Point2I(col, imaging.getMinY()),
-                        afwGeom.Extent2I(1, imaging.getHeight()))
+    reg = lsstGeom.Box2I(lsstGeom.Point2I(col, imaging.getMinY()),
+                         lsstGeom.Extent2I(1, imaging.getHeight()))
     image = ccd.unbiased_and_trimmed_image(amp)
     subim = image.Factory(image, reg)
     flags = afwMath.MEAN | afwMath.STDEV | afwMath.NPOINT
@@ -116,8 +121,8 @@ def extract_mean_signal_2(ccd, amp, footprint):
     npix = 0
     for span in footprint.getSpans():
         width = span.getX1() - span.getX0() + 1
-        bbox = afwGeom.Box2I(afwGeom.Point2I(span.getX0(), span.getY()),
-                             afwGeom.Extent2I(width, 1))
+        bbox = lsstGeom.Box2I(lsstGeom.Point2I(span.getX0(), span.getY()),
+                              lsstGeom.Extent2I(width, 1))
         subim = masked_image.Factory(masked_image, bbox)
         stats = afwMath.makeStatistics(subim, afwMath.SUM | afwMath.NPOINT,
                                        ccd.stat_ctrl)

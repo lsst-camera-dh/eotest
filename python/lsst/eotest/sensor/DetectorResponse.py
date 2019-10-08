@@ -37,16 +37,16 @@ class DetectorResponse(object):
             self._read_from_text(infile)
         self._sort_by_flux()
         self._index = {}
-        #self._compute_gain_selection(ptc, gain_range)
+        #self._compute_gain_selection(ptc, gain_range, infile)
 
-    def _compute_gain_selection(self, ptc, gain_range):
+    def _compute_gain_selection(self, ptc, gain_range, infile):
         self._index = {}
         if ptc is None or gain_range is None:
             return
         if len(ptc[1].data.field('AMP01_MEAN')) != len(self.flux):
             raise RuntimeError('Number of measurements in PTC file ' +
                                'differs from detector response file.')
-        for amp in imutils.allAmps():
+        for amp in imutils.allAmps(infile):
             mean = ptc[1].data.field('AMP%02i_MEAN' % amp)
             var = ptc[1].data.field('AMP%02i_VAR' % amp)
             gain = mean/var
@@ -86,7 +86,7 @@ class DetectorResponse(object):
         indexes = np.arange(len(dNfrac))
         good_vals = np.where(np.abs(dNfrac) <= max_non_linearity)[0]
         if good_vals.sum() < 2:
-            print ("Not enough good points to fit full_wel %i %i" % (amp, good_vals.sum()))
+            print ("Not enough good points to fit full_well %i %i" % (amp, good_vals.sum()))
             return (0., f1)
 
         imin = good_vals[-1]
@@ -216,8 +216,13 @@ class DetectorResponse(object):
         # for computing the maximum fractional deviation.
         spec_indx = np.where((Ne > spec_range[0]) & (Ne < spec_range[1])
                              & (flux <= flux[max_Ne_index]))
+
         flux_spec = flux[spec_indx]
         Ne_spec = Ne[spec_indx]
+        if len(Ne_spec) < 2:
+            print ("Not enough good points for a good fit %i %i" % (amp, len(Ne_spec)))
+            return (0., [0., 1.], Ne, flux)
+
         dNfrac = 1 - Ne_spec/f1(flux_spec)
         return max(abs(dNfrac)), f1_pars, Ne, flux
 
