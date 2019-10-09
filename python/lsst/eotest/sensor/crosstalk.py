@@ -14,12 +14,7 @@ from lsst.eotest.fitsTools import fitsWriteto
 import pylab
 from . import pylab_plotter as plot
 import lsst.afw.detection as afwDetect
-<<<<<<< Updated upstream
 import lsst.geom as lsstGeom
-=======
-#import lsst.afw.geom as afwGeom
-import lsst.geom as afwGeom
->>>>>>> Stashed changes
 import lsst.afw.math as afwMath
 import lsst.eotest.image_utils as imutils
 from .MaskedCCD import MaskedCCD

@@ -3,6 +3,8 @@ Code to apply non-linearity correction.
 """
 from __future__ import print_function
 
+import copy
+
 import numpy as np
 
 import scipy.optimize
@@ -11,7 +13,6 @@ from scipy.interpolate import UnivariateSpline
 import astropy.io.fits as fits
 
 from lsst.eotest.fitsTools import fitsTableFactory, fitsWriteto
-
 
 def lin_func(pars, xvals):
     """Return a line whose slope is pars[0]"""
@@ -108,14 +109,18 @@ class NonlinearityCorrection:
 
         self._spline_dict = {}
         for iamp in range(16):
-            profile_x = self._prof_x[iamp]
-            profile_y = self._prof_y[iamp]
+            idx_sort = np.argsort(self._prof_x[iamp])
+            profile_x = self._prof_x[iamp][idx_sort]
+            profile_y = self._prof_y[iamp][idx_sort]
             if self._prof_yerr is not None:
-                profile_yerr = self._prof_yerr[iamp]
+                profile_yerr = self._prof_yerr[iamp][idx_sort]
                 mask = profile_yerr >= 0.
             else:
                 mask = np.ones(profile_x.shape)
-            self._spline_dict[iamp] = UnivariateSpline(profile_x[mask], profile_y[mask])
+            try:
+                self._spline_dict[iamp] = UnivariateSpline(profile_x[mask], profile_y[mask])
+            except Exception:
+                self._spline_dict[iamp] = lambda x : x
 
     def __getitem__(self, amp):
         """Get the function that corrects a particular amp"""
@@ -132,11 +137,11 @@ class NonlinearityCorrection:
         output.append(fits.PrimaryHDU())
 
         col_prof_x = fits.Column(name='prof_x', format='%iE' % self._nxbins,
-                                 unit='e-', array=self._prof_x)
+                                 unit='ADU', array=self._prof_x)
         col_prof_y = fits.Column(name='prof_y', format='%iE' % self._nxbins,
-                                 unit='e-', array=self._prof_y)
+                                 unit='ADU', array=self._prof_y)
         col_prof_yerr = fits.Column(name='prof_yerr', format='%iE' % self._nxbins,
-                                    unit='e-', array=self._prof_yerr)
+                                    unit='ADU', array=self._prof_yerr)
 
         fits_cols = [col_prof_x, col_prof_y, col_prof_yerr]
         hdu = fitsTableFactory(fits_cols)
@@ -176,9 +181,10 @@ class NonlinearityCorrection:
                 mask = self._prof_yerr[iamp] >= 0.
                 x_masked = self._prof_x[iamp][mask]
                 xline = np.linspace(1., x_masked.max(), 1001)
+                model = self._spline_dict[iamp](xline)
                 axes.errorbar(x_masked, self._prof_y[iamp][mask],
                               yerr=self._prof_yerr[iamp][mask], fmt='.')
-                axes.plot(xline, self._spline_dict[iamp](xline), 'r-')
+                axes.plot(xline, model, 'r-')
                 iamp += 1
         if plotfile is None:
             fig.show()
@@ -229,35 +235,48 @@ class NonlinearityCorrection:
         return nl
 
     @classmethod
-    def create_from_det_response(cls, detresp, fit_range=(0., 9e4), nprofile_bins=10):
-        """Create a NonlinearityCorrection object from a fits file
+    def create_from_det_response(cls, detresp, gains, fit_range=(0., 9e4), nprofile_bins=10):
+        """Create a NonlinearityCorrection object DetectorResponse FITS file
+
+        Note that the DetectorResponse files typically store the signal in electrons,
+        but we want a correction that works on ADU, so we have to remove the gains.
 
         Parameters
         ----------
         detresp : `DetectorResponse`
             An object with the detector response calculated from flat-pair files
 
+        gains : `array` or `None`
+            Array with amplifier by amplifer gains
+
         fit_range : `tuple`
             The range over which to define the non-linearity
 
-        nprofile_bins : `int`
+        nprofile_bins : `int` or `None`
              The number of bins to use in the profile
+             If `None` then this will use all of the data point rather that making
+             a profile histogram
 
         Returns
         -------
         nl : `NonlinearityCorrection`
             The requested object
         """
-        xbins = np.linspace(fit_range[0], fit_range[1], nprofile_bins+1)
-
+        if nprofile_bins is not None:
+            xbins = np.linspace(fit_range[0], fit_range[1], nprofile_bins+1)
+        else:
+            xbins = None
+            nprofile_bins = len(detresp.flux)
         prof_x = np.ndarray((16, nprofile_bins))
         prof_y = np.ndarray((16, nprofile_bins))
         prof_yerr = np.ndarray((16, nprofile_bins))
 
         for idx, amp in enumerate(detresp.Ne):
-            xdata = detresp.Ne[amp]
+            xdata = copy.copy(detresp.Ne[amp])
+            if gains is not None:
+                xdata /= gains[idx]
             mask = (fit_range[0] < xdata) * (fit_range[1] > xdata)
-            xdata_fit = detresp.Ne[amp][mask]
+            xdata_fit = xdata[mask]
             ydata_fit = detresp.flux[mask]
             mean_slope = (ydata_fit/xdata_fit).mean()
             pars = (mean_slope,)
@@ -268,7 +287,10 @@ class NonlinearityCorrection:
             frac_resid = (detresp.flux - model_yvals)/model_yvals
             frac_resid_err = 1./xdata
 
-            prof_x[idx], prof_y[idx], prof_yerr[idx] = make_profile_hist(xbins, detresp.Ne[amp], frac_resid,
-                                                                         y_errs=frac_resid_err, stderr=True)
-
+            if xbins is not None:
+                prof_x[idx], prof_y[idx], prof_yerr[idx] = make_profile_hist(xbins, xdata, frac_resid,
+                                                                             y_errs=frac_resid_err,
+                                                                             stderr=True)
+            else:
+                prof_x[idx], prof_y[idx], prof_yerr[idx] = xdata, frac_resid, frac_resid_err
         return cls(prof_x, prof_y, prof_yerr)
