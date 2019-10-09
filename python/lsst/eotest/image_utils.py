@@ -14,7 +14,7 @@ from astropy.io import fits
 from astropy.utils.exceptions import AstropyWarning, AstropyUserWarning
 from .fitsTools import fitsWriteto
 import lsst.afw
-import lsst.afw.geom as afwGeom
+import lsst.geom as lsstGeom
 import lsst.afw.image as afwImage
 import lsst.afw.math as afwMath
 
@@ -469,8 +469,8 @@ class SubRegionSampler(object):
         self.imaging = imaging
 
     def bbox(self, x, y):
-        return afwGeom.Box2I(afwGeom.Point2I(int(x), int(y)),
-                             afwGeom.Extent2I(self.dx, self.dy))
+        return lsstGeom.Box2I(lsstGeom.Point2I(int(x), int(y)),
+                              lsstGeom.Extent2I(self.dx, self.dy))
 
     def subim(self, im, x, y):
         return im.Factory(im, self.bbox(x, y))
