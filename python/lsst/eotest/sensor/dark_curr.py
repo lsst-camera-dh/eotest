@@ -7,12 +7,7 @@ import numpy as np
 import numpy.random as random
 
 import lsst.afw.image as afwImage
-<<<<<<< Updated upstream
 import lsst.geom as lsstGeom
-=======
-#import lsst.afw.geom as afwGeom
-import lsst.geom as afwGeom
->>>>>>> Stashed changes
 
 from image_utils import fits_median, unbias_and_trim
 
