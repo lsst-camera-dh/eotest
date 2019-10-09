@@ -39,6 +39,23 @@ class Traps(dict):
                 trap_size = max(a0, a1)*gains[amp]/cycles
                 self[amp].append((ix, iy, trap_size, a0, a1))
 
+    def make_data_dict(self):
+        data_dict = dict(AMPLIFIER=[],
+                         XPOS=[],
+                         YPOS=[],
+                         TRAP_SIZE=[],
+                         A0=[],
+                         A1=[])
+        for amp, traps in sorted(self.items()):
+            for trap in traps:
+                data_dict['AMPLIFIER'].append(amp)
+                data_dict['XPOS'].append(trap[0])
+                data_dict['YPOS'].append(trap[1])
+                data_dict['TRAP_SIZE'].append(trap[2])
+                data_dict['A0'].append(trap[3])
+                data_dict['A1'].append(trap[4])
+        return data_dict
+
     def write(self, outfile, overwrite=True):
         """
         Write the results as a FITS binary table.

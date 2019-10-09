@@ -56,6 +56,15 @@ class QE_Data(object):
         self.medians = dict([(amp, col) for amp, col
                              in zip(imutils.allAmps(), data[3:])])
 
+    def read_fits(self, fits_file, hdu_name='qe_med'):
+        fin = fits.open(fits_file)
+        hdu_data = fin[hdu_name].data
+        self.wl = hdu_data['WL']
+        self.exptime = hdu_data['EXPTIME']
+        self.pd = hdu_data['MONDIODE']
+        self.medians = {amp:hdu_data['AMP%02i_MEDIAN' % amp] for amp in imutils.allAmps()}
+
+
     def _correction_images(self, ccd, correction_image):
         images = OrderedDict()
         for amp in ccd:
@@ -217,6 +226,20 @@ class QE_Data(object):
                 mean_value = sum(qe[indx])/len(indx[0])
                 band_qe[band] = mean_value
         return band_qe
+
+    def make_qe_curves_data_dict(self):
+        data_dict = dict(WAVELENGTH=self.wlarrs[1],
+                         DEVICE_MEAN=self.ccd_qe)
+        for i in range(1,17):
+            data_dict['AMP%02i' % i] = self.qe[i]
+        return data_dict
+
+    def make_bands_data_dict(self):
+        data_dict = dict(BAND=list(self.ccd_qe_band.keys()),
+                         DEVICE_MEAN=np.array(list(self.ccd_qe_band.values())))
+        for i in range(1,17):
+            data_dict['AMP%02i' % i] = np.array(list(self.qe_band[i].values()))
+        return data_dict
 
     def write_fits_tables(self, outfile, overwrite=True):
         amps = list(self.qe.keys())
