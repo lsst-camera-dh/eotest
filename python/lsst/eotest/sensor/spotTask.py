@@ -14,6 +14,7 @@ import lsst.pex.config as pexConfig
 import lsst.pipe.base as pipeBase
 import lsst.pipe.tasks
 from lsst.pipe.tasks.characterizeImage import CharacterizeImageTask, CharacterizeImageConfig
+from lsst.pipe.tasks.calibrate import CalibrateTask, CalibrateConfig
 import lsst.meas.extensions.shapeHSM
 
 from .MaskedCCD import MaskedCCD
@@ -90,10 +91,14 @@ def make_ccd_mosaic(infile, bias_frame=None, dark_frame=None, gains=None):
 
 class SpotConfig(pexConfig.Config):
     """Configuration for Spot analysis task"""
-    minpixels = pexConfig.Field("Minimum number of pixels above detection threshold", 
-                                int, default=10)
-    nsig = pexConfig.Field("Source footprint threshold in number of standard deviations.", 
-                           float, default=10)
+    characterize_minpixels = pexConfig.Field("Minimum number of pixels above detection threshold", 
+                                             int, default=2)
+    characterize_nsig = pexConfig.Field("Source footprint threshold in number of standard deviations.", 
+                                        float, default=4)
+    calibrate_minpixels = pexConfig.Field("Minimum number of pixels above detection threshold", 
+                                             int, default=4)
+    calibrate_nsig = pexConfig.Field("Source footprint threshold in number of standard deviations.", 
+                                        float, default=25)
     bgbinsize = pexConfig.Field("Bin size for background estimation.", int, default=10)
     output_dir = pexConfig.Field("Output directory", str, default='.')
     output_file = pexConfig.Field("Output filename", str, default=None)
@@ -123,19 +128,19 @@ class SpotTask(pipeBase.Task):
         exposure = afwImage.ExposureF(image.getBBox())
         exposure.setImage(image)
         #
-        # Set up characterize task configuration
+        # Set up and run characterize task
         #
-        nsig = self.config.nsig
-        bgbinsize = self.config.bgbinsize
-        minpixels = self.config.minpixels
+        char_nsig = self.config.characterize_nsig
+        char_bgbinsize = self.config.bgbinsize
+        char_minpixels = self.config.characterize_minpixels
         charConfig = CharacterizeImageConfig()
         charConfig.doMeasurePsf = False
         charConfig.doApCorr = False
         charConfig.repair.doCosmicRay = False
-        charConfig.detection.minPixels = minpixels
-        charConfig.detection.background.binSize = bgbinsize
+        charConfig.detection.minPixels = char_minpixels
+        charConfig.detection.background.binSize = char_bgbinsize
         charConfig.detection.thresholdType = "stdev"
-        charConfig.detection.thresholdValue = nsig
+        charConfig.detection.thresholdValue = char_nsig
         hsm_plugins = set(["ext_shapeHSM_HsmShapeBj",
                            "ext_shapeHSM_HsmShapeLinear",
                            "ext_shapeHSM_HsmShapeKsb",
@@ -144,9 +149,29 @@ class SpotTask(pipeBase.Task):
                            "ext_shapeHSM_HsmPsfMoments"])  
         charConfig.measurement.plugins.names |= hsm_plugins
         charTask = CharacterizeImageTask(config=charConfig)
-        result = charTask.run(exposure)
+        charResult = charTask.run(exposure)
+        #
+        # Set up and run calibrate task
+        #
+        cal_nsig = self.config.calibrate_nsig
+        cal_bgbinsize = self.config.bgbinsize
+        cal_minpixels = self.config.calibrate_minpixels
+        calConfig = CalibrateConfig()
+        calConfig.doAstrometry = False
+        calConfig.doPhotoCal = False
+        calConfig.doApCorr = False
+        calConfig.doWrite = False
+        calConfig.doDeblend = False   
+        calConfig.detection.background.binSize = cal_bgbinsize
+        calConfig.detection.minPixels = cal_minpixels
+        calConfig.detection.thresholdType = "stdev"
+        calConfig.detection.thresholdValue = cal_nsig
+        calConfig.measurement.plugins.names |= hsm_plugins
+        calTask = CalibrateTask(config= calConfig, icSourceSchema=charResult.sourceCat.schema)    
+        calResult = calTask.run(charResult.exposure, background=charResult.background,
+                                icSourceCat = charResult.sourceCat)
 
-        src = result.sourceCat
+        src = calResult.sourceCat
         if self.config.verbose:
             self.log.info("Detected {0} objects".format(len(src)))
         #
