@@ -119,7 +119,11 @@ def ana_divisidero_tearing(sflat_files, raft_unit_id, run):
     # get row averages
     avedict = {}
     for slot in dmslots:
-        avedict[slot] = normed_mean_response_vscol(sflat_files[slot])
+        try:
+            avedict[slot] = normed_mean_response_vscol(sflat_files[slot])
+        except KeyError:
+            # This will occur if data from `slot` is not available.
+            pass
 
     # make a summary plot
     f = plt.figure(figsize=(20, 20))
@@ -127,7 +131,7 @@ def ana_divisidero_tearing(sflat_files, raft_unit_id, run):
 
     nskip_edge = 20
 
-    for i, slot in enumerate(dmslots):
+    for i, slot in enumerate(avedict):
         max_divisidero = avedict[slot][2]
         have_wf_sensor = (len(max_divisidero) == 7)
         inner = gridspec.GridSpecFromSubplotSpec(2, 1, subplot_spec=outer[i],
@@ -160,4 +164,4 @@ def ana_divisidero_tearing(sflat_files, raft_unit_id, run):
             f.add_subplot(ax)
 
     plt.suptitle('Run %s %s' % (str(run), raft_unit_id), fontsize=36)
-    return {slot: avedict[slot][2] for slot in dmslots}
+    return {slot: avedict[slot][2] for slot in avedict}
