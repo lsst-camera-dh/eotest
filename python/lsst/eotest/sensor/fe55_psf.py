@@ -370,7 +370,7 @@ class PsfGaussFit(object):
                        np.array(maxDNs), np.array(xpeak), np.array(ypeak),
                        np.array(p9_data), np.array(p9_model),
                        np.array(prect_data), np.ones(len(x0))*seqnum]
-            formats = (['I'] + ['E']*(len(columns)-6) + ['I']*2
+            formats = (['I'] + ['E']*(len(columns)-7) + ['I']*2
                        + ['9E']*2 + ['175E'] + ['I'])
             units = ['None', 'pixel', 'pixel', 'pixel', 'pixel',
                      'ADU', 'ADU', 'None', 'None', 'None', 'ADU',
