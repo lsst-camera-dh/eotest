@@ -451,22 +451,22 @@ class EOTestPlots(object):
                 pylab.annotate(note, (0.05, 0.9), xycoords='axes fraction',
                                verticalalignment='top', size='x-small')
 
-    def cti_curves(self, overscan_file=None, figsize=(8, 6)):
+    def cti_curves(self, overscan_file=None, figsize=(12, 8)):
 
         if overscan_file is None:
             overscan_file = self._fullpath('{0}_overscan_results.fits'.format(self.sensor_id))
-        fig = plt.figure(figsize=figsize)
+        fig, ax = plt.subplots(1, 1, figsize=figsize)
 
+        cmap = plt.get_cmap("tab10")
         with fits.open(overscan_file) as overscan:
 
             datasec = overscan[0].header['DATASEC']
             amp_geom = parse_geom_kwd(datasec)
             xmax = amp_geom['xmax']
 
-            fig.add_subplot(1, 1, 1)
             for amp in range(1, 17):
 
-                if amp > 10: marker='s'
+                if k >= 8: marker='s'
                 else: marker = '^'
                 
                 meanrow = overscan[amp].data['MEANROW']
@@ -476,22 +476,26 @@ class EOTestPlots(object):
                 overscan2 = meanrow[:, xmax+1] - offset
                 lastpixel = meanrow[:, xmax-1] - offset
                 cti = (overscan1+overscan2)/(xmax*lastpixel)
+        
                 index = np.argsort(flux)
 
-                plt.plot(flux[index], cti[index], label='{0}'.format(amp),
-                         marker=marker, markersize=4)
+                ax.plot(flux[index][flux[index]<140000], cti[index][flux[index]<140000], 
+                        label='Amp {0}'.format(amp), color = cmap(k%8),
+                        marker=marker, markersize=7)
 
-            plt.axhline(y=5.0E-6, color='black', linestyle='--')
-
-            plt.ylim(bottom=5E-8, top=2E-4)
-            plt.xlim(left=50.0, right=240000.)
-            plt.xscale('log')
-            plt.yscale('log')
-            plt.grid(True, which='major', axis='both')
-            plt.xlabel('flux (e-)', fontsize='small')
-            plt.ylabel('cti', fontsize='small')
-            plt.legend(fontsize='x-small', loc=1, ncol=4)
-            plt.title('CTI from EPER, {0}'.format(self.sensor_id), fontsize='small')
+            ax.tick_params(axis='x', labelsize=14)
+            ax.tick_params(axis='y', labelsize=14)
+            ax.tick_params(axis='both', which='major', length=8, width=1)
+            ax.tick_params(axis='both', which='minor', length=4, width=1)
+            ax.set_ylim(bottom=2E-7, top=2E-4)
+            ax.set_xlim(left=50.0, right=240000.)
+            ax.set_xscale('log')
+            ax.set_yscale('log')
+            ax.grid(True, which='major', axis='both')
+            ax.set_xlabel('Signal [e-]', fontsize=18)
+            ax.set_ylabel('CTI', fontsize=18)
+            ax.legend(fontsize=15, loc=1, ncol=4)
+            ax.set_title('CTI from EPER, {0}'.format(self.sensor_id), fontsize=18)
 
     def overscan_curves(self, overscan_file, figsize=(10, 8)):
         
