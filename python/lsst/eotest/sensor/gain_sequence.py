@@ -7,7 +7,7 @@ import warnings
 import numpy as np
 import pandas as pd
 from astropy.io import fits
-import lsst.eotest.sensor as sensorTest
+from .Fe55GainFitter import Fe55GainFitter
 
 __all__ = ['gain_sequence']
 
@@ -48,7 +48,7 @@ def gain_sequence(det_name, psf_results_file, chiprob_min=0.1, logger=None):
                 index = np.where((chiprob > chiprob_min) &
                                  (cluster_data[amp].data['SEQNUM'] == seqnum))
                 dn = cluster_data[amp].data['DN'][index]
-                fitter = sensorTest.Fe55GainFitter(dn)
+                fitter = Fe55GainFitter(dn)
                 fitter.fit()
                 det_names.append(det_name)
                 amps.append(amp)
