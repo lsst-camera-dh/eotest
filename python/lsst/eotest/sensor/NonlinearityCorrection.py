@@ -91,7 +91,7 @@ class NonlinearityCorrection:
 
     This is implemented as a spline interpolation for each of the 16 amplifiers on a CCD
     """
-    def __init__(self, prof_x, prof_y, prof_yerr):
+    def __init__(self, prof_x, prof_y, prof_yerr, **kwargs):
         """C'tor
 
         Parameters
@@ -136,7 +136,7 @@ class NonlinearityCorrection:
 
         col_prof_x = fits.Column(name='prof_x', format='%iE' % self._nxbins,
                                  unit='ADU', array=self._prof_x)
-        col_prof_y = fits.Column(name='prof_y', format='%iE' % self._nxbins,
+        col_prof_y = fits.Column(name='prof_y_corr', format='%iE' % self._nxbins,
                                  unit='ADU', array=self._prof_y)
         col_prof_yerr = fits.Column(name='prof_yerr', format='%iE' % self._nxbins,
                                     unit='ADU', array=self._prof_yerr)
@@ -205,7 +205,7 @@ class NonlinearityCorrection:
             The requested object
         """
         prof_x = table.data['prof_x']
-        prof_y = table.data['prof_y']
+        prof_y = table.data['prof_y_corr']
         prof_yerr = table.data['prof_yerr']
         return cls(prof_x, prof_y, prof_yerr)
 
