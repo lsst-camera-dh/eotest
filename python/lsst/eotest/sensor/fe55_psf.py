@@ -121,7 +121,7 @@ def p9_values(peak, imarr, x0, y0, sigmax, sigmay, DN_tot):
     return p9_data, p9_model
 
 
-def prect_values(peak, imarr, ixm=3, ixp=21, iym=3, iyp=3):
+def prect_values(peak, imarr, ixm=3, ixp=5, iym=3, iyp=3):
     xpeak, ypeak = peak.getIx(), peak.getIy()
     # nb. imarr includes overscan
     yimsiz,ximsiz = imarr.shape
@@ -371,7 +371,7 @@ class PsfGaussFit(object):
                        np.array(p9_data), np.array(p9_model),
                        np.array(prect_data), np.ones(len(x0))*seqnum]
             formats = (['I'] + ['E']*(len(columns)-7) + ['I']*2
-                       + ['9E']*2 + ['175E'] + ['I'])
+                       + ['9E']*2 + ['63E'] + ['I'])
             units = ['None', 'pixel', 'pixel', 'pixel', 'pixel',
                      'ADU', 'ADU', 'None', 'None', 'None', 'ADU',
                      'pixel', 'pixel', 'ADU', 'ADU', 'ADU', 'None']
