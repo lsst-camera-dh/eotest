@@ -260,8 +260,6 @@ class NonlinearityCorrection:
 
         y_vals_corr = ((1 + profile_y) / (1 + offset)) - 1.
         y_errs_corr = profile_yerr
-        #raise RuntimeError("%s %s %s %s %s" % (str(profile_x), str(profile_y), str(offset), 
-        #                                       str(y_vals_corr), str(y_errs_corr)))        
         return y_vals_corr, y_errs_corr
 
     @classmethod
