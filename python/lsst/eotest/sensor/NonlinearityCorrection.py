@@ -234,8 +234,38 @@ class NonlinearityCorrection:
         hdulist.close()
         return nl
 
+
+    @staticmethod
+    def _correct_null_point(profile_x, profile_y, profile_yerr, null_point):
+        """Force the spline to go through zero at a particular x-xvalue
+
+        Parameters
+        ----------
+        profile_x : `array`
+            The x-bin centers
+        profile_y : `array`
+            The b-bin values
+        profile_yerr : `array`
+            The y-bin errors
+        null_point : `float`
+            The x-value where the spline should go through zero       
+
+        Returns
+        -------
+        y_vals_corr
+            The adjusted y-values
+        y_errs_corr
+            The adjusted y-errors
+        """
+        uni_spline = UnivariateSpline(profile_x, profile_y)
+        offset = uni_spline(null_point)
+
+        y_vals_corr = ((1 + profile_y) / (1 + offset)) - 1.
+        y_errs_corr = profile_yerr
+        return y_vals_corr, y_errs_corr
+
     @classmethod
-    def create_from_det_response(cls, detresp, gains, fit_range=(0., 9e4), nprofile_bins=10):
+    def create_from_det_response(cls, detresp, gains, **kwargs):
         """Create a NonlinearityCorrection object DetectorResponse FITS file
 
         Note that the DetectorResponse files typically store the signal in electrons,
@@ -249,24 +279,36 @@ class NonlinearityCorrection:
         gains : `array` or `None`
             Array with amplifier by amplifer gains
 
+
+        Keywords
+        --------
         fit_range : `tuple`
-            The range over which to define the non-linearity
+            The range over which to define the non-linearity, defaults to (0., 9e4)
 
         nprofile_bins : `int` or `None`
-             The number of bins to use in the profile
+             The number of bins to use in the profile, defaults to 10
              If `None` then this will use all of the data point rather that making
              a profile histogram
+
+        null_point : `float` or `None`
+             X-value at which the correction should vanish, defaults to 0.
+             If `None` then this will simply use the pivot point of the fit to the data             
 
         Returns
         -------
         nl : `NonlinearityCorrection`
             The requested object
         """
+        fit_range = kwargs.get('fit_range', (0., 9e4))
+        nprofile_bins = kwargs.get('nprofile_bins', 10)
+        null_point = kwargs.get('null_point', 0,)
+
         if nprofile_bins is not None:
             xbins = np.linspace(fit_range[0], fit_range[1], nprofile_bins+1)
         else:
             xbins = None
             nprofile_bins = len(detresp.flux)
+
         prof_x = np.ndarray((16, nprofile_bins))
         prof_y = np.ndarray((16, nprofile_bins))
         prof_yerr = np.ndarray((16, nprofile_bins))
@@ -293,4 +335,8 @@ class NonlinearityCorrection:
                                                                              stderr=True)
             else:
                 prof_x[idx], prof_y[idx], prof_yerr[idx] = xdata, frac_resid, frac_resid_err
+
+            if null_point is not None:
+                prof_y[idx], prof_yerr[idx] = cls._correct_null_point(prof_x[idx], prof_y[idx], prof_yerr[idx], null_point)                
+
         return cls(prof_x, prof_y, prof_yerr)

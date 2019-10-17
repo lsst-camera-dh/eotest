@@ -49,7 +49,7 @@ class NonlinearityCorrectionTestCase(unittest.TestCase):
         mean_2 = afwMath.makeStatistics(img_2, afwMath.MEAN, ccd_2.stat_ctrl).getValue()
 
         self.assertAlmostEqual(mean_1, 40.724625956352185)
-        self.assertAlmostEqual(mean_2, 41.08970568792771)
+        self.assertAlmostEqual(mean_2, 40.724101151614555)
 
 
 if __name__ == '__main__':

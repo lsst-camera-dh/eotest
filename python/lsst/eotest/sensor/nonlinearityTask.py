@@ -27,6 +27,7 @@ class NonlinearityTask(pipeBase.Task):
     def run(self, sensor_id, detrespfile,
             fit_range=(0., 9e4),
             nprofile_bins=10,
+            null_point=0.,
             outputfile=None,
             plotfile=None):
         """Run the analysis
@@ -41,6 +42,8 @@ class NonlinearityTask(pipeBase.Task):
             The range (in e-) over which to fit the splines
         nprofile_bins : `int`
             The number of bin to use when making the profile histogram
+        null_point : `float`
+            The ADU value at which the nonlinearity correction should vanish
         outputfile : `str` or `None`
             The name of the file to write the nonlinearity correction to
         plotfile : `str` or `None`
@@ -60,12 +63,14 @@ class NonlinearityTask(pipeBase.Task):
         self.detrespfile = detrespfile
         self.fit_range = fit_range
         self.nprofile_bins = nprofile_bins
+        self.null_point = null_point
         self.detresp = DetectorResponse(detrespfile)
 
         self.nlc = NonlinearityCorrection.create_from_det_response(self.detresp,
                                                                    None,
-                                                                   self.fit_range,
-                                                                   self.nprofile_bins)
+                                                                   fit_range=self.fit_range,
+                                                                   nprofile_bins=self.nprofile_bins,
+                                                                   null_point=self.null_point)
 
         if outputfile is not None:
             fulloutput = os.path.join(self.config.output_dir, outputfile)
