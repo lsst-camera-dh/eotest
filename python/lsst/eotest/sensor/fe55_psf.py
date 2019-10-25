@@ -121,7 +121,7 @@ def p9_values(peak, imarr, x0, y0, sigmax, sigmay, DN_tot):
     return p9_data, p9_model
 
 
-def prect_values(peak, imarr, ixm=3, ixp=5, iym=3, iyp=3):
+def prect_values(peak, imarr, ixm=3, ixp=3, iym=3, iyp=3):
     xpeak, ypeak = peak.getIx(), peak.getIy()
     # nb. imarr includes overscan
     yimsiz,ximsiz = imarr.shape
