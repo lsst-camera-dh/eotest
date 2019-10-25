@@ -129,7 +129,7 @@ def prect_values(peak, imarr, ixm=3, ixp=3, iym=3, iyp=3):
     if ypeak-iym<0 or xpeak-ixm<0 or ypeak+iyp+1>yimsiz or xpeak+ixp+1>ximsiz:
         prect_data = np.zeros([iyp+iym+1, ixp+ixm+1])
     else:
-        # store a region around peak pixel [-3,21] in x and [-3,3] in y
+        # store a region around peak pixel [-3,3] in x and [-3,3] in y
         prect_data = imarr[ypeak-iym:ypeak+iyp+1, xpeak-ixm:xpeak+ixp+1]
 
     # data is stored as a normal 2-d array and then flattened
