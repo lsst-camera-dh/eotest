@@ -78,7 +78,7 @@ class Fe55Task(pipeBase.Task):
     @pipeBase.timeMethod
     def run(self, sensor_id, infiles, mask_files, bias_frame=None,
             fe55_catalog=None, minClustersPerAmp=None, chiprob_min=0.1,
-            accuracy_req=0, hist_nsig=10):
+            accuracy_req=0, hist_nsig=10, linearity_correction=None):
         imutils.check_temperatures(infiles, self.config.temp_set_point_tol,
                                    setpoint=self.config.temp_set_point,
                                    warn_only=True)
@@ -97,7 +97,8 @@ class Fe55Task(pipeBase.Task):
                 if self.config.verbose:
                     self.log.info("processing %s" % infile)
                 ccd = MaskedCCD(infile, mask_files=mask_files,
-                                bias_frame=bias_frame)
+                                bias_frame=bias_frame,
+                                linearity_correction=linearity_correction)
                 for amp in ccd:
                     if self.config.verbose:
                         self.log.info("  amp %i" % amp)
