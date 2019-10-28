@@ -9,7 +9,6 @@ import pandas as pd
 import lsst.afw.math as afw_math
 from .MaskedCCD import MaskedCCD
 from .flatPairTask import mondiode_value
-import lsst.eotest.sensor as sensorTest
 
 __all__ = ['flat_signal_sequence']
 
