@@ -39,7 +39,7 @@ class MaskedCCD(dict):
     """
 
     def __init__(self, imfile, mask_files=(), bias_frame=None, applyMasks=True,
-                 linearity_correction=None):
+                 linearity_correction=None, dark_frame=None):
         super(MaskedCCD, self).__init__()
         self.imfile = imfile
         self.md = imutils.Metadata(imfile)
@@ -59,6 +59,12 @@ class MaskedCCD(dict):
             self.bias_frame = MaskedCCD(bias_frame)
         else:
             self.bias_frame = None
+        if dark_frame is not None:
+            self.dark_frame = MaskedCCD(dark_frame, bias_frame=bias_frame)
+            self.dark_time_ratio \
+                = self.md.get('DARKTIME')/self.dark_frame.md.get('DARKTIME')
+        else:
+            self.dark_frame = None
         self._applyMasks = applyMasks
         self._linearity_correction = linearity_correction
 
@@ -239,6 +245,12 @@ class MaskedCCD(dict):
             my_image -= bias
         else:
             my_image -= self.bias_image(amp, overscan, **kwargs)
+
+        # Subtract dark frame, scaling the dark current by darktime ratio.
+        if self.dark_frame is not None:
+            dark_image = self.dark_frame.bias_subtracted_image(amp)
+            dark_image *= self.dark_time_ratio
+            my_image -= dark_image
 
         # Apply any linearity correction.
         if self._linearity_correction is not None:

@@ -92,7 +92,7 @@ class FlatPairTask(pipeBase.Task):
             bias_frame=None, max_pd_frac_dev=0.05,
             linearity_spec_range=(1e3, 9e4), use_exptime=False,
             flat2_finder=find_flat2, mondiode_func=mondiode_value,
-            linearity_correction=None):
+            linearity_correction=None, dark_frame=None):
         self.sensor_id = sensor_id
         self.infiles = infiles
         self.mask_files = mask_files
@@ -102,6 +102,7 @@ class FlatPairTask(pipeBase.Task):
         self.find_flat2 = flat2_finder
         self.mondiode_func = mondiode_func
         self.linearity_correction = linearity_correction
+        self.dark_frame = dark_frame
         if detrespfile is None:
             #
             # Compute detector response from flat pair files.
@@ -186,9 +187,11 @@ class FlatPairTask(pipeBase.Task):
 
             flat1 = MaskedCCD(file1, mask_files=self.mask_files,
                               bias_frame=self.bias_frame,
+                              dark_frame=self.dark_frame,
                               linearity_correction=self.linearity_correction)
             flat2 = MaskedCCD(file2, mask_files=self.mask_files,
                               bias_frame=self.bias_frame,
+                              dark_frame=self.dark_frame,
                               linearity_correction=self.linearity_correction)
 
             seqnum = flat1.md.get('SEQNUM')
