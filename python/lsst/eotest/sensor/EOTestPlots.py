@@ -466,7 +466,7 @@ class EOTestPlots(object):
 
             for amp in range(1, 17):
 
-                if k >= 8: marker='s'
+                if amp > 8: marker='s'
                 else: marker = '^'
                 
                 meanrow = overscan[amp].data['MEANROW']
@@ -480,7 +480,7 @@ class EOTestPlots(object):
                 index = np.argsort(flux)
 
                 ax.plot(flux[index][flux[index]<140000], cti[index][flux[index]<140000], 
-                        label='Amp {0}'.format(amp), color = cmap(k%8),
+                        label='Amp {0}'.format(amp), color = cmap((amp-1)%8),
                         marker=marker, markersize=7)
 
             ax.tick_params(axis='x', labelsize=14)
@@ -608,7 +608,7 @@ class EOTestPlots(object):
             plt.legend(fontsize='x-small',  loc = 'upper left', ncol=4)
             plt.title('Summed Signal in Overscan Pixels [8:18], {0}'.format(self.sensor_id), fontsize='small')
 
-    def eper_curves(self, overscan_file, figsize=(10, 8)):
+    def eper_low_curves(self, overscan_file, figsize=(12, 8)):
 
         if overscan_file is None:
             overscan_file = self._fullpath('{0}_overscan_results.fits'.format(self.sensor_id))
@@ -620,12 +620,11 @@ class EOTestPlots(object):
             datasec = overscan[0].header['DATASEC']
             amp_geom = parse_geom_kwd(datasec)
             xmax = amp_geom['xmax']
-    
-            target_flux_levels = [100, 1000, 10000, 25000, 50000, 75000, 100000]
+
+            target_flux_levels = [100, 500, 1000, 2500, 5000]
             for amp in range(1, 17):
-        
+
                 flux = overscan[amp].data['FLUX']       
-                index = np.argsort(flux)
 
                 for target_flux in target_flux_levels:
 
@@ -635,22 +634,75 @@ class EOTestPlots(object):
                     offset = np.mean(meanrow[-20:])
                     oscan = meanrow[xmax:] - offset
                     columns = np.arange(xmax, meanrow.shape[0])
-        
-                    axes[amp-1].plot(columns, oscan, label='{0:d} e-'.format(int(round(flux[i], -2))))
 
-                axes[amp-1].set_yscale('symlog', linthreshy=1.0)
-                axes[amp-1].set_ylim(-2, 300)
-                axes[amp-1].set_yticklabels([r'$-1$', '0', '1', r'$10^{1}$', r'$10^{2}$'])
+                    axes[amp-1].plot(columns, oscan, label='{0:d} e-'.format(target_flux))
+
+                axes[amp-1].set_xlim(511.5, 516.5)
+                axes[amp-1].tick_params(axis='x', labelsize=10)
+                axes[amp-1].tick_params(axis='y', labelsize=10)
                 axes[amp-1].grid(True, which='major', axis='both')
-                axes[amp-1].set_title('Amp {0}'.format(amp), fontsize='small')
-                axes[amp-1].tick_params(axis='both', which='minor')
-                if (amp-1) >= 12: axes[amp-1].set_xlabel('pixel number', fontsize='small' )
-                if (amp-1) % 4 == 0: axes[amp-1].set_ylabel('signal (e-)', fontsize='small')
-                        
+                axes[amp-1].set_title('Amp {0}'.format(amp), fontsize=12)
+
+
+                if (amp-1) % 4 == 0: 
+                    axes[amp-1].set_ylim(-1, 21)
+                    axes[amp-1].set_yticks([0, 5, 10, 15, 20])
+
             h, l = axes[-1].get_legend_handles_labels()
             fig.subplots_adjust(bottom=0.12)
-            fig.legend(h, l, loc='lower center', ncol=len(target_flux_levels))
-            plt.suptitle('Mean Overscans, {0}'.format(self.sensor_id))
+            fig.legend(h, l, loc='lower center', ncol=len(target_flux_levels), fontsize=14)
+
+            fig.add_subplot(111, frameon=False)
+            plt.tick_params(labelcolor='none', top=False, bottom=False, left=False, right=False)
+            plt.xlabel('Column Number', fontsize=14)
+            plt.ylabel('Mean Column Signal [e-]', fontsize=14)
+
+    def eper_high_curves(self, overscan_file, figsize=(12, 8)):
+
+        fig, axes = plt.subplots(4, 4, sharey=True, sharex=True, figsize=figsize)
+        axes = axes.flatten()
+
+        with fits.open(overscan_file) as overscan:
+
+            datasec = overscan[0].header['DATASEC']
+            amp_geom = parse_geom_kwd(datasec)
+            xmax = amp_geom['xmax']            
+
+            target_flux_levels = [25000, 50000, 75000, 100000, 150000]
+
+            for amp in range(1, 17):
+
+                flux = overscan[amp].data['FLUX']       
+
+                for target_flux in target_flux_levels:
+
+                    i = min(range(flux.shape[0]), key=lambda i: abs(flux[i]-target_flux))
+
+                    meanrow = overscan[amp].data['MEANROW'][i, :]
+                    offset = np.mean(meanrow[-20:])
+                    oscan = meanrow[xmax:] - offset
+                    columns = np.arange(xmax, meanrow.shape[0])
+
+                    axes[amp-1].plot(columns, oscan, label='{0:.0f} ke-'.format(target_flux/1000.))
+
+                axes[amp-1].set_yscale('log')
+                axes[amp-1].set_ylim(.05, 400)
+                axes[amp-1].tick_params(axis='x', labelsize=10)
+                axes[amp-1].tick_params(axis='y', labelsize=10)
+                axes[amp-1].set_xlim(511.0, 541.0)
+                axes[amp-1].grid(True, which='major', axis='both')
+                axes[amp-1].set_title('Amp {0}'.format(amp), fontsize=12)
+                axes[amp-1].tick_params(axis='both', which='minor')
+
+            h, l = axes[-1].get_legend_handles_labels()
+            fig.subplots_adjust(bottom=0.12)
+            fig.legend(h, l, loc='lower center', ncol=len(target_flux_levels), fontsize=14)
+
+            fig.add_subplot(111, frameon=False)
+            # hide tick and tick label of the big axis
+            plt.tick_params(labelcolor='none', top=False, bottom=False, left=False, right=False)
+            plt.xlabel('Column Number', fontsize=14)
+            plt.ylabel('Mean Column Signal [e-]', fontsize=14, labelpad=15)
 
     def bf_curves(self, xrange=None, yrange=None, figsize=(6, 8),
                   bf_file=None, adu_max=1e5):

@@ -81,7 +81,7 @@ class OverscanFit(object):
                                      VAR=self.var[amp],
                                      FLUX=self.flux[amp],
                                      FLUX_STD=self.flux_std[amp],
-                                     NOISE=self.noise[amp])
+                                     NOISE=self.oscan_noise[amp])
         return out_dict
 
     def write_results(self, outfile):
@@ -99,7 +99,7 @@ class OverscanFit(object):
             flux_col = fits.Column('FLUX', format='E', unit='e-', array=self.flux[amp])
             flux_std_col = fits.Column('FLUX_STD', format='E', unit='e-', 
                                        array=self.flux_std[amp])
-            noise_col = fits.Column('NOISE', format='E', unit='e-', array=self.noise[amp])
+            noise_col = fits.Column('NOISE', format='E', unit='e-', array=self.oscan_noise[amp])
 
             try:
                 #
