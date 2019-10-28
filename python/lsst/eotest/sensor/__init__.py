@@ -31,6 +31,7 @@ from .cte_matrix import cte_matrix
 from .total_noise_histograms import *
 from .tearing_statistics import *
 from .gain_sequence import *
+from .flat_signal_sequence import *
 #
 # Pipe tasks
 #
