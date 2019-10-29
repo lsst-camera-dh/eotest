@@ -91,7 +91,8 @@ class FlatPairTask(pipeBase.Task):
     def run(self, sensor_id, infiles, mask_files, gains, detrespfile=None,
             bias_frame=None, max_pd_frac_dev=0.05,
             linearity_spec_range=(1e3, 9e4), use_exptime=False,
-            flat2_finder=find_flat2, mondiode_func=mondiode_value):
+            flat2_finder=find_flat2, mondiode_func=mondiode_value,
+            linearity_correction=None):
         self.sensor_id = sensor_id
         self.infiles = infiles
         self.mask_files = mask_files
@@ -100,6 +101,7 @@ class FlatPairTask(pipeBase.Task):
         self.max_pd_frac_dev = max_pd_frac_dev
         self.find_flat2 = flat2_finder
         self.mondiode_func = mondiode_func
+        self.linearity_correction = linearity_correction
         if detrespfile is None:
             #
             # Compute detector response from flat pair files.
@@ -143,10 +145,10 @@ class FlatPairTask(pipeBase.Task):
                 output.add_seg_result(amp, 'MAX_FRAC_DEV', float(maxdev))
         output.write()
 
-    def _create_detresp_fits_output(self, nrows):
+    def _create_detresp_fits_output(self, nrows, infile):
         self.output = fits.HDUList()
         self.output.append(fits.PrimaryHDU())
-        all_amps = imutils.allAmps()
+        all_amps = imutils.allAmps(infile)
         colnames = ['flux'] + ['AMP%02i_SIGNAL' % i for i in all_amps] + \
                    ['FLAT1_AMP%02i_SIGNAL' % i for i in all_amps] + \
                    ['FLAT2_AMP%02i_SIGNAL' % i for i in all_amps] + \
@@ -169,7 +171,7 @@ class FlatPairTask(pipeBase.Task):
                          if item.find('flat1') != -1])
         if self.config.verbose:
             self.log.info("writing to %s" % outfile)
-        self._create_detresp_fits_output(len(file1s))
+        self._create_detresp_fits_output(len(file1s), file1s[0])
         for row, file1 in enumerate(file1s):
             try:
                 file2 = self.find_flat2(file1)
@@ -183,9 +185,12 @@ class FlatPairTask(pipeBase.Task):
                               file1, file2)
 
             flat1 = MaskedCCD(file1, mask_files=self.mask_files,
-                              bias_frame=self.bias_frame)
+                              bias_frame=self.bias_frame,
+                              linearity_correction=self.linearity_correction)
             flat2 = MaskedCCD(file2, mask_files=self.mask_files,
-                              bias_frame=self.bias_frame)
+                              bias_frame=self.bias_frame,
+                              linearity_correction=self.linearity_correction)
+
             seqnum = flat1.md.get('SEQNUM')
 
             exptime1 = flat1.md.get('EXPTIME')

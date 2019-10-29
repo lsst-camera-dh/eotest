@@ -8,7 +8,7 @@ from __future__ import absolute_import
 import numpy as np
 import numpy.random as random
 import lsst.eotest.image_utils as imutils
-import lsst.afw.geom as afwGeom
+import lsst.geom as lsstGeom
 import lsst.afw.image as afwImage
 import lsst.pex.exceptions as pexExcept
 
@@ -59,8 +59,8 @@ def flat_gain(image1, image2, count=1000, dx=100, dy=100, binsize=1,
     ntrial = 0
     exception_count = 0
     for x, y in zip(xarr, yarr):
-        bbox = afwGeom.Box2I(afwGeom.Point2I(int(x), int(y)),
-                             afwGeom.Extent2I(dx, dy))
+        bbox = lsstGeom.Box2I(lsstGeom.Point2I(int(x), int(y)),
+                              lsstGeom.Extent2I(dx, dy))
         imarr1 = im1.Factory(im1, bbox).getArray()
         imarr2 = im2.Factory(im2, bbox).getArray()
         # Calculate flat ratio and correct subarray of image 2.

@@ -35,11 +35,13 @@ class TrapTask(pipeBase.Task):
 
     @pipeBase.timeMethod
     def run(self, sensor_id, pocket_pumped_file, mask_files, gains,
-            cycles=100, threshold=200, bias_frame=None):
+            cycles=100, threshold=200, bias_frame=None,
+            linearity_correction=None):
         if self.config.verbose:
             self.log.info("processing %s" % pocket_pumped_file)
         ccd = MaskedCCD(pocket_pumped_file, mask_files=mask_files,
-                        bias_frame=bias_frame)
+                        bias_frame=bias_frame,
+                        linearity_correction=linearity_correction)
         if self.config.outfile is None:
             outfile = os.path.join(self.config.output_dir,
                                    '%s_traps.fits' % sensor_id)
