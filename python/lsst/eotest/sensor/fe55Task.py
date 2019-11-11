@@ -99,6 +99,10 @@ class Fe55Task(pipeBase.Task):
                 ccd = MaskedCCD(infile, mask_files=mask_files,
                                 bias_frame=bias_frame,
                                 linearity_correction=linearity_correction)
+                try:
+                    seqnum = ccd.md.get('SEQNUM')
+                except KeyError:
+                    seqnum = 0
                 for amp in ccd:
                     if self.config.verbose:
                         self.log.info("  amp %i" % amp)
@@ -112,7 +116,8 @@ class Fe55Task(pipeBase.Task):
                             # Requested accuracy already obtained, so
                             # skip cluster fitting.
                             continue
-                    fitter.process_image(ccd, amp, logger=self.log)
+                    fitter.process_image(ccd, amp, logger=self.log,
+                                         seqnum=seqnum)
                     gains, gain_errors, sigma_modes = \
                         self.fit_gains(fitter, gains, gain_errors, sigma_modes,
                                        amps=[amp], hist_nsig=hist_nsig)

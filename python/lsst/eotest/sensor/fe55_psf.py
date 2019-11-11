@@ -121,7 +121,7 @@ def p9_values(peak, imarr, x0, y0, sigmax, sigmay, DN_tot):
     return p9_data, p9_model
 
 
-def prect_values(peak, imarr, ixm=3, ixp=21, iym=3, iyp=3):
+def prect_values(peak, imarr, ixm=3, ixp=3, iym=3, iyp=3):
     xpeak, ypeak = peak.getIx(), peak.getIy()
     # nb. imarr includes overscan
     yimsiz,ximsiz = imarr.shape
@@ -129,7 +129,7 @@ def prect_values(peak, imarr, ixm=3, ixp=21, iym=3, iyp=3):
     if ypeak-iym<0 or xpeak-ixm<0 or ypeak+iyp+1>yimsiz or xpeak+ixp+1>ximsiz:
         prect_data = np.zeros([iyp+iym+1, ixp+ixm+1])
     else:
-        # store a region around peak pixel [-3,21] in x and [-3,3] in y
+        # store a region around peak pixel [-3,3] in x and [-3,3] in y
         prect_data = imarr[ypeak-iym:ypeak+iyp+1, xpeak-ixm:xpeak+ixp+1]
 
     # data is stored as a normal 2-d array and then flattened
@@ -183,7 +183,7 @@ class PsfGaussFit(object):
         return bg.getImageF()
 
     def process_image(self, ccd, amp, sigma0=0.36, dn0=1590./5.,
-                      bg_reg=(10, 10), logger=None):
+                      bg_reg=(10, 10), logger=None, seqnum=0):
         """
         Process a segment and accumulate the fit results for each
         charge cluster.  The dn0 and sigma0 parameters are the
@@ -299,7 +299,7 @@ class PsfGaussFit(object):
         self._save_ext_data(amp, x0, y0, sigmax, sigmay, dn, dn_fp, chiprob,
                             chi2s, dofs, maxDNs, xpeak, ypeak,
                             np.array(p9_data), np.array(p9_model),
-                            np.array(prect_data))
+                            np.array(prect_data), seqnum)
         self.amp_set.add(amp)
         self.sigmax.extend(sigmax)
         self.sigmay.extend(sigmay)
@@ -318,7 +318,8 @@ class PsfGaussFit(object):
         return my_numGoodFits
 
     def _save_ext_data(self, amp, x0, y0, sigmax, sigmay, dn, dn_fp, chiprob,
-                       chi2s, dofs, maxDNs, xpeak, ypeak, p9_data, p9_model, prect_data):
+                       chi2s, dofs, maxDNs, xpeak, ypeak, p9_data, p9_model,
+                       prect_data, seqnum):
         """
         Write results from the source detection and Gaussian fitting
         to the FITS extension corresponding to the specified
@@ -351,6 +352,7 @@ class PsfGaussFit(object):
                 table_hdu.data[row]['P9_DATA'] = p9_data[i]
                 table_hdu.data[row]['P9_MODEL'] = p9_model[i]
                 table_hdu.data[row]['PRECT_DATA'] = prect_data[i]
+                table_hdu.data[row]['SEQNUM'] = seqnum
             table_hdu.name = extname
             self.output[extname] = table_hdu
         except KeyError:
@@ -359,17 +361,20 @@ class PsfGaussFit(object):
             #
             colnames = ['AMPLIFIER', 'XPOS', 'YPOS', 'SIGMAX', 'SIGMAY', 'DN',
                         'DN_FP_SUM', 'CHIPROB', 'CHI2', 'DOF', 'MAXDN',
-                        'XPEAK', 'YPEAK', 'P9_DATA', 'P9_MODEL', 'PRECT_DATA']
+                        'XPEAK', 'YPEAK', 'P9_DATA', 'P9_MODEL', 'PRECT_DATA',
+                        'SEQNUM']
             columns = [np.ones(len(x0))*amp, np.array(x0), np.array(y0),
                        np.array(sigmax), np.array(sigmay),
                        np.array(dn), np.array(dn_fp),
                        np.array(chiprob), np.array(chi2s), np.array(dofs),
                        np.array(maxDNs), np.array(xpeak), np.array(ypeak),
-                       np.array(p9_data), np.array(p9_model), np.array(prect_data)]
-            formats = ['I'] + ['E']*(len(columns)-6) + ['I']*2 + ['9E']*2 + ['175E']
+                       np.array(p9_data), np.array(p9_model),
+                       np.array(prect_data), np.ones(len(x0))*seqnum]
+            formats = (['I'] + ['E']*(len(columns)-7) + ['I']*2
+                       + ['9E']*2 + ['63E'] + ['I'])
             units = ['None', 'pixel', 'pixel', 'pixel', 'pixel',
                      'ADU', 'ADU', 'None', 'None', 'None', 'ADU',
-                     'pixel', 'pixel', 'ADU', 'ADU', 'ADU']
+                     'pixel', 'pixel', 'ADU', 'ADU', 'ADU', 'None']
             fits_cols = lambda coldata: [fits.Column(name=colname,
                                                      format=format,
                                                      unit=unit,
