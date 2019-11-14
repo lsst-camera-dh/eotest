@@ -388,7 +388,7 @@ class EOTestPlots(object):
                 print(eobj)
 
     def fe55_dists(self, chiprob_min=0.1, fe55_file=None, figsize=(11, 8.5),
-                   hist_nsig=10, xrange_scale=1):
+                   hist_nsig=10, xrange_scale=1, dn_range=None):
         if fe55_file is None:
             fe55_file = glob.glob(self._fullpath('%s_psf_results*.fits'
                                                  % self.sensor_id))[0]
@@ -398,6 +398,8 @@ class EOTestPlots(object):
             chiprob = fe55_catalog[amp].data.field('CHIPROB')
             index = np.where(chiprob > chiprob_min)
             dn = fe55_catalog[amp].data.field('DN')[index]
+            if dn_range is not None:
+                dn = dn[np.where((dn >= dn_range[0]) & (dn <= dn_range[1]))]
             foo = Fe55GainFitter(dn)
             try:
                 foo.fit(hist_nsig=hist_nsig)
