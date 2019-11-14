@@ -371,7 +371,7 @@ class PsfGaussFit(object):
                        np.array(p9_data), np.array(p9_model),
                        np.array(prect_data), np.ones(len(x0))*seqnum]
             formats = (['I'] + ['E']*(len(columns)-7) + ['I']*2
-                       + ['9E']*2 + ['63E'] + ['I'])
+                       + ['9E']*2 + ['49E'] + ['I'])
             units = ['None', 'pixel', 'pixel', 'pixel', 'pixel',
                      'ADU', 'ADU', 'None', 'None', 'None', 'ADU',
                      'pixel', 'pixel', 'ADU', 'ADU', 'ADU', 'None']
