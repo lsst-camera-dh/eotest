@@ -38,8 +38,9 @@ class MaskedCCD(dict):
     by various methods.
     """
 
-    def __init__(self, imfile, mask_files=(), bias_frame=None, applyMasks=True,
-                 linearity_correction=None, dark_frame=None):
+    def __init__(self, imfile, mask_files=(), bias_frame=None,
+                 interpolateFromMasks=False, linearity_correction=None,
+                 dark_frame=None):
         super(MaskedCCD, self).__init__()
         self.imfile = imfile
         self.md = imutils.Metadata(imfile)
@@ -65,7 +66,7 @@ class MaskedCCD(dict):
                 = self.md.get('DARKTIME')/self.dark_frame.md.get('DARKTIME')
         else:
             self.dark_frame = None
-        self._applyMasks = applyMasks
+        self._interpolateFromMasks = interpolateFromMasks
         self._linearity_correction = linearity_correction
 
     def applyInterpolateFromMask(self, maskedImage, fwhm=0.001):
@@ -282,7 +283,7 @@ class MaskedCCD(dict):
         if imaging is None:
             imaging = self.amp_geom.imaging
         mi = imutils.trim(unbiased_image, imaging)
-        if self._applyMasks:
+        if self._interpolateFromMasks:
             self.applyInterpolateFromMask(mi)
         return mi
 
