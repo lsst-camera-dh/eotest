@@ -384,7 +384,7 @@ def fits_median(files, hdu=2, fix=True):
 
     return median_image
 
-def stack(ims, statistic=afwMath.MEDIAN, stat_ctrl=None):
+def stack(ims, statistic=afwMath.MEDIAN, stat_ctrl=afwMath.StatisticsControl()):
     """Stacks a list of images based on a statistic."""
     images = []
     for image in ims:
