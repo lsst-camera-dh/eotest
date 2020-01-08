@@ -101,6 +101,11 @@ class NonlinearityCorrection:
             Array of 16 x nbins values for the y-axis of the correction function
         prof_yerr : `array`
             Array of 16 x nbins values for the y-axis of the correction function
+
+        Keywords
+        --------
+        Passed to UnivariateSpline c'tor
+
         """
         self._prof_x = prof_x
         self._prof_y = prof_y
@@ -118,7 +123,9 @@ class NonlinearityCorrection:
             else:
                 mask = np.ones(profile_x.shape)
             try:
-                self._spline_dict[iamp] = UnivariateSpline(profile_x[mask], profile_y[mask])
+                self._spline_dict[iamp] = UnivariateSpline(profile_x[mask],
+                                                           profile_y[mask],
+                                                           **kwargs)
             except Exception:
                 self._spline_dict[iamp] = lambda x : x
 
@@ -193,7 +200,7 @@ class NonlinearityCorrection:
 
 
     @classmethod
-    def create_from_table(cls, table):
+    def create_from_table(cls, table, **kwargs):
         """Create a NonlinearityCorrection object from a fits file
 
         Parameters
@@ -209,10 +216,10 @@ class NonlinearityCorrection:
         prof_x = table.data['prof_x']
         prof_y = table.data['prof_y_corr']
         prof_yerr = table.data['prof_yerr']
-        return cls(prof_x, prof_y, prof_yerr)
+        return cls(prof_x, prof_y, prof_yerr, **kwargs)
 
     @classmethod
-    def create_from_fits_file(cls, fits_file, hdu_name='nonlin'):
+    def create_from_fits_file(cls, fits_file, hdu_name='nonlin', **kwargs):
         """Create a NonlinearityCorrection object from a fits file
 
         Parameters
@@ -230,7 +237,7 @@ class NonlinearityCorrection:
         """
         hdulist = fits.open(fits_file)
         table = hdulist[hdu_name]
-        nl = cls.create_from_table(table)
+        nl = cls.create_from_table(table, **kwargs)
         hdulist.close()
         return nl
 
@@ -294,14 +301,17 @@ class NonlinearityCorrection:
              X-value at which the correction should vanish, defaults to 0.
              If `None` then this will simply use the pivot point of the fit to the data             
 
+        remaining kwargs are passed to the class c'tor
+
         Returns
         -------
         nl : `NonlinearityCorrection`
             The requested object
         """
-        fit_range = kwargs.get('fit_range', (0., 9e4))
-        nprofile_bins = kwargs.get('nprofile_bins', 10)
-        null_point = kwargs.get('null_point', 0,)
+        kwcopy = kwargs.copy()
+        fit_range = kwcopy.pop('fit_range', (0., 9e4))
+        nprofile_bins = kwcopy.pop('nprofile_bins', 10)
+        null_point = kwcopy.pop('null_point', 0,)
 
         if nprofile_bins is not None:
             xbins = np.linspace(fit_range[0], fit_range[1], nprofile_bins+1)
@@ -339,4 +349,4 @@ class NonlinearityCorrection:
             if null_point is not None:
                 prof_y[idx], prof_yerr[idx] = cls._correct_null_point(prof_x[idx], prof_y[idx], prof_yerr[idx], null_point)                
 
-        return cls(prof_x, prof_y, prof_yerr)
+        return cls(prof_x, prof_y, prof_yerr, **kwcopy)
