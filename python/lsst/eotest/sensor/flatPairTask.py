@@ -153,9 +153,9 @@ class FlatPairTask(pipeBase.Task):
         colnames = ['flux'] + ['AMP%02i_SIGNAL' % i for i in all_amps] + \
                    ['FLAT1_AMP%02i_SIGNAL' % i for i in all_amps] + \
                    ['FLAT2_AMP%02i_SIGNAL' % i for i in all_amps] + \
-                   ['SEQNUM']
-        formats = 'E'*(len(colnames)-1) + 'J'
-        units = ['None'] + ['e-']*3*len(all_amps) + ['None']
+                   ['SEQNUM', 'DAYOBS']
+        formats = 'E'*(len(colnames)-1) + 'JJ'
+        units = ['None'] + ['e-']*3*len(all_amps) + ['None', 'None']
         columns = [np.zeros(nrows, dtype=np.float) for fmt in formats]
         fits_cols = [fits.Column(name=colnames[i], format=formats[i],
                                  unit=units[i], array=columns[i])
@@ -195,6 +195,7 @@ class FlatPairTask(pipeBase.Task):
                               linearity_correction=self.linearity_correction)
 
             seqnum = flat1.md.get('SEQNUM')
+            dayobs = int(flat1.md.get('DAYOBS'))
 
             exptime1 = flat1.md.get('EXPTIME')
             exptime2 = flat2.md.get('EXPTIME')
@@ -241,6 +242,7 @@ class FlatPairTask(pipeBase.Task):
                 self.output[-1].data.field('FLAT1_' + colname)[row] = sig1
                 self.output[-1].data.field('FLAT2_' + colname)[row] = sig2
                 self.output[-1].data.field('SEQNUM')[row] = seqnum
+                self.output[-1].data.field('DAYOBS')[row] = dayobs
         self.output[0].header['NAMPS'] = len(flat1)
         fitsWriteto(self.output, outfile, overwrite=True)
         return outfile
