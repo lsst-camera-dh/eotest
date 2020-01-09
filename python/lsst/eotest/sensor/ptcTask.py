@@ -147,7 +147,10 @@ class PtcTask(pipeBase.Task):
                 ptc_stats[amp][0].append(results.flat_mean)
                 ptc_stats[amp][1].append(results.flat_var)
             seqnums.append(ccd1.md.get('SEQNUM'))
-            dayobs.append(int(ccd1.md.get('DAYOBS')))
+            try:
+                dayobs.append(ccd1.md.get('DAYOBS'))
+            except KeyError:
+                dayobs.append(0)
         self._fit_curves(ptc_stats, sensor_id)
         output = fits.HDUList()
         output.append(fits.PrimaryHDU())
@@ -165,7 +168,7 @@ class PtcTask(pipeBase.Task):
         colnames.append('DAYOBS')
         units.append('None')
         columns.append(dayobs)
-        formats = 'E'*(len(colnames) - 1) + 'JJ'
+        formats = 'E'*(len(colnames) - 2) + 'JJ'
         fits_cols = [fits.Column(name=colnames[i], format=formats[i],
                                  unit=units[i], array=columns[i])
                      for i in range(len(columns))]

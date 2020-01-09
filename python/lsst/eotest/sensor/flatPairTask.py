@@ -154,7 +154,7 @@ class FlatPairTask(pipeBase.Task):
                    ['FLAT1_AMP%02i_SIGNAL' % i for i in all_amps] + \
                    ['FLAT2_AMP%02i_SIGNAL' % i for i in all_amps] + \
                    ['SEQNUM', 'DAYOBS']
-        formats = 'E'*(len(colnames)-1) + 'JJ'
+        formats = 'E'*(len(colnames) - 2) + 'JJ'
         units = ['None'] + ['e-']*3*len(all_amps) + ['None', 'None']
         columns = [np.zeros(nrows, dtype=np.float) for fmt in formats]
         fits_cols = [fits.Column(name=colnames[i], format=formats[i],
@@ -195,7 +195,11 @@ class FlatPairTask(pipeBase.Task):
                               linearity_correction=self.linearity_correction)
 
             seqnum = flat1.md.get('SEQNUM')
-            dayobs = int(flat1.md.get('DAYOBS'))
+            try:
+                dayobs = flat1.md.get('DAYOBS')
+            except KeyError:
+                # This occurs if running on non-BOT data.
+                dayobs = 0
 
             exptime1 = flat1.md.get('EXPTIME')
             exptime2 = flat2.md.get('EXPTIME')
