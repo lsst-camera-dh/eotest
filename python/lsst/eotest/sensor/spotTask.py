@@ -45,19 +45,17 @@ def make_ccd_mosaic(infile, bias_frame=None, dark_frame=None, gains=None):
     ny_segments = 2
     nx = nx_segments*(datasec['xmax'] - datasec['xmin'] + 1)
     ny = ny_segments*(datasec['ymax'] - datasec['ymin'] + 1)
-
     mosaic = np.zeros((ny, nx), dtype=np.float32)
 
     for ypos in range(ny_segments):
         for xpos in range(nx_segments):
-            amp = ypos*nx_segments + xpos + 1
 
+            amp = ypos*nx_segments + xpos + 1
             detsec = parse_geom_kwd(foo[amp].header['DETSEC'])
             xmin = nx - max(detsec['xmin'], detsec['xmax'])
             xmax = nx - min(detsec['xmin'], detsec['xmax']) + 1
             ymin = ny - max(detsec['ymin'], detsec['ymax'])
             ymax = ny - min(detsec['ymin'], detsec['ymax']) + 1
-
             subarr = ccd.unbiased_and_trimmed_image(amp).getImage().getArray()
                     
             ## Flip array orientation (if applicable)
