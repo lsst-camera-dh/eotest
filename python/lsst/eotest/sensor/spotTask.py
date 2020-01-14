@@ -33,14 +33,10 @@ def make_ccd_mosaic(infile, bias_frame=None, dark_frame=None, gains=None):
         gains: Dictionary mapping amplifier number to gain.
         
     Returns:
-        afwImage object containing mosaiced image.
+        afwImage object containing CCD mosaic image.
     """
     
-    ccd = MaskedCCD(infile, bias_frame=bias_frame)
-
-    ## Additional images for calibration
-    if dark_frame is not None:
-        dark = MaskedCCD(dark_frame, bias_frame=bias_frame)
+    ccd = MaskedCCD(infile, bias_frame=bias_frame, dark_frame=dark_frame)
 
     ## Get amp geometry information
     foo = fits.open(infile)
@@ -62,16 +58,7 @@ def make_ccd_mosaic(infile, bias_frame=None, dark_frame=None, gains=None):
             ymin = ny - max(detsec['ymin'], detsec['ymax'])
             ymax = ny - min(detsec['ymin'], detsec['ymax']) + 1
 
-            ## Dark correction
-            if dark_frame is not None:
-                exptime = ccd.md.get('EXPTIME')
-                dark_exptime = dark.md.get('EXPTIME')
-
-                imarr = ccd.unbiased_and_trimmed_image(amp).getImage().getArray()
-                dark_imarr = dark.unbiased_and_trimmed_image(amp).getImage().getArray()
-                subarr = imarr - dark_imarr*exptime/dark_exptime
-            else:
-                subarr = ccd.unbiased_and_trimmed_image(amp).getImage().getArray()
+            subarr = ccd.unbiased_and_trimmed_image(amp).getImage().getArray()
                     
             ## Flip array orientation (if applicable)
             if detsec['xmax'] > detsec['xmin']: # flip in x-direction
@@ -112,9 +99,8 @@ class SpotTask(pipeBase.Task):
 
     @pipeBase.timeMethod
     def run(self, sensor_id, infile, gains, bias_frame=None, flat_frame=None, dark_frame=None):
-        #
-        # Process a CCD image mosaic
-        #
+        
+        ## Process a CCD image mosaic
         if self.config.verbose:
             self.log.info("processing {0}".format(infile))
         image = make_ccd_mosaic(infile, bias_frame=bias_frame, 
@@ -127,9 +113,8 @@ class SpotTask(pipeBase.Task):
             image = afwImage.ImageF(imarr*np.median(flatarr)/flatarr)
         exposure = afwImage.ExposureF(image.getBBox())
         exposure.setImage(image)
-        #
-        # Set up and run characterize task
-        #
+        
+        ## Set up and run characterize task
         char_nsig = self.config.characterize_nsig
         char_bgbinsize = self.config.bgbinsize
         char_minpixels = self.config.characterize_minpixels
@@ -150,9 +135,8 @@ class SpotTask(pipeBase.Task):
         charConfig.measurement.plugins.names |= hsm_plugins
         charTask = CharacterizeImageTask(config=charConfig)
         charResult = charTask.run(exposure)
-        #
-        # Set up and run calibrate task
-        #
+
+        ## Set up and run calibrate task
         cal_nsig = self.config.calibrate_nsig
         cal_bgbinsize = self.config.bgbinsize
         cal_minpixels = self.config.calibrate_minpixels
@@ -174,9 +158,8 @@ class SpotTask(pipeBase.Task):
         src = calResult.sourceCat
         if self.config.verbose:
             self.log.info("Detected {0} objects".format(len(src)))
-        #
-        # Save catalog results to file
-        #
+        
+        ## Save catalog results to file
         output_dir = self.config.output_dir
         if self.config.output_file is None:
             output_file = os.path.join(output_dir,
