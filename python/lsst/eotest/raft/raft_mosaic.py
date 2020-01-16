@@ -65,7 +65,7 @@ class RaftMosaic(object):
             try:
                 self.wl = hdu_list[0].header['MONOWL']
             except KeyError:
-                self.wl = 0.0
+                self.wl = 0
         self.image_array = np.zeros((nx, ny), dtype=np.float32)
         self.nx = nx
         self.ny = ny
