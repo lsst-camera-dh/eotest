@@ -37,7 +37,7 @@ class NonlinearityCorrectionTestCase(unittest.TestCase):
         sensorid = 'RTM-022'
         task.run(sensorid, _detrespfile, outputfile=self.fits_file, plotfile=None)
 
-        nlc = NonlinearityCorrection.create_from_fits_file(self.fits_file)
+        nlc = NonlinearityCorrection.create_from_fits_file(self.fits_file, s=None, ext=0)
         
         ccd_1 = MaskedCCD(_flat_frame, bias_frame=_bias_frame)
         ccd_2 = MaskedCCD(_flat_frame, bias_frame=_bias_frame, linearity_correction=nlc)
