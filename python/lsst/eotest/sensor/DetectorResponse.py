@@ -30,9 +30,9 @@ def _fwc_solve(f1_pars, f2_pars, g=0.1):
 
 
 class DetectorResponse(object):
-    def __init__(self, infile, ptc=None, gain_range=None):
+    def __init__(self, infile, ptc=None, gain_range=None, hdu_name='DETECTOR_RESPONSE'):
         if infile[-5:] == '.fits':
-            self._read_from_fits(infile)
+            self._read_from_fits(infile, hdu_name)
         else:
             self._read_from_text(infile)
         self._sort_by_flux()
@@ -59,11 +59,11 @@ class DetectorResponse(object):
         for amp in self.Ne:
             self.Ne[amp] = self.Ne[amp][index]
 
-    def _read_from_fits(self, infile):
+    def _read_from_fits(self, infile, hdu_name='DETECTOR_RESPONSE'):
         all_amps = imutils.allAmps(infile)
         with fits.open(infile) as foo:
-            hdu = foo['DETECTOR_RESPONSE']
-            self.flux = np.array(hdu.data.field('FLUX'), dtype=np.float)
+            hdu = foo[hdu_name]
+            self.flux = np.fabs(np.array(hdu.data.field('FLUX'), dtype=np.float))
             self.Ne = dict([(amp, np.array(hdu.data.field('AMP%02i_SIGNAL' % amp),
                                            dtype=np.float)) for amp in all_amps])
 
@@ -84,7 +84,12 @@ class DetectorResponse(object):
         f1 = np.poly1d(f1_pars)
         dNfrac = 1 - Ne/f1(flux)
         indexes = np.arange(len(dNfrac))
-        imin = np.where(np.abs(dNfrac) <= max_non_linearity)[0][-1]
+        good_vals = np.where(np.abs(dNfrac) <= max_non_linearity)[0]
+        if good_vals.sum() < 2:
+            print ("Not enough good points to fit full_well %i %i" % (amp, good_vals.sum()))
+            return (0., f1)
+
+        imin = good_vals[-1]
         try:
             imax = np.where((np.abs(dNfrac) >= frac_offset) &
                             (indexes > imin))[0][0] + 1
@@ -201,15 +206,23 @@ class DetectorResponse(object):
             fit_range = spec_range
         max_Ne_index = np.where(Ne == max(Ne))[0][0]
         indx = np.where((Ne > fit_range[0]) & (Ne < fit_range[1])
-                        & (flux <= flux[max_Ne_index]))
+                        & (flux <= flux[max_Ne_index]))[0]
+        if indx.sum() < 2:
+            print ("Not enough good points to fit linearity %i %i" % (amp, indx.sum()))
+            return (0., [0., 1.], Ne, flux)
         f1_pars = np.polyfit(flux[indx], Ne[indx], 1, w=1./Ne[indx])
         f1 = np.poly1d(f1_pars)
         # Further select points that are within the specification range
         # for computing the maximum fractional deviation.
         spec_indx = np.where((Ne > spec_range[0]) & (Ne < spec_range[1])
                              & (flux <= flux[max_Ne_index]))
+
         flux_spec = flux[spec_indx]
         Ne_spec = Ne[spec_indx]
+        if len(Ne_spec) < 2:
+            print ("Not enough good points for a good fit %i %i" % (amp, len(Ne_spec)))
+            return (0., [0., 1.], Ne, flux)
+
         dNfrac = 1 - Ne_spec/f1(flux_spec)
         return max(abs(dNfrac)), f1_pars, Ne, flux
 

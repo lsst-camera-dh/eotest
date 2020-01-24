@@ -127,6 +127,7 @@ class PtcTask(pipeBase.Task):
         ptc_stats = dict([(amp, ([], [])) for amp in all_amps])
         exposure = []
         seqnums = []
+        dayobs = []
         file1s = sorted([item for item in infiles if item.find('flat1') != -1])
         for flat1 in file1s:
             flat2 = flat2_finder(flat1)
@@ -146,6 +147,10 @@ class PtcTask(pipeBase.Task):
                 ptc_stats[amp][0].append(results.flat_mean)
                 ptc_stats[amp][1].append(results.flat_var)
             seqnums.append(ccd1.md.get('SEQNUM'))
+            try:
+                dayobs.append(ccd1.md.get('DAYOBS'))
+            except KeyError:
+                dayobs.append(0)
         self._fit_curves(ptc_stats, sensor_id)
         output = fits.HDUList()
         output.append(fits.PrimaryHDU())
@@ -160,7 +165,10 @@ class PtcTask(pipeBase.Task):
         colnames.append('SEQNUM')
         units.append('None')
         columns.append(seqnums)
-        formats = 'E'*(len(colnames) - 1) + 'J'
+        colnames.append('DAYOBS')
+        units.append('None')
+        columns.append(dayobs)
+        formats = 'E'*(len(colnames) - 2) + 'JJ'
         fits_cols = [fits.Column(name=colnames[i], format=formats[i],
                                  unit=units[i], array=columns[i])
                      for i in range(len(columns))]

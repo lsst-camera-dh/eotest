@@ -29,7 +29,9 @@ class NonlinearityTask(pipeBase.Task):
             nprofile_bins=10,
             null_point=0.,
             outputfile=None,
-            plotfile=None):
+            plotfile=None,
+            spline_ext_method=0,
+            spline_s_factor=None):
         """Run the analysis
 
         Parameters
@@ -48,6 +50,9 @@ class NonlinearityTask(pipeBase.Task):
             The name of the file to write the nonlinearity correction to
         plotfile : `str` or `None`
             The name of the file to write the diagnostic plots to
+        spline_ext_method : `int` or `None`
+            The method to use to extrapolate the spline
+        spline_s_factor : `float` or `None`
 
         This make a profile plot of the fractional residual, (mean - q*slope) / q*slope,
         of the photodiode flux version amplifier mean for each amplifier, taking the
@@ -66,11 +71,18 @@ class NonlinearityTask(pipeBase.Task):
         self.null_point = null_point
         self.detresp = DetectorResponse(detrespfile)
 
+        kw_ctor = {}
+        if spline_ext_method is not None:
+            kw_ctor['ext'] = spline_ext_method
+        if spline_s_factor is not None:
+            kw_ctor['s'] = spline_s_factor
+
         self.nlc = NonlinearityCorrection.create_from_det_response(self.detresp,
                                                                    None,
                                                                    fit_range=self.fit_range,
                                                                    nprofile_bins=self.nprofile_bins,
-                                                                   null_point=self.null_point)
+                                                                   null_point=self.null_point,
+                                                                   **kw_ctor)
 
         if outputfile is not None:
             fulloutput = os.path.join(self.config.output_dir, outputfile)
