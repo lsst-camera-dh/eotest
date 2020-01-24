@@ -18,12 +18,6 @@ class OverscanConfig(pexConfig.Config):
     """Configuration for overscan analysis task"""
     output_dir = pexConfig.Field("Output directory", str, default='.')
     output_file = pexConfig.Field("Output filename", str, default=None)
-    minflux = pexConfig.Field("Minimum flux for overscan fitting.", float,
-                              default=10000.0)
-    maxflux = pexConfig.Field("Maximum flux for overscan fitting.", float,
-                              default=140000.0)
-    num_oscan_pixels = pexConfig.Field("Number of overscan pixels used for model fit.",
-                                       int, default=10)
     verbose = pexConfig.Field("Turn verbosity on", bool, default=True)
 
 class OverscanTask(pipeBase.Task):
@@ -35,11 +29,7 @@ class OverscanTask(pipeBase.Task):
             linearity_correction=None):
 
         ## Calculate mean row for each flat file
-        minflux = self.config.minflux
-        maxflux = self.config.maxflux
-        num_oscan_pixels = self.config.num_oscan_pixels
-
-        fitter = OverscanFit(num_oscan_pixels=num_oscan_pixels, minflux=minflux, maxflux=maxflux)
+        fitter = OverscanFit()
         for i, infile in enumerate(infiles):
             if self.config.verbose:
                 self.log.info("Processing {0}".format(infile))
