@@ -493,7 +493,7 @@ class EOTestPlots(object):
 
                 ax.plot(flux[index][flux[index]<140000], cti[index][flux[index]<140000], 
                         label='Amp {0}'.format(amp), color = cmap((amp-1)%8),
-                        marker=marker, markersize=7)
+                        marker=marker, markersize=5)
 
             ax.tick_params(axis='x', labelsize=14)
             ax.tick_params(axis='y', labelsize=14)
@@ -504,12 +504,12 @@ class EOTestPlots(object):
             ax.set_xscale('log')
             ax.set_yscale('log')
             ax.grid(True, which='major', axis='both')
-            ax.set_xlabel('Signal [e-]', fontsize=18)
+            ax.set_xlabel('Flat Field Signal [e-]', fontsize=18)
             ax.set_ylabel('CTI', fontsize=18)
-            ax.legend(fontsize=15, loc=1, ncol=4)
+            ax.legend(fontsize=14, loc=1, ncol=4)
             ax.set_title('CTI from EPER, {0}'.format(self.sensor_id), fontsize=18)
 
-    def overscan_curves(self, overscan_file, figsize=(10, 8)):
+    def overscan_signal_curves(self, overscan_file, figsize=(12, 8)):
         
         if overscan_file is None:
             overscan_file = self._fullpath('{0}_overscan_results.fits'.format(self.sensor_id))
@@ -531,94 +531,101 @@ class EOTestPlots(object):
                 overscan2 = meanrow[:, xmax+1] - offset
                 index = np.argsort(flux)
         
-                axes[amp-1].plot(flux[index], overscan1[index], label='overscan 1'.format(amp),
-                         marker='.', markersize=4)
-                axes[amp-1].plot(flux[index], overscan2[index], label='overscan 2'.format(amp),
-                         marker='.', markersize=4)  
+                axes[amp-1].plot(flux[index], overscan1[index], label='Overscan 1'.format(amp))
+                axes[amp-1].plot(flux[index], overscan2[index], label='Overscan 2'.format(amp))
         
                 axes[amp-1].set_yscale('symlog', threshold=1.0)
                 axes[amp-1].set_xscale('log')
                 axes[amp-1].set_ylim(bottom=-1.0)
                 axes[amp-1].set_xlim(left=50, right=240000)
-                axes[amp-1].set_title('Amp{0}'.format(amp), fontsize='small')
+                axes[amp-1].set_title('Amp {0}'.format(amp), fontsize=12)
                 axes[amp-1].grid(True, which='major', axis='both')
-                if (amp-1) >= 12: axes[amp-1].set_xlabel('flux (e-)', fontsize='small')
-                if (amp-1) % 4 == 0: axes[amp-1].set_ylabel('signal (e-)', fontsize='small')
 
-                axes[amp-1].legend(fontsize='x-small',  loc = 'upper left', ncol=1)
+            h, l = axes[-1].get_legend_handles_labels()
+            fig.subplots_adjust(bottom=0.12)
+            fig.legend(h, l, loc='lower center', ncol=2, fontsize=14)
 
-            plt.suptitle('Signal in Overscan Pixels', fontsize='small')
+            fig.add_subplot(111, frameon=False)
+            plt.tick_params(labelcolor='none', top=False, bottom=False, left=False, right=False)
+            plt.xlabel('Overscan Mean Signal [e-]', fontsize=14)
+            plt.ylabel('Flat Field Signal [e-]', fontsize=14, labelpad=15)
 
-    def overscan_noise_curves(self, overscan_file, figsize=(8, 6)):
+    def overscan_noise_curves(self, overscan_file, figsize=(12, 8)):
         
         if overscan_file is None:
             overscan_file = self._fullpath('{0}_overscan_results.fits'.format(self.sensor_id))
-        fig = plt.figure(figsize=figsize)
+        fig, ax = plt.subplots(1, 1, figsize=figsize)
 
+        cmap = plt.get_cmap("tab10")
         with fits.open(overscan_file) as overscan:
 
             datasec = overscan[0].header['DATASEC']
             amp_geom = parse_geom_kwd(datasec)
             xmax = amp_geom['xmax']
 
-            fig.add_subplot(1, 1, 1)
             for amp in range(1, 17):
         
-                if amp > 10: marker = 's'
+                if amp > 8: marker='s'
                 else: marker = '^'
 
                 flux = overscan[amp].data['FLUX']
                 noise = overscan[amp].data['NOISE']
                 index = np.argsort(flux)
         
-                plt.plot(flux[index], noise[index], label='{0}'.format(amp),
-                         linestyle='-', marker=marker, markersize=4)
+                ax.plot(flux[index], noise[index], label='Amp {0}'.format(amp),
+                         linestyle='-', marker=marker, color = cmap((amp-1)%8),
+                        markersize=5)
         
-            plt.xscale('log')
-            plt.xlim(left=50, right=240000)
-            plt.ylim(bottom=0.0, top=min(15.0, np.max(noise[index])+2.0))
-            plt.grid(True, which='major', axis='both')
-            plt.xlabel('flux (e-)', fontsize='small')
-            plt.ylabel('noise (e-)', fontsize='small')
+            ax.set_xscale('log')
+            ax.set_xlim(left=50, right=240000)
+            ax.set_ylim(bottom=0.0, top=min(15.0, np.max(noise[index])+2.0))
+            ax.grid(True, which='major', axis='both')
+            ax.set_xlabel('Flat Field Signal [e-]', fontsize=18)
+            ax.set_ylabel('Overscan Noise [e-]', fontsize=18)
+            ax.tick_params(axis='x', labelsize=14)
+            ax.tick_params(axis='y', labelsize=14)
 
-            plt.legend(fontsize='x-small',  loc = 'upper left', ncol=4)
-            plt.title('Noise in Overscan Pixels, {0}'.format(self.sensor_id), fontsize='small')
+            plt.legend(fontsize=14,  loc = 'upper left', ncol=4)
+            plt.title('Overscan Pixel Noise, {0}'.format(self.sensor_id), fontsize=18)
 
-    def overscan_sum_curves(self, overscan_file, figsize=(8, 6)):
+    def overscan_sum_curves(self, overscan_file, figsize=(12, 8)):
         
         if overscan_file is None:
             overscan_file = self._fullpath('{0}_overscan_results.fits'.format(self.sensor_id))
-        fig = plt.figure(figsize=figsize)
+        fig, ax = plt.subplots(1, 1, figsize=figsize)
 
+        cmap = plt.get_cmap("tab10")
         with fits.open(overscan_file) as overscan:
 
             datasec = overscan[0].header['DATASEC']
             amp_geom = parse_geom_kwd(datasec)
             xmax = amp_geom['xmax']
 
-            fig.add_subplot(1, 1, 1)
             for amp in range(1, 17):
         
-                if amp > 10: marker = 's'
+                if amp > 8: marker = 's'
                 else: marker = '^'
 
                 meanrow = overscan[amp].data['MEANROW']
-                summed = np.sum(meanrow[:, xmax+8:xmax+18], axis=1)
+                summed = np.sum(meanrow[:, xmax+4:xmax+18], axis=1)
                 flux = overscan[amp].data['FLUX']
                 index = np.argsort(flux)
         
-                plt.plot(flux[index], summed[index], label='{0}'.format(amp),
-                         linestyle='-', marker=marker, markersize=4)
+                ax.plot(flux[index], summed[index], label='Amp {0}'.format(amp),
+                         linestyle='-', marker=marker, color = cmap((amp-1)%8),
+                        markersize=5)
         
-            plt.xscale('log')
-            plt.xlim(left=50.0, right=240000.0)
-            plt.ylim(bottom=-2.0, top=15.0)
-            plt.grid(True, which='major', axis='both')
-            plt.xlabel('flux (e-)', fontsize='small')
-            plt.ylabel('overscan sum (e-)', fontsize='small')
+            ax.set_xscale('log')
+            ax.set_xlim(left=50.0, right=240000.0)
+            ax.set_ylim(bottom=-2.0, top=20.0)
+            ax.grid(True, which='major', axis='both')
+            ax.set_xlabel('Flat Field Signal [e-]', fontsize=18)
+            ax.set_ylabel('Overscan Mean Sum [e-]', fontsize=18)
+            ax.tick_params(axis='x', labelsize=14)
+            ax.tick_params(axis='y', labelsize=14)
 
-            plt.legend(fontsize='x-small',  loc = 'upper left', ncol=4)
-            plt.title('Summed Signal in Overscan Pixels [8:18], {0}'.format(self.sensor_id), fontsize='small')
+            ax.legend(fontsize=14,  loc = 'upper left', ncol=4)
+            ax.set_title('Summed Signal in Overscan Pixels [4:18], {0}'.format(self.sensor_id), fontsize=18)
 
     def eper_low_curves(self, overscan_file, figsize=(12, 8)):
 
@@ -650,10 +657,10 @@ class EOTestPlots(object):
                     axes[amp-1].plot(columns, oscan, label='{0:d} e-'.format(target_flux))
 
                 axes[amp-1].set_xlim(511.5, 516.5)
-                axes[amp-1].tick_params(axis='x', labelsize=10)
-                axes[amp-1].tick_params(axis='y', labelsize=10)
+                axes[amp-1].tick_params(axis='x', labelsize=12)
+                axes[amp-1].tick_params(axis='y', labelsize=12)
                 axes[amp-1].grid(True, which='major', axis='both')
-                axes[amp-1].set_title('Amp {0}'.format(amp), fontsize=12)
+                axes[amp-1].set_title('Amp {0}'.format(amp), fontsize=14)
 
 
                 if (amp-1) % 4 == 0: 
@@ -699,8 +706,8 @@ class EOTestPlots(object):
 
                 axes[amp-1].set_yscale('log')
                 axes[amp-1].set_ylim(.05, 400)
-                axes[amp-1].tick_params(axis='x', labelsize=10)
-                axes[amp-1].tick_params(axis='y', labelsize=10)
+                axes[amp-1].tick_params(axis='x', labelsize=12)
+                axes[amp-1].tick_params(axis='y', labelsize=12)
                 axes[amp-1].set_xlim(511.0, 541.0)
                 axes[amp-1].grid(True, which='major', axis='both')
                 axes[amp-1].set_title('Amp {0}'.format(amp), fontsize=12)
@@ -711,7 +718,6 @@ class EOTestPlots(object):
             fig.legend(h, l, loc='lower center', ncol=len(target_flux_levels), fontsize=14)
 
             fig.add_subplot(111, frameon=False)
-            # hide tick and tick label of the big axis
             plt.tick_params(labelcolor='none', top=False, bottom=False, left=False, right=False)
             plt.xlabel('Column Number', fontsize=14)
             plt.ylabel('Mean Column Signal [e-]', fontsize=14, labelpad=15)
