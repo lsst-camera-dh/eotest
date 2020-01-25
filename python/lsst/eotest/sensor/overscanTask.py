@@ -12,7 +12,7 @@ import lsst.pipe.base as pipeBase
 import lsst.eotest.image_utils as imutils
 from lsst.eotest.fitsTools import fitsWriteto
 from lsst.eotest.sensor import MaskedCCD, parse_geom_kwd
-from .overscan_fit import OverscanFit
+from .overscan_fit import OverscanResults
 
 class OverscanConfig(pexConfig.Config):
     """Configuration for overscan analysis task"""
@@ -29,13 +29,13 @@ class OverscanTask(pipeBase.Task):
             linearity_correction=None):
 
         ## Calculate mean row for each flat file
-        fitter = OverscanFit()
+        overscan_results = OverscanResults()
         for i, infile in enumerate(infiles):
             if self.config.verbose:
                 self.log.info("Processing {0}".format(infile))
             ccd = MaskedCCD(infile, bias_frame=bias_frame,
                             linearity_correction=linearity_correction)
-            fitter.process_image(ccd, gains)
+            overscan_results.process_image(ccd, gains)
                 
         output_dir = self.config.output_dir
         if self.config.output_file is None:
@@ -45,6 +45,4 @@ class OverscanTask(pipeBase.Task):
             output_file = os.path.join(output_dir, self.config.output_file)
         if self.config.verbose:
             self.log.info("writing to {0}".format(output_file))
-        fitter.write_results(outfile=output_file)
-
-        return output_file
+        overscan_results.write_results(outfile=output_file)

@@ -15,33 +15,17 @@ from lsst.eotest.fitsTools import fitsWriteto, fitsTableFactory
 from .MaskedCCD import MaskedCCD
 from .AmplifierGeometry import parse_geom_kwd
 
-def make_joint_model(flux, N):
-    """Make high flux exponential plus CTI model."""
-    
-    def joint_model(x, A, tau, cti):
-        
-        result = A*np.exp(-x/tau) + (cti**x)*N*flux
-        
-        return result
-        
-    return joint_model
+class OverscanResults(object):
 
-class OverscanFit(object):
+    def __init__(self):
 
-    def __init__(self, outfile=None):
+        self.output = fits.HDUList()
+        self.output.append(fits.PrimaryHDU())
 
-        self.outfile = outfile
-        if outfile is None:
-            self.output = fits.HDUList()
-            self.output.append(fits.PrimaryHDU())
-        else:
-            self.output = fits.open(self.outfile)
-
-        self.meanrow = {amp : [] for amp in range(1, 17)}
-        self.var = {amp : [] for amp in range(1, 17)}
-        self.oscan_noise = {amp : [] for amp in range(1, 17)}
-        self.flux = {amp : [] for amp in range(1, 17)}
-        self.flux_std = {amp : [] for amp in range(1, 17)}
+        self.column_mean = {amp : [] for amp in range(1, 17)}
+        self.column_variance = {amp : [] for amp in range(1, 17)}
+        self.overscan_noise = {amp : [] for amp in range(1, 17)}
+        self.flatfield_signal = {amp : [] for amp in range(1, 17)}
 
     def process_image(self, ccd, gains):
         """Process an image."""
@@ -58,17 +42,15 @@ class OverscanFit(object):
 
             imarr = image.getImage().getArray()*gains[amp]
 
-            meanrow = np.mean(imarr[ymin-1:ymax, :], axis=0)
-            var = np.var(imarr[ymin-1:ymax, :], axis=0)
-            oscan_noise = np.mean(np.std(imarr[ymin-1:ymax, xmax+2:xmax+28], axis=1))
-            flux = np.mean(imarr[ymin-1:ymax, xmin-1:xmax])
-            flux_std = np.std(imarr[ymin-1:ymax, xmin-1:xmax])
+            column_mean = np.mean(imarr[ymin-1:ymax, :], axis=0)
+            column_variance = np.var(imarr[ymin-1:ymax, :], axis=0)
+            overscan_noise = np.mean(np.std(imarr[ymin-1:ymax, xmax+2:xmax+28], axis=1))
+            flatfield_signal = np.mean(imarr[ymin-1:ymax, xmin-1:xmax])
                 
-            self.meanrow[amp].append(meanrow)
-            self.var[amp].append(var)
-            self.flux[amp].append(flux)
-            self.flux_std[amp].append(flux_std)
-            self.oscan_noise[amp].append(oscan_noise)
+            self.column_mean[amp].append(column_mean)
+            self.column_variance[amp].append(column_variance)
+            self.overscan_noise[amp].append(overscan_noise)
+            self.flatfield_signal[amp].append(flatfield_signal)
 
         self.output[0].header['DATASEC'] = datasec
 
@@ -77,11 +59,10 @@ class OverscanFit(object):
         out_dict = {}
         for amp in range(1, 17):
             extname = 'Amp{0:02d}'.format(amp)
-            out_dict[extname] = dict(MEANROW=self.meanrow[amp],
-                                     VAR=self.var[amp],
-                                     FLUX=self.flux[amp],
-                                     FLUX_STD=self.flux_std[amp],
-                                     NOISE=self.oscan_noise[amp])
+            out_dict[extname] = dict(COLUMN_MEAN=self.column_mean[amp],
+                                     COLUMN_VARIANCE=self.column_variance[amp],
+                                     FLATFIELD_SIGNAL=self.flatfield_signal[amp],
+                                     OVERSCAN_NOISE=self.overscan_noise[amp])
         return out_dict
 
     def write_results(self, outfile):
@@ -89,40 +70,21 @@ class OverscanFit(object):
         
         for amp in range(1, 17):
             extname = 'Amp{0:02d}'.format(amp)
-            nrows1 = len(self.flux[amp])
-            ncols = len(self.meanrow[amp][0])
+            ncols = len(self.column_mean[amp][0])
 
-            meanrow_col = fits.Column('MEANROW', format='{0}E'.format(ncols), unit='e-', 
-                                      array=self.meanrow[amp])
-            var_col = fits.Column('VAR', format='{0}E'.format(ncols), unit='e-',
-                                  array=self.var[amp])
-            flux_col = fits.Column('FLUX', format='E', unit='e-', array=self.flux[amp])
-            flux_std_col = fits.Column('FLUX_STD', format='E', unit='e-', 
-                                       array=self.flux_std[amp])
-            noise_col = fits.Column('NOISE', format='E', unit='e-', array=self.oscan_noise[amp])
+            idx = np.argsort(self.flatfield_signal[amp])
 
-            try:
-                #
-                # Append new rows if HDU for this segment already exists
-                #
-                table_hdu = self.output[extname]
-                row0 = table_hdu.header['NAXIS2']
-                nrows = row0+nrows1
-                table_hdu = fitsTableFactory(table_hdu.data, nrows=nrows)
-                table_hdu.data['MEANROW'][row0:] = meanrow_col
-                table_hdu.data['VAR'][row0:] = var_col
-                table_hdu.data['FLUX'][row0:] = flux_col
-                table_hdu.data['FLUX_STD'][row0:] = flux_std_col
-                table_hdu.data['NOISE'][row0:] = noise_col
-                table_hdu.name = extname
-                self.output[extname] = table_hdu
-            except KeyError:
-                self.output.append(fitsTableFactory([meanrow_col, 
-                                                     var_col,
-                                                     flux_col,
-                                                     flux_std_col,
-                                                     noise_col]))
-                self.output[-1].name = extname
+            cols = [fits.Column('COLUMN_MEAN', format='{0}E'.format(ncols), 
+                                unit='e-', array=self.column_mean[amp][idx]),
+                    fits.Column('COLUMN_VARIANCE', format='{0}E'.format(ncols), 
+                                unit='e-', array=self.column_variance[amp][idx]),
+                    fits.Column('FLATFIELD_SIGNAL', format='E', unit='e-', 
+                                array=self.flatfield_signal[amp][idx])
+                    fits.Column('OVERSCAN_NOISE', format='E', unit='e-', 
+                                array=self.oscan_noise[amp][idx])]
+
+            self.output.append(fitsTableFactory(cols))
+            self.output[-1].name = extname
 
         self.output[0].header['NAMPS'] = 16
         fitsWriteto(self.output, outfile, overwrite=True, checksum=True)
