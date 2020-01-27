@@ -75,13 +75,13 @@ class OverscanResults(object):
             idx = np.argsort(self.flatfield_signal[amp])
 
             cols = [fits.Column('COLUMN_MEAN', format='{0}E'.format(ncols), 
-                                unit='e-', array=self.column_mean[amp][idx]),
+                                unit='e-', array=np.asarray(self.column_mean[amp])[idx, :]),
                     fits.Column('COLUMN_VARIANCE', format='{0}E'.format(ncols), 
-                                unit='e-', array=self.column_variance[amp][idx]),
+                                unit='e-', array=np.asarray(self.column_variance[amp])[idx, :]),
                     fits.Column('FLATFIELD_SIGNAL', format='E', unit='e-', 
-                                array=self.flatfield_signal[amp][idx])
+                                array=np.asarray(self.flatfield_signal[amp])[idx]),
                     fits.Column('OVERSCAN_NOISE', format='E', unit='e-', 
-                                array=self.oscan_noise[amp][idx])]
+                                array=np.asarray(self.overscan_noise[amp])[idx])]
 
             self.output.append(fitsTableFactory(cols))
             self.output[-1].name = extname

@@ -481,19 +481,18 @@ class EOTestPlots(object):
                 if amp > 8: marker='s'
                 else: marker = '^'
                 
-                meanrow = overscan[amp].data['MEANROW']
-                offset = np.mean(meanrow[:, -20:], axis=1)
-                flux = overscan[amp].data['FLUX']-offset
-                overscan1 = meanrow[:, xmax] - offset
-                overscan2 = meanrow[:, xmax+1] - offset
-                lastpixel = meanrow[:, xmax-1] - offset
+                data = overscan[amp].data['COLUMN_MEAN']
+                offset = np.mean(data[:, -20:], axis=1)
+                signal = overscan[amp].data['FLATFIELD_SIGNAL']-offset
+                overscan1 = data[:, xmax] - offset
+                overscan2 = data[:, xmax+1] - offset
+                lastpixel = data[:, xmax-1] - offset
                 cti = (overscan1+overscan2)/(xmax*lastpixel)
         
-                index = np.argsort(flux)
+                indices = signal<140000.
 
-                ax.plot(flux[index][flux[index]<140000], cti[index][flux[index]<140000], 
-                        label='Amp {0}'.format(amp), color = cmap((amp-1)%8),
-                        marker=marker, markersize=5)
+                ax.plot(signal[indices], cti[indices], label='Amp {0}'.format(amp), 
+                        color = cmap((amp-1)%8), marker=marker, markersize=5)
 
             ax.tick_params(axis='x', labelsize=14)
             ax.tick_params(axis='y', labelsize=14)
@@ -524,15 +523,14 @@ class EOTestPlots(object):
 
             for amp in range(1, 17):
 
-                meanrow = overscan[amp].data['MEANROW']
-                offset = np.mean(meanrow[:, -20:], axis=1)
-                flux = overscan[amp].data['FLUX']-offset
-                overscan1 = meanrow[:, xmax] - offset
-                overscan2 = meanrow[:, xmax+1] - offset
-                index = np.argsort(flux)
+                data = overscan[amp].data['COLUMN_MEAN']
+                offset = np.mean(data[:, -20:], axis=1)
+                signal = overscan[amp].data['FLATFIELD_SIGNAL']-offset
+                overscan1 = data[:, xmax] - offset
+                overscan2 = data[:, xmax+1] - offset
         
-                axes[amp-1].plot(flux[index], overscan1[index], label='Overscan 1'.format(amp))
-                axes[amp-1].plot(flux[index], overscan2[index], label='Overscan 2'.format(amp))
+                axes[amp-1].plot(signal, overscan1, label='Overscan 1'.format(amp))
+                axes[amp-1].plot(signal, overscan2, label='Overscan 2'.format(amp))
         
                 axes[amp-1].set_yscale('symlog', threshold=1.0)
                 axes[amp-1].set_xscale('log')
@@ -568,17 +566,15 @@ class EOTestPlots(object):
                 if amp > 8: marker='s'
                 else: marker = '^'
 
-                flux = overscan[amp].data['FLUX']
-                noise = overscan[amp].data['NOISE']
-                index = np.argsort(flux)
+                signal = overscan[amp].data['FLATFIELD_SIGNAL']
+                noise = overscan[amp].data['OVERSCAN_NOISE']
         
-                ax.plot(flux[index], noise[index], label='Amp {0}'.format(amp),
-                         linestyle='-', marker=marker, color = cmap((amp-1)%8),
-                        markersize=5)
+                ax.plot(signal, noise, label='Amp {0}'.format(amp), linestyle='-', 
+                        marker=marker, color = cmap((amp-1)%8), markersize=5)
         
             ax.set_xscale('log')
             ax.set_xlim(left=50, right=240000)
-            ax.set_ylim(bottom=0.0, top=min(15.0, np.max(noise[index])+2.0))
+            ax.set_ylim(bottom=0.0, top=min(15.0, np.max(noise)+2.0))
             ax.grid(True, which='major', axis='both')
             ax.set_xlabel('Flat Field Signal [e-]', fontsize=18)
             ax.set_ylabel('Overscan Noise [e-]', fontsize=18)
@@ -606,18 +602,16 @@ class EOTestPlots(object):
                 if amp > 8: marker = 's'
                 else: marker = '^'
 
-                meanrow = overscan[amp].data['MEANROW']
-                summed = np.sum(meanrow[:, xmax+4:xmax+18], axis=1)
-                flux = overscan[amp].data['FLUX']
-                index = np.argsort(flux)
+                data = overscan[amp].data['COLUMN_MEAN']
+                oscansum = np.sum(data[:, xmax+4:xmax+18], axis=1)
+                signal = overscan[amp].data['FLATFIELD_SIGNAL']
         
-                ax.plot(flux[index], summed[index], label='Amp {0}'.format(amp),
-                         linestyle='-', marker=marker, color = cmap((amp-1)%8),
-                        markersize=5)
+                ax.plot(signal, oscansum, label='Amp {0}'.format(amp), linestyle='-', 
+                        marker=marker, color = cmap((amp-1)%8), markersize=5)
         
             ax.set_xscale('log')
             ax.set_xlim(left=50.0, right=240000.0)
-            ax.set_ylim(bottom=-2.0, top=20.0)
+            ax.set_ylim(bottom=-2.0, top=30.0)
             ax.grid(True, which='major', axis='both')
             ax.set_xlabel('Flat Field Signal [e-]', fontsize=18)
             ax.set_ylabel('Overscan Mean Sum [e-]', fontsize=18)
@@ -640,23 +634,24 @@ class EOTestPlots(object):
             amp_geom = parse_geom_kwd(datasec)
             xmax = amp_geom['xmax']
 
-            target_flux_levels = [100, 500, 1000, 2500, 5000]
+            target_signal_levels = [100, 500, 1000, 2500, 5000]
             for amp in range(1, 17):
 
-                flux = overscan[amp].data['FLUX']       
+                signal = overscan[amp].data['FLATFIELD_SIGNAL']       
 
-                for target_flux in target_flux_levels:
+                for target_signal in target_signal_levels:
 
-                    i = min(range(flux.shape[0]), key=lambda i: abs(flux[i]-target_flux))
+                    i = min(range(signal.shape[0]), 
+                            key=lambda i: abs(signal[i]-target_signal))
 
-                    meanrow = overscan[amp].data['MEANROW'][i, :]
-                    offset = np.mean(meanrow[-20:])
-                    oscan = meanrow[xmax:] - offset
-                    columns = np.arange(xmax, meanrow.shape[0])
+                    data = overscan[amp].data['COLUMN_MEAN'][i, :]
+                    offset = np.mean(data[-20:])
+                    oscan = data[xmax:] - offset
+                    columns = np.arange(xmax, data.shape[0])
 
-                    axes[amp-1].plot(columns, oscan, label='{0:d} e-'.format(target_flux))
+                    axes[amp-1].plot(columns, oscan, label='{0:d} e-'.format(target_signal))
 
-                axes[amp-1].set_xlim(511.5, 516.5)
+                axes[amp-1].set_xlim(xmax-0.5, xmax+4.5)
                 axes[amp-1].tick_params(axis='x', labelsize=12)
                 axes[amp-1].tick_params(axis='y', labelsize=12)
                 axes[amp-1].grid(True, which='major', axis='both')
@@ -669,7 +664,7 @@ class EOTestPlots(object):
 
             h, l = axes[-1].get_legend_handles_labels()
             fig.subplots_adjust(bottom=0.12)
-            fig.legend(h, l, loc='lower center', ncol=len(target_flux_levels), fontsize=14)
+            fig.legend(h, l, loc='lower center', ncol=len(target_signal_levels), fontsize=14)
 
             fig.add_subplot(111, frameon=False)
             plt.tick_params(labelcolor='none', top=False, bottom=False, left=False, right=False)
@@ -687,35 +682,37 @@ class EOTestPlots(object):
             amp_geom = parse_geom_kwd(datasec)
             xmax = amp_geom['xmax']            
 
-            target_flux_levels = [25000, 50000, 75000, 100000, 150000]
+            target_signal_levels = [25000, 50000, 75000, 100000, 150000]
 
             for amp in range(1, 17):
 
-                flux = overscan[amp].data['FLUX']       
+                signal = overscan[amp].data['FLATFIELD_SIGNAL']       
 
-                for target_flux in target_flux_levels:
+                for target_signal in target_signal_levels:
 
-                    i = min(range(flux.shape[0]), key=lambda i: abs(flux[i]-target_flux))
+                    i = min(range(signal.shape[0]), 
+                            key=lambda i: abs(signal[i]-target_signal))
 
-                    meanrow = overscan[amp].data['MEANROW'][i, :]
-                    offset = np.mean(meanrow[-20:])
-                    oscan = meanrow[xmax:] - offset
-                    columns = np.arange(xmax, meanrow.shape[0])
+                    data = overscan[amp].data['COLUMN_MEAN'][i, :]
+                    offset = np.mean(data[-20:])
+                    oscan = data[xmax:] - offset
+                    columns = np.arange(xmax, data.shape[0])
 
-                    axes[amp-1].plot(columns, oscan, label='{0:.0f} ke-'.format(target_flux/1000.))
+                    axes[amp-1].plot(columns, oscan, 
+                                     label='{0:.0f} ke-'.format(target_signal/1000.))
 
                 axes[amp-1].set_yscale('log')
                 axes[amp-1].set_ylim(.05, 400)
                 axes[amp-1].tick_params(axis='x', labelsize=12)
                 axes[amp-1].tick_params(axis='y', labelsize=12)
-                axes[amp-1].set_xlim(511.0, 541.0)
+                axes[amp-1].set_xlim(xmax-1., xmax+29.)
                 axes[amp-1].grid(True, which='major', axis='both')
                 axes[amp-1].set_title('Amp {0}'.format(amp), fontsize=12)
                 axes[amp-1].tick_params(axis='both', which='minor')
 
             h, l = axes[-1].get_legend_handles_labels()
             fig.subplots_adjust(bottom=0.12)
-            fig.legend(h, l, loc='lower center', ncol=len(target_flux_levels), fontsize=14)
+            fig.legend(h, l, loc='lower center', ncol=len(target_signal_levels), fontsize=14)
 
             fig.add_subplot(111, frameon=False)
             plt.tick_params(labelcolor='none', top=False, bottom=False, left=False, right=False)

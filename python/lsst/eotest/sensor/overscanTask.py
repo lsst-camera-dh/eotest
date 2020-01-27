@@ -12,7 +12,7 @@ import lsst.pipe.base as pipeBase
 import lsst.eotest.image_utils as imutils
 from lsst.eotest.fitsTools import fitsWriteto
 from lsst.eotest.sensor import MaskedCCD, parse_geom_kwd
-from .overscan_fit import OverscanResults
+from .overscan import OverscanResults
 
 class OverscanConfig(pexConfig.Config):
     """Configuration for overscan analysis task"""
