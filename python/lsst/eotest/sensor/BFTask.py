@@ -40,7 +40,7 @@ def split_flats(flats):
 def find_flats(flats, flat2_finder=find_flat2):
     """Find flat pairs."""
     file1s = sorted([item.strip() for item in flats
-                     if item.find('flat0') != -1])
+                     if item.find('flat1') != -1])
     return [(f1, flat2_finder(f1)) for f1 in file1s]
 
 
