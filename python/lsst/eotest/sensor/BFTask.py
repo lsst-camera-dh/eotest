@@ -40,7 +40,7 @@ def split_flats(flats):
 def find_flats(flats, flat2_finder=find_flat2):
     """Find flat pairs."""
     file1s = sorted([item.strip() for item in flats
-                     if item.find('flat1') != -1])
+                     if item.find('flat0') != -1])
     return [(f1, flat2_finder(f1)) for f1 in file1s]
 
 
@@ -207,7 +207,7 @@ class BFTask(pipeBase.Task):
         local_exp = local_exp[bbox]
 
         # Calculate the mean of the image.
-        mean = afwMath.makeStatistics(local_exp, afwMath.MEAN,
+        mean = afwMath.makeStatistics(local_exp, afwMath.MEDIAN,
                                       sctrl).getValue()
 
         return local_exp, mean
@@ -219,6 +219,10 @@ def crossCorrelate(maskedimage1, maskedimage2, maxLag, sigma, binsize):
     """
     sctrl = afwMath.StatisticsControl()
     sctrl.setNumSigmaClip(sigma)
+    mask = maskedimage1.getMask()
+    INTRP = mask.getPlaneBitMask("INTRP")
+    sctrl.setAndMask(INTRP)
+
 
     # Diff the images.
     diff = maskedimage1.clone()
@@ -227,7 +231,7 @@ def crossCorrelate(maskedimage1, maskedimage2, maxLag, sigma, binsize):
     # Subtract background.
     nx = diff.getWidth()//binsize
     ny = diff.getHeight()//binsize
-    bctrl = afwMath.BackgroundControl(nx, ny, sctrl, afwMath.MEANCLIP)
+    bctrl = afwMath.BackgroundControl(nx, ny, sctrl, afwMath.MEDIAN)
     bkgd = afwMath.makeBackground(diff, bctrl)
     bgImg = bkgd.getImageF(afwMath.Interpolate.CUBIC_SPLINE,
                            afwMath.REDUCE_INTERP_ORDER)
@@ -241,7 +245,7 @@ def crossCorrelate(maskedimage1, maskedimage2, maxLag, sigma, binsize):
 
     bbox = lsstGeom.Box2I(lsstGeom.Point2I(x0, y0), bbox_extent)
     dim0 = diff[bbox].clone()
-    dim0 -= afwMath.makeStatistics(dim0, afwMath.MEANCLIP, sctrl).getValue()
+    dim0 -= afwMath.makeStatistics(dim0, afwMath.MEDIAN, sctrl).getValue()
 
     xcorr = np.zeros((maxLag + 1, maxLag + 1), dtype=np.float64)
     xcorr_err = np.zeros((maxLag + 1, maxLag + 1), dtype=np.float64)
@@ -251,11 +255,11 @@ def crossCorrelate(maskedimage1, maskedimage2, maxLag, sigma, binsize):
             bbox_lag = lsstGeom.Box2I(lsstGeom.Point2I(x0 + xlag, y0 + ylag),
                                       bbox_extent)
             dim_xy = diff[bbox_lag].clone()
-            dim_xy -= afwMath.makeStatistics(dim_xy, afwMath.MEANCLIP,
+            dim_xy -= afwMath.makeStatistics(dim_xy, afwMath.MEDIAN,
                                              sctrl).getValue()
             dim_xy *= dim0
             xcorr[xlag, ylag] = afwMath.makeStatistics(
-                dim_xy, afwMath.MEANCLIP, sctrl).getValue()
+                dim_xy, afwMath.MEDIAN, sctrl).getValue()
             dim_xy_array = dim_xy.getImage().getArray().flatten()/xcorr[0][0]
             N = len(dim_xy_array.flatten())
             if xlag != 0 and ylag != 0:
