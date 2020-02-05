@@ -135,6 +135,18 @@ class BFTask(pipeBase.Task):
 
         return BFResults
 
+    def fit_slopes(self,xcorr,ycorr,mean,adu_max):
+        xcorr = np.array(xcorr)
+        ycorr = np.array(ycorr)
+        mean = np.array(mean)
+        xcorr = xcorr[mean<adu_max]
+        ycorr = ycorr[mean<adu_max]
+        mean = mean[mean<adu_max]
+        from scipy import stats
+        slopex, _, _, _, errx = stats.linregress(mean, xcorr)
+        slopey, _, _, _, erry = stats.linregress(mean, ycorr)
+        return slopex, errx, slopey, erry
+
     def write_eotest_output(self, BFResults, sensor_id, meanidx=0):
         """Write the correlation curves to a FITS file for plotting,
         and the BF results to the eotest results file."""
@@ -180,6 +192,12 @@ class BFTask(pipeBase.Task):
             results.add_seg_result(amp, 'BF_YCORR', BFResults[amp][2][meanidx])
             results.add_seg_result(amp, 'BF_YCORR_ERR', BFResults[amp][3][meanidx])
             results.add_seg_result(amp, 'BF_MEAN', BFResults[amp][4][meanidx])
+            slopex, slopex_err, slopey_err, slopey = self.fit_slopes(BFResults[\
+amp][0],BFResults[amp][2],BFResults[amp][4],adu_max)
+            results.add_seg_result(amp, 'BF_SLOPEX', slopex)
+            results.add_seg_result(amp, 'BF_SLOPEX_ERR', slopex_err)
+            results.add_seg_result(amp, 'BF_SLOPEY', slopey)
+            results.add_seg_result(amp, 'BF_SLOPEY_ERR', slopey_err)
 
         results.write(clobber=True)
 
