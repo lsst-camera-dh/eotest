@@ -255,6 +255,267 @@ def fe55_zoom(infile, size=250, amp=1, cmap=pylab.cm.hot, nsig=10,
                  horizontalalignment='right', verticalalignment='bottom')
     return win
 
+class OverscanTestPlots(object):
+
+    def __init__(self, sensor_id, overscan_file=None):
+
+        self.sensor_id = sensor_id
+        if overscan_file is None:
+            overscan_file = self._fullpath('%s_overscan_results.fits' % sensor_id)
+        if not os.path.exists(overscan_file):
+            raise RuntimeError("OverscanTestPlots: %s not found" % overscan_file)
+
+        with fits.open(overscan_file) as hdul:
+            self.header = hdul[0].header
+            self.overscan_data = {i : hdul[i].data for i in range(1, 17)}
+
+    def _fullpath(self, basename):
+        return os.path.join(self.rootdir, basename)
+
+    def cti_curves(self, figsize=(12, 8)):
+
+        fig, ax = plt.subplots(1, 1, figsize=figsize)
+
+        cmap = plt.get_cmap("tab10")
+
+        datasec = self.header['DATASEC']
+        amp_geom = parse_geom_kwd(datasec)
+        xmax = amp_geom['xmax']
+
+        for amp in range(1, 17):
+
+            if amp > 8: marker='s'
+            else: marker = '^'
+
+            data = self.overscan_data[amp]['COLUMN_MEAN']
+            offset = np.mean(data[:, -20:], axis=1)
+            signal = self.overscan_data[amp]['FLATFIELD_SIGNAL']-offset
+            overscan1 = data[:, xmax] - offset
+            overscan2 = data[:, xmax+1] - offset
+            lastpixel = data[:, xmax-1] - offset
+            cti = (overscan1+overscan2)/(xmax*lastpixel)
+
+            indices = signal<175000.
+
+            ax.plot(signal[indices], cti[indices], label='Amp {0}'.format(amp), 
+                    color = cmap((amp-1)%8), marker=marker, markersize=5)
+
+        ax.tick_params(axis='x', labelsize=14)
+        ax.tick_params(axis='y', labelsize=14)
+        ax.tick_params(axis='both', which='major', length=8, width=1)
+        ax.tick_params(axis='both', which='minor', length=4, width=1)
+        ax.set_ylim(bottom=7E-8, top=2E-4)
+        ax.set_xlim(left=50.0, right=240000.)
+        ax.set_xscale('log')
+        ax.set_yscale('log')
+        ax.grid(True, which='major', axis='both')
+        ax.set_xlabel('Flat Field Signal [e-]', fontsize=18)
+        ax.set_ylabel('CTI', fontsize=18)
+        ax.legend(fontsize=14, loc=1, ncol=4)
+        ax.set_title('CTI from EPER, {0}'.format(self.sensor_id), fontsize=18)
+
+    def overscan_signal_curves(self, figsize=(12, 8)):
+        
+        fig, axes = plt.subplots(4, 4, sharey=True, sharex=True, figsize=figsize)
+        axes = axes.flatten()
+
+        datasec = self.header['DATASEC']
+        amp_geom = parse_geom_kwd(datasec)
+        xmax = amp_geom['xmax']
+
+        for amp in range(1, 17):
+
+            data = self.overscan_data[amp]['COLUMN_MEAN']
+            offset = np.mean(data[:, -20:], axis=1)
+            signal = self.overscan_data[amp]['FLATFIELD_SIGNAL']-offset
+            overscan1 = data[:, xmax] - offset
+            overscan2 = data[:, xmax+1] - offset
+
+            axes[amp-1].plot(signal, overscan1, label='Overscan 1'.format(amp))
+            axes[amp-1].plot(signal, overscan2, label='Overscan 2'.format(amp))
+
+            axes[amp-1].set_yscale('symlog', threshold=1.0)
+            axes[amp-1].set_xscale('log')
+            axes[amp-1].set_ylim(bottom=-1.0)
+            axes[amp-1].set_xlim(left=50, right=240000)
+            axes[amp-1].set_title('Amp {0}'.format(amp), fontsize=12)
+            axes[amp-1].grid(True, which='major', axis='both')
+
+        h, l = axes[-1].get_legend_handles_labels()
+        fig.subplots_adjust(bottom=0.12)
+        fig.legend(h, l, loc='lower center', ncol=2, fontsize=14)
+
+        fig.add_subplot(111, frameon=False)
+        plt.tick_params(labelcolor='none', top=False, bottom=False, 
+                        left=False, right=False)
+        plt.xlabel('Overscan Mean Signal [e-]', fontsize=14)
+        plt.ylabel('Flat Field Signal [e-]', fontsize=14, labelpad=15)
+
+    def overscan_noise_curves(self, figsize=(12, 8)):
+        
+        fig, ax = plt.subplots(1, 1, figsize=figsize)
+
+        cmap = plt.get_cmap("tab10")
+
+        datasec = self.header['DATASEC']
+        amp_geom = parse_geom_kwd(datasec)
+        xmax = amp_geom['xmax']
+
+        for amp in range(1, 17):
+
+            if amp > 8: marker='s'
+            else: marker = '^'
+
+            signal = self.overscan_data[amp]['FLATFIELD_SIGNAL']
+            noise = self.overscan_data[amp]['OVERSCAN_NOISE']
+
+            ax.plot(signal, noise, label='Amp {0}'.format(amp), linestyle='-', 
+                    marker=marker, color = cmap((amp-1)%8), markersize=5)
+
+        ax.set_xscale('log')
+        ax.set_xlim(left=50, right=240000)
+        ax.set_ylim(bottom=0.0, top=min(15.0, np.max(noise)+2.0))
+        ax.grid(True, which='major', axis='both')
+        ax.set_xlabel('Flat Field Signal [e-]', fontsize=18)
+        ax.set_ylabel('Overscan Noise [e-]', fontsize=18)
+        ax.tick_params(axis='x', labelsize=14)
+        ax.tick_params(axis='y', labelsize=14)
+
+        plt.legend(fontsize=14,  loc = 'upper left', ncol=4)
+        plt.title('Overscan Pixel Noise, {0}'.format(self.sensor_id), 
+                  fontsize=18)
+
+    def overscan_sum_curves(self, figsize=(12, 8)):
+        
+        fig, ax = plt.subplots(1, 1, figsize=figsize)
+
+        cmap = plt.get_cmap("tab10")
+
+        datasec = self.header['DATASEC']
+        amp_geom = parse_geom_kwd(datasec)
+        xmax = amp_geom['xmax']
+
+        for amp in range(1, 17):
+
+            if amp > 8: marker = 's'
+            else: marker = '^'
+
+            data = self.overscan_data[amp]['COLUMN_MEAN']
+            oscansum = np.sum(data[:, xmax+4:xmax+18], axis=1)
+            signal = self.overscan_data[amp]['FLATFIELD_SIGNAL']
+
+            ax.plot(signal, oscansum, label='Amp {0}'.format(amp), 
+                    linestyle='-', marker=marker, color = cmap((amp-1)%8), 
+                    markersize=5)
+
+        ax.set_xscale('log')
+        ax.set_xlim(left=50.0, right=240000.0)
+        ax.set_ylim(bottom=-2.0, top=30.0)
+        ax.grid(True, which='major', axis='both')
+        ax.set_xlabel('Flat Field Signal [e-]', fontsize=18)
+        ax.set_ylabel('Overscan Mean Sum [e-]', fontsize=18)
+        ax.tick_params(axis='x', labelsize=14)
+        ax.tick_params(axis='y', labelsize=14)
+
+        ax.legend(fontsize=14,  loc = 'upper left', ncol=4)
+        ax.set_title('Summed Overscan Pixel Signal [4:18], {0}'.format(self.sensor_id), fontsize=18)
+
+    def eper_low_curves(self, figsize=(12, 8)):
+
+        fig, axes = plt.subplots(4, 4, sharey=True, sharex=True, figsize=figsize)
+        axes = axes.flatten()
+    
+        datasec = self.header['DATASEC']
+        amp_geom = parse_geom_kwd(datasec)
+        xmax = amp_geom['xmax']
+
+        target_signals = [100, 500, 1000, 2500, 5000]
+        for amp in range(1, 17):
+
+            signal = self.overscan_data[amp]['FLATFIELD_SIGNAL']       
+
+            for target in target_signals:
+
+                i = min(range(signal.shape[0]), 
+                        key=lambda i: abs(signal[i]-target))
+
+                data = self.overscan_data[amp]['COLUMN_MEAN'][i, :]
+                offset = np.mean(data[-20:])
+                oscan = data[xmax:] - offset
+                columns = np.arange(xmax, data.shape[0])
+
+                axes[amp-1].plot(columns, oscan, 
+                                 label='{0:d} e-'.format(target))
+
+            axes[amp-1].set_xlim(xmax-0.5, xmax+4.5)
+            axes[amp-1].tick_params(axis='x', labelsize=12)
+            axes[amp-1].tick_params(axis='y', labelsize=12)
+            axes[amp-1].grid(True, which='major', axis='both')
+            axes[amp-1].set_title('Amp {0}'.format(amp), fontsize=14)
+
+
+            if (amp-1) % 4 == 0: 
+                axes[amp-1].set_ylim(-1, 21)
+                axes[amp-1].set_yticks([0, 5, 10, 15, 20])
+
+        h, l = axes[-1].get_legend_handles_labels()
+        fig.subplots_adjust(bottom=0.12)
+        fig.legend(h, l, loc='lower center', ncol=len(target_signals), 
+                   fontsize=14)
+
+        fig.add_subplot(111, frameon=False)
+        plt.tick_params(labelcolor='none', top=False, bottom=False, 
+                        left=False, right=False)
+        plt.xlabel('Column Number', fontsize=14)
+        plt.ylabel('Mean Column Signal [e-]', fontsize=14)
+
+    def eper_high_curves(self, figsize=(12, 8)):
+
+        fig, axes = plt.subplots(4, 4, sharey=True, sharex=True, figsize=figsize)
+        axes = axes.flatten()
+
+        datasec = self.header['DATASEC']
+        amp_geom = parse_geom_kwd(datasec)
+        xmax = amp_geom['xmax']            
+
+        target_signals = [25000, 50000, 75000, 100000, 150000]
+
+        for amp in range(1, 17):
+
+            signal = self.overscan_data[amp]['FLATFIELD_SIGNAL']       
+
+            for target in target_signals:
+
+                i = min(range(signal.shape[0]), 
+                        key=lambda i: abs(signal[i]-target))
+
+                data = self.overscan_data[amp]['COLUMN_MEAN'][i, :]
+                offset = np.mean(data[-20:])
+                oscan = data[xmax:] - offset
+                columns = np.arange(xmax, data.shape[0])
+
+                axes[amp-1].plot(columns, oscan, 
+                                 label='{0:.0f} ke-'.format(target/1000.))
+
+            axes[amp-1].set_yscale('log')
+            axes[amp-1].set_ylim(.05, 400)
+            axes[amp-1].tick_params(axis='x', labelsize=12)
+            axes[amp-1].tick_params(axis='y', labelsize=12)
+            axes[amp-1].set_xlim(xmax-1., xmax+29.)
+            axes[amp-1].grid(True, which='major', axis='both')
+            axes[amp-1].set_title('Amp {0}'.format(amp), fontsize=12)
+            axes[amp-1].tick_params(axis='both', which='minor')
+
+        h, l = axes[-1].get_legend_handles_labels()
+        fig.subplots_adjust(bottom=0.12)
+        fig.legend(h, l, loc='lower center', ncol=len(target_signals), 
+                   fontsize=14)
+
+        fig.add_subplot(111, frameon=False)
+        plt.tick_params(labelcolor='none', top=False, bottom=False, 
+                        left=False, right=False)
+        plt.xlabel('Column Number', fontsize=14)
+        plt.ylabel('Mean Column Signal [e-]', fontsize=14, labelpad=15)
 
 class EOTestPlots(object):
     band_pass = QE_Data.band_pass
@@ -462,262 +723,6 @@ class EOTestPlots(object):
                     % (amp, ptc_gain, ptc_gain_error, ptc_a00, ptc_a00_error)
                 pylab.annotate(note, (0.05, 0.9), xycoords='axes fraction',
                                verticalalignment='top', size='x-small')
-
-    def cti_curves(self, overscan_file=None, figsize=(12, 8)):
-
-        if overscan_file is None:
-            overscan_file = self._fullpath('{0}_overscan_results.fits'.format(self.sensor_id))
-        fig, ax = plt.subplots(1, 1, figsize=figsize)
-
-        cmap = plt.get_cmap("tab10")
-        with fits.open(overscan_file) as overscan:
-
-            datasec = overscan[0].header['DATASEC']
-            amp_geom = parse_geom_kwd(datasec)
-            xmax = amp_geom['xmax']
-
-            for amp in range(1, 17):
-
-                if amp > 8: marker='s'
-                else: marker = '^'
-                
-                data = overscan[amp].data['COLUMN_MEAN']
-                offset = np.mean(data[:, -20:], axis=1)
-                signal = overscan[amp].data['FLATFIELD_SIGNAL']-offset
-                overscan1 = data[:, xmax] - offset
-                overscan2 = data[:, xmax+1] - offset
-                lastpixel = data[:, xmax-1] - offset
-                cti = (overscan1+overscan2)/(xmax*lastpixel)
-        
-                indices = signal<140000.
-
-                ax.plot(signal[indices], cti[indices], label='Amp {0}'.format(amp), 
-                        color = cmap((amp-1)%8), marker=marker, markersize=5)
-
-            ax.tick_params(axis='x', labelsize=14)
-            ax.tick_params(axis='y', labelsize=14)
-            ax.tick_params(axis='both', which='major', length=8, width=1)
-            ax.tick_params(axis='both', which='minor', length=4, width=1)
-            ax.set_ylim(bottom=2E-7, top=2E-4)
-            ax.set_xlim(left=50.0, right=240000.)
-            ax.set_xscale('log')
-            ax.set_yscale('log')
-            ax.grid(True, which='major', axis='both')
-            ax.set_xlabel('Flat Field Signal [e-]', fontsize=18)
-            ax.set_ylabel('CTI', fontsize=18)
-            ax.legend(fontsize=14, loc=1, ncol=4)
-            ax.set_title('CTI from EPER, {0}'.format(self.sensor_id), fontsize=18)
-
-    def overscan_signal_curves(self, overscan_file, figsize=(12, 8)):
-        
-        if overscan_file is None:
-            overscan_file = self._fullpath('{0}_overscan_results.fits'.format(self.sensor_id))
-        fig, axes = plt.subplots(4, 4, sharey=True, sharex=True, figsize=figsize)
-        axes = axes.flatten()
-
-        with fits.open(overscan_file) as overscan:
-
-            datasec = overscan[0].header['DATASEC']
-            amp_geom = parse_geom_kwd(datasec)
-            xmax = amp_geom['xmax']
-
-            for amp in range(1, 17):
-
-                data = overscan[amp].data['COLUMN_MEAN']
-                offset = np.mean(data[:, -20:], axis=1)
-                signal = overscan[amp].data['FLATFIELD_SIGNAL']-offset
-                overscan1 = data[:, xmax] - offset
-                overscan2 = data[:, xmax+1] - offset
-        
-                axes[amp-1].plot(signal, overscan1, label='Overscan 1'.format(amp))
-                axes[amp-1].plot(signal, overscan2, label='Overscan 2'.format(amp))
-        
-                axes[amp-1].set_yscale('symlog', threshold=1.0)
-                axes[amp-1].set_xscale('log')
-                axes[amp-1].set_ylim(bottom=-1.0)
-                axes[amp-1].set_xlim(left=50, right=240000)
-                axes[amp-1].set_title('Amp {0}'.format(amp), fontsize=12)
-                axes[amp-1].grid(True, which='major', axis='both')
-
-            h, l = axes[-1].get_legend_handles_labels()
-            fig.subplots_adjust(bottom=0.12)
-            fig.legend(h, l, loc='lower center', ncol=2, fontsize=14)
-
-            fig.add_subplot(111, frameon=False)
-            plt.tick_params(labelcolor='none', top=False, bottom=False, left=False, right=False)
-            plt.xlabel('Overscan Mean Signal [e-]', fontsize=14)
-            plt.ylabel('Flat Field Signal [e-]', fontsize=14, labelpad=15)
-
-    def overscan_noise_curves(self, overscan_file, figsize=(12, 8)):
-        
-        if overscan_file is None:
-            overscan_file = self._fullpath('{0}_overscan_results.fits'.format(self.sensor_id))
-        fig, ax = plt.subplots(1, 1, figsize=figsize)
-
-        cmap = plt.get_cmap("tab10")
-        with fits.open(overscan_file) as overscan:
-
-            datasec = overscan[0].header['DATASEC']
-            amp_geom = parse_geom_kwd(datasec)
-            xmax = amp_geom['xmax']
-
-            for amp in range(1, 17):
-        
-                if amp > 8: marker='s'
-                else: marker = '^'
-
-                signal = overscan[amp].data['FLATFIELD_SIGNAL']
-                noise = overscan[amp].data['OVERSCAN_NOISE']
-        
-                ax.plot(signal, noise, label='Amp {0}'.format(amp), linestyle='-', 
-                        marker=marker, color = cmap((amp-1)%8), markersize=5)
-        
-            ax.set_xscale('log')
-            ax.set_xlim(left=50, right=240000)
-            ax.set_ylim(bottom=0.0, top=min(15.0, np.max(noise)+2.0))
-            ax.grid(True, which='major', axis='both')
-            ax.set_xlabel('Flat Field Signal [e-]', fontsize=18)
-            ax.set_ylabel('Overscan Noise [e-]', fontsize=18)
-            ax.tick_params(axis='x', labelsize=14)
-            ax.tick_params(axis='y', labelsize=14)
-
-            plt.legend(fontsize=14,  loc = 'upper left', ncol=4)
-            plt.title('Overscan Pixel Noise, {0}'.format(self.sensor_id), fontsize=18)
-
-    def overscan_sum_curves(self, overscan_file, figsize=(12, 8)):
-        
-        if overscan_file is None:
-            overscan_file = self._fullpath('{0}_overscan_results.fits'.format(self.sensor_id))
-        fig, ax = plt.subplots(1, 1, figsize=figsize)
-
-        cmap = plt.get_cmap("tab10")
-        with fits.open(overscan_file) as overscan:
-
-            datasec = overscan[0].header['DATASEC']
-            amp_geom = parse_geom_kwd(datasec)
-            xmax = amp_geom['xmax']
-
-            for amp in range(1, 17):
-        
-                if amp > 8: marker = 's'
-                else: marker = '^'
-
-                data = overscan[amp].data['COLUMN_MEAN']
-                oscansum = np.sum(data[:, xmax+4:xmax+18], axis=1)
-                signal = overscan[amp].data['FLATFIELD_SIGNAL']
-        
-                ax.plot(signal, oscansum, label='Amp {0}'.format(amp), linestyle='-', 
-                        marker=marker, color = cmap((amp-1)%8), markersize=5)
-        
-            ax.set_xscale('log')
-            ax.set_xlim(left=50.0, right=240000.0)
-            ax.set_ylim(bottom=-2.0, top=30.0)
-            ax.grid(True, which='major', axis='both')
-            ax.set_xlabel('Flat Field Signal [e-]', fontsize=18)
-            ax.set_ylabel('Overscan Mean Sum [e-]', fontsize=18)
-            ax.tick_params(axis='x', labelsize=14)
-            ax.tick_params(axis='y', labelsize=14)
-
-            ax.legend(fontsize=14,  loc = 'upper left', ncol=4)
-            ax.set_title('Summed Signal in Overscan Pixels [4:18], {0}'.format(self.sensor_id), fontsize=18)
-
-    def eper_low_curves(self, overscan_file, figsize=(12, 8)):
-
-        if overscan_file is None:
-            overscan_file = self._fullpath('{0}_overscan_results.fits'.format(self.sensor_id))
-        fig, axes = plt.subplots(4, 4, sharey=True, sharex=True, figsize=figsize)
-        axes = axes.flatten()
-    
-        with fits.open(overscan_file) as overscan:
-
-            datasec = overscan[0].header['DATASEC']
-            amp_geom = parse_geom_kwd(datasec)
-            xmax = amp_geom['xmax']
-
-            target_signal_levels = [100, 500, 1000, 2500, 5000]
-            for amp in range(1, 17):
-
-                signal = overscan[amp].data['FLATFIELD_SIGNAL']       
-
-                for target_signal in target_signal_levels:
-
-                    i = min(range(signal.shape[0]), 
-                            key=lambda i: abs(signal[i]-target_signal))
-
-                    data = overscan[amp].data['COLUMN_MEAN'][i, :]
-                    offset = np.mean(data[-20:])
-                    oscan = data[xmax:] - offset
-                    columns = np.arange(xmax, data.shape[0])
-
-                    axes[amp-1].plot(columns, oscan, label='{0:d} e-'.format(target_signal))
-
-                axes[amp-1].set_xlim(xmax-0.5, xmax+4.5)
-                axes[amp-1].tick_params(axis='x', labelsize=12)
-                axes[amp-1].tick_params(axis='y', labelsize=12)
-                axes[amp-1].grid(True, which='major', axis='both')
-                axes[amp-1].set_title('Amp {0}'.format(amp), fontsize=14)
-
-
-                if (amp-1) % 4 == 0: 
-                    axes[amp-1].set_ylim(-1, 21)
-                    axes[amp-1].set_yticks([0, 5, 10, 15, 20])
-
-            h, l = axes[-1].get_legend_handles_labels()
-            fig.subplots_adjust(bottom=0.12)
-            fig.legend(h, l, loc='lower center', ncol=len(target_signal_levels), fontsize=14)
-
-            fig.add_subplot(111, frameon=False)
-            plt.tick_params(labelcolor='none', top=False, bottom=False, left=False, right=False)
-            plt.xlabel('Column Number', fontsize=14)
-            plt.ylabel('Mean Column Signal [e-]', fontsize=14)
-
-    def eper_high_curves(self, overscan_file, figsize=(12, 8)):
-
-        fig, axes = plt.subplots(4, 4, sharey=True, sharex=True, figsize=figsize)
-        axes = axes.flatten()
-
-        with fits.open(overscan_file) as overscan:
-
-            datasec = overscan[0].header['DATASEC']
-            amp_geom = parse_geom_kwd(datasec)
-            xmax = amp_geom['xmax']            
-
-            target_signal_levels = [25000, 50000, 75000, 100000, 150000]
-
-            for amp in range(1, 17):
-
-                signal = overscan[amp].data['FLATFIELD_SIGNAL']       
-
-                for target_signal in target_signal_levels:
-
-                    i = min(range(signal.shape[0]), 
-                            key=lambda i: abs(signal[i]-target_signal))
-
-                    data = overscan[amp].data['COLUMN_MEAN'][i, :]
-                    offset = np.mean(data[-20:])
-                    oscan = data[xmax:] - offset
-                    columns = np.arange(xmax, data.shape[0])
-
-                    axes[amp-1].plot(columns, oscan, 
-                                     label='{0:.0f} ke-'.format(target_signal/1000.))
-
-                axes[amp-1].set_yscale('log')
-                axes[amp-1].set_ylim(.05, 400)
-                axes[amp-1].tick_params(axis='x', labelsize=12)
-                axes[amp-1].tick_params(axis='y', labelsize=12)
-                axes[amp-1].set_xlim(xmax-1., xmax+29.)
-                axes[amp-1].grid(True, which='major', axis='both')
-                axes[amp-1].set_title('Amp {0}'.format(amp), fontsize=12)
-                axes[amp-1].tick_params(axis='both', which='minor')
-
-            h, l = axes[-1].get_legend_handles_labels()
-            fig.subplots_adjust(bottom=0.12)
-            fig.legend(h, l, loc='lower center', ncol=len(target_signal_levels), fontsize=14)
-
-            fig.add_subplot(111, frameon=False)
-            plt.tick_params(labelcolor='none', top=False, bottom=False, left=False, right=False)
-            plt.xlabel('Column Number', fontsize=14)
-            plt.ylabel('Mean Column Signal [e-]', fontsize=14, labelpad=15)
 
     def bf_curves(self, xrange=None, yrange=None, figsize=(6, 8),
                   bf_file=None, adu_max=1e5):
