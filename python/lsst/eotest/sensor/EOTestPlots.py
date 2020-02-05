@@ -300,6 +300,8 @@ class OverscanTestPlots(object):
             ax.plot(signal[indices], cti[indices], label='Amp {0}'.format(amp), 
                     color = cmap((amp-1)%8), marker=marker, markersize=5)
 
+        ax.axhline(y=5.E-6, linestyle='--', color='black')
+
         ax.tick_params(axis='x', labelsize=14)
         ax.tick_params(axis='y', labelsize=14)
         ax.tick_params(axis='both', which='major', length=8, width=1)
