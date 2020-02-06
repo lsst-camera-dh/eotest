@@ -147,7 +147,7 @@ class BFTask(pipeBase.Task):
         slopey, _, _, _, erry = stats.linregress(mean, ycorr)
         return slopex, errx, slopey, erry
 
-    def write_eotest_output(self, BFResults, sensor_id, meanidx=0):
+    def write_eotest_output(self, BFResults, sensor_id, meanidx=0, adu_max=1e5):
         """Write the correlation curves to a FITS file for plotting,
         and the BF results to the eotest results file."""
         outfile = os.path.join(self.config.output_dir,
