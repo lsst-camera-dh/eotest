@@ -135,7 +135,19 @@ class BFTask(pipeBase.Task):
 
         return BFResults
 
-    def write_eotest_output(self, BFResults, sensor_id, meanidx=0):
+    def fit_slopes(self,xcorr,ycorr,mean,adu_max):
+        xcorr = np.array(xcorr)
+        ycorr = np.array(ycorr)
+        mean = np.array(mean)
+        xcorr = xcorr[mean<adu_max]
+        ycorr = ycorr[mean<adu_max]
+        mean = mean[mean<adu_max]
+        from scipy import stats
+        slopex, _, _, _, errx = stats.linregress(mean, xcorr)
+        slopey, _, _, _, erry = stats.linregress(mean, ycorr)
+        return slopex, errx, slopey, erry
+
+    def write_eotest_output(self, BFResults, sensor_id, meanidx=0, adu_max=1e5):
         """Write the correlation curves to a FITS file for plotting,
         and the BF results to the eotest results file."""
         outfile = os.path.join(self.config.output_dir,
@@ -180,6 +192,13 @@ class BFTask(pipeBase.Task):
             results.add_seg_result(amp, 'BF_YCORR', BFResults[amp][2][meanidx])
             results.add_seg_result(amp, 'BF_YCORR_ERR', BFResults[amp][3][meanidx])
             results.add_seg_result(amp, 'BF_MEAN', BFResults[amp][4][meanidx])
+            slopex, slopex_err, slopey_err, slopey \
+                = self.fit_slopes(BFResults[amp][0], BFResults[amp][2],
+                                  BFResults[amp][4], adu_max)
+            results.add_seg_result(amp, 'BF_SLOPEX', slopex)
+            results.add_seg_result(amp, 'BF_SLOPEX_ERR', slopex_err)
+            results.add_seg_result(amp, 'BF_SLOPEY', slopey)
+            results.add_seg_result(amp, 'BF_SLOPEY_ERR', slopey_err)
 
         results.write(clobber=True)
 
@@ -207,7 +226,7 @@ class BFTask(pipeBase.Task):
         local_exp = local_exp[bbox]
 
         # Calculate the mean of the image.
-        mean = afwMath.makeStatistics(local_exp, afwMath.MEAN,
+        mean = afwMath.makeStatistics(local_exp, afwMath.MEDIAN,
                                       sctrl).getValue()
 
         return local_exp, mean
@@ -219,6 +238,10 @@ def crossCorrelate(maskedimage1, maskedimage2, maxLag, sigma, binsize):
     """
     sctrl = afwMath.StatisticsControl()
     sctrl.setNumSigmaClip(sigma)
+    mask = maskedimage1.getMask()
+    INTRP = mask.getPlaneBitMask("INTRP")
+    sctrl.setAndMask(INTRP)
+
 
     # Diff the images.
     diff = maskedimage1.clone()
@@ -227,7 +250,7 @@ def crossCorrelate(maskedimage1, maskedimage2, maxLag, sigma, binsize):
     # Subtract background.
     nx = diff.getWidth()//binsize
     ny = diff.getHeight()//binsize
-    bctrl = afwMath.BackgroundControl(nx, ny, sctrl, afwMath.MEANCLIP)
+    bctrl = afwMath.BackgroundControl(nx, ny, sctrl, afwMath.MEDIAN)
     bkgd = afwMath.makeBackground(diff, bctrl)
     bgImg = bkgd.getImageF(afwMath.Interpolate.CUBIC_SPLINE,
                            afwMath.REDUCE_INTERP_ORDER)
@@ -241,7 +264,7 @@ def crossCorrelate(maskedimage1, maskedimage2, maxLag, sigma, binsize):
 
     bbox = lsstGeom.Box2I(lsstGeom.Point2I(x0, y0), bbox_extent)
     dim0 = diff[bbox].clone()
-    dim0 -= afwMath.makeStatistics(dim0, afwMath.MEANCLIP, sctrl).getValue()
+    dim0 -= afwMath.makeStatistics(dim0, afwMath.MEDIAN, sctrl).getValue()
 
     xcorr = np.zeros((maxLag + 1, maxLag + 1), dtype=np.float64)
     xcorr_err = np.zeros((maxLag + 1, maxLag + 1), dtype=np.float64)
@@ -251,11 +274,11 @@ def crossCorrelate(maskedimage1, maskedimage2, maxLag, sigma, binsize):
             bbox_lag = lsstGeom.Box2I(lsstGeom.Point2I(x0 + xlag, y0 + ylag),
                                       bbox_extent)
             dim_xy = diff[bbox_lag].clone()
-            dim_xy -= afwMath.makeStatistics(dim_xy, afwMath.MEANCLIP,
+            dim_xy -= afwMath.makeStatistics(dim_xy, afwMath.MEDIAN,
                                              sctrl).getValue()
             dim_xy *= dim0
             xcorr[xlag, ylag] = afwMath.makeStatistics(
-                dim_xy, afwMath.MEANCLIP, sctrl).getValue()
+                dim_xy, afwMath.MEDIAN, sctrl).getValue()
             dim_xy_array = dim_xy.getImage().getArray().flatten()/xcorr[0][0]
             N = len(dim_xy_array.flatten())
             if xlag != 0 and ylag != 0:
