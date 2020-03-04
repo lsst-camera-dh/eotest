@@ -24,7 +24,10 @@ class OverscanResults(object):
 
         self.column_mean = {amp : [] for amp in range(1, 17)}
         self.column_variance = {amp : [] for amp in range(1, 17)}
-        self.overscan_noise = {amp : [] for amp in range(1, 17)}
+        self.row_mean = {amp : [] for amp in range(1, 17)}
+        self.row_variance = {amp : [] for amp in range(1, 17)}
+        self.serial_overscan_noise = {amp : [] for amp in range(1, 17)}
+        self.parallel_overscan_noise = {amp : [] for amp in range(1, 17)}
         self.flatfield_signal = {amp : [] for amp in range(1, 17)}
 
     def process_image(self, ccd, gains):
@@ -42,14 +45,20 @@ class OverscanResults(object):
 
             imarr = image.getImage().getArray()*gains[amp]
 
-            column_mean = np.mean(imarr[ymin-1:ymax, :], axis=0)
-            column_variance = np.var(imarr[ymin-1:ymax, :], axis=0)
-            overscan_noise = np.mean(np.std(imarr[ymin-1:ymax, xmax+2:xmax+28], axis=1))
+            column_mean = np.mean(imarr[ymin-1:ymax, xmax-1:], axis=0)
+            column_variance = np.var(imarr[ymin-1:ymax, xmax-1:], axis=0)
+            row_mean = np.mean(imarr[ymax-1:, xmin-1:xmax], axis=1)
+            row_variance = np.var(imarr[ymax-1:, xmin-1:xmax], axis=1)
+            serial_overscan_noise = np.mean(np.std(imarr[ymin-1:ymax, xmax+2:], axis=1))
+            parallel_overscan_noise = np.mean(np.std(imarr[ymax+2:, xmin-1:xmax], axis=1))
             flatfield_signal = np.mean(imarr[ymin-1:ymax, xmin-1:xmax])
                 
             self.column_mean[amp].append(column_mean)
             self.column_variance[amp].append(column_variance)
-            self.overscan_noise[amp].append(overscan_noise)
+            self.row_mean[amp].append(row_mean)
+            self.row_variance[amp].append(row_variance)
+            self.serial_overscan_noise[amp].append(serial_overscan_noise)
+            self.parallel_overscan_noise[amp].append(parallel_overscan_noise)
             self.flatfield_signal[amp].append(flatfield_signal)
 
         self.output[0].header['DATASEC'] = datasec
@@ -61,8 +70,11 @@ class OverscanResults(object):
             extname = 'Amp{0:02d}'.format(amp)
             out_dict[extname] = dict(COLUMN_MEAN=self.column_mean[amp],
                                      COLUMN_VARIANCE=self.column_variance[amp],
+                                     ROW_MEAN=self.row_mean[amp],
+                                     ROW_VARIANCE=self.row_variance[amp],
                                      FLATFIELD_SIGNAL=self.flatfield_signal[amp],
-                                     OVERSCAN_NOISE=self.overscan_noise[amp])
+                                     SERIAL_OVERSCAN_NOISE=self.serial_overscan_noise[amp],
+                                     PARALLEL_OVERSCAN_NOISE=self.parallel_overscan_noise[amp])
         return out_dict
 
     def write_results(self, outfile):
@@ -71,6 +83,7 @@ class OverscanResults(object):
         for amp in range(1, 17):
             extname = 'Amp{0:02d}'.format(amp)
             ncols = len(self.column_mean[amp][0])
+            nrows = len(self.row_mean[amp][0])
 
             idx = np.argsort(self.flatfield_signal[amp])
 
@@ -78,10 +91,16 @@ class OverscanResults(object):
                                 unit='e-', array=np.asarray(self.column_mean[amp])[idx, :]),
                     fits.Column('COLUMN_VARIANCE', format='{0}E'.format(ncols), 
                                 unit='e-', array=np.asarray(self.column_variance[amp])[idx, :]),
+                    fits.Column('ROW_MEAN', format='{0}E'.format(nrows),
+                                unit='e-', array=np.asarray(self.row_mean[amp])[idx, :]),
+                    fits.Column('ROW_VARIANCE', format='{0}E'.format(nrows),
+                                unit='e-', array=np.asarray(self.row_variance[amp])[idx, :]),
                     fits.Column('FLATFIELD_SIGNAL', format='E', unit='e-', 
                                 array=np.asarray(self.flatfield_signal[amp])[idx]),
-                    fits.Column('OVERSCAN_NOISE', format='E', unit='e-', 
-                                array=np.asarray(self.overscan_noise[amp])[idx])]
+                    fits.Column('SERIAL_OVERSCAN_NOISE', format='E', unit='e-', 
+                                array=np.asarray(self.serial_overscan_noise[amp])[idx]),
+                    fits.Column('PARALLEL_OVERSCAN_NOISE', format='E', unit='e-',
+                                array=np.asarray(self.parallel_overscan_noise[amp])[idx])]
 
             self.output.append(fitsTableFactory(cols))
             self.output[-1].name = extname
