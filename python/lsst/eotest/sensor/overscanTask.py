@@ -28,8 +28,9 @@ class OverscanTask(pipeBase.Task):
     def run(self, sensor_id, infiles, gains, bias_frame=None,
             linearity_correction=None):
 
+        all_amps = imutils.allAmps(infiles[0])
         ## Calculate mean row for each flat file
-        overscan_results = OverscanResults()
+        overscan_results = OverscanResults(all_amps)
         for i, infile in enumerate(infiles):
             if self.config.verbose:
                 self.log.info("Processing {0}".format(infile))

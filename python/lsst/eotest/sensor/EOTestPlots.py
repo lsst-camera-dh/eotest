@@ -267,7 +267,8 @@ class OverscanTestPlots(object):
 
         with fits.open(overscan_file) as hdul:
             self.header = hdul[0].header
-            self.overscan_data = {i : hdul[i].data for i in range(1, 17)}
+            self.all_amps = range(1, int(self.header['NAMPS'])+1)
+            self.overscan_data = {i : hdul[i].data for i in self.all_amps}
 
     def _fullpath(self, basename):
         return os.path.join(self.rootdir, basename)
@@ -282,7 +283,7 @@ class OverscanTestPlots(object):
 
         cmap = plt.get_cmap("tab10")
 
-        for amp in range(1, 17):
+        for amp in self.all_amps:
 
             if amp > 8: marker='s'
             else: marker = '^'
@@ -322,7 +323,7 @@ class OverscanTestPlots(object):
 
         target_signals = [25000, 50000, 75000, 100000, 150000]
 
-        for amp in range(1, 17):
+        for amp in self.all_amps:
 
             signal = self.overscan_data[amp]['FLATFIELD_SIGNAL']       
 
@@ -364,7 +365,7 @@ class OverscanTestPlots(object):
         axes = axes.flatten()
 
         target_signals = [100, 500, 1000, 2500, 5000]
-        for amp in range(1, 17):
+        for amp in self.all_amps:
 
             signal = self.overscan_data[amp]['FLATFIELD_SIGNAL']       
 
@@ -408,7 +409,7 @@ class OverscanTestPlots(object):
 
         cmap = plt.get_cmap("tab10")
 
-        for amp in range(1, 17):
+        for amp in self.all_amps:
 
             if amp > 8: marker='s'
             else: marker = '^'
@@ -437,7 +438,7 @@ class OverscanTestPlots(object):
         fig, axes = plt.subplots(4, 4, sharey=True, sharex=True, figsize=figsize)
         axes = axes.flatten()
 
-        for amp in range(1, 17):
+        for amp in self.all_amps:
 
             data = self.overscan_data[amp]['ROW_MEAN']
             signal = self.overscan_data[amp]['FLATFIELD_SIGNAL']
@@ -470,7 +471,7 @@ class OverscanTestPlots(object):
 
         cmap = plt.get_cmap("tab10")
 
-        for amp in range(1, 17):
+        for amp in self.all_amps:
 
             if amp > 8: marker = 's'
             else: marker = '^'
@@ -505,7 +506,7 @@ class OverscanTestPlots(object):
 
         cmap = plt.get_cmap("tab10")
 
-        for amp in range(1, 17):
+        for amp in self.all_amps:
 
             if amp > 8: marker='s'
             else: marker = '^'
@@ -545,7 +546,7 @@ class OverscanTestPlots(object):
 
         target_signals = [25000, 50000, 75000, 100000, 150000]
 
-        for amp in range(1, 17):
+        for amp in self.all_amps:
 
             signal = self.overscan_data[amp]['FLATFIELD_SIGNAL']       
 
@@ -587,7 +588,7 @@ class OverscanTestPlots(object):
         axes = axes.flatten()
 
         target_signals = [100, 500, 1000, 2500, 5000]
-        for amp in range(1, 17):
+        for amp in self.all_amps:
 
             signal = self.overscan_data[amp]['FLATFIELD_SIGNAL']       
 
@@ -631,7 +632,7 @@ class OverscanTestPlots(object):
 
         cmap = plt.get_cmap("tab10")
 
-        for amp in range(1, 17):
+        for amp in self.all_amps:
 
             if amp > 8: marker='s'
             else: marker = '^'
@@ -660,7 +661,7 @@ class OverscanTestPlots(object):
         fig, axes = plt.subplots(4, 4, sharey=True, sharex=True, figsize=figsize)
         axes = axes.flatten()
 
-        for amp in range(1, 17):
+        for amp in self.all_amps:
 
             data = self.overscan_data[amp]['COLUMN_MEAN']
             signal = self.overscan_data[amp]['FLATFIELD_SIGNAL']
@@ -693,7 +694,7 @@ class OverscanTestPlots(object):
 
         cmap = plt.get_cmap("tab10")
 
-        for amp in range(1, 17):
+        for amp in self.all_amps:
 
             if amp > 8: marker = 's'
             else: marker = '^'

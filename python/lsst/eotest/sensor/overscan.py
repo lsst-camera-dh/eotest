@@ -17,23 +17,24 @@ from .AmplifierGeometry import parse_geom_kwd
 
 class OverscanResults(object):
 
-    def __init__(self):
+    def __init__(self, all_amps):
 
         self.output = fits.HDUList()
         self.output.append(fits.PrimaryHDU())
+        self.all_amps = all_amps
 
-        self.column_mean = {amp : [] for amp in range(1, 17)}
-        self.column_variance = {amp : [] for amp in range(1, 17)}
-        self.row_mean = {amp : [] for amp in range(1, 17)}
-        self.row_variance = {amp : [] for amp in range(1, 17)}
-        self.serial_overscan_noise = {amp : [] for amp in range(1, 17)}
-        self.parallel_overscan_noise = {amp : [] for amp in range(1, 17)}
-        self.flatfield_signal = {amp : [] for amp in range(1, 17)}
+        self.column_mean = {amp : [] for amp in all_amps}
+        self.column_variance = {amp : [] for amp in all_amps}
+        self.row_mean = {amp : [] for amp in all_amps}
+        self.row_variance = {amp : [] for amp in all_amps}
+        self.serial_overscan_noise = {amp : [] for amp in all_amps}
+        self.parallel_overscan_noise = {amp : [] for amp in all_amps}
+        self.flatfield_signal = {amp : [] for amp in all_amps}
 
     def process_image(self, ccd, gains):
         """Process an image."""
       
-        for amp in range(1, 17):
+        for amp in self.all_amps:
             image = ccd.bias_subtracted_image(amp)
 
             datasec = ccd.amp_geom[1]['DATASEC']
@@ -66,7 +67,7 @@ class OverscanResults(object):
     def build_output_dict(self):
         """Export the results as a dictionary of dictionaries"""
         out_dict = {}
-        for amp in range(1, 17):
+        for amp in self.all_amps:
             extname = 'Amp{0:02d}'.format(amp)
             out_dict[extname] = dict(COLUMN_MEAN=self.column_mean[amp],
                                      COLUMN_VARIANCE=self.column_variance[amp],
@@ -80,7 +81,7 @@ class OverscanResults(object):
     def write_results(self, outfile):
         """Export results as a FITs file."""
         
-        for amp in range(1, 17):
+        for amp in self.all_amps:
             extname = 'Amp{0:02d}'.format(amp)
             ncols = len(self.column_mean[amp][0])
             nrows = len(self.row_mean[amp][0])
@@ -105,5 +106,5 @@ class OverscanResults(object):
             self.output.append(fitsTableFactory(cols))
             self.output[-1].name = extname
 
-        self.output[0].header['NAMPS'] = 16
+        self.output[0].header['NAMPS'] = len(self.all_amps)
         fitsWriteto(self.output, outfile, overwrite=True, checksum=True)
