@@ -358,6 +358,8 @@ class OverscanTestPlots(object):
                         left=False, right=False)
         plt.xlabel('Overscan Row Number', fontsize=14)
         plt.ylabel('Mean Row Signal [e-]', fontsize=14, labelpad=15)
+        plt.title('High Signal Parallel EPER, {0}'.format(self.sensor_id), 
+                  fontsize=16, pad=20)
 
     def parallel_eper_low_curves(self, figsize=(12, 8)):
 
@@ -402,6 +404,8 @@ class OverscanTestPlots(object):
                         left=False, right=False)
         plt.xlabel('Overscan Row Number', fontsize=14)
         plt.ylabel('Mean Row Signal [e-]', fontsize=14)
+        plt.title('Low Signal Parallel EPER, {0}'.format(self.sensor_id), 
+                  fontsize=16, pad=20)
 
     def parallel_overscan_noise_curves(self, figsize=(12, 8)):
         
@@ -464,6 +468,8 @@ class OverscanTestPlots(object):
                         left=False, right=False)
         plt.ylabel('Parallel Overscan Mean Signal [e-]', fontsize=14, labelpad=15)
         plt.xlabel('Flat Field Signal [e-]', fontsize=14)
+        plt.title('Overscan Pixel Signal, {0}'.format(self.sensor_id), 
+                  fontsize=16, pad=20)
 
     def parallel_overscan_sum_curves(self, figsize=(12, 8)):
         
@@ -494,7 +500,8 @@ class OverscanTestPlots(object):
         ax.tick_params(axis='y', labelsize=14)
 
         ax.legend(fontsize=14,  loc = 'upper left', ncol=4)
-        ax.set_title('Summed Parallel Overscan Pixel Signal [3:20], {0}'.format(self.sensor_id), fontsize=18)
+        ax.set_title('Summed Parallel Overscan Pixel Signal [3:20], {0}'.format(self.sensor_id), 
+                     fontsize=18)
 
     def serial_cti_curves(self, figsize=(12, 8)):
 
@@ -581,6 +588,8 @@ class OverscanTestPlots(object):
                         left=False, right=False)
         plt.xlabel('Overscan Column Number', fontsize=14)
         plt.ylabel('Mean Column Signal [e-]', fontsize=14, labelpad=15)
+        plt.title('High Signal Serial EPER, {0}'.format(self.sensor_id), 
+                  fontsize=16, pad=20)
 
     def serial_eper_low_curves(self, figsize=(12, 8)):
 
@@ -625,6 +634,8 @@ class OverscanTestPlots(object):
                         left=False, right=False)
         plt.xlabel('Overscan Column Number', fontsize=14)
         plt.ylabel('Mean Column Signal [e-]', fontsize=14)
+        plt.title('Low Signal Serial EPER, {0}'.format(self.sensor_id), 
+                  fontsize=16, pad=20)
 
     def serial_overscan_noise_curves(self, figsize=(12, 8)):
         
@@ -687,6 +698,8 @@ class OverscanTestPlots(object):
                         left=False, right=False)
         plt.ylabel('Serial Overscan Mean Signal [e-]', fontsize=14, labelpad=15)
         plt.xlabel('Flat Field Signal [e-]', fontsize=14)
+        plt.title('Overscan Pixel Signal, {0}'.format(self.sensor_id), 
+                  fontsize=16, pad=20)
 
     def serial_overscan_sum_curves(self, figsize=(12, 8)):
         
@@ -717,7 +730,8 @@ class OverscanTestPlots(object):
         ax.tick_params(axis='y', labelsize=14)
 
         ax.legend(fontsize=14,  loc = 'upper left', ncol=4)
-        ax.set_title('Summed Serial Overscan Pixel Signal [5:25], {0}'.format(self.sensor_id), fontsize=18)
+        ax.set_title('Summed Serial Overscan Pixel Signal [5:25], {0}'.format(self.sensor_id), 
+                     fontsize=18)
 
 class EOTestPlots(object):
     band_pass = QE_Data.band_pass
