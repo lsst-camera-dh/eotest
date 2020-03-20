@@ -1,8 +1,6 @@
 """
 Module to manage plots for single sensor EO test reports.
 """
-from __future__ import print_function
-from __future__ import absolute_import
 import os
 import sys
 import glob
@@ -924,16 +922,15 @@ class EOTestPlots(object):
                                   xrange=xrange, yrange=yrange,
                                   xlog=1, ylog=1, new_win=False,)
                 axes = pylab.gca()
-                xrange = list(axes.get_xlim())
-                xrange[0] = max(xrange[0], 1e-1)
-                xx = np.logspace(np.log10(xrange[0]), np.log10(xrange[1]), 20)
+                xx = np.logspace(np.log10(min(mean)), np.log10(max(mean)), 20)
                 # Plot PTC curves using gain measurements.
                 ptc_gain = self.results['PTC_GAIN'][amp-1]
                 ptc_gain_error = self.results['PTC_GAIN_ERROR'][amp-1]
                 ptc_noise = self.results['PTC_NOISE'][amp-1]
                 ptc_a00 = self.results['PTC_A00'][amp-1]
                 ptc_a00_error = self.results['PTC_A00_ERROR'][amp-1]
-                plot.curve(xx, ptc_func((ptc_a00, ptc_gain, ptc_noise*ptc_noise), xx),
+                plot.curve(xx, ptc_func((ptc_a00, ptc_gain,
+                                         ptc_noise*ptc_noise), xx),
                            oplot=1, color='b', lineStyle=':')
                 note = 'Amp %i\nGain = %.2f +/- %.2f\nA00 = %.1e +/- %.1e'\
                     % (amp, ptc_gain, ptc_gain_error, ptc_a00, ptc_a00_error)
@@ -1379,7 +1376,8 @@ class EOTestPlots(object):
         band_wls = np.array([sum(self.band_pass[b])/2. for b in
                              list(self.band_pass.keys()) if b in bands])
         band_wls_errs = np.array([(self.band_pass[b][1]-self.band_pass[b][0])/2.
-                                  for b in list(self.band_pass.keys()) if b in bands])
+                                  for b in list(self.band_pass.keys())
+                                  if b in bands])
         wl = qe_data[1].data.field('WAVELENGTH')
         qe = {}
         for amp in imutils.allAmps(self._qe_file):
@@ -1488,8 +1486,10 @@ class CcdSpecs(OrderedDict):
                          traps_offline=('CCD-012e',),
                          dark_current=('CCD-014',),
                          dark_current_offline=('CCD-014',),
-                         qe_analysis=('CCD-021', 'CCD-022', 'CCD-023', 'CCD-024', 'CCD-025', 'CCD-026'),
-                         qe_offline=('CCD-021', 'CCD-022', 'CCD-023', 'CCD-024', 'CCD-025', 'CCD-026'),
+                         qe_analysis=('CCD-021', 'CCD-022', 'CCD-023',
+                                      'CCD-024', 'CCD-025', 'CCD-026'),
+                         qe_offline=('CCD-021', 'CCD-022', 'CCD-023',
+                                     'CCD-024', 'CCD-025', 'CCD-026'),
                          prnu=('CCD-027',),
                          prnu_offline=('CCD-027',),
                          fe55_analysis=('CCD-028',),
