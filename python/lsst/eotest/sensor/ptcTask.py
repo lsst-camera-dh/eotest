@@ -279,22 +279,4 @@ class PtcTask(pipeBase.Task):
                                                          ptc_noise_error,
                                                          ptc_turnoff))
 
-            # Now fit the means and variances that were evaluated with MAD filtering
-            mean, var = np.array(ptc_stats[amp][2]), np.array(ptc_stats[amp][3])
-            (ptc_gain, ptc_error, ptc_a00, ptc_a00_error, ptc_noise,
-             ptc_noise_error, ptc_turnoff) \
-             = self.fit_ptc_curve(mean, var, sig_cut=sig_cut, logger=self.log)
-            output.add_seg_result(amp, 'PTC_MGAIN', ptc_gain)
-            output.add_seg_result(amp, 'PTC_MGAIN_ERROR', ptc_error)
-            output.add_seg_result(amp, 'PTC_MA00', ptc_a00)
-            output.add_seg_result(amp, 'PTC_MA00_ERROR', ptc_a00_error)
-            output.add_seg_result(amp, 'PTC_MNOISE', ptc_noise)
-            output.add_seg_result(amp, 'PTC_MNOISE_ERROR', ptc_noise_error)
-            output.add_seg_result(amp, 'PTC_MTURNOFF', ptc_turnoff)
-            self.log.info("%i  %f  %f %f %f %f %f %f" % (amp, ptc_gain,
-                                                         ptc_error, ptc_a00,
-                                                         ptc_a00_error,
-                                                         ptc_noise,
-                                                         ptc_noise_error,
-                                                         ptc_turnoff))
         output.write()
