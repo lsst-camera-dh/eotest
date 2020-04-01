@@ -11,6 +11,7 @@ import operator
 import numpy as np
 import scipy.optimize
 import astropy.io.fits as fits
+import astropy.stats as astats
 import lsst.afw.image as afwImage
 import lsst.afw.math as afwMath
 import lsst.pex.config as pexConfig
@@ -20,8 +21,6 @@ import lsst.eotest.image_utils as imutils
 from .MaskedCCD import MaskedCCD
 from .EOTestResults import EOTestResults
 from .flatPairTask import find_flat2
-import astropy.stats as astats
-import matplotlib.pyplot as plt
 
 def exptime(x): return imutils.Metadata(x).get('EXPTIME')
 
@@ -105,12 +104,13 @@ def flat_pair_stats(ccd1, ccd2, amp, mask_files=(), bias_frame=None):
         image2 = np.ravel(image2.getArrays()[0])
         fdiff = image1 - image2
         mad = astats.mad_std(fdiff)  #/2.
-        # The factor 14.826 below makes the filter the equivalent of a 10-sigma cut for a normal distribution
-        g = np.where((np.abs(fdiff) < (mad*14.826)))[0]
+        # The factor 14.826 below makes the filter the equivalent of a 10-sigma
+        # cut for a normal distribution
+        keep = np.where((np.abs(fdiff) < (mad*14.826)))[0]
 
         # Re-weight the images
-        mean1 = mean(image1[g])
-        mean2 = mean(image2[g])
+        mean1 = mean(image1[keep])
+        mean2 = mean(image2[keep])
         fmean = (mean1 + mean2)/2.
         weight1 = mean2/fmean
         weight2 = mean1/fmean
@@ -118,7 +118,7 @@ def flat_pair_stats(ccd1, ccd2, amp, mask_files=(), bias_frame=None):
         image2 *= weight2
 
         fmean = (mean1 + mean2)/2.
-        fvar = np.var(image1[g] - image2[g])/2.
+        fvar = np.var(image1[keep] - image2[keep])/2.
 
     return FlatPairStats(fmean, fvar)
 
@@ -203,7 +203,7 @@ class PtcTask(pipeBase.Task):
     def fit_ptc_curve(mean, var, sig_cut=5, logger=None):
         """Fit the PTC curve for a set of mean-variance points."""
         index_old = []
-        index = list(np.where((mean < 4e4)*(var >0))[0])
+        index = list(np.where((mean < 4e4)*(var > 0))[0])
         count = 1
         # Initial guess for BF coeff, gain, and square of the read noise
         pars = 2.7e-6, 0.75, 25
