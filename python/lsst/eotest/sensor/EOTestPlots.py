@@ -929,11 +929,12 @@ class EOTestPlots(object):
                 ptc_noise = self.results['PTC_NOISE'][amp-1]
                 ptc_a00 = self.results['PTC_A00'][amp-1]
                 ptc_a00_error = self.results['PTC_A00_ERROR'][amp-1]
-                plot.curve(xx, ptc_func((ptc_a00, ptc_gain,
-                                         ptc_noise*ptc_noise), xx),
+                ptc_turnoff = self.results['PTC_TURNOFF'][amp-1]
+                plot.curve(xx, ptc_func((ptc_a00, ptc_gain, ptc_noise*ptc_noise), xx),
                            oplot=1, color='b', lineStyle=':')
-                note = 'Amp %i\nGain = %.2f +/- %.2f\nA00 = %.1e +/- %.1e'\
-                    % (amp, ptc_gain, ptc_gain_error, ptc_a00, ptc_a00_error)
+                note = 'Amp %i\nGain = %.2f +/- %.2f\nA00 = %.1e +/- %.1e \nTurnoff = %7.0f'\
+                    % (amp, ptc_gain, ptc_gain_error, ptc_a00, ptc_a00_error,
+                       ptc_turnoff)
                 pylab.annotate(note, (0.05, 0.9), xycoords='axes fraction',
                                verticalalignment='top', size='x-small')
 
