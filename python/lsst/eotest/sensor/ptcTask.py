@@ -152,7 +152,7 @@ class PtcTask(pipeBase.Task):
         exposure = []
         seqnums = []
         dayobs = []
-        file1s = sorted([item for item in infiles if item.find('flat0') != -1])
+        file1s = sorted([item for item in infiles if item.find('flat1') != -1])
         for flat1 in file1s:
             flat2 = flat2_finder(flat1)
             if self.config.verbose:
