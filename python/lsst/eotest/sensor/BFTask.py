@@ -168,7 +168,7 @@ class BFTask(pipeBase.Task):
                              'AMP%02i_COV02' % amp, 'AMP%02i_COV02_ERR' % amp,
                              'AMP%02i_MEAN' % amp])
             units.extend(
-                ['Unitless', 'Unitless', 'Unitless', 'Unitless', 'ADU'])
+                ['Unitless', 'Unitless', 'Unitless', 'Unitless', 'Unitless','Unitless','Unitless','Unitless','e-'])
             columns.extend([np.array(BFResults[amp][0], dtype=np.float),
                             np.array(BFResults[amp][1], dtype=np.float),
                             np.array(BFResults[amp][2], dtype=np.float),
@@ -177,8 +177,7 @@ class BFTask(pipeBase.Task):
                             np.array(BFResults[amp][5], dtype=np.float),
                             np.array(BFResults[amp][6], dtype=np.float),
                             np.array(BFResults[amp][7], dtype=np.float),
-                            np.array(BFResults[amp][8], dtype=np.float),
-                            np.array(BFResults[amp][9], dtype=np.float)])
+                            np.array(BFResults[amp][8], dtype=np.float)])
         formats = 'E'*len(colnames)
         fits_cols = [fits.Column(name=colnames[i], format=formats[i],
                                  unit=units[i], array=columns[i])
