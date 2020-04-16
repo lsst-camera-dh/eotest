@@ -76,9 +76,6 @@ class BFTask(pipeBase.Task):
         all flat pairs given for a particular exposure time.  Additionally
         store the flat means per amp.
         """
-        if dark_frame is not None:
-            ccd_dark = MaskedCCD(dark_frame, mask_files=mask_files,
-                                 linearity_correction=linearity_correction)
 
         if single_pairs:
             if flat2_finder is None:
@@ -98,20 +95,17 @@ class BFTask(pipeBase.Task):
             self.log.info("%s\n%s", *flat_pair)
             ccd1 = MaskedCCD(flat_pair[0], mask_files=mask_files,
                              bias_frame=bias_frame,
-                             linearity_correction=linearity_correction)
+                             linearity_correction=linearity_correction,dark_frame=dark_frame)
             ccd2 = MaskedCCD(flat_pair[1], mask_files=mask_files,
                              bias_frame=bias_frame,
-                             linearity_correction=linearity_correction)
+                             linearity_correction=linearity_correction,dark_frame=dark_frame)
 
             for amp in all_amps:
                 self.log.info('on amp %s', amp)
-                dark_image = None if dark_frame is None \
-                             else ccd_dark.unbiased_and_trimmed_image(amp)
-
                 image1 = ccd1.unbiased_and_trimmed_image(amp)
                 image2 = ccd2.unbiased_and_trimmed_image(amp)
-                prepped_image1, mean1 = self.prep_image(image1, gains[amp], dark_image)
-                prepped_image2, mean2 = self.prep_image(image2, gains[amp], dark_image)
+                prepped_image1, mean1 = self.prep_image(image1, gains[amp])
+                prepped_image2, mean2 = self.prep_image(image2, gains[amp])
 
                 # Calculate the average mean of the pair.
                 avemean = (mean1 + mean2)/2
@@ -212,7 +206,7 @@ class BFTask(pipeBase.Task):
 
         results.write(clobber=True)
 
-    def prep_image(self, exp, gain, dark_image=None):
+    def prep_image(self, exp, gain):
         """
         Crop the image to avoid edge effects based on the Config border
         parameter. Additionally, if there is a dark image, subtract.
@@ -225,10 +219,6 @@ class BFTask(pipeBase.Task):
         border = self.config.nPixBorder
 
         sctrl = afwMath.StatisticsControl()
-
-        # If a dark image is passed, subtract it.
-        if dark_image is not None:
-            local_exp -= dark_image.getImage()
 
         # Crop the image within a border region.
         bbox = local_exp.getBBox()
