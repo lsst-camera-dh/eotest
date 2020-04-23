@@ -968,7 +968,7 @@ class EOTestPlots(object):
                 mean = mean[index]
                 xcorr = xcorr[index]
                 index = np.where(mean < adu_max)
-                plt.plot(mean[index], xcorr[index]/xcorr[index], label='%s' % amp)
+                plt.plot(mean[index], xcorr[index]/mean[index], label='%s' % amp)
             plt.xlabel('mean signal (ADU)', fontsize='small')
             plt.ylabel('cov(2, 0)/mean', fontsize='small')
             plt.legend(fontsize='x-small', loc=2)
@@ -983,7 +983,7 @@ class EOTestPlots(object):
                 mean = mean[index]
                 ycorr = ycorr[index]
                 index = np.where(mean < adu_max)
-                plt.plot(mean[index], ycorr[index]/ycorr[index], label='%s' % amp)
+                plt.plot(mean[index], ycorr[index]/mean[index], label='%s' % amp)
             plt.xlabel('mean signal (ADU)', fontsize='small')
             plt.ylabel('cov(0, 1)/mean', fontsize='small')
             plt.legend(fontsize='x-small', loc=2)
@@ -997,7 +997,7 @@ class EOTestPlots(object):
                 mean = mean[index]
                 ycorr = ycorr[index]
                 index = np.where(mean < adu_max)
-                plt.plot(mean[index], xcorr[index]/xcorr[index], label='%s' % amp)
+                plt.plot(mean[index], ycorr[index]/mean[index], label='%s' % amp)
             plt.xlabel('mean signal (ADU)', fontsize='small')
             plt.ylabel('cov(0, 2)/mean', fontsize='small')
             plt.legend(fontsize='x-small', loc=2)
@@ -1012,7 +1012,7 @@ class EOTestPlots(object):
                 mean = mean[index]
                 ycorr = ycorr[index]
                 index = np.where(mean < adu_max)
-                plt.plot(mean[index], ycorr[index]/ycorr[index], label='%s' % amp)
+                plt.plot(mean[index], ycorr[index]/mean[index], label='%s' % amp)
             plt.xlabel('mean signal (ADU)', fontsize='small')
             plt.ylabel('cov(1, 1)/mean', fontsize='small')
             plt.legend(fontsize='x-small', loc=2)
