@@ -938,41 +938,85 @@ class EOTestPlots(object):
                 pylab.annotate(note, (0.05, 0.9), xycoords='axes fraction',
                                verticalalignment='top', size='x-small')
 
-    def bf_curves(self, xrange=None, yrange=None, figsize=(6, 8),
+    def bf_curves(self, xrange=None, yrange=None, figsize=(24, 12),
                   bf_file=None, adu_max=1e5):
         if bf_file is None:
             bf_file = self._fullpath('%s_bf.fits' % self.sensor_id)
         fig = plt.figure(figsize=figsize)
         with fits.open(bf_file) as bf:
 
-            fig.add_subplot(2, 1, 1)
+            fig.add_subplot(3, 2, 1)
             for amp in imutils.allAmps(bf_file):
                 mean = bf[1].data.field('AMP%02i_MEAN' % amp)
-                xcorr = bf[1].data.field('AMP%02i_XCORR' % amp)
+                xcorr = bf[1].data.field('AMP%02i_COV10' % amp)
                 index = np.argsort(mean)
                 mean = mean[index]
                 xcorr = xcorr[index]
                 index = np.where(mean < adu_max)
-                plt.plot(mean[index], xcorr[index], label='%s' % amp)
+                plt.plot(mean[index], xcorr[index]/mean[index], label='%s' % amp)
             plt.xlabel('mean signal (ADU)', fontsize='small')
-            plt.ylabel('corr(1, 0)', fontsize='small')
+            plt.ylabel('cov(1, 0)/mean', fontsize='small')
             plt.legend(fontsize='x-small', loc=2)
-            plt.title('Brighter-Fatter corr(1, 0), %s' % self.sensor_id,
+            plt.title('Brighter-Fatter cov(1, 0), %s' % self.sensor_id,
                       fontsize='small')
 
-            fig.add_subplot(2, 1, 2)
+            fig.add_subplot(3, 2, 2)
             for amp in imutils.allAmps(bf_file):
                 mean = bf[1].data.field('AMP%02i_MEAN' % amp)
-                ycorr = bf[1].data.field('AMP%02i_YCORR' % amp)
+                xcorr = bf[1].data.field('AMP%02i_COV20' % amp)
+                index = np.argsort(mean)
+                mean = mean[index]
+                xcorr = xcorr[index]
+                index = np.where(mean < adu_max)
+                plt.plot(mean[index], xcorr[index]/mean[index], label='%s' % amp)
+            plt.xlabel('mean signal (ADU)', fontsize='small')
+            plt.ylabel('cov(2, 0)/mean', fontsize='small')
+            plt.legend(fontsize='x-small', loc=2)
+            plt.title('Brighter-Fatter cov(2, 0), %s' % self.sensor_id,
+                      fontsize='small')
+
+            fig.add_subplot(3, 2, 3)
+            for amp in imutils.allAmps(bf_file):
+                mean = bf[1].data.field('AMP%02i_MEAN' % amp)
+                ycorr = bf[1].data.field('AMP%02i_COV01' % amp)
                 index = np.argsort(mean)
                 mean = mean[index]
                 ycorr = ycorr[index]
                 index = np.where(mean < adu_max)
-                plt.plot(mean[index], ycorr[index], label='%s' % amp)
+                plt.plot(mean[index], ycorr[index]/mean[index], label='%s' % amp)
             plt.xlabel('mean signal (ADU)', fontsize='small')
-            plt.ylabel('corr(0, 1)', fontsize='small')
+            plt.ylabel('cov(0, 1)/mean', fontsize='small')
             plt.legend(fontsize='x-small', loc=2)
-            plt.title('Brighter-Fatter corr(0, 1), %s' % self.sensor_id,
+            plt.title('Brighter-Fatter cov(0, 1), %s' % self.sensor_id,
+                      fontsize='small')
+            fig.add_subplot(3, 2, 4)
+            for amp in imutils.allAmps(bf_file):
+                mean = bf[1].data.field('AMP%02i_MEAN' % amp)
+                ycorr = bf[1].data.field('AMP%02i_COV02' % amp)
+                index = np.argsort(mean)
+                mean = mean[index]
+                ycorr = ycorr[index]
+                index = np.where(mean < adu_max)
+                plt.plot(mean[index], ycorr[index]/mean[index], label='%s' % amp)
+            plt.xlabel('mean signal (ADU)', fontsize='small')
+            plt.ylabel('cov(0, 2)/mean', fontsize='small')
+            plt.legend(fontsize='x-small', loc=2)
+            plt.title('Brighter-Fatter cov(0, 2), %s' % self.sensor_id,
+                      fontsize='small')
+
+            fig.add_subplot(3, 2, 5)
+            for amp in imutils.allAmps(bf_file):
+                mean = bf[1].data.field('AMP%02i_MEAN' % amp)
+                ycorr = bf[1].data.field('AMP%02i_COV11' % amp)
+                index = np.argsort(mean)
+                mean = mean[index]
+                ycorr = ycorr[index]
+                index = np.where(mean < adu_max)
+                plt.plot(mean[index], ycorr[index]/mean[index], label='%s' % amp)
+            plt.xlabel('mean signal (ADU)', fontsize='small')
+            plt.ylabel('cov(1, 1)/mean', fontsize='small')
+            plt.legend(fontsize='x-small', loc=2)
+            plt.title('Brighter-Fatter cov(1, 1), %s' % self.sensor_id,
                       fontsize='small')
         plt.tight_layout()
 

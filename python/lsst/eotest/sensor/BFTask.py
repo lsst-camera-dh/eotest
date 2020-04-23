@@ -46,7 +46,7 @@ def find_flats(flats, flat2_finder=find_flat2):
 
 class BFConfig(pexConfig.Config):
     """Configuration for BFTask"""
-    maxLag = pexConfig.Field("Maximum lag", int, default=1)
+    maxLag = pexConfig.Field("Maximum lag", int, default=2)
     nPixBorder = pexConfig.Field("Number of pixels to clip on the border",
                                  int, default=10)
     nSigmaClip = pexConfig.Field("Number of sigma to clip for corr calc", int,
@@ -59,7 +59,7 @@ class BFConfig(pexConfig.Config):
 
 
 BFAmpResults = namedtuple('BFAmpResults',
-                          'xcorr xcorr_err ycorr ycorr_err mean'.split())
+                          'COV10 COV10_err COV20 COV20_err COV01 COV01_err COV02 COV02_err COV11 COV11_err mean'.split())
 
 
 class BFTask(pipeBase.Task):
@@ -70,15 +70,12 @@ class BFTask(pipeBase.Task):
     @pipeBase.timeMethod
     def run(self, sensor_id, flat_files, single_pairs=True,
             dark_frame=None, mask_files=(), flat2_finder=None,
-            bias_frame=None, meanidx=0, linearity_correction=None):
+            bias_frame=None, meanidx=0, linearity_correction=None,gains=None):
         """
         Compute the average nearest neighbor correlation coefficients for
         all flat pairs given for a particular exposure time.  Additionally
         store the flat means per amp.
         """
-        if dark_frame is not None:
-            ccd_dark = MaskedCCD(dark_frame, mask_files=mask_files,
-                                 linearity_correction=linearity_correction)
 
         if single_pairs:
             if flat2_finder is None:
@@ -92,26 +89,23 @@ class BFTask(pipeBase.Task):
         # List with some number of flat pairs per exposure
         # [[(flat1,flat2),(flat1,flat2)],[(flat1,flat2),(flat1,flat2)]]
 
-        BFResults = {amp: BFAmpResults([], [], [], [], []) for amp in all_amps}
+        BFResults = {amp: BFAmpResults([], [], [], [], [], [], [], [], [], [], []) for amp in all_amps}
 
         for flat_pair in flats:
             self.log.info("%s\n%s", *flat_pair)
             ccd1 = MaskedCCD(flat_pair[0], mask_files=mask_files,
                              bias_frame=bias_frame,
-                             linearity_correction=linearity_correction)
+                             linearity_correction=linearity_correction,dark_frame=dark_frame)
             ccd2 = MaskedCCD(flat_pair[1], mask_files=mask_files,
                              bias_frame=bias_frame,
-                             linearity_correction=linearity_correction)
+                             linearity_correction=linearity_correction,dark_frame=dark_frame)
 
             for amp in all_amps:
                 self.log.info('on amp %s', amp)
-                dark_image = None if dark_frame is None \
-                             else ccd_dark.unbiased_and_trimmed_image(amp)
-
                 image1 = ccd1.unbiased_and_trimmed_image(amp)
                 image2 = ccd2.unbiased_and_trimmed_image(amp)
-                prepped_image1, mean1 = self.prep_image(image1, dark_image)
-                prepped_image2, mean2 = self.prep_image(image2, dark_image)
+                prepped_image1, mean1 = self.prep_image(image1, gains[amp])
+                prepped_image2, mean2 = self.prep_image(image2, gains[amp])
 
                 # Calculate the average mean of the pair.
                 avemean = (mean1 + mean2)/2
@@ -125,10 +119,16 @@ class BFTask(pipeBase.Task):
 
                 # Append the per-amp values for this pair to the
                 # corresponding lists.
-                BFResults[amp].xcorr.append(corr[1][0]/corr[0][0])
-                BFResults[amp].xcorr_err.append(corr_err[1][0])
-                BFResults[amp].ycorr.append(corr[0][1]/corr[0][0])
-                BFResults[amp].ycorr_err.append(corr_err[0][1])
+                BFResults[amp].COV10.append(corr[1][0])
+                BFResults[amp].COV10_err.append(corr_err[1][0])
+                BFResults[amp].COV20.append(corr[2][0])
+                BFResults[amp].COV20_err.append(corr_err[2][0])
+                BFResults[amp].COV01.append(corr[0][1])
+                BFResults[amp].COV01_err.append(corr_err[0][1])
+                BFResults[amp].COV02.append(corr[0][2])
+                BFResults[amp].COV02_err.append(corr_err[0][2])
+                BFResults[amp].COV11.append(corr[1][1])
+                BFResults[amp].COV11_err.append(corr_err[1][1])
                 BFResults[amp].mean.append(avemean)
 
         self.write_eotest_output(BFResults, sensor_id, meanidx=meanidx)
@@ -158,16 +158,24 @@ class BFTask(pipeBase.Task):
         units = []
         columns = []
         for amp in BFResults:
-            colnames.extend(['AMP%02i_XCORR' % amp, 'AMP%02i_XCORR_ERR' % amp,
-                             'AMP%02i_YCORR' % amp, 'AMP%02i_YCORR_ERR' % amp,
-                             'AMP%02i_MEAN' % amp])
+            colnames.extend(['AMP%02i_COV10' % amp, 'AMP%02i_COV10_ERR' % amp,
+                             'AMP%02i_COV20' % amp, 'AMP%02i_COV20_ERR' % amp,
+                             'AMP%02i_COV01' % amp, 'AMP%02i_COV01_ERR' % amp,
+                             'AMP%02i_COV02' % amp, 'AMP%02i_COV02_ERR' % amp,
+                             'AMP%02i_COV11' % amp, 'AMP%02i_COV11_ERR' % amp, 'AMP%02i_MEAN' % amp])
             units.extend(
-                ['Unitless', 'Unitless', 'Unitless', 'Unitless', 'ADU'])
+                ['Unitless', 'Unitless', 'Unitless', 'Unitless', 'Unitless','Unitless','Unitless','Unitless','Unitless','Unitless','e-'])
             columns.extend([np.array(BFResults[amp][0], dtype=np.float),
                             np.array(BFResults[amp][1], dtype=np.float),
                             np.array(BFResults[amp][2], dtype=np.float),
                             np.array(BFResults[amp][3], dtype=np.float),
-                            np.array(BFResults[amp][4], dtype=np.float)])
+                            np.array(BFResults[amp][4], dtype=np.float),
+                            np.array(BFResults[amp][5], dtype=np.float),
+                            np.array(BFResults[amp][6], dtype=np.float),
+                            np.array(BFResults[amp][7], dtype=np.float),
+                            np.array(BFResults[amp][8], dtype=np.float),
+                            np.array(BFResults[amp][9], dtype=np.float),
+                            np.array(BFResults[amp][10], dtype=np.float)])
         formats = 'E'*len(colnames)
         fits_cols = [fits.Column(name=colnames[i], format=formats[i],
                                  unit=units[i], array=columns[i])
@@ -202,7 +210,7 @@ class BFTask(pipeBase.Task):
 
         results.write(clobber=True)
 
-    def prep_image(self, exp, dark_image=None):
+    def prep_image(self, exp, gain):
         """
         Crop the image to avoid edge effects based on the Config border
         parameter. Additionally, if there is a dark image, subtract.
@@ -216,14 +224,11 @@ class BFTask(pipeBase.Task):
 
         sctrl = afwMath.StatisticsControl()
 
-        # If a dark image is passed, subtract it.
-        if dark_image is not None:
-            local_exp -= dark_image.getImage()
-
         # Crop the image within a border region.
         bbox = local_exp.getBBox()
         bbox.grow(-border)
         local_exp = local_exp[bbox]
+        local_exp*=gain
 
         # Calculate the mean of the image.
         mean = afwMath.makeStatistics(local_exp, afwMath.MEDIAN,
