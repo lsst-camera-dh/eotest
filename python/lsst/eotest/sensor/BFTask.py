@@ -1,4 +1,4 @@
-1;95;0c"""
+"""
 brief Compute the brighter fatter correlation coefficients.  Input is
 flat pairs.  Based on the LSST DM cdoe.  Output is the nearest neighbor
 coefficients per amp.
