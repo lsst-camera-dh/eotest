@@ -59,7 +59,7 @@ class BFConfig(pexConfig.Config):
 
 
 BFAmpResults = namedtuple('BFAmpResults',
-                          'COV10 COV10_err COV20 COV20_err COV01 COV01_err COV02 COV02_err mean'.split())
+                          'COV10 COV10_err COV20 COV20_err COV01 COV01_err COV02 COV02_err COV11 COV11_err mean'.split())
 
 
 class BFTask(pipeBase.Task):
@@ -89,7 +89,7 @@ class BFTask(pipeBase.Task):
         # List with some number of flat pairs per exposure
         # [[(flat1,flat2),(flat1,flat2)],[(flat1,flat2),(flat1,flat2)]]
 
-        BFResults = {amp: BFAmpResults([], [], [], [], [], [], [], [], []) for amp in all_amps}
+        BFResults = {amp: BFAmpResults([], [], [], [], [], [], [], [], [], [], []) for amp in all_amps}
 
         for flat_pair in flats:
             self.log.info("%s\n%s", *flat_pair)
@@ -127,6 +127,8 @@ class BFTask(pipeBase.Task):
                 BFResults[amp].COV01_err.append(corr_err[0][1])
                 BFResults[amp].COV02.append(corr[2][0])
                 BFResults[amp].COV02_err.append(corr_err[2][0])
+                BFResults[amp.COV11.append(corr[1][1])
+                BFResults[amp].COV11_err.append(corr_err[1][1])
                 BFResults[amp].mean.append(avemean)
 
         self.write_eotest_output(BFResults, sensor_id, meanidx=meanidx)
@@ -160,9 +162,9 @@ class BFTask(pipeBase.Task):
                              'AMP%02i_COV20' % amp, 'AMP%02i_COV20_ERR' % amp,
                              'AMP%02i_COV01' % amp, 'AMP%02i_COV01_ERR' % amp,
                              'AMP%02i_COV02' % amp, 'AMP%02i_COV02_ERR' % amp,
-                             'AMP%02i_MEAN' % amp])
+                             'AMP502i_COV11' %amp, 'AMP%02i_COV11_ERR' % amp, 'AMP%02i_MEAN' % amp])
             units.extend(
-                ['Unitless', 'Unitless', 'Unitless', 'Unitless', 'Unitless','Unitless','Unitless','Unitless','e-'])
+                ['Unitless', 'Unitless', 'Unitless', 'Unitless', 'Unitless','Unitless','Unitless','Unitless','Unitless','Unitless','e-'])
             columns.extend([np.array(BFResults[amp][0], dtype=np.float),
                             np.array(BFResults[amp][1], dtype=np.float),
                             np.array(BFResults[amp][2], dtype=np.float),
@@ -171,7 +173,9 @@ class BFTask(pipeBase.Task):
                             np.array(BFResults[amp][5], dtype=np.float),
                             np.array(BFResults[amp][6], dtype=np.float),
                             np.array(BFResults[amp][7], dtype=np.float),
-                            np.array(BFResults[amp][8], dtype=np.float)])
+                            np.array(BFResults[amp][8], dtype=np.float),
+                            np.array(BFResults[amp][9], dtype=np.float),
+                            np.array(BFResults[amp][10], dtype=np.float)])
         formats = 'E'*len(colnames)
         fits_cols = [fits.Column(name=colnames[i], format=formats[i],
                                  unit=units[i], array=columns[i])
