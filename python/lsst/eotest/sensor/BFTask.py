@@ -1,4 +1,4 @@
-"""
+1;95;0c"""
 brief Compute the brighter fatter correlation coefficients.  Input is
 flat pairs.  Based on the LSST DM cdoe.  Output is the nearest neighbor
 coefficients per amp.
@@ -127,7 +127,7 @@ class BFTask(pipeBase.Task):
                 BFResults[amp].COV01_err.append(corr_err[0][1])
                 BFResults[amp].COV02.append(corr[2][0])
                 BFResults[amp].COV02_err.append(corr_err[2][0])
-                BFResults[amp.COV11.append(corr[1][1])
+                BFResults[amp].COV11.append(corr[1][1])
                 BFResults[amp].COV11_err.append(corr_err[1][1])
                 BFResults[amp].mean.append(avemean)
 
@@ -162,7 +162,7 @@ class BFTask(pipeBase.Task):
                              'AMP%02i_COV20' % amp, 'AMP%02i_COV20_ERR' % amp,
                              'AMP%02i_COV01' % amp, 'AMP%02i_COV01_ERR' % amp,
                              'AMP%02i_COV02' % amp, 'AMP%02i_COV02_ERR' % amp,
-                             'AMP502i_COV11' %amp, 'AMP%02i_COV11_ERR' % amp, 'AMP%02i_MEAN' % amp])
+                             'AMP%02i_COV11' % amp, 'AMP%02i_COV11_ERR' % amp, 'AMP%02i_MEAN' % amp])
             units.extend(
                 ['Unitless', 'Unitless', 'Unitless', 'Unitless', 'Unitless','Unitless','Unitless','Unitless','Unitless','Unitless','e-'])
             columns.extend([np.array(BFResults[amp][0], dtype=np.float),
