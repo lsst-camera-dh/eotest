@@ -43,6 +43,18 @@ def pair_mean(flat1, flat2, amp):
     return np.array([avg_mean_value, flat1_value, flat2_value], dtype=float)
 
 
+def row_mean_variance(flat1, flat2, amp):
+    """
+    Compute the variance of the row mean distributions for the
+    specified amp from a pair of flats.
+    """
+    mi_diff = afwImage.MaskedImageF(flat1.unbiased_and_trimmed_image(amp),
+                                    deep=True)
+    mi_diff -= flat2.unbiased_and_trimmed_image(amp)
+    row_means = np.mean(mi_diff.getImage().array, axis=1)
+    return np.var(row_means)
+
+
 def find_flat2(flat1):
     pattern = flat1.split('flat1')[0] + 'flat2*.fits'
     flat2_files = glob.glob(pattern)
@@ -153,6 +165,7 @@ class FlatPairTask(pipeBase.Task):
         colnames = ['flux'] + ['AMP%02i_SIGNAL' % i for i in all_amps] + \
                    ['FLAT1_AMP%02i_SIGNAL' % i for i in all_amps] + \
                    ['FLAT2_AMP%02i_SIGNAL' % i for i in all_amps] + \
+                   ['AMP%02i_ROW_MEAN_VAR' % i for i in all_amps] + \
                    ['SEQNUM', 'DAYOBS']
         formats = 'E'*(len(colnames) - 2) + 'JJ'
         units = ['None'] + ['e-']*3*len(all_amps) + ['None', 'None']
@@ -245,6 +258,8 @@ class FlatPairTask(pipeBase.Task):
                 self.output[-1].data.field(colname)[row] = signal
                 self.output[-1].data.field('FLAT1_' + colname)[row] = sig1
                 self.output[-1].data.field('FLAT2_' + colname)[row] = sig2
+                self.output[-1].data.field(f'AMP{amp:02d}_ROW_MEAN_VAR')[row] \
+                    = row_mean_variances(flat1, flat2, amp)
                 self.output[-1].data.field('SEQNUM')[row] = seqnum
                 self.output[-1].data.field('DAYOBS')[row] = dayobs
         self.output[0].header['NAMPS'] = len(flat1)
