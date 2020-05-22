@@ -45,14 +45,14 @@ def pair_mean(flat1, flat2, amp):
 
 def row_mean_variance(flat1, flat2, amp):
     """
-    Compute the variance of the row mean distributions for the
-    specified amp from a pair of flats.
+    Compute the 3-sigma clipped variance of the row mean distributions
+    for the specified amp from a pair of flats.
     """
     mi_diff = afwImage.MaskedImageF(flat1.unbiased_and_trimmed_image(amp),
                                     deep=True)
     mi_diff -= flat2.unbiased_and_trimmed_image(amp)
     row_means = np.mean(mi_diff.getImage().array, axis=1)
-    return np.var(row_means)
+    return afwMath.makeStatistics(row_means, afwMath.VARIANCECLIP).getValue()
 
 
 def find_flat2(flat1):
