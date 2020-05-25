@@ -85,7 +85,7 @@ def mondiode_value(fits_file, _, factor=5):
     return sum((y[1:] + y[:-1])/2.*(x[1:] - x[:-1]))/exptime
 
 
-def compute_row_mean_var_slopes(detrespfile, max_flux=1e5):
+def compute_row_mean_var_slopes(detrespfile, min_flux=3000, max_flux=1e5):
     """
     Fits linear slopes to var(row_mean) vs flux as an indicator of
     long-range serial correlations.
@@ -97,8 +97,11 @@ def compute_row_mean_var_slopes(detrespfile, max_flux=1e5):
         for amp in amps:
             amp_label = f'AMP{amp:02d}'
             flux = detresp[1].data[f'{amp_label}_SIGNAL']
-            index = np.where(flux < max_flux)
             row_mean_var = detresp[1].data[f'{amp_label}_ROW_MEAN_VAR']
+            # Restrict to higher flux values below full well and
+            # avoid nans in row_mean_var.
+            index = np.where((min_flux < flux) & (flux < max_flux)
+                             & (row_mean_var == row_mean_var))
             slopes[amp] = sum(row_mean_var[index])/sum(2.*flux[index]/ncols)
     return slopes
 
