@@ -110,8 +110,8 @@ def flat_pair_stats(ccd1, ccd2, amp, mask_files=(), bias_frame=None):
         keep = np.where((np.abs(fdiff) < (mad*14.826)))[0]
 
         # Re-weight the images
-        mean1 = np.mean(image1[keep])
-        mean2 = np.mean(image2[keep])
+        mean1 = np.mean(image1[keep], dtype=np.float64)
+        mean2 = np.mean(image2[keep], dtype=np.float64)
         fmean = (mean1 + mean2)/2.
         weight1 = mean2/fmean
         weight2 = mean1/fmean
@@ -152,7 +152,8 @@ class PtcTask(pipeBase.Task):
         exposure = []
         seqnums = []
         dayobs = []
-        file1s = sorted([item for item in infiles if item.find('flat1') != -1])
+        #file1s = sorted([item for item in infiles if item.find('flat1') != -1])
+        file1s = sorted([item for item in infiles if item.find('flat0') != -1])
         for flat1 in file1s:
             flat2 = flat2_finder(flat1)
             if self.config.verbose:
