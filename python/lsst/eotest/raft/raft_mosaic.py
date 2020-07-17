@@ -38,7 +38,7 @@ class RaftMosaic:
     def __init__(self, fits_files, gains=None, bias_subtract=True,
                  nx=12700, ny=12700, nx_segments=8, ny_segments=2,
                  segment_processor=None, bias_frames=None,
-                 dark_currents=None):
+                 dark_currents=None, e2v_xoffset=21):
         """
         Parameters
         ----------
@@ -71,6 +71,10 @@ class RaftMosaic:
             Dictionary of dictionaries of dark current values per amp
             in e-/s, keyed by raft slot and by amp number. If None, then
             dark current subtraction is not applied.
+        e2v_xoffset : int [21]
+            Offset in serial direction for CRVAL1Q parameter to get
+            07-00 segments to align properly with 10-17 segments
+            in BOT-level FITS files for e2V CCDs.
         """
         self.fits_files = fits_files
         with fits.open(list(fits_files.values())[0]) as hdu_list:
@@ -106,10 +110,11 @@ class RaftMosaic:
                     else:
                         dark_correction = 0
                     self._set_segment(slot, ccd, amp, hdu, gains[slot][amp],
-                                      bias_subtract, dark_correction)
+                                      bias_subtract, dark_correction,
+                                      e2v_xoffset=e2v_xoffset)
 
     def _set_segment(self, slot, ccd, amp, hdu, amp_gain, bias_subtract,
-                     dark_correction):
+                     dark_correction, e2v_xoffset=21):
         """
         Set the pixel values in the mosaic from the segment values.
         """
@@ -131,6 +136,8 @@ class RaftMosaic:
             xmin = xmax - ccd.amp_geom.nx
         else:
             xmin = int(hdu.header['CRVAL1Q'])
+            if ccd.amp_geom.vendor == 'E2V':
+                xmin += e2v_xoffset
             xmax = xmin + ccd.amp_geom.nx
         # Determine flip in parallel direction based on 2, 2 element
         # of transformation matrix.
