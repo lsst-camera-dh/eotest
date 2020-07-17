@@ -161,7 +161,7 @@ class RaftMosaic:
 
     def plot(self, title=None, cmap=plt.cm.hot, nsig=5, figsize=(10, 10),
              binsize=10, flipx=True, textcolor='c', annotation='',
-             rotate180=False):
+             rotate180=False, vrange=None):
         """
         Render the raft mosaic.
 
@@ -193,6 +193,9 @@ class RaftMosaic:
             Flag to rotate the mosaic by 180 degrees to match the
             orientation of the focalplane mosiacs created for the
             BOT-level plots.
+        vrange : (float, float) [None]
+            Range of pixel values to plot.  If None, then the cmap_range
+            function will be used.
         """
         plt.rcParams['figure.figsize'] = figsize
         fig = plt.figure()
@@ -210,7 +213,10 @@ class RaftMosaic:
         image = ax.imshow(output_array, interpolation='nearest', cmap=cmap)
         # Set range and normalization of color map based on sigma-clip
         # of pixel values.
-        vmin, vmax = cmap_range(output_array, nsig=nsig)
+        if vrange is None:
+            vmin, vmax = cmap_range(output_array, nsig=nsig)
+        else:
+            vmin, vmax = vrange
         norm = matplotlib.colors.Normalize(vmin=vmin, vmax=vmax)
         image.set_norm(norm)
         if title is None:
