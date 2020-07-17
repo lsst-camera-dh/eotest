@@ -264,21 +264,20 @@ class RaftMosaic:
 
 
 class CornerRaftMosaic:
-    # These are nominal locations of one of the corners of each imaging
-    # segment for the corresponding amp in the guide and wavefront sensors
-    # in a coordinate system that is rotated so that the wavefront sensors
-    # are in the lower right corner of the raft.
-    slot_data = dict()
-    slot_data['SG0'] = {amp: (4126, 4827 + (amp - 1)*509)
-                        for amp in range(1, 9)}
-    slot_data['SG0'].update({amp: (125, 8390 - (amp - 9)*509)
-                             for amp in range(9, 17)})
-    slot_data['SG1'] = {amp: (8390 - (amp - 1)*509, 4126)
-                        for amp in range(1, 9)}
-    slot_data['SG1'].update({amp: (4827 + (amp - 9)*509, 125)
-                             for amp in range(9, 17)})
-    slot_data['SW1'] = {amp: (602 + (amp-1)*509, 4126) for amp in range(1, 9)}
-    slot_data['SW0'] = {amp: (4165 - (amp-1)*509, 125) for amp in range(1, 9)}
+    # The amp_llc data are the nominal locations in pixel coordinates
+    # of the lower left corner of each imaging segment for the
+    # corresponding amp in the guide and wavefront sensors.  These
+    # values assume a coordinate system which is rotated so that the
+    # wavefront sensors are in the lower left corner of the raft.
+    amp_llc = dict()
+    amp_llc['SG0'] = {amp: (2126, 4318 + (amp - 1)*509) for amp in range(1, 9)}
+    amp_llc['SG0'].update({amp: (125, 7881 - (amp - 9)*509)
+                           for amp in range(9, 17)})
+    amp_llc['SG1'] = {amp: (7881 - (amp - 1)*509, 2126) for amp in range(1, 9)}
+    amp_llc['SG1'].update({amp: (4318 + (amp - 9)*509, 125)
+                           for amp in range(9, 17)})
+    amp_llc['SW0'] = {amp: (3656 - (amp-1)*509, 125) for amp in range(1, 9)}
+    amp_llc['SW1'] = {amp: (93 + (amp-1)*509, 2126) for amp in range(1, 9)}
 
     def __init__(self, fits_files, nx=9000, ny=9000, bias_frames=None):
         self.fits_files = fits_files
@@ -290,69 +289,52 @@ class CornerRaftMosaic:
                 self.wl = None
         self.image_array = np.zeros((nx, ny), dtype=np.float32)
         for slot, filename in fits_files.items():
-            if slot not in self.slot_data:
+            if slot not in self.amp_llc:
                 continue
             bias_frame = bias_frames[slot] if bias_frames is not None else None
             ccd = sensorTest.MaskedCCD(filename, bias_frame=bias_frame)
             for amp in ccd:
                 if slot.startswith('SW'):
                     self._set_sw_segment(slot, ccd, amp)
-                elif slot == 'SG0':
-                    self._set_sg0_segment(slot, ccd, amp)
-                elif slot == 'SG1':
-                    self._set_sg1_segment(slot, ccd, amp)
+                else:
+                    self._set_sg_segment(slot, ccd, amp)
 
     def _set_sw_segment(self, slot, ccd, amp):
+        xmin, ymin = self.amp_llc[slot][amp]
+        xmax = xmin + ccd.amp_geom.nx
+        ymax = ymin + ccd.amp_geom.ny
         seg_array = np.array(copy.deepcopy(ccd.unbiased_and_trimmed_image(amp)
                                            .getImage().getArray()),
                              dtype=np.float32)
-        xx, yy = self.slot_data[slot][amp]
-        xmin = xx - ccd.amp_geom.nx
-        xmax = xx
         if slot == 'SW0':
             # Flip amps in serial direction and parallel directions.
             # This is equivalent to a 180 degree rotation about the
             # segment center.
             seg_array = seg_array[::-1, ::-1]
-            ymin = yy
-            ymax = yy + ccd.amp_geom.ny
-        else:
-            ymin = yy - ccd.amp_geom.ny
-            ymax = yy
         self.image_array[ymin:ymax, xmin:xmax] = seg_array
 
-    def _set_sg0_segment(self, slot, ccd, amp):
+    def _set_sg_segment(self, slot, ccd, amp):
+        xmin, ymin = self.amp_llc[slot][amp]
+        if slot == 'SG0':
+            # SGO sensors have their x- and y-coordinates swapped wrt
+            # SG1 and wavefront and science raft sensors, so swap nx
+            # and ny from the amp geometries.  The corresponding
+            # transpose of the pixel data is performed below.
+            xmax = xmin + ccd.amp_geom.ny
+            ymax = ymin + ccd.amp_geom.nx
+        else:
+            xmax = xmin + ccd.amp_geom.nx
+            ymax = ymin + ccd.amp_geom.ny
+
         seg_array = np.array(copy.deepcopy(ccd.unbiased_and_trimmed_image(amp)
                                            .getImage().getArray()),
                              dtype=np.float32)
-        seg_array = seg_array.transpose()
-        xx, yy = self.slot_data[slot][amp]
-        ymin = yy - ccd.amp_geom.nx
-        ymax = yy
-        if amp < 9:
-            seg_array = seg_array[:, ::-1]
-            xmin = xx - ccd.amp_geom.ny
-            xmax = xx
-        else:
-            xmin = xx
-            xmax = xx + ccd.amp_geom.ny
-        self.image_array[ymin:ymax, xmin:xmax] = seg_array
-
-    def _set_sg1_segment(self, slot, ccd, amp):
-        seg_array = np.array(copy.deepcopy(ccd.unbiased_and_trimmed_image(amp)
-                                           .getImage().getArray()),
-                             dtype=np.float32)
-        xx, yy = self.slot_data[slot][amp]
-        seg_array = seg_array[:, ::-1]
-        xmin = xx - ccd.amp_geom.nx
-        xmax = xx
         if amp < 9:
             seg_array = seg_array[::-1, :]
-            ymin = yy - ccd.amp_geom.ny
-            ymax = yy
+        if slot == 'SG0':
+            seg_array = seg_array.transpose()
         else:
-            ymin = yy
-            ymax = yy + ccd.amp_geom.ny
+            seg_array = seg_array[:, ::-1]
         self.image_array[ymin:ymax, xmin:xmax] = seg_array
 
     def plot(self, title=None, cmap=plt.cm.hot, nsig=5, figsize=(10, 10),
