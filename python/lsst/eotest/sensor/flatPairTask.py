@@ -102,7 +102,10 @@ def compute_row_mean_var_slopes(detrespfile, min_flux=3000, max_flux=1e5):
             # avoid nans in row_mean_var.
             index = np.where((min_flux < flux) & (flux < max_flux)
                              & (row_mean_var == row_mean_var))
-            slopes[amp] = sum(row_mean_var[index])/sum(2.*flux[index]/ncols)
+            if len(index[0]) == 0:
+                slopes[amp] = 0
+            else:
+                slopes[amp] = sum(row_mean_var[index])/sum(2.*flux[index]/ncols)
     return slopes
 
 
