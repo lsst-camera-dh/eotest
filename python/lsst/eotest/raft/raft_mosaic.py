@@ -14,23 +14,23 @@ import lsst.eotest.sensor as sensorTest
 from lsst.eotest.sensor.EOTestPlots import cmap_range
 
 
-__all__ = ['ScienceRaftMosaic', 'CornerRaftMosaic', 'make_raft_mosaic']
+__all__ = ['RaftMosaic', 'CornerRaftMosaic', 'make_raft_mosaic']
 
 
 def make_raft_mosaic(fits_files, gains=None, bias_subtract=True,
                      segment_processor=None, bias_frames=None,
                      dark_currents=None):
     corner_raft_slots = {'SW0', 'SW1', 'SG0', 'SG1'}
-    if corner_raft_flots.intersection(fits_files):
+    if corner_raft_slots.intersection(fits_files):
         return CornerRaftMosaic(fits_files, bias_frames=bias_frames)
-    return ScienceRaftMosaic(fits_files, gains=gains,
-                             bias_subtract=bias_subtract,
-                             segment_processor=segment_processor,
-                             bias_frames=bias_frames,
-                             dark_currents=dark_currents)
+    return RaftMosaic(fits_files, gains=gains,
+                      bias_subtract=bias_subtract,
+                      segment_processor=segment_processor,
+                      bias_frames=bias_frames,
+                      dark_currents=dark_currents)
 
 
-class ScienceRaftMosaic:
+class RaftMosaic:
     """
     Raft-level mosaic of individual CCDs in Science Rafts.
     """
