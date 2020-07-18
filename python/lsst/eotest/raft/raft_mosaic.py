@@ -22,7 +22,10 @@ def make_raft_mosaic(fits_files, gains=None, bias_subtract=True,
                      dark_currents=None):
     corner_raft_slots = {'SW0', 'SW1', 'SG0', 'SG1'}
     if corner_raft_slots.intersection(fits_files):
-        return CornerRaftMosaic(fits_files, bias_frames=bias_frames)
+        return CornerRaftMosaic(fits_files, gains=gains,
+                                bias_subtract=bias_subtract,
+                                bias_frames=bias_frames,
+                                dark_currents=dark_currents)
     return RaftMosaic(fits_files, gains=gains,
                       bias_subtract=bias_subtract,
                       segment_processor=segment_processor,
@@ -36,9 +39,8 @@ class RaftMosaic:
     """
 
     def __init__(self, fits_files, gains=None, bias_subtract=True,
-                 nx=12700, ny=12700, nx_segments=8, ny_segments=2,
-                 segment_processor=None, bias_frames=None,
-                 dark_currents=None, e2v_xoffset=21):
+                 nx=12700, ny=12700, segment_processor=None,
+                 bias_frames=None, dark_currents=None, e2v_xoffset=21):
         """
         Parameters
         ----------
@@ -55,10 +57,6 @@ class RaftMosaic:
         nx : int [12700]
             Number of pixels in the x (serial) direction.
         ny : int, [12700]
-            Number of pixels in the y (parallel) direction.
-        nx_segments : int [8]
-            Number of segments in the x (serial) direction.
-        ny_segments : int [2]
             Number of pixels in the y (parallel) direction.
         segment_processor : function [None]
             Function to apply to pixel data in each segment. If None,
@@ -86,8 +84,6 @@ class RaftMosaic:
         self.image_array = np.zeros((nx, ny), dtype=np.float32)
         self.nx = nx
         self.ny = ny
-        self.nx_segments = nx_segments
-        self.ny_segments = ny_segments
         self.segment_processor = segment_processor
         self._amp_coords = defaultdict(dict)
         if gains is None:
@@ -281,7 +277,38 @@ class CornerRaftMosaic:
     amp_llc['SW1'] = {amp: (214 + (amp-1)*509, 2413) for amp in range(1, 9)}
     wf_channels = {1: '00', 2: '01', 3: '02', 4: '03',
                    5: '04', 6: '05', 7: '06', 8: '07'}
-    def __init__(self, fits_files, nx=11630, ny=11630, bias_frames=None):
+    def __init__(self, fits_files, gains=None, bias_subtract=True,
+                 nx=11630, ny=11630, bias_frames=None, dark_currents=None):
+        """
+        Parameters
+        ----------
+        fits_files : dict
+            Dictionary of single sensor FITS files, keyed by raft slot
+            name.  These files should conform to LCA-13501.
+        gains : dict [None]
+            Dictionary (keyed by slot name) of dictionaries (one per
+            FITS file) of system gain values for each amp.  If
+            None, then do not apply gain correction.
+        bias_subtract : bool [True]
+            Flag do to a bias subtraction based on the serial overscan
+            or provided bias frame.
+        nx : int [11630]
+            Number of pixels in the x (serial) direction.  The default
+            is based on the size of the corner raft baseplate in the
+            x-direction.
+        ny : int, [11630]
+            Number of pixels in the y (parallel) direction.  The default
+            is based on the size of the corner raft baseplate in the
+            y-direction.
+        bias_frames : dict [None]
+            Dictionary of single sensor bias frames, keyed by raft slot.
+            If None, then just do the bias level subtraction using
+            overscan region.
+        dark_currents : dict [None]
+            Dictionary of dictionaries of dark current values per amp
+            in e-/s, keyed by raft slot and by amp number. If None, then
+            dark current subtraction is not applied.
+        """
         self.fits_files = fits_files
         with fits.open(list(fits_files.values())[0]) as hdus:
             self.raft_name = hdus[0].header['RAFTNAME']
@@ -290,26 +317,47 @@ class CornerRaftMosaic:
             except KeyError:
                 self.wl = None
         self.image_array = np.zeros((nx, ny), dtype=np.float32)
+        self.pixel_values = []
         self.nx = nx
         self.ny = ny
+        if gains is None:
+            # Assume unit gain for all amplifiers.
+            unit_gains = dict([(i, 1) for i in range(1, 17)])
+            gains = dict([(slot, unit_gains) for slot in fits_files])
         for slot, filename in fits_files.items():
             if slot not in self.amp_llc:
                 continue
             bias_frame = bias_frames[slot] if bias_frames is not None else None
             ccd = sensorTest.MaskedCCD(filename, bias_frame=bias_frame)
+            if dark_currents is not None:
+                try:
+                    dark_time = ccd.md.get('DARKTIME')
+                except:
+                    dark_time = ccd.md.get('EXPTIME')
             for amp in ccd:
-                if slot.startswith('SW'):
-                    self._set_sw_segment(slot, ccd, amp)
+                if dark_currents:
+                    dark_correction = dark_time*dark_currents[slot][amp]
                 else:
-                    self._set_sg_segment(slot, ccd, amp)
+                    dark_correction = 0
+                if slot.startswith('SW'):
+                    self._set_sw_segment(slot, ccd, amp, gains[slot][amp],
+                                         bias_subtract, dark_correction)
+                else:
+                    self._set_sg_segment(slot, ccd, amp, gains[slot][amp],
+                                         bias_subtract, dark_correction)
 
-    def _set_sw_segment(self, slot, ccd, amp):
+    def _set_sw_segment(self, slot, ccd, amp, gain, bias_subtract,
+                        dark_correction):
+        if bias_subtract:
+            mi = ccd.unbiased_and_trimmed_image(amp)
+        else:
+            mi = ccd[amp].Factory(ccd[amp], ccd.amp_geom.imaging)
         xmin, ymin = self.amp_llc[slot][amp]
         xmax = xmin + ccd.amp_geom.nx
         ymax = ymin + ccd.amp_geom.ny
-        seg_array = np.array(copy.deepcopy(ccd.unbiased_and_trimmed_image(amp)
-                                           .getImage().getArray()),
-                             dtype=np.float32)
+        seg_array = np.array(gain*copy.deepcopy(mi.getImage().getArray()),
+                             dtype=np.float32) - dark_correction
+        self.pixel_values.extend(seg_array.ravel())
         if slot == 'SW0':
             # Flip amps in serial direction and parallel directions.
             # This is equivalent to a 180 degree rotation about the
@@ -317,7 +365,12 @@ class CornerRaftMosaic:
             seg_array = seg_array[::-1, ::-1]
         self.image_array[ymin:ymax, xmin:xmax] = seg_array
 
-    def _set_sg_segment(self, slot, ccd, amp):
+    def _set_sg_segment(self, slot, ccd, amp, gain, bias_subtract,
+                        dark_correction):
+        if bias_subtract:
+            mi = ccd.unbiased_and_trimmed_image(amp)
+        else:
+            mi = ccd[amp].Factory(ccd[amp], ccd.amp_geom.imaging)
         xmin, ymin = self.amp_llc[slot][amp]
         if slot == 'SG0':
             # SGO sensors have their x- and y-coordinates swapped wrt
@@ -330,9 +383,9 @@ class CornerRaftMosaic:
             xmax = xmin + ccd.amp_geom.nx
             ymax = ymin + ccd.amp_geom.ny
 
-        seg_array = np.array(copy.deepcopy(ccd.unbiased_and_trimmed_image(amp)
-                                           .getImage().getArray()),
-                             dtype=np.float32)
+        seg_array = np.array(gain*copy.deepcopy(mi.getImage().getArray()),
+                             dtype=np.float32) - dark_correction
+        self.pixel_values.extend(seg_array.ravel())
         if amp < 9:
             seg_array = seg_array[::-1, :]
         if slot == 'SG0':
@@ -396,7 +449,11 @@ class CornerRaftMosaic:
         if vrange is None:
             # Set range and normalization of color map based on
             # sigma-clip of pixel values.
-            vmin, vmax = cmap_range(output_array, nsig=nsig)
+            num_pix = len(self.pixel_values)
+            dpix = binsize*binsize
+            rebinned_pixels = [sum(self.pixel_values[i*dpix:(i+1)*dpix])/dpix
+                               for i in range(num_pix//dpix)]
+            vmin, vmax = cmap_range(rebinned_pixels, nsig=nsig)
         else:
             vmin, vmax = vrange
         norm = matplotlib.colors.Normalize(vmin=vmin, vmax=vmax)
