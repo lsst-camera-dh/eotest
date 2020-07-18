@@ -270,16 +270,16 @@ class CornerRaftMosaic:
     # values assume a coordinate system which is rotated so that the
     # wavefront sensors are in the lower left corner of the raft.
     amp_llc = dict()
-    amp_llc['SG0'] = {amp: (2126, 4318 + (amp - 1)*509) for amp in range(1, 9)}
-    amp_llc['SG0'].update({amp: (125, 7881 - (amp - 9)*509)
+    amp_llc['SG0'] = {amp: (2050, 4663 + (amp - 1)*509) for amp in range(1, 9)}
+    amp_llc['SG0'].update({amp: (49, 8226 - (amp - 9)*509)
                            for amp in range(9, 17)})
-    amp_llc['SG1'] = {amp: (7881 - (amp - 1)*509, 2126) for amp in range(1, 9)}
-    amp_llc['SG1'].update({amp: (4318 + (amp - 9)*509, 125)
+    amp_llc['SG1'] = {amp: (8226 - (amp - 1)*509, 2050) for amp in range(1, 9)}
+    amp_llc['SG1'].update({amp: (4663 + (amp - 9)*509, 49)
                            for amp in range(9, 17)})
-    amp_llc['SW0'] = {amp: (3656 - (amp-1)*509, 125) for amp in range(1, 9)}
-    amp_llc['SW1'] = {amp: (93 + (amp-1)*509, 2126) for amp in range(1, 9)}
+    amp_llc['SW0'] = {amp: (3777 - (amp-1)*509, 88) for amp in range(1, 9)}
+    amp_llc['SW1'] = {amp: (214 + (amp-1)*509, 2413) for amp in range(1, 9)}
 
-    def __init__(self, fits_files, nx=9000, ny=9000, bias_frames=None):
+    def __init__(self, fits_files, nx=11630, ny=11630, bias_frames=None):
         self.fits_files = fits_files
         with fits.open(list(fits_files.values())[0]) as hdus:
             self.raft_name = hdus[0].header['RAFTNAME']
