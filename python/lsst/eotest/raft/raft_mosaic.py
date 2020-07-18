@@ -279,7 +279,8 @@ class CornerRaftMosaic:
                            for amp in range(9, 17)})
     amp_llc['SW0'] = {amp: (3777 - (amp-1)*509, 88) for amp in range(1, 9)}
     amp_llc['SW1'] = {amp: (214 + (amp-1)*509, 2413) for amp in range(1, 9)}
-
+    wf_channels = {1: '00', 2: '01', 3: '02', 4: '03',
+                   5: '04', 6: '05', 7: '06', 8: '07'}
     def __init__(self, fits_files, nx=11630, ny=11630, bias_frames=None):
         self.fits_files = fits_files
         with fits.open(list(fits_files.values())[0]) as hdus:
@@ -289,6 +290,8 @@ class CornerRaftMosaic:
             except KeyError:
                 self.wl = None
         self.image_array = np.zeros((nx, ny), dtype=np.float32)
+        self.nx = nx
+        self.ny = ny
         for slot, filename in fits_files.items():
             if slot not in self.amp_llc:
                 continue
@@ -409,37 +412,50 @@ class CornerRaftMosaic:
         plt.tick_params(axis='both', which='both',
                         top='off', bottom='off', left='off', right='off',
                         labelbottom='off', labelleft='off')
-#        # Label segments by sensor bay and segment number.
-#        for slot in self.fits_files:
-#            seg_coords = list(self._amp_coords[slot].values())[-8]
-#            xmin, xmax, ymin, ymax = seg_coords
-#            xx = float(xmax + xmin)/2./float(self.nx)
-#            if flipx:
-#                xx = 1 - xx
-#            yy = 1. - (float(ymax - ymin)*0.05 + ymin)/float(self.ny)
-#            if rotate180:
-#                xx = 1 - xx - 7*np.abs(xmax - xmin)/float(self.nx)
-#                yy = 1 - yy + 1.9*np.abs(ymax - ymin)/float(self.ny)
-#            plt.annotate('%s' % slot,
-#                         (xx, yy), xycoords='axes fraction',
-#                         size='x-small', horizontalalignment='center',
-#                         verticalalignment='center', color=textcolor)
-#            for amp, seg_coords in list(self._amp_coords[slot].items()):
-#                xmin, xmax, ymin, ymax = seg_coords
-#                xx = float(xmax + xmin)/2./float(self.nx)
-#                if flipx:
-#                    xx = 1. - xx
-#                if amp <= 8:
-#                    yy = 1. - (float(ymax - ymin)*0.85 + ymin)/float(self.ny)
-#                else:
-#                    yy = 1. - (float(ymax - ymin)*0.15 + ymin)/float(self.ny)
-#                if rotate180:
-#                    xx = 1 - xx
-#                    yy = 1 - yy
-#                plt.annotate('%s' % imutils.channelIds[amp],
-#                             (xx, yy), xycoords='axes fraction',
-#                             size='x-small', horizontalalignment='center',
-#                             verticalalignment='center', color=textcolor)
-#        plt.annotate(annotation, (1, -0.1), xycoords='axes fraction',
-#                     horizontalalignment='right', verticalalignment='bottom')
+        # Label segments by sensor bay and segment number.
+        for slot in self.fits_files:
+            if slot.startswith('SW'):
+                channels = self.wf_channels
+            else:
+                channels = imutils.channelIds
+            edge_offset = 350
+            serial_midpoint = 509//2
+            for amp, (x, y) in self.amp_llc[slot].items():
+                if slot == 'SG0':
+                    dx = edge_offset
+                    dy = serial_midpoint
+                    xx = (x + dx)/self.nx
+                    if amp < 9:
+                        xx += (2000 - 2*dx)/self.nx
+                    yy = (y + dy)/self.ny
+                else:
+                    dx = serial_midpoint
+                    dy = edge_offset
+                    xx = (x + dx)/self.nx
+                    yy = (y + dy)/self.ny
+                    if ((slot == 'SG1' and amp < 9) or
+                        slot == 'SW0'):
+                        yy += (2000 - 2*dy)/self.ny
+                plt.annotate(f'{channels[amp]}', (xx, yy),
+                             xycoords='axes fraction',
+                             horizontalalignment='center',
+                             verticalalignment='center',
+                             size='x-small', color=textcolor)
+            if slot == 'SG1':
+                x, y = self.amp_llc[slot][8]
+                y += 2000 - edge_offset//2
+            elif slot == 'SG0':
+                x, y = self.amp_llc[slot][9]
+                y += (509 - edge_offset//2)
+            elif slot == 'SW1':
+                x, y = self.amp_llc[slot][1]
+                y += 2000 - edge_offset//2
+            elif slot == 'SW0':
+                x, y = self.amp_llc[slot][8]
+                y += 2000 - edge_offset//2
+            plt.annotate(f'{slot}', (x/self.nx, y/self.ny),
+                         xycoords='axes fraction', size='x-small',
+                         horizontalalignment='left',
+                         verticalalignment='bottom',
+                         color=textcolor)
         return fig
