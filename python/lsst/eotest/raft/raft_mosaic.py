@@ -211,9 +211,9 @@ class RaftMosaic:
                 rotated_array[:, ny-1-j] = output_array[::-1, j]
             output_array = rotated_array
         image = ax.imshow(output_array, interpolation='nearest', cmap=cmap)
-        # Set range and normalization of color map based on sigma-clip
-        # of pixel values.
         if vrange is None:
+            # Set range and normalization of color map based on
+            # sigma-clip of pixel values.
             vmin, vmax = cmap_range(output_array, nsig=nsig)
         else:
             vmin, vmax = vrange
@@ -269,6 +269,7 @@ class CornerRaftMosaic:
     # corresponding amp in the guide and wavefront sensors.  These
     # values assume a coordinate system which is rotated so that the
     # wavefront sensors are in the lower left corner of the raft.
+    # They are based on sheet 4 of LCA-13381.
     amp_llc = dict()
     amp_llc['SG0'] = {amp: (2050, 4663 + (amp - 1)*509) for amp in range(1, 9)}
     amp_llc['SG0'].update({amp: (49, 8226 - (amp - 9)*509)
@@ -389,9 +390,9 @@ class CornerRaftMosaic:
                 rotated_array[:, ny-1-j] = output_array[::-1, j]
             output_array = rotated_array
         image = ax.imshow(output_array, interpolation='nearest', cmap=cmap)
-        # Set range and normalization of color map based on sigma-clip
-        # of pixel values.
         if vrange is None:
+            # Set range and normalization of color map based on
+            # sigma-clip of pixel values.
             vmin, vmax = cmap_range(output_array, nsig=nsig)
         else:
             vmin, vmax = vrange
