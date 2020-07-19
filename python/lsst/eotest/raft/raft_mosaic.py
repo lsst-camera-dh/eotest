@@ -20,6 +20,35 @@ __all__ = ['RaftMosaic', 'CornerRaftMosaic', 'make_raft_mosaic']
 def make_raft_mosaic(fits_files, gains=None, bias_subtract=True,
                      segment_processor=None, bias_frames=None,
                      dark_currents=None):
+    """
+    Parameters
+    ----------
+    fits_files : dict
+        Dictionary of single sensor FITS files, keyed by raft slot
+        name.  These files should conform to LCA-13501.
+    gains : dict [None]
+        Dictionary (keyed by slot name) of dictionaries (one per
+        FITS file) of system gain values for each amp.  If
+        None, then do not apply gain correction.
+    bias_subtract : bool [True]
+        Flag do to a bias subtraction based on the serial overscan
+        or provided bias frame.
+    segment_processor : function [None]
+        Function to apply to pixel data in each segment. If None,
+        then set do the standard bias subtraction and gain correction.
+    bias_frames : dict [None]
+        Dictionary of single sensor bias frames, keyed by raft slot.
+        If None, then just do the bias level subtraction using
+        overscan region.
+    dark_currents : dict [None]
+        Dictionary of dictionaries of dark current values per amp
+        in e-/s, keyed by raft slot and by amp number. If None, then
+        dark current subtraction is not applied.
+
+    Returns
+    -------
+    RaftMosaic or CornerRaftMosaic
+    """
     corner_raft_slots = {'SW0', 'SW1', 'SG0', 'SG1'}
     if corner_raft_slots.intersection(fits_files):
         return CornerRaftMosaic(fits_files, gains=gains,
