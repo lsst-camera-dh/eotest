@@ -36,7 +36,7 @@ def flat_signal_sequence(flat_files, bias_frame=None, dark_frame=None,
 
     Returns
     -------
-    pandas.DataFrame containing arrays of mjd, seqnum, integrated flux,
+    pandas.DataFrame containing arrays of mjd, test seqnum, integrated flux,
         and median ADU values for each amplifier.
     """
     flux_dict = dict()
@@ -49,7 +49,7 @@ def flat_signal_sequence(flat_files, bias_frame=None, dark_frame=None,
                         mask_files=mask_files)
         if adus is None:
             adus = defaultdict(lambda: {amp: 0 for amp in ccd})
-        seqnum = ccd.md.get('SEQNUM')
+        seqnum = ccd.md.get('TSEQNUM')
         mjd_dict[seqnum] = ccd.md.get('MJD-OBS')
         exptime = ccd.md.get('EXPTIME')
         flux_dict[seqnum] = mondiode_func(item, exptime)*exptime
