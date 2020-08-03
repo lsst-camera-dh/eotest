@@ -19,7 +19,7 @@ __all__ = ['RaftMosaic', 'CornerRaftMosaic', 'make_raft_mosaic']
 
 def make_raft_mosaic(fits_files, gains=None, bias_subtract=True,
                      segment_processor=None, bias_frames=None,
-                     dark_currents=None):
+                     dark_currents=None, nx=None, ny=None):
     """
     Parameters
     ----------
@@ -44,6 +44,14 @@ def make_raft_mosaic(fits_files, gains=None, bias_subtract=True,
         Dictionary of dictionaries of dark current values per amp
         in e-/s, keyed by raft slot and by amp number. If None, then
         dark current subtraction is not applied.
+    nx : int [None]
+        Number of pixels in the x (nominally serial) direction.  If
+        None, then use defaults of RaftMosaic (12700) and
+        CornerRaftMosaic (11630).
+    ny : int [None]
+        Number of pixels in the y (nominally parallel) direction.  If
+        None, then use defaults of RaftMosaic (12700) and
+        CornerRaftMosaic (11630).
 
     Returns
     -------
@@ -53,10 +61,11 @@ def make_raft_mosaic(fits_files, gains=None, bias_subtract=True,
     if corner_raft_slots.intersection(fits_files):
         return CornerRaftMosaic(fits_files, gains=gains,
                                 bias_subtract=bias_subtract,
+                                nx=nx, ny=ny,
                                 bias_frames=bias_frames,
                                 dark_currents=dark_currents)
     return RaftMosaic(fits_files, gains=gains,
-                      bias_subtract=bias_subtract,
+                      bias_subtract=bias_subtract, nx=nx, ny=ny,
                       segment_processor=segment_processor,
                       bias_frames=bias_frames,
                       dark_currents=dark_currents)
@@ -68,7 +77,7 @@ class RaftMosaic:
     """
 
     def __init__(self, fits_files, gains=None, bias_subtract=True,
-                 nx=12700, ny=12700, segment_processor=None,
+                 nx=None, ny=None, segment_processor=None,
                  bias_frames=None, dark_currents=None, e2v_xoffset=21):
         """
         Parameters
@@ -83,10 +92,10 @@ class RaftMosaic:
         bias_subtract : bool [True]
             Flag do to a bias subtraction based on the serial overscan
             or provided bias frame.
-        nx : int [12700]
-            Number of pixels in the x (serial) direction.
-        ny : int, [12700]
-            Number of pixels in the y (parallel) direction.
+        nx : int [None]
+            Number of pixels in the x (serial) direction. If None, use 12700.
+        ny : int [None]
+            Number of pixels in the y (parallel) direction. If None, use 12700.
         segment_processor : function [None]
             Function to apply to pixel data in each segment. If None,
             then set do the standard bias subtraction and gain correction.
@@ -110,6 +119,10 @@ class RaftMosaic:
                 self.wl = hdu_list[0].header['MONOWL']
             except KeyError:
                 self.wl = 0
+        if nx is None:
+            nx = 12700
+        if ny is None:
+            ny = 12700
         self.image_array = np.zeros((nx, ny), dtype=np.float32)
         self.nx = nx
         self.ny = ny
@@ -186,7 +199,7 @@ class RaftMosaic:
 
     def plot(self, title=None, cmap=plt.cm.hot, nsig=5, figsize=(10, 10),
              binsize=10, flipx=True, textcolor='c', annotation='',
-             rotate180=False, vrange=None):
+             rotate=180, vrange=None, colorbar=True, ax=None):
         """
         Render the raft mosaic.
 
@@ -214,27 +227,42 @@ class RaftMosaic:
         annotation : str, optional
             Description of the plot, e.g., pixel units (ADU or e-),
             gain-corrected, bias-subtracted.  Default: ''
-        rotate180 : bool [False]
-            Flag to rotate the mosaic by 180 degrees to match the
-            orientation of the focalplane mosiacs created for the
-            BOT-level plots.
+        rotate : int [180]
+            Flag to rotate the mosaic by 90, 180, or 270 degrees.
+            These rotations are implemented via a set of flips in x, y
+            and/or xy-transpose operations.  If rotate is not in (0,
+            90, 180, 270), a ValueError exception is raised.
         vrange : (float, float) [None]
             Range of pixel values to plot.  If None, then the cmap_range
             function will be used.
+        colorbar : bool [True]
+            Add a colorbar to the figure.
+        ax : matplotlib.axes.Axes [None]
+            Axes object to contain the figure. If None, then make a new
+            figure.Figure object and add an axes.Axes object to use.
         """
-        plt.rcParams['figure.figsize'] = figsize
-        fig = plt.figure()
-        ax = fig.add_subplot(1, 1, 1)
+        if ax is None:
+            plt.rcParams['figure.figsize'] = figsize
+            fig = plt.figure()
+            ax = fig.add_subplot(1, 1, 1)
         output_array = imutils.rebin_array(self.image_array, binsize,
                                            use_mean=True)
         if flipx:
             output_array = output_array[:, ::-1]
-        if rotate180:
+        if rotate not in (0, 90, 180, 270):
+            raise ValueError(f'invalid rotation angle: {rotate}')
+        if rotate == 180:
             ny, nx = output_array.shape
             rotated_array = np.zeros((nx, ny), dtype=output_array.dtype)
             for j in range(ny):
                 rotated_array[:, ny-1-j] = output_array[::-1, j]
             output_array = rotated_array
+        elif rotate == 90:
+            rotated_array = copy.deepcopy(output_array.transpose())
+            output_array = rotated_array[::-1, :]
+        elif rotate == 270:
+            rotated_array = copy.deepcopy(output_array.transpose())
+            output_array = rotated_array[:, ::-1]
         image = ax.imshow(output_array, interpolation='nearest', cmap=cmap)
         if vrange is None:
             # Set range and normalization of color map based on
@@ -247,11 +275,12 @@ class RaftMosaic:
         if title is None:
             title = "%s, %i nm" % (self.raft_name, self.wl)
         ax.set_title(title)
-        fig.colorbar(image)
+        if colorbar:
+            fig.colorbar(image)
         # Turn off ticks and tick labels for x- and y-axes.
         plt.tick_params(axis='both', which='both',
-                        top='off', bottom='off', left='off', right='off',
-                        labelbottom='off', labelleft='off')
+                        top=False, bottom=False, left=False, right=False,
+                        labelbottom=False, labelleft=False)
         # Label segments by sensor bay and segment number.
         for slot in self.fits_files:
             seg_coords = list(self._amp_coords[slot].values())[-8]
@@ -260,7 +289,7 @@ class RaftMosaic:
             if flipx:
                 xx = 1 - xx
             yy = 1. - (float(ymax - ymin)*0.05 + ymin)/float(self.ny)
-            if rotate180:
+            if rotate == 180:
                 xx = 1 - xx - 7*np.abs(xmax - xmin)/float(self.nx)
                 yy = 1 - yy + 1.9*np.abs(ymax - ymin)/float(self.ny)
             plt.annotate('%s' % slot,
@@ -276,7 +305,7 @@ class RaftMosaic:
                     yy = 1. - (float(ymax - ymin)*0.85 + ymin)/float(self.ny)
                 else:
                     yy = 1. - (float(ymax - ymin)*0.15 + ymin)/float(self.ny)
-                if rotate180:
+                if rotate == 180:
                     xx = 1 - xx
                     yy = 1 - yy
                 plt.annotate('%s' % imutils.channelIds[amp],
@@ -285,7 +314,6 @@ class RaftMosaic:
                              verticalalignment='center', color=textcolor)
         plt.annotate(annotation, (1, -0.1), xycoords='axes fraction',
                      horizontalalignment='right', verticalalignment='bottom')
-        return fig
 
 
 class CornerRaftMosaic:
@@ -304,8 +332,8 @@ class CornerRaftMosaic:
                            for amp in range(9, 17)})
     amp_llc['SW0'] = {amp: (3777 - (amp-1)*509, 88) for amp in range(1, 9)}
     amp_llc['SW1'] = {amp: (214 + (amp-1)*509, 2413) for amp in range(1, 9)}
-    wf_channels = {1: '00', 2: '01', 3: '02', 4: '03',
-                   5: '04', 6: '05', 7: '06', 8: '07'}
+    wf_channels = {1: '10', 2: '11', 3: '12', 4: '13',
+                   5: '14', 6: '15', 7: '16', 8: '17'}
     def __init__(self, fits_files, gains=None, bias_subtract=True,
                  nx=11630, ny=11630, bias_frames=None, dark_currents=None):
         """
@@ -321,14 +349,14 @@ class CornerRaftMosaic:
         bias_subtract : bool [True]
             Flag do to a bias subtraction based on the serial overscan
             or provided bias frame.
-        nx : int [11630]
-            Number of pixels in the x (serial) direction.  The default
-            is based on the size of the corner raft baseplate in the
-            x-direction.
-        ny : int, [11630]
-            Number of pixels in the y (parallel) direction.  The default
-            is based on the size of the corner raft baseplate in the
-            y-direction.
+        nx : int [None]
+            Number of pixels in the x (serial) direction.  If None,
+            use 11630, which is based on the size of the corner raft
+            baseplate in the x-direction.
+        ny : int [None]
+            Number of pixels in the y (parallel) direction.  If None,
+            use 11630, which is based on the size of the corner raft
+            baseplate in the y-direction.
         bias_frames : dict [None]
             Dictionary of single sensor bias frames, keyed by raft slot.
             If None, then just do the bias level subtraction using
@@ -345,6 +373,10 @@ class CornerRaftMosaic:
                 self.wl = hdus[0].header['MONOWL']
             except KeyError:
                 self.wl = None
+        if nx is None:
+            nx = 11630
+        if ny is None:
+            ny = 11630
         self.image_array = np.zeros((nx, ny), dtype=np.float32)
         self.pixel_values = []
         self.nx = nx
@@ -425,7 +457,7 @@ class CornerRaftMosaic:
 
     def plot(self, title=None, cmap=plt.cm.hot, nsig=5, figsize=(10, 10),
              binsize=10, flipx=True, textcolor='c', annotation='',
-             rotate180=False, vrange=None):
+             rotate=180, vrange=None, colorbar=True, ax=None):
         """
         Render the raft mosaic.
 
@@ -453,27 +485,42 @@ class CornerRaftMosaic:
         annotation : str, optional
             Description of the plot, e.g., pixel units (ADU or e-),
             gain-corrected, bias-subtracted.  Default: ''
-        rotate180 : bool [False]
-            Flag to rotate the mosaic by 180 degrees to match the
-            orientation of the focalplane mosiacs created for the
-            BOT-level plots.
+        rotate : int [180]
+            Flag to rotate the mosaic by 90, 180, or 270 degrees.
+            These rotations are implemented via a set of flips in x, y
+            and/or xy-transpose operations.  If rotate is not in (0,
+            90, 180, 270), a ValueError exception is raised.
         vrange : (float, float) [None]
             Range of pixel values to plot.  If None, then the cmap_range
             function will be used.
+        colorbar : bool [True]
+            Add a colorbar to the figure.
+        ax : matplotlib.axes.Axes [None]
+            Axes object to contain the figure. If None, then make a new
+            figure.Figure object and add an axes.Axes object to use.
         """
-        plt.rcParams['figure.figsize'] = figsize
-        fig = plt.figure()
-        ax = fig.add_subplot(1, 1, 1)
+        if ax is None:
+            plt.rcParams['figure.figsize'] = figsize
+            fig = plt.figure()
+            ax = fig.add_subplot(1, 1, 1)
         output_array = imutils.rebin_array(self.image_array, binsize,
                                            use_mean=True)
         if flipx:
             output_array = output_array[:, ::-1]
-        if rotate180:
+        if rotate not in (0, 90, 180, 270):
+            raise ValueError(f'invalid rotation angle: {rotate}')
+        if rotate == 180:
             ny, nx = output_array.shape
             rotated_array = np.zeros((nx, ny), dtype=output_array.dtype)
             for j in range(ny):
                 rotated_array[:, ny-1-j] = output_array[::-1, j]
             output_array = rotated_array
+        elif rotate == 90:
+            rotated_array = copy.deepcopy(output_array.transpose())
+            output_array = rotated_array[::-1, :]
+        elif rotate == 270:
+            rotated_array = copy.deepcopy(output_array.transpose())
+            output_array = rotated_array[:, ::-1]
         image = ax.imshow(output_array, interpolation='nearest', cmap=cmap)
         if vrange is None:
             # Set range and normalization of color map based on
@@ -493,11 +540,16 @@ class CornerRaftMosaic:
             else:
                 title = "%s, %i nm" % (self.raft_name, self.wl)
         ax.set_title(title)
-        fig.colorbar(image)
+        if colorbar:
+            fig.colorbar(image)
         # Turn off ticks and tick labels for x- and y-axes.
         plt.tick_params(axis='both', which='both',
-                        top='off', bottom='off', left='off', right='off',
-                        labelbottom='off', labelleft='off')
+                        top=False, bottom=False, left=False, right=False,
+                        labelbottom=False, labelleft=False)
+        if rotate != 180:
+            # Only label segments if the corner raft orientation matches
+            # sheet 4 of LCA-13381.
+            return
         # Label segments by sensor bay and segment number.
         for slot in self.fits_files:
             if slot.startswith('SW'):
@@ -544,4 +596,3 @@ class CornerRaftMosaic:
                          horizontalalignment='left',
                          verticalalignment='bottom',
                          color=textcolor)
-        return fig
