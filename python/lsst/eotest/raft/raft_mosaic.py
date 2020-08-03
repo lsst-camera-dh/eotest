@@ -296,11 +296,11 @@ class CornerRaftMosaic:
     # wavefront sensors are in the lower left corner of the raft.
     # They are based on sheet 4 of LCA-13381.
     amp_llc = dict()
-    amp_llc['SG0'] = {amp: (2050, 4663 + (amp - 1)*509) for amp in range(1, 9)}
-    amp_llc['SG0'].update({amp: (49, 8226 - (amp - 9)*509)
+    amp_llc['SG0'] = {amp: (2050, 8226 - (amp - 1)*509) for amp in range(1, 9)}
+    amp_llc['SG0'].update({amp: (49, 4663 + (amp - 9)*509)
                            for amp in range(9, 17)})
-    amp_llc['SG1'] = {amp: (8226 - (amp - 1)*509, 2050) for amp in range(1, 9)}
-    amp_llc['SG1'].update({amp: (4663 + (amp - 9)*509, 49)
+    amp_llc['SG1'] = {amp: (4663 + (amp - 1)*509, 2050) for amp in range(1, 9)}
+    amp_llc['SG1'].update({amp: (8226 - (amp - 9)*509, 49)
                            for amp in range(9, 17)})
     amp_llc['SW0'] = {amp: (3777 - (amp-1)*509, 88) for amp in range(1, 9)}
     amp_llc['SW1'] = {amp: (214 + (amp-1)*509, 2413) for amp in range(1, 9)}
