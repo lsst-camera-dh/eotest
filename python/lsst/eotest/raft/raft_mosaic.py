@@ -118,7 +118,7 @@ class RaftMosaic:
             try:
                 self.wl = hdu_list[0].header['MONOWL']
             except KeyError:
-                self.wl = 0
+                self.wl = None
         if nx is None:
             nx = 12700
         if ny is None:
@@ -273,7 +273,10 @@ class RaftMosaic:
         norm = matplotlib.colors.Normalize(vmin=vmin, vmax=vmax)
         image.set_norm(norm)
         if title is None:
-            title = "%s, %i nm" % (self.raft_name, self.wl)
+            if self.wl is None:
+                title = self.raft_name
+            else:
+                title = "%s, %i nm" % (self.raft_name, self.wl)
         ax.set_title(title)
         if colorbar:
             fig.colorbar(image)
