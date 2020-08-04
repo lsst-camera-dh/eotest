@@ -86,7 +86,8 @@ class DetectorResponse(object):
         indexes = np.arange(len(dNfrac))
         good_vals = np.where(np.abs(dNfrac) <= max_non_linearity)[0]
         if good_vals.sum() < 2:
-            print ("Not enough good points to fit full_well %i %i" % (amp, good_vals.sum()))
+            print("Not enough good points to fit full_well %i %i"
+                  % (amp, good_vals.sum()))
             return (0., f1)
 
         imin = good_vals[-1]
