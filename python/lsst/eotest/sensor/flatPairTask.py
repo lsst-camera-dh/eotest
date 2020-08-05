@@ -174,7 +174,8 @@ class FlatPairTask(pipeBase.Task):
                 self.log.info("Exception caught in linearity calculation:")
                 self.log.info(str(eobj))
                 maxdev = None
-            max_observed_signal = np.max(detresp.Ne[amp])
+            # The maximum observed signal should be reported in ADUs.
+            max_observed_signal = np.max(detresp.Ne[amp])/self.gains[amp]
             if self.config.verbose:
                 self.log.info('%2i            %s             %s'
                               % (amp, max_observed_signal, maxdev))
