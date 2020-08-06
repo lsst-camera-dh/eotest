@@ -157,7 +157,7 @@ class FlatPairTask(pipeBase.Task):
         output = EOTestResults(outfile, namps=len(all_amps))
         row_mean_var_slopes = compute_row_mean_var_slopes(detrespfile)
         if self.config.verbose:
-            self.log.info("Amp        full well (e-/pixel)   max. frac. dev.")
+            self.log.info("Amp       max_signal (e-/pixel)   max. frac. dev.")
         for amp in all_amps:
             try:
                 full_well, _ = detresp.full_well(amp)
@@ -174,15 +174,18 @@ class FlatPairTask(pipeBase.Task):
                 self.log.info("Exception caught in linearity calculation:")
                 self.log.info(str(eobj))
                 maxdev = None
+            max_observed_signal = np.max(detresp.Ne[amp])
             if self.config.verbose:
                 self.log.info('%2i            %s             %s'
-                              % (amp, full_well, maxdev))
+                              % (amp, max_observed_signal, maxdev))
             if full_well is not None:
                 output.add_seg_result(amp, 'FULL_WELL', full_well)
             if maxdev is not None:
                 output.add_seg_result(amp, 'MAX_FRAC_DEV', float(maxdev))
             output.add_seg_result(amp, 'ROW_MEAN_VAR_SLOPE',
                                   row_mean_var_slopes[amp])
+            output.add_seg_result(amp, 'MAX_OBSERVED_SIGNAL',
+                                  max_observed_signal)
         output.write()
 
     def _create_detresp_fits_output(self, nrows, infile):
