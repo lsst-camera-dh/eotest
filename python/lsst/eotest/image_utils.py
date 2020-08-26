@@ -290,7 +290,7 @@ def bias_col_spline(im, overscan, dxmin=5, dxmax=2, statistic=np.mean, **kwargs)
         imarr = im.Factory(im, overscan).getImage().getArray()
     ny, nx = imarr.shape
     cols = np.arange(nx)
-    values = np.array([statistic(imarr[dxmin:-dxmax][j]) for j in cols])
+    values = np.array([statistic(imarr[dxmin:-dxmax,j]) for j in cols])
     rms = 7 # Expected read noise per pixel
     weights = np.ones(nx) * (rms / np.sqrt(nx))
     return interpolate.splrep(cols, values, w=1/weights, k=kwargs.get('k', 3),
@@ -380,7 +380,10 @@ def bias_image_col(im, overscan, dxmin=5, dxmax=2, statistic=np.mean, bias_metho
     if bias_method not in ['mean', 'col', 'func', 'spline']:
         raise RuntimeError('Bias method must be either "mean", "col", "func" or "spline".')
 
-    method = {'mean' : bias, 'col' : bias_col, 'func' : bias_col_func, 'spline' : bias_col_spline}
+    def dummy_none(im, overscan, dxmin, dxmax, **kwargs):
+        return 0.0
+
+    method = {'mean' : bias, 'col' : bias_col, 'func' : bias_col_func, 'spline' : bias_col_spline, 'none':dummy_none}
     my_bias = method[bias_method](im, overscan, dxmin=dxmin, dxmax=dxmax, **kwargs)
     biasim = afwImage.ImageF(im.getDimensions())
     imarr = biasim.getArray()
