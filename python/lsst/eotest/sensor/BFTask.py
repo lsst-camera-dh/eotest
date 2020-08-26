@@ -46,7 +46,7 @@ def find_flats(flats, flat2_finder=find_flat2):
 
 class BFConfig(pexConfig.Config):
     """Configuration for BFTask"""
-    maxLag = pexConfig.Field("Maximum lag", int, default=1)
+    maxLag = pexConfig.Field("Maximum lag", int, default=2)
     nPixBorder = pexConfig.Field("Number of pixels to clip on the border",
                                  int, default=10)
     nSigmaClip = pexConfig.Field("Number of sigma to clip for corr calc", int,
@@ -59,7 +59,7 @@ class BFConfig(pexConfig.Config):
 
 
 BFAmpResults = namedtuple('BFAmpResults',
-                          'xcorr xcorr_err ycorr ycorr_err mean'.split())
+                          'COV10 COV10_err COV20 COV20_err COV01 COV01_err COV02 COV02_err COV11 COV11_err mean'.split())
 
 
 class BFTask(pipeBase.Task):
@@ -70,15 +70,12 @@ class BFTask(pipeBase.Task):
     @pipeBase.timeMethod
     def run(self, sensor_id, flat_files, single_pairs=True,
             dark_frame=None, mask_files=(), flat2_finder=None,
-            bias_frame=None, meanidx=0, linearity_correction=None):
+            bias_frame=None, meanidx=0, linearity_correction=None,gains=None):
         """
         Compute the average nearest neighbor correlation coefficients for
         all flat pairs given for a particular exposure time.  Additionally
         store the flat means per amp.
         """
-        if dark_frame is not None:
-            ccd_dark = MaskedCCD(dark_frame, mask_files=mask_files,
-                                 linearity_correction=linearity_correction)
 
         if single_pairs:
             if flat2_finder is None:
@@ -92,26 +89,23 @@ class BFTask(pipeBase.Task):
         # List with some number of flat pairs per exposure
         # [[(flat1,flat2),(flat1,flat2)],[(flat1,flat2),(flat1,flat2)]]
 
-        BFResults = {amp: BFAmpResults([], [], [], [], []) for amp in all_amps}
+        BFResults = {amp: BFAmpResults([], [], [], [], [], [], [], [], [], [], []) for amp in all_amps}
 
         for flat_pair in flats:
             self.log.info("%s\n%s", *flat_pair)
             ccd1 = MaskedCCD(flat_pair[0], mask_files=mask_files,
                              bias_frame=bias_frame,
-                             linearity_correction=linearity_correction)
+                             linearity_correction=linearity_correction,dark_frame=dark_frame)
             ccd2 = MaskedCCD(flat_pair[1], mask_files=mask_files,
                              bias_frame=bias_frame,
-                             linearity_correction=linearity_correction)
+                             linearity_correction=linearity_correction,dark_frame=dark_frame)
 
             for amp in all_amps:
                 self.log.info('on amp %s', amp)
-                dark_image = None if dark_frame is None \
-                             else ccd_dark.unbiased_and_trimmed_image(amp)
-
                 image1 = ccd1.unbiased_and_trimmed_image(amp)
                 image2 = ccd2.unbiased_and_trimmed_image(amp)
-                prepped_image1, mean1 = self.prep_image(image1, dark_image)
-                prepped_image2, mean2 = self.prep_image(image2, dark_image)
+                prepped_image1, mean1 = self.prep_image(image1, gains[amp])
+                prepped_image2, mean2 = self.prep_image(image2, gains[amp])
 
                 # Calculate the average mean of the pair.
                 avemean = (mean1 + mean2)/2
@@ -125,17 +119,35 @@ class BFTask(pipeBase.Task):
 
                 # Append the per-amp values for this pair to the
                 # corresponding lists.
-                BFResults[amp].xcorr.append(corr[1][0]/corr[0][0])
-                BFResults[amp].xcorr_err.append(corr_err[1][0])
-                BFResults[amp].ycorr.append(corr[0][1]/corr[0][0])
-                BFResults[amp].ycorr_err.append(corr_err[0][1])
+                BFResults[amp].COV10.append(corr[1][0])
+                BFResults[amp].COV10_err.append(corr_err[1][0])
+                BFResults[amp].COV20.append(corr[2][0])
+                BFResults[amp].COV20_err.append(corr_err[2][0])
+                BFResults[amp].COV01.append(corr[0][1])
+                BFResults[amp].COV01_err.append(corr_err[0][1])
+                BFResults[amp].COV02.append(corr[0][2])
+                BFResults[amp].COV02_err.append(corr_err[0][2])
+                BFResults[amp].COV11.append(corr[1][1])
+                BFResults[amp].COV11_err.append(corr_err[1][1])
                 BFResults[amp].mean.append(avemean)
 
         self.write_eotest_output(BFResults, sensor_id, meanidx=meanidx)
 
         return BFResults
 
-    def write_eotest_output(self, BFResults, sensor_id, meanidx=0):
+    def fit_slopes(self,xcorr,ycorr,mean,adu_max):
+        xcorr = np.array(xcorr)
+        ycorr = np.array(ycorr)
+        mean = np.array(mean)
+        xcorr = xcorr[mean<adu_max]
+        ycorr = ycorr[mean<adu_max]
+        mean = mean[mean<adu_max]
+        from scipy import stats
+        slopex, _, _, _, errx = stats.linregress(mean, xcorr)
+        slopey, _, _, _, erry = stats.linregress(mean, ycorr)
+        return slopex, errx, slopey, erry
+
+    def write_eotest_output(self, BFResults, sensor_id, meanidx=0, adu_max=1e5):
         """Write the correlation curves to a FITS file for plotting,
         and the BF results to the eotest results file."""
         outfile = os.path.join(self.config.output_dir,
@@ -146,16 +158,24 @@ class BFTask(pipeBase.Task):
         units = []
         columns = []
         for amp in BFResults:
-            colnames.extend(['AMP%02i_XCORR' % amp, 'AMP%02i_XCORR_ERR' % amp,
-                             'AMP%02i_YCORR' % amp, 'AMP%02i_YCORR_ERR' % amp,
-                             'AMP%02i_MEAN' % amp])
+            colnames.extend(['AMP%02i_COV10' % amp, 'AMP%02i_COV10_ERR' % amp,
+                             'AMP%02i_COV20' % amp, 'AMP%02i_COV20_ERR' % amp,
+                             'AMP%02i_COV01' % amp, 'AMP%02i_COV01_ERR' % amp,
+                             'AMP%02i_COV02' % amp, 'AMP%02i_COV02_ERR' % amp,
+                             'AMP%02i_COV11' % amp, 'AMP%02i_COV11_ERR' % amp, 'AMP%02i_MEAN' % amp])
             units.extend(
-                ['Unitless', 'Unitless', 'Unitless', 'Unitless', 'ADU'])
+                ['Unitless', 'Unitless', 'Unitless', 'Unitless', 'Unitless','Unitless','Unitless','Unitless','Unitless','Unitless','e-'])
             columns.extend([np.array(BFResults[amp][0], dtype=np.float),
                             np.array(BFResults[amp][1], dtype=np.float),
                             np.array(BFResults[amp][2], dtype=np.float),
                             np.array(BFResults[amp][3], dtype=np.float),
-                            np.array(BFResults[amp][4], dtype=np.float)])
+                            np.array(BFResults[amp][4], dtype=np.float),
+                            np.array(BFResults[amp][5], dtype=np.float),
+                            np.array(BFResults[amp][6], dtype=np.float),
+                            np.array(BFResults[amp][7], dtype=np.float),
+                            np.array(BFResults[amp][8], dtype=np.float),
+                            np.array(BFResults[amp][9], dtype=np.float),
+                            np.array(BFResults[amp][10], dtype=np.float)])
         formats = 'E'*len(colnames)
         fits_cols = [fits.Column(name=colnames[i], format=formats[i],
                                  unit=units[i], array=columns[i])
@@ -180,10 +200,17 @@ class BFTask(pipeBase.Task):
             results.add_seg_result(amp, 'BF_YCORR', BFResults[amp][2][meanidx])
             results.add_seg_result(amp, 'BF_YCORR_ERR', BFResults[amp][3][meanidx])
             results.add_seg_result(amp, 'BF_MEAN', BFResults[amp][4][meanidx])
+            slopex, slopex_err, slopey_err, slopey \
+                = self.fit_slopes(BFResults[amp][0], BFResults[amp][2],
+                                  BFResults[amp][4], adu_max)
+            results.add_seg_result(amp, 'BF_SLOPEX', slopex)
+            results.add_seg_result(amp, 'BF_SLOPEX_ERR', slopex_err)
+            results.add_seg_result(amp, 'BF_SLOPEY', slopey)
+            results.add_seg_result(amp, 'BF_SLOPEY_ERR', slopey_err)
 
         results.write(clobber=True)
 
-    def prep_image(self, exp, dark_image=None):
+    def prep_image(self, exp, gain):
         """
         Crop the image to avoid edge effects based on the Config border
         parameter. Additionally, if there is a dark image, subtract.
@@ -197,17 +224,14 @@ class BFTask(pipeBase.Task):
 
         sctrl = afwMath.StatisticsControl()
 
-        # If a dark image is passed, subtract it.
-        if dark_image is not None:
-            local_exp -= dark_image.getImage()
-
         # Crop the image within a border region.
         bbox = local_exp.getBBox()
         bbox.grow(-border)
         local_exp = local_exp[bbox]
+        local_exp*=gain
 
         # Calculate the mean of the image.
-        mean = afwMath.makeStatistics(local_exp, afwMath.MEAN,
+        mean = afwMath.makeStatistics(local_exp, afwMath.MEDIAN,
                                       sctrl).getValue()
 
         return local_exp, mean
@@ -228,6 +252,10 @@ def crossCorrelate_images(image1, image2, maxLag, sigma, binsize):
     """
     sctrl = afwMath.StatisticsControl()
     sctrl.setNumSigmaClip(sigma)
+    mask = maskedimage1.getMask()
+    INTRP = mask.getPlaneBitMask("INTRP")
+    sctrl.setAndMask(INTRP)
+
 
     # Diff the images.
     diff = image1.clone()
@@ -236,7 +264,7 @@ def crossCorrelate_images(image1, image2, maxLag, sigma, binsize):
     # Subtract background.
     nx = diff.getWidth()//binsize
     ny = diff.getHeight()//binsize
-    bctrl = afwMath.BackgroundControl(nx, ny, sctrl, afwMath.MEANCLIP)
+    bctrl = afwMath.BackgroundControl(nx, ny, sctrl, afwMath.MEDIAN)
     bkgd = afwMath.makeBackground(diff, bctrl)
     bgImg = bkgd.getImageF(afwMath.Interpolate.CUBIC_SPLINE,
                            afwMath.REDUCE_INTERP_ORDER)
@@ -250,7 +278,7 @@ def crossCorrelate_images(image1, image2, maxLag, sigma, binsize):
 
     bbox = lsstGeom.Box2I(lsstGeom.Point2I(x0, y0), bbox_extent)
     dim0 = diff[bbox].clone()
-    dim0 -= afwMath.makeStatistics(dim0, afwMath.MEANCLIP, sctrl).getValue()
+    dim0 -= afwMath.makeStatistics(dim0, afwMath.MEDIAN, sctrl).getValue()
 
     xcorr = np.zeros((maxLag + 1, maxLag + 1), dtype=np.float64)
     xcorr_err = np.zeros((maxLag + 1, maxLag + 1), dtype=np.float64)
@@ -260,7 +288,7 @@ def crossCorrelate_images(image1, image2, maxLag, sigma, binsize):
             bbox_lag = lsstGeom.Box2I(lsstGeom.Point2I(x0 + xlag, y0 + ylag),
                                       bbox_extent)
             dim_xy = diff[bbox_lag].clone()
-            dim_xy -= afwMath.makeStatistics(dim_xy, afwMath.MEANCLIP,
+            dim_xy -= afwMath.makeStatistics(dim_xy, afwMath.MEDIAN,
                                              sctrl).getValue()
             dim_xy *= dim0
             xcorr[xlag, ylag] = afwMath.makeStatistics(

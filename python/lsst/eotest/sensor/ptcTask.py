@@ -11,6 +11,7 @@ import operator
 import numpy as np
 import scipy.optimize
 import astropy.io.fits as fits
+import astropy.stats as astats
 import lsst.afw.image as afwImage
 import lsst.afw.math as afwMath
 import lsst.pex.config as pexConfig
@@ -41,7 +42,7 @@ def find_flats(args):
 
 def ptc_func(pars, mean):
     """
-    Model for variance vs mean.  See Astier et al.
+    Model for variance vs mean.  See Astier et al. (arXiv:1905.08677)
     https://confluence.slac.stanford.edu/pages/viewpage.action?pageId=242286867
     """
     a00, gain, intcpt = pars
@@ -56,9 +57,10 @@ def residuals(pars, mean, var):
 
 
 class FlatPairStats(object):
-    def __init__(self, fmean, fvar):
+    def __init__(self, fmean, fvar, discard):
         self.flat_mean = fmean
         self.flat_var = fvar
+        self.flat_discard = discard
 
 def flat_pair_stats(ccd1, ccd2, amp, mask_files=(), bias_frame=None):
     if ccd1.md.get('EXPTIME') != ccd2.md.get('EXPTIME'):
@@ -89,17 +91,38 @@ def flat_pair_stats(ccd1, ccd2, amp, mask_files=(), bias_frame=None):
         # Make a deep copy since otherwise the pixel values in image1
         # would be altered in the ratio calculation.
         #
-        fratio_im = afwImage.MaskedImageF(image1, True)
-        operator.itruediv(fratio_im, image2)
-        fratio = mean(fratio_im)
-        image2 *= fratio
-        fmean = (mean(image1) + mean(image2))/2.
+        mean1 = mean(image1)
+        mean2 = mean(image2)
+        fmean = (mean1 + mean2)/2.
+	# Pierre Astier's symmetric weights to make the difference image have zero mean
+        weight1 = mean2/fmean
+        weight2 = mean1/fmean
+        image1 *= weight1
+        image2 *= weight2
 
-        fdiff = afwImage.MaskedImageF(image1, True)
-        fdiff -= image2
-        fvar = var(fdiff)/2.
+	# Make a robust estimate of variance by filtering outliers
+        image1 = np.ravel(image1.getArrays()[0])
+        image2 = np.ravel(image2.getArrays()[0])
+        fdiff = image1 - image2
+        mad = astats.mad_std(fdiff)  #/2.
+        # The factor 14.826 below makes the filter the equivalent of a 10-sigma
+        # cut for a normal distribution
+        keep = np.where((np.abs(fdiff) < (mad*14.826)))[0]
 
-    return FlatPairStats(fmean, fvar)
+        # Re-weight the images
+        mean1 = np.mean(image1[keep], dtype=np.float64)
+        mean2 = np.mean(image2[keep], dtype=np.float64)
+        fmean = (mean1 + mean2)/2.
+        weight1 = mean2/fmean
+        weight2 = mean1/fmean
+        image1 *= weight1
+        image2 *= weight2
+
+        fmean = (mean1 + mean2)/2.
+        fvar = np.var(image1[keep] - image2[keep])/2.
+        discard = len(image1) - len(keep)
+
+    return FlatPairStats(fmean, fvar, discard)
 
 
 class PtcConfig(pexConfig.Config):
@@ -124,7 +147,8 @@ class PtcTask(pipeBase.Task):
         outfile = os.path.join(self.config.output_dir,
                                '%s_ptc.fits' % sensor_id)
         all_amps = imutils.allAmps(infiles[0])
-        ptc_stats = dict([(amp, ([], [])) for amp in all_amps])
+        #print(all_amps)
+        ptc_stats = dict([(amp, ([], [], [])) for amp in all_amps])
         exposure = []
         seqnums = []
         dayobs = []
@@ -146,6 +170,7 @@ class PtcTask(pipeBase.Task):
                                           bias_frame=bias_frame)
                 ptc_stats[amp][0].append(results.flat_mean)
                 ptc_stats[amp][1].append(results.flat_var)
+                ptc_stats[amp][2].append(results.flat_discard)
             seqnums.append(ccd1.md.get('SEQNUM'))
             try:
                 dayobs.append(ccd1.md.get('DAYOBS'))
@@ -158,17 +183,19 @@ class PtcTask(pipeBase.Task):
         units = ['seconds']
         columns = [np.array(exposure, dtype=np.float)]
         for amp in all_amps:
-            colnames.extend(['AMP%02i_MEAN' % amp, 'AMP%02i_VAR' % amp])
-            units.extend(['ADU', 'ADU**2'])
+            colnames.extend(['AMP%02i_MEAN' % amp, 'AMP%02i_VAR' % amp,
+                             'AMP%02i_DISCARD' % amp])
+            units.extend(['ADU', 'ADU**2', 'pixls'])
             columns.extend([np.array(ptc_stats[amp][0], dtype=np.float),
-                            np.array(ptc_stats[amp][1], dtype=np.float)])
+                            np.array(ptc_stats[amp][1], dtype=np.float),
+                            np.array(ptc_stats[amp][2], dtype=np.integer)])
         colnames.append('SEQNUM')
         units.append('None')
         columns.append(seqnums)
         colnames.append('DAYOBS')
         units.append('None')
         columns.append(dayobs)
-        formats = 'E'*(len(colnames) - 2) + 'JJ'
+        formats = 'E' + len(all_amps)*'EEJ' + 'JJ'
         fits_cols = [fits.Column(name=colnames[i], format=formats[i],
                                  unit=units[i], array=columns[i])
                      for i in range(len(columns))]
@@ -181,7 +208,7 @@ class PtcTask(pipeBase.Task):
     def fit_ptc_curve(mean, var, sig_cut=5, logger=None):
         """Fit the PTC curve for a set of mean-variance points."""
         index_old = []
-        index = list(np.where((mean < 4e4)*(var >0))[0])
+        index = list(np.where((mean < 4e4)*(var > 0))[0])
         count = 1
         # Initial guess for BF coeff, gain, and square of the read noise
         pars = 2.7e-6, 0.75, 25
@@ -233,6 +260,7 @@ class PtcTask(pipeBase.Task):
         if outfile is None:
             outfile = os.path.join(self.config.output_dir,
                                    '%s_eotest_results.fits' % sensor_id)
+        print('Writing:  ' + outfile)
         output = EOTestResults(outfile, namps=len(ptc_stats))
         # Fit for gain and error, a00 and its uncertainty, inferred
         # noise and uncertainty, and the 'turnoff' level (in
@@ -255,4 +283,5 @@ class PtcTask(pipeBase.Task):
                                                          ptc_noise,
                                                          ptc_noise_error,
                                                          ptc_turnoff))
+
         output.write()

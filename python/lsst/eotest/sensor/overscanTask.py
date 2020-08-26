@@ -12,18 +12,12 @@ import lsst.pipe.base as pipeBase
 import lsst.eotest.image_utils as imutils
 from lsst.eotest.fitsTools import fitsWriteto
 from lsst.eotest.sensor import MaskedCCD, parse_geom_kwd
-from .overscan_fit import OverscanFit
+from .overscan import OverscanResults
 
 class OverscanConfig(pexConfig.Config):
     """Configuration for overscan analysis task"""
     output_dir = pexConfig.Field("Output directory", str, default='.')
     output_file = pexConfig.Field("Output filename", str, default=None)
-    minflux = pexConfig.Field("Minimum flux for overscan fitting.", float,
-                              default=10000.0)
-    maxflux = pexConfig.Field("Maximum flux for overscan fitting.", float,
-                              default=140000.0)
-    num_oscan_pixels = pexConfig.Field("Number of overscan pixels used for model fit.",
-                                       int, default=10)
     verbose = pexConfig.Field("Turn verbosity on", bool, default=True)
 
 class OverscanTask(pipeBase.Task):
@@ -34,18 +28,15 @@ class OverscanTask(pipeBase.Task):
     def run(self, sensor_id, infiles, gains, bias_frame=None,
             linearity_correction=None):
 
+        all_amps = imutils.allAmps(infiles[0])
         ## Calculate mean row for each flat file
-        minflux = self.config.minflux
-        maxflux = self.config.maxflux
-        num_oscan_pixels = self.config.num_oscan_pixels
-
-        fitter = OverscanFit(num_oscan_pixels=num_oscan_pixels, minflux=minflux, maxflux=maxflux)
+        overscan_results = OverscanResults(all_amps)
         for i, infile in enumerate(infiles):
             if self.config.verbose:
                 self.log.info("Processing {0}".format(infile))
             ccd = MaskedCCD(infile, bias_frame=bias_frame,
                             linearity_correction=linearity_correction)
-            fitter.process_image(ccd, gains)
+            overscan_results.process_image(ccd, gains)
                 
         output_dir = self.config.output_dir
         if self.config.output_file is None:
@@ -55,6 +46,4 @@ class OverscanTask(pipeBase.Task):
             output_file = os.path.join(output_dir, self.config.output_file)
         if self.config.verbose:
             self.log.info("writing to {0}".format(output_file))
-        fitter.write_results(outfile=output_file)
-
-        return output_file
+        overscan_results.write_results(outfile=output_file)

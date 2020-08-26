@@ -112,6 +112,10 @@ class NonlinearityCorrection:
         self._prof_yerr = prof_yerr
         self._nxbins = self._prof_x.shape[1]
 
+        kwcopy = kwargs.copy()
+        kwcopy.setdefault('s', 1e-6)
+        kwcopy.setdefault('ext', 3)
+
         self._spline_dict = {}
         for iamp in range(16):
             idx_sort = np.argsort(self._prof_x[iamp])
@@ -125,7 +129,7 @@ class NonlinearityCorrection:
             try:
                 self._spline_dict[iamp] = UnivariateSpline(profile_x[mask],
                                                            profile_y[mask],
-                                                           **kwargs)
+                                                           **kwcopy)
             except Exception:
                 self._spline_dict[iamp] = lambda x : x
 
@@ -208,6 +212,8 @@ class NonlinearityCorrection:
         table : `Table`
             The table data used to build the nonlinearity correction
 
+        kwargs : passed to UnivariateSpline Constructor
+
         Returns
         -------
         nl : `NonlinearityCorrection`
@@ -229,6 +235,8 @@ class NonlinearityCorrection:
 
         hdu_name : `str`
             The name of the HDU with the nonlinearity correction data
+
+        kwargs : passed to UnivariateSpline Constructor
 
         Returns
         -------
