@@ -131,17 +131,17 @@ def bias_row(im, overscan, dxmin=5, dxmax=2, statistic=np.mean, **kwargs):
 
 
 
-def bias_col(im, overscan, dxmin=5, dxmax=2, statistic=np.mean, **kwargs):
+def bias_col(im, overscan, dymin=5, dymax=2, statistic=np.mean, **kwargs):
     """Compute the offset based on a statistic for each column in the serial 
-    overscan region for rows dxmin through dxmax.
+    overscan region for rows dymin through dymax.
 
     Args:
         im: A masked (lsst.afw.image.imageLib.MaskedImageF) or unmasked 
             (lsst.afw.image.imageLib.ImageF) afw image.
         overscan: A bounding box for the parallel overscan region.
-        dxmin: The number of rows to skip at the beginning of the serial 
+        dymin: The number of rows to skip at the beginning of the serial 
             overscan region.
-        dxmax: The number of rows to skip at the end of the parallel overscan region.
+        dymax: The number of rows to skip at the end of the parallel overscan region.
         statistic: The statistic to use to calculate the offset for each column.
 
     Returns:
@@ -154,7 +154,7 @@ def bias_col(im, overscan, dxmin=5, dxmax=2, statistic=np.mean, **kwargs):
         imarr = im.Factory(im, overscan).getImage().getArray()
     ny, nx = imarr.shape
     cols = np.arange(nx)
-    values = np.array([statistic(imarr[dxmin:-dxmax,j]) for j in cols])
+    values = np.array([statistic(imarr[dymin:-dymax,j]) for j in cols])
     return lambda x: values[x]
 
 
@@ -190,7 +190,7 @@ def bias_func(im, overscan, dxmin=5, dxmax=2, statistic=np.mean, **kwargs):
     return np.poly1d(np.polyfit(rows, values, kwargs.get('fit_order', 1)))
 
 
-def bias_col_func(im, overscan, dxmin=5, dxmax=2, statistic=np.mean, **kwargs):
+def bias_col_func(im, overscan, dymin=5, dymax=2, statistic=np.mean, **kwargs):
     """Compute the offset by fitting a polynomial (order 1 by default)
     to the mean of each column of the parallel overscan region.  This
     returns a numpy.poly1d object with the fitted bias as function of pixel columns.
@@ -201,9 +201,9 @@ def bias_col_func(im, overscan, dxmin=5, dxmax=2, statistic=np.mean, **kwargs):
         im: A masked (lsst.afw.image.imageLib.MaskedImageF) or unmasked
             (lsst.afw.image.imageLib.ImageF) afw image.
         overscan: A bounding box for the parallel overscan region.
-        dxmin: The number of rows to skip at the beginning of the parallel
+        dymin: The number of rows to skip at the beginning of the parallel
             overscan region.
-        dxmax: The number of rows to skip at the end of the parallel overscan region.
+        dymax: The number of rows to skip at the end of the parallel overscan region.
         statistic: The statistic to use to calculate the offset for each columns.
 
     Keyword Arguments:
@@ -218,7 +218,7 @@ def bias_col_func(im, overscan, dxmin=5, dxmax=2, statistic=np.mean, **kwargs):
         imarr = im.Factory(im, overscan).getImage().getArray()
     ny, nx = imarr.shape
     cols = np.arange(nx)
-    values = np.array([statistic(imarr[dxmin:-dxmax,j]) for j in cols])
+    values = np.array([statistic(imarr[dymin:-dymax,j]) for j in cols])
     return np.poly1d(np.polyfit(cols, values, kwargs.get('fit_order', 1)))
 
 
@@ -260,7 +260,7 @@ def bias_spline(im, overscan, dxmin=5, dxmax=2, statistic=np.mean, **kwargs):
                               s=kwargs.get('s', 18000), t=kwargs.get('t', None))
 
 
-def bias_col_spline(im, overscan, dxmin=5, dxmax=2, statistic=np.mean, **kwargs):
+def bias_col_spline(im, overscan, dymin=5, dymax=2, statistic=np.mean, **kwargs):
     """Compute the offset by fitting a spline to the mean of each row in the
     serial overscan region.
 
@@ -268,9 +268,9 @@ def bias_col_spline(im, overscan, dxmin=5, dxmax=2, statistic=np.mean, **kwargs)
         im: A masked (lsst.afw.image.imageLib.MaskedImageF) or unmasked
             (lsst.afw.image.imageLib.ImageF) afw image.
         overscan: A bounding box for the parallel overscan region.
-        dxmin: The number of rows to skip at the beginning of the parallel
+        dymin: The number of rows to skip at the beginning of the parallel
             overscan region.
-        dxmax: The number of rows to skip at the end of the parallel overscan region.
+        dymax: The number of rows to skip at the end of the parallel overscan region.
         statistic: The statistic to use to calculate the offset for each columns.
 
     Keyword Arguments:
@@ -290,7 +290,7 @@ def bias_col_spline(im, overscan, dxmin=5, dxmax=2, statistic=np.mean, **kwargs)
         imarr = im.Factory(im, overscan).getImage().getArray()
     ny, nx = imarr.shape
     cols = np.arange(nx)
-    values = np.array([statistic(imarr[dxmin:-dxmax,j]) for j in cols])
+    values = np.array([statistic(imarr[dymin:-dymax,j]) for j in cols])
     rms = 7 # Expected read noise per pixel
     weights = np.ones(nx) * (rms / np.sqrt(nx))
     return interpolate.splrep(cols, values, w=1/weights, k=kwargs.get('k', 3),
@@ -349,7 +349,7 @@ def bias_image(im, overscan, dxmin=5, dxmax=2, statistic=np.mean, bias_method='r
     return biasim
 
 
-def bias_image_col(im, overscan, dxmin=5, dxmax=2, statistic=np.mean, bias_method='col', **kwargs):
+def bias_image_col(im, overscan, dymin=5, dymax=2, statistic=np.mean, bias_method='col', **kwargs):
     """Generate a bias image containing the offset values calculated from
     bias(), bias_col(), bias_func() or bias_spline().
 
@@ -357,9 +357,9 @@ def bias_image_col(im, overscan, dxmin=5, dxmax=2, statistic=np.mean, bias_metho
         im: A masked (lsst.afw.image.imageLib.MaskedImageF) or unmasked
             (lsst.afw.image.imageLib.ImageF) afw image.
         overscan: A bounding box for the parallel overscan region.
-        dxmin: The number of rows to skip at the beginning of the parallel
+        dymin: The number of rows to skip at the beginning of the parallel
             overscan region.
-        dxmax: The number of rows to skip at the end of the parallel overscan region.
+        dymax: The number of rows to skip at the end of the parallel overscan region.
         statistic: The statistic to use to calculate the offset for each row.
         bias_method: Either 'mean', 'col', 'func' or 'spline'.
 
@@ -380,11 +380,8 @@ def bias_image_col(im, overscan, dxmin=5, dxmax=2, statistic=np.mean, bias_metho
     if bias_method not in ['mean', 'col', 'func', 'spline']:
         raise RuntimeError('Bias method must be either "mean", "col", "func" or "spline".')
 
-    def dummy_none(im, overscan, dxmin, dxmax, **kwargs):
-        return 0.0
-
-    method = {'mean' : bias, 'col' : bias_col, 'func' : bias_col_func, 'spline' : bias_col_spline, 'none':dummy_none}
-    my_bias = method[bias_method](im, overscan, dxmin=dxmin, dxmax=dxmax, **kwargs)
+    method = {'mean' : bias, 'col' : bias_col, 'func' : bias_col_func, 'spline' : bias_col_spline}
+    my_bias = method[bias_method](im, overscan, dymin=dymin, dymax=dymax, **kwargs)
     biasim = afwImage.ImageF(im.getDimensions())
     imarr = biasim.getArray()
     nx = overscan.width
@@ -443,16 +440,24 @@ def unbias_and_trim(im, overscan, imaging=None, dxmin=5, dxmax=2, bias_method='r
         t: The number of knots. If None, finds the number of knots to use for a given smoothing
             factor, s. This only needs to be specified when using the 'spline' method.
             The default is: None.
+        bias_method_col : Method to subtract the parallel overscan.  Typically not used. 
+            However can be set to 'mean', 'col', 'func', or 'spline'.   Default is None, in which
+            case the parallel overscan is not subtracted.  
+        dymin: The number of columns to skip at the beginning of the parallel
+            overscan region, if parallel overscan subtraction is requested. Defaults to 5
+        dymax: The number of columns to skip at the end of the parallel
+            overscan region, if parallel overscan subtraction is requested. Defaults to 2
 
     Returns:
         An afw image.
     """
 
     im -= bias_image(im, overscan, dxmin=dxmin, dxmax=dxmax, bias_method=bias_method, **kwargs)
-    bias_method_col = kwargs.get('bias_method_col', 'None')
+    bias_method_col = kwargs.get('bias_method_col', None)
     overscan_col = kwargs.get('overscan_col')
-    if bias_method_col != 'None':
-        im -= bias_image_col(im, overscan_col, dxmin=dxmin, dxmax=dxmax, bias_method=bias_method_col, **kwargs)
+    if bias_method_col not in ['None', None]:
+        im -= bias_image_col(im, overscan_col, dymin=kwaargs.get('dymin', 5), dymax=kwargs.get('dymax', 2),
+                             bias_method=bias_method_col, **kwargs)
     if bias_frame:
         im -= bias_frame
     if imaging is not None:
