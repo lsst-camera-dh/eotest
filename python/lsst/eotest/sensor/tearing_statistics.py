@@ -35,6 +35,27 @@ class TearingStats(OrderedDict):
         for amp in ccd:
             self[amp] = AmpTearingStats(ccd[amp], ccd.amp_geom, buf=buf)
 
+    def amp_tearing_count(self, amp, cut1=0.05, cut2=-0.01, nsig=1):
+        """
+        Return the number of tearing detections for the desired amp.
+
+        Parameters
+        ----------
+        amp: int
+        cut1: float [0.05]
+        cut2: float [-0.01]
+        nsig: float [1]
+        """
+        ntear = 0
+        rstats1, rstats2 = self[amp].rstats
+        if (rstats1.diff - cut1 > nsig*rstats1.error and
+            rstats2.diff - cut2 > nsig*rstats2.error):
+            ntear += 1
+        if (rstats1.diff - cut2 > nsig*rstats1.error and
+            rstats2.diff - cut1 > nsig*rstats2.error):
+            ntear += 1
+        return ntear
+
     def has_tearing(self, cut1=0.05, cut2=-0.01, nsig=1, ntear_min=10):
         """
         Returns True if tearing is found given the ratio cuts, signal
@@ -50,13 +71,8 @@ class TearingStats(OrderedDict):
         """
         ntear = 0
         for amp in self:
-            rstats1, rstats2 = self[amp].rstats
-            if (rstats1.diff - cut1 > nsig*rstats1.error and
-                rstats2.diff - cut2 > nsig*rstats2.error):
-                ntear += 1
-            if (rstats1.diff - cut2 > nsig*rstats1.error and
-                rstats2.diff - cut1 > nsig*rstats2.error):
-                ntear += 1
+            ntear += self.amp_tearing_count(amp, cut1=cut1, cut2=cut2,
+                                            nsig=nsig)
         return ntear > ntear_min
 
     def plot_profiles(self, fig=None, figsize=(10, 10), title=None):
