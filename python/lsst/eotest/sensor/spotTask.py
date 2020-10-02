@@ -19,7 +19,7 @@ import lsst.meas.extensions.shapeHSM
 
 from .MaskedCCD import MaskedCCD
 from .AmplifierGeometry import parse_geom_kwd
-    
+
 def make_ccd_mosaic(infile, bias_frame=None, dark_frame=None, gains=None):
     """Create a full CCD image mosaic.
     
@@ -46,6 +46,7 @@ def make_ccd_mosaic(infile, bias_frame=None, dark_frame=None, gains=None):
     nx = nx_segments*(datasec['xmax'] - datasec['xmin'] + 1)
     ny = ny_segments*(datasec['ymax'] - datasec['ymin'] + 1)
     mosaic = np.zeros((ny, nx), dtype=np.float32)
+    raw = np.zeros((ny, nx), dtype=np.float32)
 
     for ypos in range(ny_segments):
         for xpos in range(nx_segments):
@@ -69,7 +70,9 @@ def make_ccd_mosaic(infile, bias_frame=None, dark_frame=None, gains=None):
                 subarr *= gains[amp]
 
             ## Assign to final array
-            mosaic[ymin:ymax, xmin:xmax] = subarr
+            raw[ymin:ymax, xmin:xmax] = subarr
+
+    mosaic[:, :] = raw[:, ::-1]
 
     image = afwImage.ImageF(mosaic)
     return image
