@@ -43,7 +43,7 @@ def pair_mean(flat1, flat2, amp):
     return np.array([avg_mean_value, flat1_value, flat2_value], dtype=float)
 
 
-def row_mean_variance(flat1, flat2, amp):
+def row_mean_variance(flat1, flat2, amp, nsig=10):
     """
     Compute the 3-sigma clipped variance of the row mean distributions
     for the specified amp from a pair of flats.  Units are ADU^2.
@@ -52,7 +52,10 @@ def row_mean_variance(flat1, flat2, amp):
                                     deep=True)
     mi_diff -= flat2.unbiased_and_trimmed_image(amp)
     row_means = np.mean(mi_diff.getImage().array, axis=1)
-    return afwMath.makeStatistics(row_means, afwMath.VARIANCECLIP).getValue()
+    sctrl = afwMath.StatisticsControl()
+    sctrl.setNumSigmaClip(nsig)
+    return afwMath.makeStatistics(row_means, afwMath.VARIANCECLIP,
+                                  sctrl).getValue()
 
 
 def find_flat2(flat1):
