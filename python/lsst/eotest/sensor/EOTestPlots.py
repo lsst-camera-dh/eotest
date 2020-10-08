@@ -1220,7 +1220,8 @@ class EOTestPlots(object):
             #
             # Get the linearity fit for this amp.
             try:
-                maxdev, fit_pars, Ne, flux = self.linearity_results[amp]
+                maxdev, fit_pars, Ne, flux, Ne_f, flux_f \
+                    = self.linearity_results[amp]
             except KeyError:
                 continue
             #
@@ -1240,6 +1241,12 @@ class EOTestPlots(object):
             # Plot Ne vs flux
             try:
                 win.axes[-1].loglog(flux, Ne, 'ko', markersize=3)
+            except Exception as eObj:
+                print("EOTestPlots.linearity: amp %i" % amp)
+                print("  ", eObj)
+            # Plot the fitted points
+            try:
+                win.axes[-1].loglog(flux_f, Ne_f, 'ro', markersize=3)
             except Exception as eObj:
                 print("EOTestPlots.linearity: amp %i" % amp)
                 print("  ", eObj)
