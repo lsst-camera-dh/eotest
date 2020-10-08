@@ -46,7 +46,7 @@ def pair_mean(flat1, flat2, amp):
 def row_mean_variance(flat1, flat2, amp):
     """
     Compute the 3-sigma clipped variance of the row mean distributions
-    for the specified amp from a pair of flats.
+    for the specified amp from a pair of flats.  Units are ADU^2.
     """
     mi_diff = afwImage.MaskedImageF(flat1.unbiased_and_trimmed_image(amp),
                                     deep=True)
@@ -290,8 +290,9 @@ class FlatPairTask(pipeBase.Task):
                 self.output[-1].data.field(colname)[row] = signal
                 self.output[-1].data.field('FLAT1_' + colname)[row] = sig1
                 self.output[-1].data.field('FLAT2_' + colname)[row] = sig2
+                # Convert row mean variance to e-**2
                 self.output[-1].data.field(f'AMP{amp:02d}_ROW_MEAN_VAR')[row] \
-                    = row_mean_variance(flat1, flat2, amp)
+                    = row_mean_variance(flat1, flat2, amp)*self.gains[amp]**2
                 self.output[-1].data.field('SEQNUM')[row] = seqnum
                 self.output[-1].data.field('DAYOBS')[row] = dayobs
         self.output[0].header['NAMPS'] = len(flat1)
