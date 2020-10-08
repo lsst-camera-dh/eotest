@@ -199,8 +199,8 @@ class FlatPairTask(pipeBase.Task):
                    ['AMP%02i_ROW_MEAN_VAR' % i for i in all_amps] + \
                    ['SEQNUM', 'DAYOBS']
         formats = 'E'*(len(colnames) - 2) + 'JJ'
-        units = ['None'] + (['e-']*3 + ['ADU^2'])*len(all_amps) \
-                + ['None', 'None']
+        namps = len(all_amps)
+        units = ['None'] + 3*namps*['e-'] + namps*['e-^2'] + ['None', 'None']
         columns = [np.zeros(nrows, dtype=np.float) for fmt in formats]
         fits_cols = [fits.Column(name=colnames[i], format=formats[i],
                                  unit=units[i], array=columns[i])
