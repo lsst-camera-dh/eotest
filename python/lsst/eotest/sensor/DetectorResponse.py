@@ -4,8 +4,6 @@ linearity) from flat pairs data.
 
 @author J. Chiang <jchiang@slac.stanford.edu>
 """
-from __future__ import print_function
-from __future__ import absolute_import
 import sys
 import numpy as np
 import astropy.io.fits as fits
@@ -30,7 +28,8 @@ def _fwc_solve(f1_pars, f2_pars, g=0.1):
 
 
 class DetectorResponse(object):
-    def __init__(self, infile, ptc=None, gain_range=None, hdu_name='DETECTOR_RESPONSE'):
+    def __init__(self, infile, ptc=None, gain_range=None,
+                 hdu_name='DETECTOR_RESPONSE'):
         if infile[-5:] == '.fits':
             self._read_from_fits(infile, hdu_name)
         else:
@@ -63,7 +62,8 @@ class DetectorResponse(object):
         all_amps = imutils.allAmps(infile)
         with fits.open(infile) as foo:
             hdu = foo[hdu_name]
-            self.flux = np.fabs(np.array(hdu.data.field('FLUX'), dtype=np.float))
+            self.flux = np.fabs(np.array(hdu.data.field('FLUX'),
+                                         dtype=np.float))
             self.Ne = dict([(amp, np.array(hdu.data.field('AMP%02i_SIGNAL' % amp),
                                            dtype=np.float)) for amp in all_amps])
 
@@ -206,26 +206,31 @@ class DetectorResponse(object):
         if fit_range is None:
             fit_range = spec_range
         max_Ne_index = np.where(Ne == max(Ne))[0][0]
-        indx = np.where((Ne > fit_range[0]) & (Ne < fit_range[1])
-                        & (flux <= flux[max_Ne_index]))[0]
-        if indx.sum() < 2:
-            print ("Not enough good points to fit linearity %i %i" % (amp, indx.sum()))
-            return (0., [0., 1.], Ne, flux)
-        f1_pars = np.polyfit(flux[indx], Ne[indx], 1, w=1./Ne[indx])
+        index = np.where((Ne > fit_range[0]) & (Ne < fit_range[1])
+                         & (flux <= flux[max_Ne_index]))
+        if sum(index[0]) < 1:
+            print(f"No selected points to fit linearity for amp {amp}")
+            return (0., (1, 0), Ne, flux)
+        # Fit a linear slope to these data, using the variance for the
+        # signal levels assuming Poisson statistics in the chi-square
+        # and fixing the y-intercept to zero.  Package the slope as
+        # part of a tuple to be passed to np.poly1d.
+        slope = len(Ne[index])/np.sum(flux[index]/Ne[index])
+        f1_pars = slope, 0
         f1 = np.poly1d(f1_pars)
         # Further select points that are within the specification range
         # for computing the maximum fractional deviation.
-        spec_indx = np.where((Ne > spec_range[0]) & (Ne < spec_range[1])
+        spec_index = np.where((Ne > spec_range[0]) & (Ne < spec_range[1])
                              & (flux <= flux[max_Ne_index]))
 
-        flux_spec = flux[spec_indx]
-        Ne_spec = Ne[spec_indx]
-        if len(Ne_spec) < 2:
-            print ("Not enough good points for a good fit %i %i" % (amp, len(Ne_spec)))
-            return (0., [0., 1.], Ne, flux)
+        flux_spec = flux[spec_index]
+        Ne_spec = Ne[spec_index]
+        if len(Ne_spec) < 1:
+            print(f"No selected points for max frac dev for amp {amp}")
+            return (0., (1, 0), Ne, flux)
 
         dNfrac = 1 - Ne_spec/f1(flux_spec)
-        return max(abs(dNfrac)), f1_pars, Ne, flux
+        return max(abs(dNfrac)), f1_pars, Ne, flux, Ne[index], flux[index]
 
     def plot_linearity(self, maxdev, f1_pars, Ne, flux, max_dev=0.02):
         top_rect = [0.1, 0.3, 0.8, 0.6]
@@ -234,6 +239,8 @@ class DetectorResponse(object):
         top_ax = fig.add_axes(top_rect)
         bot_ax = fig.add_axes(bottom_rect, sharex=top_ax)
 
+        f1 = np.poly1d(f1_pars)
+        dNfrac = 1 - Ne/f1(flux)
         # Plot flux vs e-/pixel.
         top_ax.loglog(Ne, flux, 'ko')
         top_ax.loglog(Ne, f1(Ne), 'r-')
