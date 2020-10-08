@@ -1246,7 +1246,7 @@ class EOTestPlots(object):
                 print("  ", eObj)
             # Plot the fitted points
             try:
-                win.axes[-1].loglog(flux_f, Ne_f, 'ro', markersize=3)
+                win.axes[-1].loglog(flux_f, Ne_f, 'go', markersize=3)
             except Exception as eObj:
                 print("EOTestPlots.linearity: amp %i" % amp)
                 print("  ", eObj)
