@@ -171,7 +171,8 @@ class FlatPairTask(pipeBase.Task):
                 results = \
                     detresp.linearity(amp, spec_range=linearity_spec_range)
                 maxdev = results[0]
-                turnoff = results[-1]
+                # Convert linearity turnoff to ADU.
+                turnoff = results[-1]/self.gains[amp]
             except Exception as eobj:
                 self.log.info("Exception caught in linearity calculation:")
                 self.log.info(str(eobj))
