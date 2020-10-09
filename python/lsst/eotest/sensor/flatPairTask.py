@@ -168,12 +168,15 @@ class FlatPairTask(pipeBase.Task):
             self.log.info('linearity analysis range: %s, %s' %
                           linearity_spec_range)
             try:
-                maxdev, _, _, _ = \
+                results = \
                     detresp.linearity(amp, spec_range=linearity_spec_range)
+                maxdev = results[0]
+                turnoff = results[-1]
             except Exception as eobj:
                 self.log.info("Exception caught in linearity calculation:")
                 self.log.info(str(eobj))
                 maxdev = None
+                turnoff = None
             # The maximum observed signal should be reported in ADUs.
             max_observed_signal = np.max(detresp.Ne[amp])/self.gains[amp]
             if self.config.verbose:
@@ -187,6 +190,8 @@ class FlatPairTask(pipeBase.Task):
                                   row_mean_var_slopes[amp])
             output.add_seg_result(amp, 'MAX_OBSERVED_SIGNAL',
                                   max_observed_signal)
+            if turnoff is not None:
+                output.add_seg_result(amp, 'LINEARITY_TURNOFF', float(turnoff))
         output.write()
 
     def _create_detresp_fits_output(self, nrows, infile):
