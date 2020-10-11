@@ -279,6 +279,9 @@ class FlatPairTask(pipeBase.Task):
                 self.log.info('   flux = %s', flux)
                 self.log.info('   flux/exptime = %s', flux/exptime1)
             self.output[-1].data.field('FLUX')[row] = flux
+            if row == 0:
+                self.output[0].header['NAMPS'] = len(all_amps)
+
             for amp in all_amps:
                 flat1 = MaskedCCD(file1, mask_files=self.mask_files,
                                   bias_frame=self.bias_frame,
@@ -303,7 +306,6 @@ class FlatPairTask(pipeBase.Task):
                 self.output[-1].data.field('SEQNUM')[row] = seqnum
                 self.output[-1].data.field('DAYOBS')[row] = dayobs
                 if row == 0 and amp == 1:
-                    self.output[0].header['NAMPS'] = len(flat1)
                     self.output[0].header['NUMCOLS'] \
                         = flat1.amp_geom.imaging.getWidth()
                 del flat1
