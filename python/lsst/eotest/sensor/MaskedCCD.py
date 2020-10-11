@@ -40,12 +40,13 @@ class MaskedCCD(dict):
 
     def __init__(self, imfile, mask_files=(), bias_frame=None,
                  interpolateFromMasks=False, linearity_correction=None,
-                 dark_frame=None):
+                 dark_frame=None, all_amps=None):
         super(MaskedCCD, self).__init__()
         self.imfile = imfile
         self.md = imutils.Metadata(imfile)
         self.amp_geom = makeAmplifierGeometry(imfile)
-        all_amps = imutils.allAmps(imfile)
+        if all_amps is None:
+            all_amps = imutils.allAmps(imfile)
         for amp in all_amps:
             image = afwImage.ImageF(imfile, imutils.dm_hdu(amp))
             mask = afwImage_Mask(image.getDimensions())
@@ -60,11 +61,12 @@ class MaskedCCD(dict):
             if isinstance(bias_frame, MaskedCCD):
                 self.bias_frame = bias_frame
             else:
-                self.bias_frame = MaskedCCD(bias_frame)
+                self.bias_frame = MaskedCCD(bias_frame, all_amps=all_amps)
         else:
             self.bias_frame = None
         if dark_frame is not None:
-            self.dark_frame = MaskedCCD(dark_frame, bias_frame=bias_frame)
+            self.dark_frame = MaskedCCD(dark_frame, bias_frame=bias_frame,
+                                        all_amps=all_amps)
             self.dark_time_ratio \
                 = self.md.get('DARKTIME')/self.dark_frame.md.get('DARKTIME')
         else:
