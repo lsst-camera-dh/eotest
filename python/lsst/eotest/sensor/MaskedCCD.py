@@ -24,6 +24,7 @@ try:
 except AttributeError:
     afwImage_Mask = afwImage.MaskU
 
+
 class MaskedCCDBiasImageException(RuntimeError):
     def __init__(self, *args):
         super(MaskedCCDBiasImageException, self).__init__(*args)
@@ -37,7 +38,6 @@ class MaskedCCD(dict):
     amplifier number.  Masks can be added and manipulated separately
     by various methods.
     """
-
     def __init__(self, imfile, mask_files=(), bias_frame=None,
                  interpolateFromMasks=False, linearity_correction=None,
                  dark_frame=None, all_amps=None):
@@ -318,6 +318,37 @@ def compute_stats(image, sctrl, weights=None):
     else:
         stats = afwMath.makeStatistics(image, weights, flags, sctrl)
     return stats.getValue(afwMath.MEAN), stats.getValue(afwMath.STDEV)
+
+
+class MaskedCCDWrapper:
+    """
+    Wrapper class for MaskedCCD to reduce the memory footprint by
+    having only one amp in memory at a time.
+    """
+    def __init__(self, imfile, **kwds):
+        self.imfile = imfile
+        self.kwds = kwds
+        if 'all_amps' in kwds:
+            self.all_amps = kwds['all_amps']
+        self.ccd = None
+        self.md = imutils.Metadata(imfile)
+
+    def unbiased_and_trimmed_image(self, amp):
+        if self.ccd is None or not amp in self.ccd:
+            self.kwds['all_amps'] = (amp,)
+            self.ccd = MaskedCCD(self.imfile, **self.kwds)
+        return self.ccd.unbiased_and_trimmed_image(amp)
+
+    def __getitem__(self, amp):
+        if self.ccd is None or not amp in self.ccd:
+            self.kwds['all_amps'] = (amp,)
+            self.ccd = MaskedCCD(self.imfile, **self.kwds)
+        return self.ccd[amp]
+
+    def __getattr__(self, attr):
+        if self.ccd is None:
+            raise RuntimeError('__getattr__: self.ccd is None')
+        return getattr(self.ccd, attr)
 
 
 if __name__ == '__main__':

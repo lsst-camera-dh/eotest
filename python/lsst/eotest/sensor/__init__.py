@@ -6,7 +6,7 @@ import warnings
 #
 # Low-level classes and functions
 #
-from .MaskedCCD import MaskedCCD, add_mask_files
+from .MaskedCCD import MaskedCCD, add_mask_files, MaskedCCDWrapper
 from .TaskParser import TaskParser
 from .EOTestResults import EOTestResults
 from .EOTestPlots import EOTestPlots, plot_flat, fe55_zoom
