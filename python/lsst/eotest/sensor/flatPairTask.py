@@ -171,12 +171,16 @@ class FlatPairTask(pipeBase.Task):
             self.log.info('linearity analysis range: %s, %s' %
                           linearity_spec_range)
             try:
-                maxdev, _, _, _ = \
+                results = \
                     detresp.linearity(amp, spec_range=linearity_spec_range)
+                maxdev = results[0]
+                # Convert linearity turnoff to ADU.
+                turnoff = results[-1]/self.gains[amp]
             except Exception as eobj:
                 self.log.info("Exception caught in linearity calculation:")
                 self.log.info(str(eobj))
                 maxdev = None
+                turnoff = None
             # The maximum observed signal should be reported in ADUs.
             max_observed_signal = np.max(detresp.Ne[amp])/self.gains[amp]
             if self.config.verbose:
@@ -190,6 +194,8 @@ class FlatPairTask(pipeBase.Task):
                                   row_mean_var_slopes[amp])
             output.add_seg_result(amp, 'MAX_OBSERVED_SIGNAL',
                                   max_observed_signal)
+            if turnoff is not None:
+                output.add_seg_result(amp, 'LINEARITY_TURNOFF', float(turnoff))
         output.write()
 
     def _create_detresp_fits_output(self, nrows, infile):
@@ -202,8 +208,8 @@ class FlatPairTask(pipeBase.Task):
                    ['AMP%02i_ROW_MEAN_VAR' % i for i in all_amps] + \
                    ['SEQNUM', 'DAYOBS']
         formats = 'E'*(len(colnames) - 2) + 'JJ'
-        units = ['None'] + (['e-']*3 + ['ADU^2'])*len(all_amps) \
-                + ['None', 'None']
+        namps = len(all_amps)
+        units = ['None'] + 3*namps*['e-'] + namps*['e-^2'] + ['None', 'None']
         columns = [np.zeros(nrows, dtype=np.float) for fmt in formats]
         fits_cols = [fits.Column(name=colnames[i], format=formats[i],
                                  unit=units[i], array=columns[i])

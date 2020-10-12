@@ -4,8 +4,6 @@ linearity) from flat pairs data.
 
 @author J. Chiang <jchiang@slac.stanford.edu>
 """
-from __future__ import print_function
-from __future__ import absolute_import
 import sys
 import numpy as np
 import astropy.io.fits as fits
@@ -13,7 +11,6 @@ import scipy.optimize
 import lsst.eotest.image_utils as imutils
 import pylab
 from . import pylab_plotter as plot
-
 
 def _fwc_solve(f1_pars, f2_pars, g=0.1):
     """
@@ -30,7 +27,8 @@ def _fwc_solve(f1_pars, f2_pars, g=0.1):
 
 
 class DetectorResponse(object):
-    def __init__(self, infile, ptc=None, gain_range=None, hdu_name='DETECTOR_RESPONSE'):
+    def __init__(self, infile, ptc=None, gain_range=None,
+                 hdu_name='DETECTOR_RESPONSE'):
         if infile[-5:] == '.fits':
             self._read_from_fits(infile, hdu_name)
         else:
@@ -63,7 +61,8 @@ class DetectorResponse(object):
         all_amps = imutils.allAmps(infile)
         with fits.open(infile) as foo:
             hdu = foo[hdu_name]
-            self.flux = np.fabs(np.array(hdu.data.field('FLUX'), dtype=np.float))
+            self.flux = np.fabs(np.array(hdu.data.field('FLUX'),
+                                         dtype=np.float))
             self.Ne = dict([(amp, np.array(hdu.data.field('AMP%02i_SIGNAL' % amp),
                                            dtype=np.float)) for amp in all_amps])
 
@@ -79,8 +78,8 @@ class DetectorResponse(object):
                   multipanel=False, fit_range=(1e2, 5e4)):
         if plotter is None:
             plotter = plot
-        max_frac_dev, f1_pars, Ne, flux = self.linearity(amp,
-                                                         fit_range=fit_range)
+        results = self.linearity(amp, fit_range=fit_range)
+        max_frac_dev, f1_pars, Ne, flux = results[:4]
         f1 = np.poly1d(f1_pars)
         dNfrac = 1 - Ne/f1(flux)
         indexes = np.arange(len(dNfrac))
@@ -189,14 +188,8 @@ class DetectorResponse(object):
         plotter.pylab.interactive(pylab_interactive_state)
         return full_well, fp
 
-    def plot_diagnostics(self, flux, Ne, indxp, f1, fp):
-        plot.pylab.ion()
-        plot.xyplot(flux, Ne)
-        plot.xyplot(flux[indxp], Ne[indxp], oplot=1, color='r')
-        plot.curve(flux, f1(flux), oplot=1)
-        plot.curve(flux, fp(flux), oplot=1, color='b')
-
-    def linearity(self, amp, fit_range=None, spec_range=(1e3, 9e4)):
+    def linearity(self, amp, fit_range=None, spec_range=(1e3, 9e4),
+                  max_frac_dev=0.05):
         flux, Ne = self.flux, self.Ne[amp]
         if self._index:
             # Apply selection to remove points with outlier gains from
@@ -206,61 +199,41 @@ class DetectorResponse(object):
         if fit_range is None:
             fit_range = spec_range
         max_Ne_index = np.where(Ne == max(Ne))[0][0]
-        indx = np.where((Ne > fit_range[0]) & (Ne < fit_range[1])
-                        & (flux <= flux[max_Ne_index]))[0]
-        if indx.sum() < 2:
-            print ("Not enough good points to fit linearity %i %i" % (amp, indx.sum()))
-            return (0., [0., 1.], Ne, flux)
-        f1_pars = np.polyfit(flux[indx], Ne[indx], 1, w=1./Ne[indx])
+        index = np.where((Ne > fit_range[0]) & (Ne < fit_range[1])
+                         & (flux <= flux[max_Ne_index]))
+
+        default_results = 0, (1, 0), Ne, flux, [], [], max(Ne)
+        if sum(index[0]) < 1:
+            print(f"No selected points to fit linearity for amp {amp}")
+            return default_results
+        # Fit a linear slope to these data, using the variance for the
+        # signal levels assuming Poisson statistics in the chi-square
+        # and fixing the y-intercept to zero.  Package the slope as
+        # part of a tuple to be passed to np.poly1d.
+        slope = len(Ne[index])/np.sum(flux[index]/Ne[index])
+        f1_pars = slope, 0
         f1 = np.poly1d(f1_pars)
         # Further select points that are within the specification range
         # for computing the maximum fractional deviation.
-        spec_indx = np.where((Ne > spec_range[0]) & (Ne < spec_range[1])
+        spec_index = np.where((Ne > spec_range[0]) & (Ne < spec_range[1])
                              & (flux <= flux[max_Ne_index]))
 
-        flux_spec = flux[spec_indx]
-        Ne_spec = Ne[spec_indx]
-        if len(Ne_spec) < 2:
-            print ("Not enough good points for a good fit %i %i" % (amp, len(Ne_spec)))
-            return (0., [0., 1.], Ne, flux)
+        flux_spec = flux[spec_index]
+        Ne_spec = Ne[spec_index]
+        if len(Ne_spec) < 1:
+            print(f"No selected points for max frac dev for amp {amp}")
+            return default_results
 
         dNfrac = 1 - Ne_spec/f1(flux_spec)
-        return max(abs(dNfrac)), f1_pars, Ne, flux
+        return (max(abs(dNfrac)), f1_pars, Ne, flux, Ne[index], flux[index],
+                self.linearity_turnoff(f1, flux, Ne, max_frac_dev=max_frac_dev))
 
-    def plot_linearity(self, maxdev, f1_pars, Ne, flux, max_dev=0.02):
-        top_rect = [0.1, 0.3, 0.8, 0.6]
-        bottom_rect = [0.1, 0.1, 0.8, 0.2]
-        fig = pylab.figure()
-        top_ax = fig.add_axes(top_rect)
-        bot_ax = fig.add_axes(bottom_rect, sharex=top_ax)
-
-        # Plot flux vs e-/pixel.
-        top_ax.loglog(Ne, flux, 'ko')
-        top_ax.loglog(Ne, f1(Ne), 'r-')
-        top_ax.set_ylabel('flux')
-        for label in top_ax.get_xticklabels():
-            label.set_visible(False)
-
-        # Plot fractional residuals vs e-/pixel.
-        bot_ax.semilogx(Ne, dNfrac, 'ko')
-        bot_ax.semilogx(Ne, np.zeros(len(Ne)), 'r-')
-        plot.setAxis(yrange=(-1.5*max_dev, 1.5*max_dev))
-        bot_ax.set_ylabel('fractional residual flux')
-        bot_ax.set_xlabel('e-/pixel')
-
-
-if __name__ == '__main__':
-    infile = '000-00_det_response.txt'
-    detResp = DetectorResponse(infile)
-    make_plot = False
-    print("Amp       max. dev.   full well")
-    for amp in imutils.allAmps():
-        max_dev, fit_pars = detResp.linearity(amp, make_plot=make_plot)
-        sys.stdout.write("%2i         %.3f       " % (amp, max_dev))
-        try:
-            full_well = detResp.full_well(amp, make_plot=make_plot)
-            print("%i" % full_well)
-        except RuntimeError:
-            full_well = detResp.full_well(amp, frac_offset=0.05,
-                                          make_plot=make_plot)
-            print("%i (5%% dev)" % full_well)
+    @staticmethod
+    def linearity_turnoff(f1, flux, Ne, max_frac_dev=0.05):
+        """
+        Find the maximum signal consistent with the linear fit within
+        the specified maximum fractional deviation.
+        """
+        frac_dev = f1(flux)/Ne - 1
+        index = np.where(frac_dev < max_frac_dev)
+        return np.max(Ne[index])

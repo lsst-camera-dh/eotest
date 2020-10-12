@@ -62,7 +62,8 @@ class LinearityTask(pipeBase.Task):
             self.log.info("Amp        max. frac. dev.")
         for amp in all_amps:
             try:
-                maxdev, fit_pars, Ne, flux = detresp.linearity(amp)
+                results = detresp.linearity(amp)
+                maxdev, fit_pars, Ne, flux = results[:4]
             except:
                 maxdev = None
             if self.config.verbose:
