@@ -78,8 +78,8 @@ class DetectorResponse(object):
                   multipanel=False, fit_range=(1e2, 5e4)):
         if plotter is None:
             plotter = plot
-        max_frac_dev, f1_pars, Ne, flux = self.linearity(amp,
-                                                         fit_range=fit_range)
+        results = self.linearity(amp, fit_range=fit_range)
+        max_frac_dev, f1_pars, Ne, flux = results[:4]
         f1 = np.poly1d(f1_pars)
         dNfrac = 1 - Ne/f1(flux)
         indexes = np.arange(len(dNfrac))

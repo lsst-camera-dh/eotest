@@ -1221,7 +1221,7 @@ class EOTestPlots(object):
             # Get the linearity fit for this amp.
             try:
                 maxdev, fit_pars, Ne, flux, Ne_f, flux_f \
-                    = self.linearity_results[amp]
+                    = self.linearity_results[amp][:6]
             except KeyError:
                 continue
             #
@@ -1308,7 +1308,7 @@ class EOTestPlots(object):
                 win.select_subplot(*subplot)
 
             try:
-                maxdev, fit_pars, Ne, flux = self.linearity_results[amp]
+                maxdev, fit_pars, Ne, flux = self.linearity_results[amp][:4]
             except KeyError:
                 continue
 
