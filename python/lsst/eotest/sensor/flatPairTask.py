@@ -14,7 +14,7 @@ import lsst.pex.config as pexConfig
 import lsst.pipe.base as pipeBase
 from lsst.eotest.fitsTools import fitsTableFactory, fitsWriteto
 import lsst.eotest.image_utils as imutils
-from .MaskedCCD import MaskedCCD
+from .MaskedCCD import MaskedCCDWrapper
 from .EOTestResults import EOTestResults
 from .DetectorResponse import DetectorResponse
 
@@ -233,15 +233,15 @@ class FlatPairTask(pipeBase.Task):
                 self.log.info("processing\n   %s as flat1 and\n   %s as flat2",
                               file1, file2)
 
-            flat1 = MaskedCCD(file1, mask_files=self.mask_files,
-                              bias_frame=self.bias_frame,
-                              dark_frame=self.dark_frame,
-                              linearity_correction=self.linearity_correction)
-            flat2 = MaskedCCD(file2, mask_files=self.mask_files,
-                              bias_frame=self.bias_frame,
-                              dark_frame=self.dark_frame,
-                              linearity_correction=self.linearity_correction)
-
+            flat1 = MaskedCCDWrapper(file1, mask_files=self.mask_files,
+                                     bias_frame=self.bias_frame,
+                                     dark_frame=self.dark_frame,
+                                     linearity_correction=self.linearity_correction)
+            flat2 = MaskedCCDWrapper(file2, mask_files=self.mask_files,
+                                     bias_frame=self.bias_frame,
+                                     dark_frame=self.dark_frame,
+                                     linearity_correction=self.linearity_correction)
+            all_amps = imutils.allAmps(file1)
             seqnum = flat1.md.get('SEQNUM')
             try:
                 dayobs = flat1.md.get('DAYOBS')
@@ -285,7 +285,10 @@ class FlatPairTask(pipeBase.Task):
                 self.log.info('   flux = %s', flux)
                 self.log.info('   flux/exptime = %s', flux/exptime1)
             self.output[-1].data.field('FLUX')[row] = flux
-            for amp in flat1:
+            if row == 0:
+                self.output[0].header['NAMPS'] = len(all_amps)
+
+            for amp in all_amps:
                 # Convert to e- and write out for each segment.
                 signal, sig1, sig2 \
                     = pair_mean(flat1, flat2, amp)*self.gains[amp]
@@ -298,7 +301,8 @@ class FlatPairTask(pipeBase.Task):
                     = row_mean_variance(flat1, flat2, amp)*self.gains[amp]**2
                 self.output[-1].data.field('SEQNUM')[row] = seqnum
                 self.output[-1].data.field('DAYOBS')[row] = dayobs
-        self.output[0].header['NAMPS'] = len(flat1)
-        self.output[0].header['NUMCOLS'] = flat1.amp_geom.imaging.getWidth()
+                if row == 0 and amp == 1:
+                    self.output[0].header['NUMCOLS'] \
+                        = flat1.amp_geom.imaging.getWidth()
         fitsWriteto(self.output, outfile, overwrite=True)
         return outfile

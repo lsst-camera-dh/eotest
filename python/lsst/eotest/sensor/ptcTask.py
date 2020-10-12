@@ -18,7 +18,7 @@ import lsst.pex.config as pexConfig
 import lsst.pipe.base as pipeBase
 from lsst.eotest.fitsTools import fitsTableFactory, fitsWriteto
 import lsst.eotest.image_utils as imutils
-from .MaskedCCD import MaskedCCD
+from .MaskedCCD import MaskedCCDWrapper
 from .EOTestResults import EOTestResults
 from .flatPairTask import find_flat2
 
@@ -94,13 +94,14 @@ def flat_pair_stats(ccd1, ccd2, amp, mask_files=(), bias_frame=None):
         mean1 = mean(image1)
         mean2 = mean(image2)
         fmean = (mean1 + mean2)/2.
-	# Pierre Astier's symmetric weights to make the difference image have zero mean
+        # Pierre Astier's symmetric weights to make the difference
+        # image have zero mean
         weight1 = mean2/fmean
         weight2 = mean1/fmean
         image1 *= weight1
         image2 *= weight2
 
-	# Make a robust estimate of variance by filtering outliers
+        # Make a robust estimate of variance by filtering outliers
         image1 = np.ravel(image1.getArrays()[0])
         image2 = np.ravel(image2.getArrays()[0])
         fdiff = image1 - image2
@@ -147,7 +148,6 @@ class PtcTask(pipeBase.Task):
         outfile = os.path.join(self.config.output_dir,
                                '%s_ptc.fits' % sensor_id)
         all_amps = imutils.allAmps(infiles[0])
-        #print(all_amps)
         ptc_stats = dict([(amp, ([], [], [])) for amp in all_amps])
         exposure = []
         seqnums = []
@@ -158,13 +158,13 @@ class PtcTask(pipeBase.Task):
             if self.config.verbose:
                 self.log.info("processing %s" % flat1)
             exposure.append(exptime(flat1))
-            ccd1 = MaskedCCD(flat1, mask_files=mask_files,
-                             bias_frame=bias_frame,
-                             linearity_correction=linearity_correction)
-            ccd2 = MaskedCCD(flat2, mask_files=mask_files,
-                             bias_frame=bias_frame,
-                             linearity_correction=linearity_correction)
-            for amp in ccd1:
+            ccd1 = MaskedCCDWrapper(flat1, mask_files=mask_files,
+                                    bias_frame=bias_frame,
+                                    linearity_correction=linearity_correction)
+            ccd2 = MaskedCCDWrapper(flat2, mask_files=mask_files,
+                                    bias_frame=bias_frame,
+                                    linearity_correction=linearity_correction)
+            for amp in all_amps:
                 results = flat_pair_stats(ccd1, ccd2, amp,
                                           mask_files=mask_files,
                                           bias_frame=bias_frame)
