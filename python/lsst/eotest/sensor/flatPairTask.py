@@ -14,7 +14,7 @@ import lsst.pex.config as pexConfig
 import lsst.pipe.base as pipeBase
 from lsst.eotest.fitsTools import fitsTableFactory, fitsWriteto
 import lsst.eotest.image_utils as imutils
-from .MaskedCCD import MaskedCCD
+from .MaskedCCD import MaskedCCDWrapper
 from .EOTestResults import EOTestResults
 from .DetectorResponse import DetectorResponse
 
@@ -233,26 +233,32 @@ class FlatPairTask(pipeBase.Task):
                 self.log.info("processing\n   %s as flat1 and\n   %s as flat2",
                               file1, file2)
 
+            flat1 = MaskedCCDWrapper(file1, mask_files=self.mask_files,
+                                     bias_frame=self.bias_frame,
+                                     dark_frame=self.dark_frame,
+                                     linearity_correction=self.linearity_correction)
+            flat2 = MaskedCCDWrapper(file2, mask_files=self.mask_files,
+                                     bias_frame=self.bias_frame,
+                                     dark_frame=self.dark_frame,
+                                     linearity_correction=self.linearity_correction)
             all_amps = imutils.allAmps(file1)
-            flat1_md = imutils.Metadata(file1)
-            flat2_md = imutils.Metadata(file2)
-            seqnum = flat1_md.get('SEQNUM')
+            seqnum = flat1.md.get('SEQNUM')
             try:
-                dayobs = flat1_md.get('DAYOBS')
+                dayobs = flat1.md.get('DAYOBS')
             except KeyError:
                 # This occurs if running on non-BOT data.
                 dayobs = 0
 
-            exptime1 = flat1_md.get('EXPTIME')
-            exptime2 = flat2_md.get('EXPTIME')
+            exptime1 = flat1.md.get('EXPTIME')
+            exptime2 = flat2.md.get('EXPTIME')
 
             if exptime1 != exptime2:
                 raise RuntimeError("Exposure times do not match for:\n%s\n%s\n"
                                    % (file1, file2))
 
             if self.mondiode_func is None:
-                pd1 = flat1_md.get('MONDIODE')
-                pd2 = flat2_md.get('MONDIODE')
+                pd1 = flat1.md.get('MONDIODE')
+                pd2 = flat2.md.get('MONDIODE')
             else:
                 try:
                     pd1 = self.mondiode_func(file1, exptime1)
@@ -283,16 +289,6 @@ class FlatPairTask(pipeBase.Task):
                 self.output[0].header['NAMPS'] = len(all_amps)
 
             for amp in all_amps:
-                flat1 = MaskedCCD(file1, mask_files=self.mask_files,
-                                  bias_frame=self.bias_frame,
-                                  dark_frame=self.dark_frame,
-                                  linearity_correction=self.linearity_correction,
-                                  all_amps=(amp,))
-                flat2 = MaskedCCD(file2, mask_files=self.mask_files,
-                                  bias_frame=self.bias_frame,
-                                  dark_frame=self.dark_frame,
-                                  linearity_correction=self.linearity_correction,
-                                  all_amps=(amp,))
                 # Convert to e- and write out for each segment.
                 signal, sig1, sig2 \
                     = pair_mean(flat1, flat2, amp)*self.gains[amp]
