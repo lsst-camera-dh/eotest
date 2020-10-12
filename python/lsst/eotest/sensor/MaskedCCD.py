@@ -333,11 +333,11 @@ class MaskedCCDWrapper:
         self.ccd = None
         self.md = imutils.Metadata(imfile)
 
-    def unbiased_and_trimmed_image(self, amp):
+    def unbiased_and_trimmed_image(self, amp, **kwds):
         if self.ccd is None or not amp in self.ccd:
             self.kwds['all_amps'] = (amp,)
             self.ccd = MaskedCCD(self.imfile, **self.kwds)
-        return self.ccd.unbiased_and_trimmed_image(amp)
+        return self.ccd.unbiased_and_trimmed_image(amp, **kwds)
 
     def __getitem__(self, amp):
         if self.ccd is None or not amp in self.ccd:
