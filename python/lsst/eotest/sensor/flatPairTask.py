@@ -304,7 +304,5 @@ class FlatPairTask(pipeBase.Task):
                 if row == 0 and amp == 1:
                     self.output[0].header['NUMCOLS'] \
                         = flat1.amp_geom.imaging.getWidth()
-                del flat1
-                del flat2
         fitsWriteto(self.output, outfile, overwrite=True)
         return outfile
