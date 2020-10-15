@@ -14,7 +14,7 @@ import lsst.pex.config as pexConfig
 import lsst.pipe.base as pipeBase
 from lsst.eotest import fitsTools
 import lsst.eotest.image_utils as imutils
-from .MaskedCCD import MaskedCCD
+from .MaskedCCD import MaskedCCDWrapper
 from .EOTestResults import EOTestResults
 
 
@@ -93,12 +93,14 @@ class BFTask(pipeBase.Task):
 
         for flat_pair in flats:
             self.log.info("%s\n%s", *flat_pair)
-            ccd1 = MaskedCCD(flat_pair[0], mask_files=mask_files,
-                             bias_frame=bias_frame,
-                             linearity_correction=linearity_correction,dark_frame=dark_frame)
-            ccd2 = MaskedCCD(flat_pair[1], mask_files=mask_files,
-                             bias_frame=bias_frame,
-                             linearity_correction=linearity_correction,dark_frame=dark_frame)
+            ccd1 = MaskedCCDWrapper(flat_pair[0], mask_files=mask_files,
+                                    bias_frame=bias_frame,
+                                    linearity_correction=linearity_correction,
+                                    dark_frame=dark_frame)
+            ccd2 = MaskedCCDWrapper(flat_pair[1], mask_files=mask_files,
+                                    bias_frame=bias_frame,
+                                    linearity_correction=linearity_correction,
+                                    dark_frame=dark_frame)
 
             for amp in all_amps:
                 self.log.info('on amp %s', amp)
