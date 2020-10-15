@@ -191,9 +191,9 @@ class FlatPairTask(pipeBase.Task):
             if maxdev is not None:
                 output.add_seg_result(amp, 'MAX_FRAC_DEV', float(maxdev))
             output.add_seg_result(amp, 'ROW_MEAN_VAR_SLOPE',
-                                  row_mean_var_slopes[amp])
+                                  float(row_mean_var_slopes[amp]))
             output.add_seg_result(amp, 'MAX_OBSERVED_SIGNAL',
-                                  max_observed_signal)
+                                  float(max_observed_signal))
             if turnoff is not None:
                 output.add_seg_result(amp, 'LINEARITY_TURNOFF', float(turnoff))
         output.write()
