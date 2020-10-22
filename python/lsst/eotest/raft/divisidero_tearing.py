@@ -74,6 +74,14 @@ def normed_mean_response_vscol(sflat_file):
         # normalize
         nmean_byrow = anamp_meanbyrow/np.median(anamp_meanbyrow)
 
+        # fit nmean_byrow to a line and divide that line out
+        nedge = 25
+        x = np.arange(nmean_byrow.shape[0])
+        y = nmean_byrow
+        cpoly = np.polyfit(x[nedge:-nedge],y[nedge:-nedge],deg=1)
+        yfit = cpoly[1] + cpoly[0]*x
+        nmean_byrow = y/yfit
+
         lopix = 0 + (i_amp-1)*ncol
         hipix = ncol + (i_amp-1)*ncol
         if sensor_type == 'e2v':
