@@ -6,7 +6,6 @@ photon transfer curve and compute and write out the full well.
 """
 import os
 import glob
-from copy import deepcopy
 import operator
 import numpy as np
 import scipy.optimize
@@ -87,10 +86,6 @@ def flat_pair_stats(ccd1, ccd2, amp, mask_files=(), bias_frame=None):
         fmean = mean(image1)
         fvar = var(image1)
     else:
-        #
-        # Make a deep copy since otherwise the pixel values in image1
-        # would be altered in the ratio calculation.
-        #
         mean1 = mean(image1)
         mean2 = mean(image2)
         fmean = (mean1 + mean2)/2.
@@ -105,14 +100,17 @@ def flat_pair_stats(ccd1, ccd2, amp, mask_files=(), bias_frame=None):
         image1 = np.ravel(image1.getArrays()[0])
         image2 = np.ravel(image2.getArrays()[0])
         fdiff = image1 - image2
-        mad = astats.mad_std(fdiff)  #/2.
+        mad = astats.mad_std(fdiff)
         # The factor 14.826 below makes the filter the equivalent of a 10-sigma
         # cut for a normal distribution
         keep = np.where((np.abs(fdiff) < (mad*14.826)))[0]
+        discard = len(image1) - len(keep)
 
-        # Re-weight the images
-        mean1 = np.mean(image1[keep], dtype=np.float64)
-        mean2 = np.mean(image2[keep], dtype=np.float64)
+        # Re-weight the images after this 10-sigma cut
+        image1 = image1[keep]
+        image2 = image2[keep]
+        mean1 = np.mean(image1, dtype=np.float64)
+        mean2 = np.mean(image2, dtype=np.float64)
         fmean = (mean1 + mean2)/2.
         weight1 = mean2/fmean
         weight2 = mean1/fmean
@@ -120,8 +118,7 @@ def flat_pair_stats(ccd1, ccd2, amp, mask_files=(), bias_frame=None):
         image2 *= weight2
 
         fmean = (mean1 + mean2)/2.
-        fvar = np.var(image1[keep] - image2[keep])/2.
-        discard = len(image1) - len(keep)
+        fvar = astats.mad_std(image1 - image2)/2.
 
     return FlatPairStats(fmean, fvar, discard)
 
@@ -267,6 +264,9 @@ class PtcTask(pipeBase.Task):
         # electrons) and write to an EO test results file.
         for amp in ptc_stats:
             mean, var = np.array(ptc_stats[amp][0]), np.array(ptc_stats[amp][1])
+            order = np.argsort(mean)  # fit_ptc_curve assumes points are
+            mean = mean[order]        # in flux order
+            var = var[order]
             (ptc_gain, ptc_error, ptc_a00, ptc_a00_error, ptc_noise,
              ptc_noise_error, ptc_turnoff) \
              = self.fit_ptc_curve(mean, var, sig_cut=sig_cut, logger=self.log)
