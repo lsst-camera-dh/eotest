@@ -219,9 +219,9 @@ class PtcTask(pipeBase.Task):
         index = list(np.arange(len(mean)))
         max_resid = 2*sig_cut
         try:
-            while index != index_old and count < len(mean):
+            while max_resid > sig_cut and count < len(mean):
                 if count > 0:
-                    index = index[:-`]
+                    index = index[:-1]
                 try:
                     results = scipy.optimize.leastsq(residuals, pars,
                                                      full_output=1,
