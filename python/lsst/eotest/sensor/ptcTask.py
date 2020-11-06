@@ -118,7 +118,7 @@ def flat_pair_stats(ccd1, ccd2, amp, mask_files=(), bias_frame=None):
         image2 *= weight2
 
         fmean = (mean1 + mean2)/2.
-        fvar = astats.mad_std(image1 - image2)/2.
+        fvar = astats.mad_std(image1 - image2)**2/2.
 
     return FlatPairStats(fmean, fvar, discard)
 
