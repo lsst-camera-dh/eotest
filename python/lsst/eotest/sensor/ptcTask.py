@@ -234,7 +234,7 @@ class PtcTask(pipeBase.Task):
 
                 pars, cov = results[:2]
                 sig_resids = residuals(pars, mean, var)
-                index_old = deepcopy(index)
+                max_resid = np.max(np.abs(sig_resids))
                 index = list(np.where(np.abs(sig_resids) < sig_cut)[0])
                 count += 1
 
