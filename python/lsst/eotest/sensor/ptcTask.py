@@ -204,13 +204,24 @@ class PtcTask(pipeBase.Task):
     @staticmethod
     def fit_ptc_curve(mean, var, sig_cut=5, logger=None):
         """Fit the PTC curve for a set of mean-variance points."""
-        index_old = []
-        index = list(np.where((mean < 4e4)*(var > 0))[0])
         count = 1
         # Initial guess for BF coeff, gain, and square of the read noise
-        pars = 2.7e-6, 0.75, 25
+        ratio = var/mean
+        ratio_interp = np.interp([1e4,4e4],mean,ratio)
+        gain_approx = 1/ratio_interp[1]
+        # Estimate the slop of var/mean vs. mean between 1e4 and 4e4 ADU
+        slope = (ratio_interp[1] - ratio_interp[0])/3e4
+        a00_approx = -2/gain_approx*slope
+        # Assume var[0] is dominated by the square of the read noise
+        noise2_approx = var[0]
+
+        pars = a00_approx, gain_approx, noise2_approx
+        index = list(np.arange(len(mean)))
+        max_resid = 2*sig_cut
         try:
-            while index != index_old and count < 10:
+            while index != index_old and count < len(mean):
+                if count > 0:
+                    index = index[:-`]
                 try:
                     results = scipy.optimize.leastsq(residuals, pars,
                                                      full_output=1,
@@ -233,8 +244,7 @@ class PtcTask(pipeBase.Task):
             ptc_error = np.sqrt(cov[1][1])
             ptc_noise = np.sqrt(pars[2])
             ptc_noise_error = 0.5/ptc_noise*np.sqrt(cov[2][2])
-            # Cannot assume that the mean values are sorted
-            ptc_turnoff = max(mean[index])
+            ptc_turnoff = mean[index[-1]]
         except Exception as eobj:
             if logger is not None:
                 logger.info("Exception caught while fitting PTC:")
