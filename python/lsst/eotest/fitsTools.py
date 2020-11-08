@@ -23,7 +23,7 @@ def fitsWriteto(hdulist, outfile, compress_images=True, **kwds):
     warnings.filterwarnings('ignore', category=UserWarning, append=True)
     warnings.filterwarnings('ignore', category=fits.verify.VerifyWarning,
                             append=True)
-    if compress_images:
+    if isinstance(hdulist, fits.HDUList) and compress_images:
         for i in range(len(hdulist)):
             if isinstance(hdulist[i], fits.ImageHDU):
                 hdulist[i] = fits.CompImageHDU(data=hdulist[i].data,
