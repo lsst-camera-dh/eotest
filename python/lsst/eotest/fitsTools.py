@@ -10,15 +10,24 @@ def fitsTableFactory(*args, **kwds):
     return my_table
 
 
-def fitsWriteto(hdulist, outfile, **kwds):
-    """Silence warnings about over-writing a file."""
+def fitsWriteto(hdulist, outfile, compress_images=True, **kwds):
+    """
+    Silence warnings about over-writing a file and optionally perform
+    compression on each ImageHDU.
+    """
     # Handle change from clobber to overwrite:
     if 'overwrite' in kwds and astropy.__version__.startswith('1.'):
         kwds['clobber'] = kwds['overwrite']
         del kwds['overwrite']
     warnings.resetwarnings()
     warnings.filterwarnings('ignore', category=UserWarning, append=True)
-    warnings.filterwarnings('ignore', category=fits.verify.VerifyWarning, append=True)
+    warnings.filterwarnings('ignore', category=fits.verify.VerifyWarning,
+                            append=True)
+    if compress_images:
+        for i in range(len(hdulist)):
+            if isinstance(hdulist[i], fits.ImageHDU):
+                hdulist[i] = fits.CompImageHDU(data=hdulist[i].data,
+                                               header=hdulist[i].header)
     hdulist.writeto(outfile, **kwds)
 
 
