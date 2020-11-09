@@ -38,7 +38,7 @@ class SerialEperTestCase(EperTestCase):
             overscan = segment.image.Factory(segment.image,
                                              overscan_region).getArray()
             overscan[:, 0:self.overscans] = self.overscan_value
-        ccd.writeto(self.fits_file)
+        ccd.writeto(self.fits_file, bitpix=16)
 
     def tearDown(self):
         "Delete test FITS file."
@@ -98,7 +98,7 @@ class ParallelEperTestCase(EperTestCase):
             overscan = segment.image.Factory(segment.image,
                                              overscan_region).getArray()
             overscan[0:self.overscans, :] = self.overscan_value
-        ccd.writeto(self.fits_file)
+        ccd.writeto(self.fits_file, bitpix=16)
 
     def tearDown(self):
         "Delete test FITS file."
