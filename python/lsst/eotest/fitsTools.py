@@ -27,7 +27,8 @@ def fitsWriteto(hdulist, outfile, compress_images=True, **kwds):
         for i in range(len(hdulist)):
             if isinstance(hdulist[i], fits.ImageHDU):
                 hdulist[i] = fits.CompImageHDU(data=hdulist[i].data,
-                                               header=hdulist[i].header)
+                                               header=hdulist[i].header,
+                                               compression_type='RICE_1')
     hdulist.writeto(outfile, **kwds)
 
 
