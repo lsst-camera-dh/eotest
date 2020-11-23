@@ -107,7 +107,7 @@ def normed_mean_response_vscol(sflat_file):
     return averow_top, averow_bot, max_divisidero_tearing
 
 
-def ana_divisidero_tearing(sflat_files, raft_unit_id, run):
+def ana_divisidero_tearing(sflat_files, raft_unit_id, title=None):
     """
     Analyze a raft of corrected super-flats for Divisidero Tearing.
 
@@ -117,8 +117,8 @@ def ana_divisidero_tearing(sflat_files, raft_unit_id, run):
         Dictionary of single CCD superflat files, keyed by slot name.
     raft_unit_id: str
         Raft unit id, e.g., 'LCA-11021_RTM-019'
-    run: str
-        Run number
+    title: str [None]
+        Plot title.
     """
     my_slot = list(sflat_files)[0]
     amp_geom = sensorTest.makeAmplifierGeometry(sflat_files[my_slot])
@@ -179,5 +179,5 @@ def ana_divisidero_tearing(sflat_files, raft_unit_id, run):
 
             f.add_subplot(ax)
 
-    plt.suptitle('Run %s %s' % (str(run), raft_unit_id), fontsize=36)
+    plt.suptitle(title, fontsize=36)
     return {slot: avedict[slot][2] for slot in avedict}
