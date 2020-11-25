@@ -821,7 +821,7 @@ class EOTestPlots(object):
                                   ylabel=r'Deferred charge (e-/pixel)')
                 win.frameAxes.text(0.5, 1.08,
                                    'Image Persistence vs Time, %s'
-                                   % self.sensor_id,
+                                   % self.plot_title,
                                    horizontalalignment='center',
                                    verticalalignment='top',
                                    transform=win.frameAxes.transAxes,
@@ -859,7 +859,7 @@ class EOTestPlots(object):
                                   xlabel=r'PSF sigma ($\mu$); $\sigma_x$ in blue, $\sigma_y$ in red',
                                   ylabel=r'entries / bin', size='large')
                 win.frameAxes.text(0.5, 1.08,
-                                   'PSF from Fe55 data, %s' % self.sensor_id,
+                                   'PSF from Fe55 data, %s' % self.plot_title,
                                    horizontalalignment='center',
                                    verticalalignment='top',
                                    transform=win.frameAxes.transAxes,
@@ -910,7 +910,7 @@ class EOTestPlots(object):
                                subplot=self.subplot(amp),
                                figsize=figsize, frameLabels=True, amp=amp,
                                xrange_scale=xrange_scale)
-                win.frameAxes.text(0.5, 1.08, 'Fe55, %s' % self.sensor_id,
+                win.frameAxes.text(0.5, 1.08, 'Fe55, %s' % self.plot_title,
                                    horizontalalignment='center',
                                    verticalalignment='top',
                                    transform=win.frameAxes.transAxes,
@@ -935,7 +935,7 @@ class EOTestPlots(object):
                                       ylabel=r'variance (ADU$^2$)', size='large')
                     win.frameAxes.text(0.5, 1.08,
                                        'Photon Transfer Curves, %s'
-                                       % self.sensor_id,
+                                       % self.plot_title,
                                        horizontalalignment='center',
                                        verticalalignment='top',
                                        transform=win.frameAxes.transAxes,
