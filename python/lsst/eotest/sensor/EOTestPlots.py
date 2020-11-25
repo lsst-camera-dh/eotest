@@ -196,7 +196,7 @@ def plot_flat(infile, nsig=3, cmap=pylab.cm.hot, win=None, subplot=(1, 1, 1),
     image.set_norm(norm)
     if title is None:
         title = '%i nm' % wl
-    win.axes[-1].set_title(title)
+    win.axes[-1].set_title(title, fontsize='small')
     win.fig.colorbar(image)
     # Turn off tick labels for x- and y-axes
     pylab.setp(win.axes[-1].get_xticklabels(), visible=False)
@@ -255,9 +255,11 @@ def fe55_zoom(infile, size=250, amp=1, cmap=pylab.cm.hot, nsig=10,
 
 class OverscanTestPlots(object):
 
-    def __init__(self, sensor_id, overscan_file=None):
+    def __init__(self, sensor_id, overscan_file=None, title_addendum=None):
 
         self.sensor_id = sensor_id
+        self._title_addendum = title_addendum
+        self._plot_title = None
         if overscan_file is None:
             overscan_file = self._fullpath('%s_overscan_results.fits' % sensor_id)
         if not os.path.exists(overscan_file):
@@ -267,6 +269,15 @@ class OverscanTestPlots(object):
             self.header = hdul[0].header
             self.all_amps = range(1, int(self.header['NAMPS'])+1)
             self.overscan_data = {i : hdul[i].data for i in self.all_amps}
+
+    @property
+    def plot_title(self):
+        if self._plot_title is None:
+            self._plot_title = self.sensor_id
+            if self._title_addendum is not None:
+                self._plot_title \
+                    = ' '.join((self._plot_title, self._title_addendum))
+        return self._plot_title
 
     def _fullpath(self, basename):
         return os.path.join(self.rootdir, basename)
@@ -295,7 +306,7 @@ class OverscanTestPlots(object):
 
             indices = signal<175000.
 
-            ax.plot(signal[indices], cti[indices], label='Amp {0}'.format(amp), 
+            ax.plot(signal[indices], cti[indices], label='Amp {0}'.format(amp),
                     color = cmap((amp-1)%8), marker=marker, markersize=5)
 
         ax.axhline(y=3.E-6, linestyle='--', color='black')
@@ -312,29 +323,30 @@ class OverscanTestPlots(object):
         ax.set_xlabel('Flat Field Signal [e-]', fontsize=18)
         ax.set_ylabel('Parallel CTI', fontsize=18)
         ax.legend(fontsize=12, loc=1, ncol=4)
-        ax.set_title('Parallel CTI from EPER, {0}'.format(self.sensor_id), fontsize=18)
+        ax.set_title('Parallel CTI from EPER, {0}'.format(self.plot_title),
+                     fontsize=18)
 
     def parallel_eper_high_curves(self, figsize=(12, 8)):
 
         fig, axes = plt.subplots(4, 4, sharey=True, sharex=True, figsize=figsize)
-        axes = axes.flatten()         
+        axes = axes.flatten()
 
         target_signals = [25000, 50000, 75000, 100000, 150000]
 
         for amp in self.all_amps:
 
-            signal = self.overscan_data[amp]['FLATFIELD_SIGNAL']       
+            signal = self.overscan_data[amp]['FLATFIELD_SIGNAL']
 
             for target in target_signals:
 
-                i = min(range(signal.shape[0]), 
+                i = min(range(signal.shape[0]),
                         key=lambda i: abs(signal[i]-target))
 
                 data = self.overscan_data[amp]['ROW_MEAN'][i, :]
                 oscan = data[1:]
                 columns = np.arange(1, data.shape[0])
 
-                axes[amp-1].plot(columns, oscan, 
+                axes[amp-1].plot(columns, oscan,
                                  label='{0:.0f} ke-'.format(target/1000.))
 
             axes[amp-1].set_yscale('log')
@@ -348,15 +360,15 @@ class OverscanTestPlots(object):
 
         h, l = axes[-1].get_legend_handles_labels()
         fig.subplots_adjust(bottom=0.12)
-        fig.legend(h, l, loc='lower center', ncol=len(target_signals), 
+        fig.legend(h, l, loc='lower center', ncol=len(target_signals),
                    fontsize=14)
 
         fig.add_subplot(111, frameon=False)
-        plt.tick_params(labelcolor='none', top=False, bottom=False, 
+        plt.tick_params(labelcolor='none', top=False, bottom=False,
                         left=False, right=False)
         plt.xlabel('Overscan Row Number', fontsize=14)
         plt.ylabel('Mean Row Signal [e-]', fontsize=14, labelpad=15)
-        plt.title('High Signal Parallel EPER, {0}'.format(self.sensor_id), 
+        plt.title('High Signal Parallel EPER, {0}'.format(self.plot_title),
                   fontsize=16, pad=20)
 
     def parallel_eper_low_curves(self, figsize=(12, 8)):
@@ -367,18 +379,18 @@ class OverscanTestPlots(object):
         target_signals = [100, 500, 1000, 2500, 5000]
         for amp in self.all_amps:
 
-            signal = self.overscan_data[amp]['FLATFIELD_SIGNAL']       
+            signal = self.overscan_data[amp]['FLATFIELD_SIGNAL']
 
             for target in target_signals:
 
-                i = min(range(signal.shape[0]), 
+                i = min(range(signal.shape[0]),
                         key=lambda i: abs(signal[i]-target))
 
                 data = self.overscan_data[amp]['ROW_MEAN'][i, :]
                 oscan = data[1:]
                 columns = np.arange(1, data.shape[0])
 
-                axes[amp-1].plot(columns, oscan, 
+                axes[amp-1].plot(columns, oscan,
                                  label='{0:d} e-'.format(target))
 
             axes[amp-1].set_xlim(0.5, 5.5)
@@ -388,25 +400,25 @@ class OverscanTestPlots(object):
             axes[amp-1].set_title('Amp {0}'.format(amp), fontsize=14)
 
 
-            if (amp-1) % 4 == 0: 
+            if (amp-1) % 4 == 0:
                 axes[amp-1].set_ylim(-4, 22)
                 axes[amp-1].set_yticks([0, 5, 10, 15, 20])
 
         h, l = axes[-1].get_legend_handles_labels()
         fig.subplots_adjust(bottom=0.12)
-        fig.legend(h, l, loc='lower center', ncol=len(target_signals), 
+        fig.legend(h, l, loc='lower center', ncol=len(target_signals),
                    fontsize=14)
 
         fig.add_subplot(111, frameon=False)
-        plt.tick_params(labelcolor='none', top=False, bottom=False, 
+        plt.tick_params(labelcolor='none', top=False, bottom=False,
                         left=False, right=False)
         plt.xlabel('Overscan Row Number', fontsize=14)
         plt.ylabel('Mean Row Signal [e-]', fontsize=14)
-        plt.title('Low Signal Parallel EPER, {0}'.format(self.sensor_id), 
+        plt.title('Low Signal Parallel EPER, {0}'.format(self.plot_title),
                   fontsize=16, pad=20)
 
     def parallel_overscan_noise_curves(self, figsize=(12, 8)):
-        
+
         fig, ax = plt.subplots(1, 1, figsize=figsize)
 
         cmap = plt.get_cmap("tab10")
@@ -419,7 +431,7 @@ class OverscanTestPlots(object):
             signal = self.overscan_data[amp]['FLATFIELD_SIGNAL']
             noise = self.overscan_data[amp]['PARALLEL_OVERSCAN_NOISE']
 
-            ax.plot(signal, noise, label='Amp {0}'.format(amp), linestyle='-', 
+            ax.plot(signal, noise, label='Amp {0}'.format(amp), linestyle='-',
                     marker=marker, color = cmap((amp-1)%8), markersize=5)
 
         ax.set_xscale('log')
@@ -432,11 +444,11 @@ class OverscanTestPlots(object):
         ax.tick_params(axis='y', labelsize=14)
 
         plt.legend(fontsize=14,  loc = 'upper left', ncol=4)
-        plt.title('Parallel Overscan Pixel Noise, {0}'.format(self.sensor_id), 
+        plt.title('Parallel Overscan Pixel Noise, {0}'.format(self.plot_title),
                   fontsize=18)
 
     def parallel_overscan_signal_curves(self, figsize=(12, 8)):
-        
+
         fig, axes = plt.subplots(4, 4, sharey=True, sharex=True, figsize=figsize)
         axes = axes.flatten()
 
@@ -447,8 +459,8 @@ class OverscanTestPlots(object):
             overscan1 = data[:, 1]
             overscan2 = data[:, 2]
 
-            axes[amp-1].plot(signal, overscan1, label='Overscan 1'.format(amp))
-            axes[amp-1].plot(signal, overscan2, label='Overscan 2'.format(amp))
+            axes[amp-1].plot(signal, overscan1, label='Overscan 1')
+            axes[amp-1].plot(signal, overscan2, label='Overscan 2')
 
             axes[amp-1].set_yscale('symlog', threshold=1.0)
             axes[amp-1].set_xscale('log')
@@ -462,15 +474,15 @@ class OverscanTestPlots(object):
         fig.legend(h, l, loc='lower center', ncol=2, fontsize=14)
 
         fig.add_subplot(111, frameon=False)
-        plt.tick_params(labelcolor='none', top=False, bottom=False, 
+        plt.tick_params(labelcolor='none', top=False, bottom=False,
                         left=False, right=False)
         plt.ylabel('Parallel Overscan Mean Signal [e-]', fontsize=14, labelpad=15)
         plt.xlabel('Flat Field Signal [e-]', fontsize=14)
-        plt.title('Overscan Pixel Signal, {0}'.format(self.sensor_id), 
+        plt.title('Overscan Pixel Signal, {0}'.format(self.plot_title),
                   fontsize=16, pad=20)
 
     def parallel_overscan_sum_curves(self, figsize=(12, 8)):
-        
+
         fig, ax = plt.subplots(1, 1, figsize=figsize)
 
         cmap = plt.get_cmap("tab10")
@@ -484,8 +496,8 @@ class OverscanTestPlots(object):
             oscansum = np.sum(data[:, 3:20], axis=1)
             signal = self.overscan_data[amp]['FLATFIELD_SIGNAL']
 
-            ax.plot(signal, oscansum, label='Amp {0}'.format(amp), 
-                    linestyle='-', marker=marker, color = cmap((amp-1)%8), 
+            ax.plot(signal, oscansum, label='Amp {0}'.format(amp),
+                    linestyle='-', marker=marker, color = cmap((amp-1)%8),
                     markersize=5)
 
         ax.set_xscale('log')
@@ -498,7 +510,7 @@ class OverscanTestPlots(object):
         ax.tick_params(axis='y', labelsize=14)
 
         ax.legend(fontsize=14,  loc = 'upper left', ncol=4)
-        ax.set_title('Summed Parallel Overscan Pixel Signal [3:20], {0}'.format(self.sensor_id), 
+        ax.set_title('Summed Parallel Overscan Pixel Signal [3:20], {0}'.format(self.plot_title),
                      fontsize=18)
 
     def serial_cti_curves(self, figsize=(12, 8)):
@@ -525,7 +537,7 @@ class OverscanTestPlots(object):
 
             indices = signal<175000.
 
-            ax.plot(signal[indices], cti[indices], label='Amp {0}'.format(amp), 
+            ax.plot(signal[indices], cti[indices], label='Amp {0}'.format(amp),
                     color = cmap((amp-1)%8), marker=marker, markersize=5)
 
         ax.axhline(y=5.E-6, linestyle='--', color='black')
@@ -542,29 +554,30 @@ class OverscanTestPlots(object):
         ax.set_xlabel('Flat Field Signal [e-]', fontsize=18)
         ax.set_ylabel('Serial CTI', fontsize=18)
         ax.legend(fontsize=12, loc=1, ncol=4)
-        ax.set_title('Serial CTI from EPER, {0}'.format(self.sensor_id), fontsize=18)
+        ax.set_title('Serial CTI from EPER, {0}'.format(self.plot_title),
+                     fontsize=18)
 
     def serial_eper_high_curves(self, figsize=(12, 8)):
 
         fig, axes = plt.subplots(4, 4, sharey=True, sharex=True, figsize=figsize)
-        axes = axes.flatten()         
+        axes = axes.flatten()
 
         target_signals = [25000, 50000, 75000, 100000, 150000]
 
         for amp in self.all_amps:
 
-            signal = self.overscan_data[amp]['FLATFIELD_SIGNAL']       
+            signal = self.overscan_data[amp]['FLATFIELD_SIGNAL']
 
             for target in target_signals:
 
-                i = min(range(signal.shape[0]), 
+                i = min(range(signal.shape[0]),
                         key=lambda i: abs(signal[i]-target))
 
                 data = self.overscan_data[amp]['COLUMN_MEAN'][i, :]
                 oscan = data[1:]
                 columns = np.arange(1, data.shape[0])
 
-                axes[amp-1].plot(columns, oscan, 
+                axes[amp-1].plot(columns, oscan,
                                  label='{0:.0f} ke-'.format(target/1000.))
 
             axes[amp-1].set_yscale('log')
@@ -578,15 +591,15 @@ class OverscanTestPlots(object):
 
         h, l = axes[-1].get_legend_handles_labels()
         fig.subplots_adjust(bottom=0.12)
-        fig.legend(h, l, loc='lower center', ncol=len(target_signals), 
+        fig.legend(h, l, loc='lower center', ncol=len(target_signals),
                    fontsize=14)
 
         fig.add_subplot(111, frameon=False)
-        plt.tick_params(labelcolor='none', top=False, bottom=False, 
+        plt.tick_params(labelcolor='none', top=False, bottom=False,
                         left=False, right=False)
         plt.xlabel('Overscan Column Number', fontsize=14)
         plt.ylabel('Mean Column Signal [e-]', fontsize=14, labelpad=15)
-        plt.title('High Signal Serial EPER, {0}'.format(self.sensor_id), 
+        plt.title('High Signal Serial EPER, {0}'.format(self.plot_title),
                   fontsize=16, pad=20)
 
     def serial_eper_low_curves(self, figsize=(12, 8)):
@@ -597,18 +610,18 @@ class OverscanTestPlots(object):
         target_signals = [100, 500, 1000, 2500, 5000]
         for amp in self.all_amps:
 
-            signal = self.overscan_data[amp]['FLATFIELD_SIGNAL']       
+            signal = self.overscan_data[amp]['FLATFIELD_SIGNAL']
 
             for target in target_signals:
 
-                i = min(range(signal.shape[0]), 
+                i = min(range(signal.shape[0]),
                         key=lambda i: abs(signal[i]-target))
 
                 data = self.overscan_data[amp]['COLUMN_MEAN'][i, :]
                 oscan = data[1:]
                 columns = np.arange(1, data.shape[0])
 
-                axes[amp-1].plot(columns, oscan, 
+                axes[amp-1].plot(columns, oscan,
                                  label='{0:d} e-'.format(target))
 
             axes[amp-1].set_xlim(0.5, 5.5)
@@ -618,25 +631,25 @@ class OverscanTestPlots(object):
             axes[amp-1].set_title('Amp {0}'.format(amp), fontsize=14)
 
 
-            if (amp-1) % 4 == 0: 
+            if (amp-1) % 4 == 0:
                 axes[amp-1].set_ylim(-4, 22)
                 axes[amp-1].set_yticks([0, 5, 10, 15, 20])
 
         h, l = axes[-1].get_legend_handles_labels()
         fig.subplots_adjust(bottom=0.12)
-        fig.legend(h, l, loc='lower center', ncol=len(target_signals), 
+        fig.legend(h, l, loc='lower center', ncol=len(target_signals),
                    fontsize=14)
 
         fig.add_subplot(111, frameon=False)
-        plt.tick_params(labelcolor='none', top=False, bottom=False, 
+        plt.tick_params(labelcolor='none', top=False, bottom=False,
                         left=False, right=False)
         plt.xlabel('Overscan Column Number', fontsize=14)
         plt.ylabel('Mean Column Signal [e-]', fontsize=14)
-        plt.title('Low Signal Serial EPER, {0}'.format(self.sensor_id), 
+        plt.title('Low Signal Serial EPER, {0}'.format(self.plot_title),
                   fontsize=16, pad=20)
 
     def serial_overscan_noise_curves(self, figsize=(12, 8)):
-        
+
         fig, ax = plt.subplots(1, 1, figsize=figsize)
 
         cmap = plt.get_cmap("tab10")
@@ -649,7 +662,7 @@ class OverscanTestPlots(object):
             signal = self.overscan_data[amp]['FLATFIELD_SIGNAL']
             noise = self.overscan_data[amp]['SERIAL_OVERSCAN_NOISE']
 
-            ax.plot(signal, noise, label='Amp {0}'.format(amp), linestyle='-', 
+            ax.plot(signal, noise, label='Amp {0}'.format(amp), linestyle='-',
                     marker=marker, color = cmap((amp-1)%8), markersize=5)
 
         ax.set_xscale('log')
@@ -662,11 +675,11 @@ class OverscanTestPlots(object):
         ax.tick_params(axis='y', labelsize=14)
 
         plt.legend(fontsize=14,  loc = 'upper left', ncol=4)
-        plt.title('Serial Overscan Pixel Noise, {0}'.format(self.sensor_id), 
+        plt.title('Serial Overscan Pixel Noise, {0}'.format(self.plot_title),
                   fontsize=18)
 
     def serial_overscan_signal_curves(self, figsize=(12, 8)):
-        
+
         fig, axes = plt.subplots(4, 4, sharey=True, sharex=True, figsize=figsize)
         axes = axes.flatten()
 
@@ -677,8 +690,8 @@ class OverscanTestPlots(object):
             overscan1 = data[:, 1]
             overscan2 = data[:, 2]
 
-            axes[amp-1].plot(signal, overscan1, label='Overscan 1'.format(amp))
-            axes[amp-1].plot(signal, overscan2, label='Overscan 2'.format(amp))
+            axes[amp-1].plot(signal, overscan1, label='Overscan 1')
+            axes[amp-1].plot(signal, overscan2, label='Overscan 2')
 
             axes[amp-1].set_yscale('symlog', threshold=1.0)
             axes[amp-1].set_xscale('log')
@@ -692,15 +705,15 @@ class OverscanTestPlots(object):
         fig.legend(h, l, loc='lower center', ncol=2, fontsize=14)
 
         fig.add_subplot(111, frameon=False)
-        plt.tick_params(labelcolor='none', top=False, bottom=False, 
+        plt.tick_params(labelcolor='none', top=False, bottom=False,
                         left=False, right=False)
         plt.ylabel('Serial Overscan Mean Signal [e-]', fontsize=14, labelpad=15)
         plt.xlabel('Flat Field Signal [e-]', fontsize=14)
-        plt.title('Overscan Pixel Signal, {0}'.format(self.sensor_id), 
+        plt.title('Overscan Pixel Signal, {0}'.format(self.plot_title),
                   fontsize=16, pad=20)
 
     def serial_overscan_sum_curves(self, figsize=(12, 8)):
-        
+
         fig, ax = plt.subplots(1, 1, figsize=figsize)
 
         cmap = plt.get_cmap("tab10")
@@ -714,8 +727,8 @@ class OverscanTestPlots(object):
             oscansum = np.sum(data[:, 5:25], axis=1)
             signal = self.overscan_data[amp]['FLATFIELD_SIGNAL']
 
-            ax.plot(signal, oscansum, label='Amp {0}'.format(amp), 
-                    linestyle='-', marker=marker, color = cmap((amp-1)%8), 
+            ax.plot(signal, oscansum, label='Amp {0}'.format(amp),
+                    linestyle='-', marker=marker, color = cmap((amp-1)%8),
                     markersize=5)
 
         ax.set_xscale('log')
@@ -728,7 +741,7 @@ class OverscanTestPlots(object):
         ax.tick_params(axis='y', labelsize=14)
 
         ax.legend(fontsize=14,  loc = 'upper left', ncol=4)
-        ax.set_title('Summed Serial Overscan Pixel Signal [5:25], {0}'.format(self.sensor_id), 
+        ax.set_title('Summed Serial Overscan Pixel Signal [5:25], {0}'.format(self.plot_title),
                      fontsize=18)
 
 class EOTestPlots(object):
@@ -736,7 +749,8 @@ class EOTestPlots(object):
     prnu_wls = (350, 450, 500, 620, 750, 870, 1000)
 
     def __init__(self, sensor_id, rootdir='.', output_dir='.',
-                 interactive=False, results_file=None, xtalk_file=None):
+                 interactive=False, results_file=None, xtalk_file=None,
+                 title_addendum=None):
         self.sensor_id = sensor_id
         self.rootdir = rootdir
         self.output_dir = output_dir
@@ -744,6 +758,8 @@ class EOTestPlots(object):
             os.makedirs(output_dir)
         self.interactive = interactive
         plot.pylab.interactive(interactive)
+        self._title_addendum = title_addendum
+        self._plot_title = None
         if results_file is None:
             results_file = self._fullpath('%s_eotest_results.fits' % sensor_id)
         if not os.path.exists(results_file):
@@ -755,6 +771,15 @@ class EOTestPlots(object):
                               xtalk_file=xtalk_file, prnu_wls=self.prnu_wls)
         self._linearity_results = None
         self.subplot = Subplot(len(self.results['AMP']))
+
+    @property
+    def plot_title(self):
+        if self._plot_title is None:
+            self._plot_title = self.sensor_id
+            if self._title_addendum is not None:
+                self._plot_title \
+                    = ' '.join((self._plot_title, self._title_addendum))
+        return self._plot_title
 
     @property
     def qe_data(self):
@@ -776,7 +801,7 @@ class EOTestPlots(object):
             xtalk_file = os.path.join(self.rootdir,
                                       '%s_xtalk_matrix.fits' % self.sensor_id)
         foo = CrosstalkMatrix(xtalk_file)
-        foo.plot(title="Crosstalk, %s" % self.sensor_id)
+        foo.plot(title="Crosstalk, %s" % self.plot_title)
         return foo
 
     def persistence(self, infile=None, figsize=(11, 8.5)):
@@ -796,7 +821,7 @@ class EOTestPlots(object):
                                   ylabel=r'Deferred charge (e-/pixel)')
                 win.frameAxes.text(0.5, 1.08,
                                    'Image Persistence vs Time, %s'
-                                   % self.sensor_id,
+                                   % self.plot_title,
                                    horizontalalignment='center',
                                    verticalalignment='top',
                                    transform=win.frameAxes.transAxes,
@@ -834,7 +859,7 @@ class EOTestPlots(object):
                                   xlabel=r'PSF sigma ($\mu$); $\sigma_x$ in blue, $\sigma_y$ in red',
                                   ylabel=r'entries / bin', size='large')
                 win.frameAxes.text(0.5, 1.08,
-                                   'PSF from Fe55 data, %s' % self.sensor_id,
+                                   'PSF from Fe55 data, %s' % self.plot_title,
                                    horizontalalignment='center',
                                    verticalalignment='top',
                                    transform=win.frameAxes.transAxes,
@@ -885,7 +910,7 @@ class EOTestPlots(object):
                                subplot=self.subplot(amp),
                                figsize=figsize, frameLabels=True, amp=amp,
                                xrange_scale=xrange_scale)
-                win.frameAxes.text(0.5, 1.08, 'Fe55, %s' % self.sensor_id,
+                win.frameAxes.text(0.5, 1.08, 'Fe55, %s' % self.plot_title,
                                    horizontalalignment='center',
                                    verticalalignment='top',
                                    transform=win.frameAxes.transAxes,
@@ -910,7 +935,7 @@ class EOTestPlots(object):
                                       ylabel=r'variance (ADU$^2$)', size='large')
                     win.frameAxes.text(0.5, 1.08,
                                        'Photon Transfer Curves, %s'
-                                       % self.sensor_id,
+                                       % self.plot_title,
                                        horizontalalignment='center',
                                        verticalalignment='top',
                                        transform=win.frameAxes.transAxes,
@@ -957,7 +982,7 @@ class EOTestPlots(object):
             plt.xlabel('mean signal (ADU)', fontsize='small')
             plt.ylabel('cov(1, 0)/mean', fontsize='small')
             plt.legend(fontsize='x-small', loc=2)
-            plt.title('Brighter-Fatter cov(1, 0), %s' % self.sensor_id,
+            plt.title('Brighter-Fatter cov(1, 0), %s' % self.plot_title,
                       fontsize='small')
 
             fig.add_subplot(3, 2, 2)
@@ -972,7 +997,7 @@ class EOTestPlots(object):
             plt.xlabel('mean signal (ADU)', fontsize='small')
             plt.ylabel('cov(2, 0)/mean', fontsize='small')
             plt.legend(fontsize='x-small', loc=2)
-            plt.title('Brighter-Fatter cov(2, 0), %s' % self.sensor_id,
+            plt.title('Brighter-Fatter cov(2, 0), %s' % self.plot_title,
                       fontsize='small')
 
             fig.add_subplot(3, 2, 3)
@@ -983,11 +1008,12 @@ class EOTestPlots(object):
                 mean = mean[index]
                 ycorr = ycorr[index]
                 index = np.where(mean < adu_max)
-                plt.plot(mean[index], ycorr[index]/mean[index], label='%s' % amp)
+                plt.plot(mean[index], ycorr[index]/mean[index],
+                         label='%s' % amp)
             plt.xlabel('mean signal (ADU)', fontsize='small')
             plt.ylabel('cov(0, 1)/mean', fontsize='small')
             plt.legend(fontsize='x-small', loc=2)
-            plt.title('Brighter-Fatter cov(0, 1), %s' % self.sensor_id,
+            plt.title('Brighter-Fatter cov(0, 1), %s' % self.plot_title,
                       fontsize='small')
             fig.add_subplot(3, 2, 4)
             for amp in imutils.allAmps(bf_file):
@@ -1001,7 +1027,7 @@ class EOTestPlots(object):
             plt.xlabel('mean signal (ADU)', fontsize='small')
             plt.ylabel('cov(0, 2)/mean', fontsize='small')
             plt.legend(fontsize='x-small', loc=2)
-            plt.title('Brighter-Fatter cov(0, 2), %s' % self.sensor_id,
+            plt.title('Brighter-Fatter cov(0, 2), %s' % self.plot_title,
                       fontsize='small')
 
             fig.add_subplot(3, 2, 5)
@@ -1016,7 +1042,7 @@ class EOTestPlots(object):
             plt.xlabel('mean signal (ADU)', fontsize='small')
             plt.ylabel('cov(1, 1)/mean', fontsize='small')
             plt.legend(fontsize='x-small', loc=2)
-            plt.title('Brighter-Fatter cov(1, 1), %s' % self.sensor_id,
+            plt.title('Brighter-Fatter cov(1, 1), %s' % self.plot_title,
                       fontsize='small')
         plt.tight_layout()
 
@@ -1054,7 +1080,7 @@ class EOTestPlots(object):
                         yerr=results['PTC_GAIN_ERROR'], oplot=1, color='r')
         except:
             pass
-        win.set_title("System Gain, %s" % self.sensor_id)
+        win.set_title("System Gain, %s" % self.plot_title)
 
     def ptc_bf(self, oplot=0, xoffset=0.25, width=0.5, xrange=None):
         results = self.results
@@ -1066,14 +1092,14 @@ class EOTestPlots(object):
         win = plot.xyplot(results['AMP'], results['PTC_A00']*1e6,
                           yerr=results['PTC_A00_ERROR']*1e6, xname='AMP',
                           yname=yname, xrange=xrange, yrange=(ymin, ymax))
-        win.set_title("PTC Brighter-Fatter, %s" % self.sensor_id)
+        win.set_title("PTC Brighter-Fatter, %s" % self.plot_title)
 
     def ptc_turnoff(self, oplot=0, xoffset=0.25, width=0.5, xrange=None):
         results = self.results
         yname = 'PTC Turnoff (DN)'
         win = plot.xyplot(results['AMP'], results['PTC_TURNOFF'],
                           xname='AMP', yname=yname, xrange=xrange)
-        win.set_title("PTC Turnoff, %s" % self.sensor_id)
+        win.set_title("PTC Turnoff, %s" % self.plot_title)
 
     def noise(self, oplot=0, xoffset=0.2, width=0.2, color='b'):
         results = self.results
@@ -1099,7 +1125,7 @@ class EOTestPlots(object):
                  oplot=1, color='c', width=width)
         plot.legend('bgc', ('Read Noise', 'System Noise', 'Total Noise'))
         plot.hline(8)
-        win.set_title("Read Noise, %s" % self.sensor_id)
+        win.set_title("Read Noise, %s" % self.plot_title)
 
     def total_noise(self, exptime=16, spec=9, dark95s=None):
         """
@@ -1124,7 +1150,7 @@ class EOTestPlots(object):
             plt.plot(amp + xoffset, noise, '.', color=color, label=label)
         plt.xlabel('Amp')
         plt.ylabel('Noise (rms e-)')
-        plt.title('Noise, %s' % self.sensor_id)
+        plt.title('Noise, %s' % self.plot_title)
         plt.legend()
         plt.plot([0, 17], [spec, spec], 'k:')
         axis = list(plt.axis())
@@ -1144,7 +1170,7 @@ class EOTestPlots(object):
                 win = plot.Window(subplot=subplot, figsize=figsize,
                                   xlabel=r'pd current $\times$ exposure',
                                   ylabel=r'$10^3$ e- per pixel', size='large')
-                win.frameAxes.text(0.5, 1.08, 'Full Well, %s' % self.sensor_id,
+                win.frameAxes.text(0.5, 1.08, 'Full Well, %s' % self.plot_title,
                                    horizontalalignment='center',
                                    verticalalignment='top',
                                    transform=win.frameAxes.transAxes,
@@ -1209,7 +1235,7 @@ class EOTestPlots(object):
             if amp == 1:
                 win = plot.Window(subplot=subplot, figsize=figsize,
                                   xlabel=xlabel, ylabel='', size='large')
-                win.frameAxes.text(0.5, 1.08, 'Linearity, %s' % self.sensor_id,
+                win.frameAxes.text(0.5, 1.08, 'Linearity, %s' % self.plot_title,
                                    horizontalalignment='center',
                                    verticalalignment='top',
                                    transform=win.frameAxes.transAxes,
@@ -1299,7 +1325,7 @@ class EOTestPlots(object):
                 win = plot.Window(subplot=subplot, figsize=figsize,
                                   xlabel=xlabel, ylabel='', size='large')
                 win.frameAxes.text(0.5, 1.08,
-                                   'Linearity residuals, %s' % self.sensor_id,
+                                   'Linearity residuals, %s' % self.plot_title,
                                    horizontalalignment='center',
                                    verticalalignment='top',
                                    transform=win.frameAxes.transAxes,
@@ -1369,7 +1395,7 @@ class EOTestPlots(object):
             bias_est[amp] = gains[amp]*bias_estimate(ccd[amp], ccd.amp_geom,
                                                      serial=serial)
         title = '%s CTE profiles, %s flux, %s' % (direction, flux_level,
-                                                  self.sensor_id)
+                                                  self.plot_title)
         for amp in ccd:
             subplot = self.subplot(amp)
             if amp == 1:
@@ -1438,7 +1464,7 @@ class EOTestPlots(object):
                              yname='QE (% e-/photon)', oplot=amp-1,
                              xrange=(300, 1100), yrange=(0, 120))
             if amp == 1:
-                win.set_title('QE, %s' % self.sensor_id)
+                win.set_title('QE, %s' % self.plot_title)
             qe_band = qe_data[2].data.field('AMP%02i' % amp)
             plot.xyplot(band_wls, qe_band, xerr=band_wls_errs,
                         oplot=1, color='g')
@@ -1801,18 +1827,3 @@ class CcdSpec(object):
         lines.append(self.latex_entry())
         lines.append(CcdSpecs.latex_footer())
         return '\n'.join(lines)
-
-
-if __name__ == '__main__':
-    plots = EOTestPlots('114-03')
-    plots.fe55_dists()
-    plots.ptcs()
-    plots.linearity()
-    plots.gains()
-    plots.noise()
-    plots.ptc_bf()
-    plots.ptc_turnoff()
-    plots.qe()
-    plots.crosstalk_matrix()
-    plots.confluence_table()
-    plots.latex_table()
