@@ -137,7 +137,8 @@ class CCD(object):
                                                       trap_size)
         return traps
 
-    def writeto(self, outfile, pars=None, bitpix=-32, obs_time=None):
+    def writeto(self, outfile, pars=None, bitpix=16, obs_time=None,
+                compress_images=True):
         ccd_segments = [self.segments[amp] for amp in self.segments]
         output = fitsFile(ccd_segments)
         if pars is not None:
@@ -169,7 +170,8 @@ class CCD(object):
         output[0].header['DATE-OBS'] = obs_time.isot
         output[0].header['DATE'] = obs_time.isot
         output[0].header.set('MJD-OBS', value=float('%.5f' % obs_time.mjd))
-        fitsWriteto(output, outfile, overwrite=True, checksum=True)
+        fitsWriteto(output, outfile, overwrite=True, checksum=True,
+                    compress_images=compress_images)
 
 
 class SegmentExposure(object):

@@ -73,7 +73,8 @@ def generate_mask(infile, outfile, mask_plane, pixels=None, columns=None,
             except AttributeError:
                 mask = afwImage.MaskU(maskedCCD[amp].getDimensions())
             fp_set.setMask(mask, mask_plane)
-            hdus[amp].data = mask.array
+            hdus[amp] = fits.CompImageHDU(data=mask.array,
+                                          header=hdus[amp].header)
             # add mask plane keywords
             for key, value in mask.getMaskPlaneDict().items():
                 hdus[amp].header['MP_' + key] = value

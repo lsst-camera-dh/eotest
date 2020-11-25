@@ -46,7 +46,7 @@ class BiasHandlingTestCase(unittest.TestCase):
                             geometry=cls.amp_geom)
         for amp in ccd.segments:
             ccd.segments[amp].image += cls.bias_image
-        ccd.writeto(cls.image_file)
+        ccd.writeto(cls.image_file, bitpix=-32, compress_images=False)
 
         cls.mean_bias_image = afwImage.ImageF(cls.amp_geom.full_segment)
         imarr = cls.mean_bias_image.getArray()
@@ -57,7 +57,7 @@ class BiasHandlingTestCase(unittest.TestCase):
         ccd = sim_tools.CCD(exptime=cls.exptime, gain=cls.gain, geometry=cls.amp_geom)
         for amp in ccd.segments:
             ccd.segments[amp].image += cls.mean_bias_image
-        ccd.writeto(cls.mean_image_file)
+        ccd.writeto(cls.mean_image_file, bitpix=-32, compress_images=False)
 
     @classmethod
     def tearDownClass(cls):
@@ -167,7 +167,7 @@ class FitsMedianTestCase(unittest.TestCase):
             ccd = sim_tools.CCD(exptime=1)
             for amp in ccd.segments:
                 ccd.segments[amp].image += i
-            ccd.writeto(self.files[-1])
+            ccd.writeto(self.files[-1], bitpix=-32, compress_images=False)
 
     def tearDown(self):
         for item in self.files:
