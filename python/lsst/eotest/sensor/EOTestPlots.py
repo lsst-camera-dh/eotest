@@ -196,7 +196,7 @@ def plot_flat(infile, nsig=3, cmap=pylab.cm.hot, win=None, subplot=(1, 1, 1),
     image.set_norm(norm)
     if title is None:
         title = '%i nm' % wl
-    win.axes[-1].set_title(title)
+    win.axes[-1].set_title(title, fontsize='small')
     win.fig.colorbar(image)
     # Turn off tick labels for x- and y-axes
     pylab.setp(win.axes[-1].get_xticklabels(), visible=False)
@@ -447,8 +447,8 @@ class OverscanTestPlots(object):
             overscan1 = data[:, 1]
             overscan2 = data[:, 2]
 
-            axes[amp-1].plot(signal, overscan1, label='Overscan 1'.format(amp))
-            axes[amp-1].plot(signal, overscan2, label='Overscan 2'.format(amp))
+            axes[amp-1].plot(signal, overscan1, label='Overscan 1')
+            axes[amp-1].plot(signal, overscan2, label='Overscan 2')
 
             axes[amp-1].set_yscale('symlog', threshold=1.0)
             axes[amp-1].set_xscale('log')
@@ -677,8 +677,8 @@ class OverscanTestPlots(object):
             overscan1 = data[:, 1]
             overscan2 = data[:, 2]
 
-            axes[amp-1].plot(signal, overscan1, label='Overscan 1'.format(amp))
-            axes[amp-1].plot(signal, overscan2, label='Overscan 2'.format(amp))
+            axes[amp-1].plot(signal, overscan1, label='Overscan 1')
+            axes[amp-1].plot(signal, overscan2, label='Overscan 2')
 
             axes[amp-1].set_yscale('symlog', threshold=1.0)
             axes[amp-1].set_xscale('log')
