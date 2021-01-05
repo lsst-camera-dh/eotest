@@ -26,7 +26,9 @@ class Metadata(object):
         except:
             # This exception occurs when DM stack encounters a "." in
             # a FITS header keyword.
-            self.header = fits.open(infile)[hdu].header
+            with fits.open(infile) as hdulist:
+                self.header = dict()
+                self.header.update(hdulist[hdu].header)
 
     def get(self, key):
         return self(key)
