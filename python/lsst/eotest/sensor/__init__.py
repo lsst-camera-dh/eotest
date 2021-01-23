@@ -33,6 +33,7 @@ from .tearing_statistics import *
 from .NonlinearityCorrection import NonlinearityCorrection
 from .gain_sequence import *
 from .flat_signal_sequence import *
+from .ccd_bias_pca import *
 #
 # Pipe tasks
 #
