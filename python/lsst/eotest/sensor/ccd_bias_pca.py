@@ -42,7 +42,7 @@ class CCD_bias_PCA(dict):
     Class to compute mean bias frames and PCA-based models of the overscan
     subtraction derived from an ensemble of bias frames.
     """
-    def __init__(self, std_max=15, xstart=2, ystart=0, ncomp_x=6, ncomp_y=8):
+    def __init__(self, std_max=20, xstart=2, ystart=0, ncomp_x=6, ncomp_y=8):
         """
         Parameters
         ----------
@@ -93,7 +93,7 @@ class CCD_bias_PCA(dict):
             amps = imutils.allAmps(fits_files[0])
         for amp in amps:
             if verbose:
-                print(amp, len(amps))
+                print(f"amp {amp}")
             amp_stack = get_amp_stack(fits_files, amp)
             self[amp] \
                 = self._compute_amp_pcas(amp_stack,
@@ -112,12 +112,13 @@ class CCD_bias_PCA(dict):
         # per-amp overscan corner from each image, and apply a noise
         # cut of self.std_max for inclusion in the training set.
         training_set = list()
-        for _ in amp_stack:
+        for i, _ in enumerate(amp_stack):
             imarr = _.copy()
             imarr -= mean_amp
             imarr -= self.mean_oscan_corner(imarr)
             sigma = np.std(imarr)
             if sigma > self.std_max:
+                print('rejected frame:', i, sigma, self.std_max)
                 continue
             # Apply sigma clipping to mask pixel defects.
             training_set.append(sigma_clip(imarr, sigma=sigma))
@@ -217,7 +218,7 @@ class CCD_bias_PCA(dict):
             my_instance = pickle.load(fd)
         return my_instance
 
-    def make_bias_frame(self, raw_file, outfile, resid_file=None):
+    def make_bias_frame(self, raw_file, outfile, residuals_file=None):
         """
         Construct the PCA model bias frame for one of the bias files
         and optionally write the bias-subtracted file.
@@ -228,7 +229,7 @@ class CCD_bias_PCA(dict):
             Filename of raw single CCD FITS file.
         outfile: str
             Filename of the output bias frame.
-        resid_file: str [None]
+        residuals_file: str [None]
             Filename of the output bias-subtracted frame. If None, then
             the file is not written.
         """
@@ -260,12 +261,12 @@ class CCD_bias_PCA(dict):
                 hdus[amp].data = bias_model
             hdus.writeto(outfile, overwrite=True)
 
-        if resid_file is not None:
+        if residuals_file is not None:
             with fits.open(raw_file) as resids, fits.open(outfile) as bias:
                 for amp in range(1, 17):
                     resids[amp].data = (np.array(resids[amp].data, dtype=float)
                                         - bias[amp].data)
-                resids.writeto(resid_file, overwrite=True)
+                resids.writeto(residuals_file, overwrite=True)
 
 def make_overscan_frame(fits_file, outfile=None):
     """
