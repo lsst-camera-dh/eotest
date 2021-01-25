@@ -1,5 +1,6 @@
 """
-Module to use PCA modeling of bias frames.
+Module to use PCA modeling of bias frames.   This code is based on a
+jupyter notebook from Andrew Bradshaw.
 """
 import pickle
 import numpy as np
