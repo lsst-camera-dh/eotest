@@ -6,11 +6,12 @@ import numpy as np
 from astropy.io import fits
 from astropy.stats import sigma_clip
 from sklearn.decomposition import PCA
+import lsst.geom
 import lsst.eotest.image_utils as imutils
 import lsst.eotest.sensor as sensorTest
 
 
-__all__ = ['CCD_bias_PCA']
+__all__ = ['CCD_bias_PCA', 'make_overscan_frame']
 
 
 def get_amp_stack(fits_files, amp):
@@ -27,11 +28,10 @@ def get_amp_stack(fits_files, amp):
     -------
     list of numpy arrays.
     """
-    amp_stack = dict()
+    amp_stack = []
     for item in fits_files:
         with fits.open(item) as hdus:
-            seqnum = hdus[0].header['SEQNUM']
-            amp_stack[seqnum] = np.array(hdus[amp].data, dtype=float)
+            amp_stack.append(np.array(hdus[amp].data, dtype=float))
     return amp_stack
 
 
@@ -40,11 +40,11 @@ class CCD_bias_PCA(dict):
     Class to compute mean bias frames and PCA-based models of the overscan
     subtraction derived from an ensemble of bias frames.
     """
-    def __init__(self, std_max=10, xstart=2, ystart=0, ncomp_x=6, ncomp_y=8):
+    def __init__(self, std_max=15, xstart=2, ystart=0, ncomp_x=6, ncomp_y=8):
         """
         Parameters
         ----------
-        std_max: float [10]
+        std_max: float [15]
             Cutoff for stdev of amp ADU values for inclusion in the PCA
             training set.
         xstart: int [2]
@@ -66,7 +66,7 @@ class CCD_bias_PCA(dict):
         self.y_oscan_corner = None
 
     def compute_pcas(self, fits_files, amps=None, verbose=False,
-                     fit_full_segment=False):
+                     fit_full_segment=True):
         """
         Compute mean bias and PCA models of serial and parallel
         overscans using a list of bias frame FITS files for a
@@ -80,7 +80,7 @@ class CCD_bias_PCA(dict):
             A list of amps to model. If None, then do all amps in the CCD.
         verbose: bool [False]
             Flag to print the progress of computing PCAs for each amp.
-        fit_full_segment: bool [False]
+        fit_full_segment: bool [True]
             Use the full amplifier segment in deriving the PCAs.  If False,
             then use the parallel and serial overscan regions.
         """
@@ -93,45 +93,54 @@ class CCD_bias_PCA(dict):
             if verbose:
                 print(amp, len(amps))
             amp_stack = get_amp_stack(fits_files, amp)
-            self[amp] = self._compute_amp_pcas(amp_stack, fit_full_segment)
+            self[amp] \
+                = self._compute_amp_pcas(amp_stack,
+                                         fit_full_segment=fit_full_segment,
+                                         verbose=verbose)
 
-    def _compute_amp_pcas(self, amp_stack, fit_full_segment=False):
+    def _compute_amp_pcas(self, amp_stack, fit_full_segment=True,
+                          verbose=False, sigma=3):
         # Compute the mean bias image from the stack of amp data.
-        mean_amp = np.mean(np.array(list(amp_stack.values())), axis=0)
+        mean_amp = np.mean(np.array(amp_stack), axis=0)
+        if verbose:
+            print("np.std(mean_amp):", np.std(mean_amp))
 
         # Assemble the training set of mean-subtracted images from the
-        # stack of raw amplifier data. In addition to subtracting the mean
-        # image, also subtract the mean of the per-amp overscan corner.
-        # Apply a noise cut of self.std_max.
-        training_set = dict()
-        for seqnum, _ in amp_stack.items():
+        # stack of raw amplifier data.  Also subtract the mean of the
+        # per-amp overscan corner from each image, and apply a noise
+        # cut of self.std_max for inclusion in the training set.
+        training_set = list()
+        for _ in amp_stack:
             imarr = _.copy()
             imarr -= mean_amp
             imarr -= self.mean_oscan_corner(imarr)
-            if np.std(imarr) > self.std_max:
+            sigma = np.std(imarr)
+            if sigma > self.std_max:
                 continue
-            training_set[seqnum] = sigma_clip(imarr)
+            # Apply sigma clipping to mask pixel defects.
+            training_set.append(sigma_clip(imarr, sigma=sigma))
+        if verbose:
+            print("training set size:", len(training_set))
 
         # Create the ensemble of profiles in the serial direction.
         if fit_full_segment:
             # This uses the full data segment, rather than just the parallel
-            # overscan. Is this the correct procedure?
-            x_profs = {seqnum: np.mean(_, axis=0)[self.xstart:]
-                       for seqnum, _ in training_set.items()}
+            # overscan.
+            x_profs = [np.mean(_, axis=0)[self.xstart:] for _ in training_set]
         else:
-            # Use overscan regions for training instead of full segment.
-            x_profs = {seqnum: np.mean(_[self.y_oscan_corner:, :],
-                                       axis=0)[self.xstart:]
-                       for seqnum, _ in training_set.items()}
+            # Use the parallel overscan region instead of full
+            # segment.
+            x_profs = [np.mean(_[self.y_oscan_corner:, :], axis=0)[self.xstart:]
+                       for _ in training_set]
 
         # Run the PCA fit for the serial direction
         pcax = PCA(self.ncomp_x)
-        pcax.fit(list(x_profs.values()))
+        pcax.fit(x_profs)
 
         # Use the previous serial direction decomposition to do the
         # fitting in the parallel direction.
-        y_profs = dict()
-        for seqnum, imarr in training_set.items():
+        y_profs = []
+        for imarr in training_set:
             # Build the serial model, using the pcax basis set, and fit
             # to the full segment data in the serial direction.
             _ = pcax.transform(imarr[self.ystart:, self.xstart:])
@@ -143,19 +152,20 @@ class CCD_bias_PCA(dict):
 
             # Add the resulting profile to the y-ensemble
             if fit_full_segment:
-                y_profs[seqnum] = np.mean(new_imarr, axis=1)
+                y_profs.append(np.mean(new_imarr, axis=1))
             else:
-                y_profs[seqnum] = np.mean(new_imarr[:, self.x_oscan_corner:],
-                                          axis=1)
+                # Just use the serial overscan data.
+                y_profs.append(np.mean(new_imarr[:, self.x_oscan_corner:],
+                                       axis=1))
 
 
         # Run the PCA fit for the parallel direction.
         pcay = PCA(self.ncomp_y)
-        pcay.fit(list(y_profs.values()))
+        pcay.fit(y_profs)
 
         return pcax, pcay, mean_amp
 
-    def mean_oscan_corner(self, imarr, buff=2):
+    def mean_oscan_corner(self, imarr, buff=0):
         """
         Compute the mean pixel value of the region common to
         the parallel and serial overscan regions.
@@ -240,7 +250,11 @@ class CCD_bias_PCA(dict):
                 _ = pcay.transform(imarr[self.ystart:, self.x_oscan_corner:].T)
                 projy = pcay.inverse_transform(_)
                 parallel_model = np.mean(projy, axis=0)
+                imarr[self.ystart:, self.xstart:] \
+                    = (imarr[self.ystart:, self.xstart:].T - parallel_model).T
                 bias_model = (bias_model.T + parallel_model).T
+                bias_model \
+                    += self.mean_oscan_corner(hdus[amp].data - bias_model)
                 hdus[amp].data = bias_model
             hdus.writeto(outfile, overwrite=True)
 
@@ -250,3 +264,46 @@ class CCD_bias_PCA(dict):
                     resids[amp].data = (np.array(resids[amp].data, dtype=float)
                                         - bias[amp].data)
                 resids.writeto(resid_file, overwrite=True)
+
+def make_overscan_frame(fits_file, outfile=None):
+    """
+    Use overscan regions to do column-wise, then row-wise overscan
+    profile-based overscan frame.
+    """
+    ccd = sensorTest.MaskedCCD(fits_file)
+    par_corner = lsst.geom.Point2I(0, ccd.amp_geom.imaging.getHeight())
+    par_extent = lsst.geom.Extent2I(ccd.amp_geom.full_segment.getWidth(),
+                                    ccd.amp_geom.parallel_overscan.getHeight())
+    par_bbox = lsst.geom.Box2I(par_corner, par_extent)
+    ser_corners = ccd.amp_geom.serial_overscan.getCorners()
+    ser_extent = lsst.geom.Extent2I(ccd.amp_geom.serial_overscan.getWidth(),
+                                    ccd.amp_geom.full_segment.getHeight())
+    ser_bbox = lsst.geom.Box2I(ser_corners[0], ser_extent)
+
+    oscan_arrays = dict()
+    for amp in ccd:
+        image = ccd[amp].getImage()
+
+        parallel = image.Factory(image, par_bbox).array
+        p_profile = np.sum(parallel, 0)/parallel.shape[0]
+
+        overscan_array = np.zeros(image.array.shape)
+
+        image.array[:,] -= p_profile
+        overscan_array[:,] += p_profile
+
+        serial = image.Factory(image, ser_bbox).array
+        s_profile = np.sum(serial, 1)/serial.shape[1]
+
+        for col in range(ccd.amp_geom.full_segment.getWidth()):
+            image.array[:serial.shape[0], col] -= s_profile
+            overscan_array[:serial.shape[0], col] += s_profile
+        oscan_arrays[amp] = overscan_array
+
+    if outfile is not None:
+        with fits.open(fits_file) as hdus:
+            for amp in ccd:
+                hdus[amp].data = oscan_arrays[amp]
+            hdus.writeto(outfile, overwrite=True)
+
+    return ccd
