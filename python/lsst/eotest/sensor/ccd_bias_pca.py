@@ -8,7 +8,8 @@ from astropy.stats import sigma_clip
 from sklearn.decomposition import PCA
 import lsst.geom
 import lsst.eotest.image_utils as imutils
-import lsst.eotest.sensor as sensorTest
+from .MaskedCCD import MaskedCCD
+from .AmplifierGeometry import makeAmplifierGeometry
 
 
 __all__ = ['CCD_bias_PCA', 'make_overscan_frame']
@@ -84,7 +85,7 @@ class CCD_bias_PCA(dict):
             Use the full amplifier segment in deriving the PCAs.  If False,
             then use the parallel and serial overscan regions.
         """
-        amp_geom = sensorTest.makeAmplifierGeometry(fits_files[0])
+        amp_geom = makeAmplifierGeometry(fits_files[0])
         self.x_oscan_corner = amp_geom.imaging.getEndX()
         self.y_oscan_corner = amp_geom.imaging.getEndY()
         if amps is None:
@@ -270,7 +271,7 @@ def make_overscan_frame(fits_file, outfile=None):
     Use overscan regions to do column-wise, then row-wise overscan
     profile-based overscan frame.
     """
-    ccd = sensorTest.MaskedCCD(fits_file)
+    ccd = MaskedCCD(fits_file)
     par_corner = lsst.geom.Point2I(0, ccd.amp_geom.imaging.getHeight())
     par_extent = lsst.geom.Extent2I(ccd.amp_geom.full_segment.getWidth(),
                                     ccd.amp_geom.parallel_overscan.getHeight())
