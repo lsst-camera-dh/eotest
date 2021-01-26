@@ -68,7 +68,7 @@ class CCD_bias_PCA(dict):
         self.y_oscan_corner = None
 
     def compute_pcas(self, fits_files, amps=None, verbose=False,
-                     fit_full_segment=True):
+                     fit_full_segment=True, use_median=True):
         """
         Compute mean bias and PCA models of serial and parallel
         overscans using a list of bias frame FITS files for a
@@ -85,6 +85,9 @@ class CCD_bias_PCA(dict):
         fit_full_segment: bool [True]
             Use the full amplifier segment in deriving the PCAs.  If False,
             then use the parallel and serial overscan regions.
+        use_median: bool [True]
+            Compute the median of the stacked images for the mean_amp
+            image.  If False, then compute the mean.
         """
         amp_geom = makeAmplifierGeometry(fits_files[0])
         self.x_oscan_corner = amp_geom.imaging.getEndX()
@@ -98,12 +101,15 @@ class CCD_bias_PCA(dict):
             self[amp] \
                 = self._compute_amp_pcas(amp_stack,
                                          fit_full_segment=fit_full_segment,
-                                         verbose=verbose)
+                                         verbose=verbose, use_median=use_median)
 
     def _compute_amp_pcas(self, amp_stack, fit_full_segment=True,
-                          verbose=False, sigma=3):
+                          verbose=False, sigma=3, use_median=True):
         # Compute the mean bias image from the stack of amp data.
-        mean_amp = np.mean(np.array(amp_stack), axis=0)
+        if use_median:
+            mean_amp = np.median(np.array(amp_stack), axis=0)
+        else:
+            mean_amp = np.mean(np.array(amp_stack), axis=0)
         if verbose:
             print("np.std(mean_amp):", np.std(mean_amp))
 
