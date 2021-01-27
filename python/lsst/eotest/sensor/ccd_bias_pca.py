@@ -8,6 +8,7 @@ from astropy.io import fits
 from astropy.stats import sigma_clip
 from sklearn.decomposition import PCA
 import lsst.eotest.image_utils as imutils
+from lsst.eotest.fitsTools import fitsWriteto
 from .AmplifierGeometry import makeAmplifierGeometry
 
 
@@ -64,9 +65,11 @@ class CCD_bias_PCA(dict):
         self.ncomp_y = ncomp_y
         self.x_oscan_corner = None
         self.y_oscan_corner = None
+        self.pca_bias_file = None
 
-    def compute_pcas(self, fits_files, amps=None, verbose=False,
-                     fit_full_segment=True, use_median=True):
+    def compute_pcas(self, fits_files, outfile_prefix, amps=None,
+                     verbose=False, fit_full_segment=True, sigma=3,
+                     use_median=True):
         """
         Compute mean bias and PCA models of serial and parallel
         overscans using a list of bias frame FITS files for a
@@ -76,6 +79,10 @@ class CCD_bias_PCA(dict):
         ----------
         fits_files: list
             List of bias frame FITS files for a single CCD.
+        outfile_prefix: str
+            Prefix of output files containing the mean/median bias frame,
+            `f'{outfile_prefix}_pca_bias.fits'`, and the pickle file
+            containing the PCA models, `f'{outfile_prefix}_pca_bias.pickle'`.
         amps: list-like [None]
             A list of amps to model. If None, then do all amps in the CCD.
         verbose: bool [False]
@@ -83,6 +90,9 @@ class CCD_bias_PCA(dict):
         fit_full_segment: bool [True]
             Use the full amplifier segment in deriving the PCAs.  If False,
             then use the parallel and serial overscan regions.
+        sigma: int [3]
+            Value to use for sigma-clipping the amp-level images that
+            are included in the training set.
         use_median: bool [True]
             Compute the median of the stacked images for the mean_amp
             image.  If False, then compute the mean.
@@ -92,14 +102,22 @@ class CCD_bias_PCA(dict):
         self.y_oscan_corner = amp_geom.imaging.getEndY()
         if amps is None:
             amps = imutils.allAmps(fits_files[0])
-        for amp in amps:
-            if verbose:
-                print(f"amp {amp}")
-            amp_stack = get_amp_stack(fits_files, amp)
-            self[amp] \
-                = self._compute_amp_pcas(amp_stack,
-                                         fit_full_segment=fit_full_segment,
-                                         verbose=verbose, use_median=use_median)
+        with fits.open(fits_files[0]) as mean_bias_frame:
+            for amp in amps:
+                if verbose:
+                    print(f"amp {amp}")
+                amp_stack = get_amp_stack(fits_files, amp)
+                pcax, pcay, mean_amp \
+                    = self._compute_amp_pcas(amp_stack,
+                                             fit_full_segment=fit_full_segment,
+                                             verbose=verbose,
+                                             sigma=sigma,
+                                             use_median=use_median)
+                self[amp] = pcax, pcay
+                mean_bias_frame[amp].data = mean_amp
+            self.pca_bias_file = f'{outfile_prefix}_pca_bias.fits'
+            fitsWriteto(mean_bias_frame, self.pca_bias_file, overwrite=True)
+        self.to_pickle(f'{outfile_prefix}_pca_bias.pickle')
 
     def _compute_amp_pcas(self, amp_stack, fit_full_segment=True,
                           verbose=False, sigma=3, use_median=True):
@@ -222,6 +240,75 @@ class CCD_bias_PCA(dict):
             my_instance = pickle.load(fd)
         return my_instance
 
+    @staticmethod
+    def read_model(pca_model_file, pca_bias_file):
+        """
+        Read in the PCA model and associated PCA bias frame for computing
+        the bias corrections.
+
+        Parameters
+        ----------
+        pca_model_file: str
+            Pickle file containing the PCA model of the bias correction.
+        pca_bias_file: str
+            FITS file containing the mean images of each amplifier that
+            were used to fit the PCA model.
+
+        Returns
+        -------
+        CCD_bias_PCA object with the pca_bias_file FITS file explicitly
+        set.
+        """
+        my_instance = CCD_bias_PCA.read_pickle(pca_model_file)
+        my_instance.pca_bias_file = pca_bias_file
+        return my_instance
+
+    def pca_bias_correction(self, amp, image_array):
+        """
+        Compute the bias model based on the PCA fit.  This should be
+        subtracted from the raw data for the specified amp in order to
+        apply an overscan+bias correction.
+
+        Parameters
+        ----------
+        amp: int
+            Amplifier for which to compute the correction.
+        image_array: numpy.array
+            Array containing the pixel values for the full segment of
+            the specified amp.
+
+        Returns
+        -------
+        numpy.array: Array with the pixel values of the computed correction
+            for the full segment.
+
+        """
+        pcax, pcay = self[amp]
+        mean_amp = fits.getdata(self.pca_bias_file, amp).astype('float')
+
+        imarr = image_array - mean_amp
+        corner_mean = self.mean_oscan_corner(imarr)
+        imarr -= corner_mean
+
+        # Build the serial PCA-based model using the parallel overscan
+        _ = pcax.transform(imarr[self.y_oscan_corner:, self.xstart:])
+        projx = pcax.inverse_transform(_)
+        serial_model = np.mean(projx, axis=0)
+
+        # Build the parallel PCA-based model using the serial overscan
+        # after subtracting the serial_model
+        imarr[self.ystart:, self.xstart:] -= serial_model
+        _ = pcay.transform(imarr[self.ystart:, self.x_oscan_corner:].T)
+        projy = pcay.inverse_transform(_)
+        parallel_model = np.mean(projy, axis=0)
+
+        bias_model = mean_amp + corner_mean
+        bias_model[self.ystart:, self.xstart:] += serial_model
+        bias_model = (bias_model.T + parallel_model).T
+        bias_model += self.mean_oscan_corner(image_array - bias_model)
+
+        return bias_model
+
     def make_bias_frame(self, raw_file, outfile, residuals_file=None):
         """
         Construct the PCA model bias frame for one of the bias files
@@ -239,31 +326,8 @@ class CCD_bias_PCA(dict):
         """
         with fits.open(raw_file) as hdus:
             for amp in range(1, 17):
-                pcax, pcay, mean_amp = self[amp]
-                imarr = hdus[amp].data - mean_amp
-                corner_mean = self.mean_oscan_corner(imarr)
-                imarr -= corner_mean
-                bias_model = mean_amp + corner_mean
-
-                # Build the serial PCA-based model using the parallel overscan
-                _ = pcax.transform(imarr[self.y_oscan_corner:, self.xstart:])
-                projx = pcax.inverse_transform(_)
-                serial_model = np.mean(projx, axis=0)
-
-                # Build the parallel PCA-based model using the serial overscan
-                # after subtracting the serial_model
-                imarr[self.ystart:, self.xstart:] -= serial_model
-                bias_model[self.ystart:, self.xstart:] += serial_model
-                _ = pcay.transform(imarr[self.ystart:, self.x_oscan_corner:].T)
-                projy = pcay.inverse_transform(_)
-                parallel_model = np.mean(projy, axis=0)
-                imarr[self.ystart:, self.xstart:] \
-                    = (imarr[self.ystart:, self.xstart:].T - parallel_model).T
-                bias_model = (bias_model.T + parallel_model).T
-                bias_model \
-                    += self.mean_oscan_corner(hdus[amp].data - bias_model)
-                hdus[amp].data = bias_model
-            hdus.writeto(outfile, overwrite=True)
+                hdus[amp].data = self.pca_bias_correction(amp, hdus[amp].data)
+            fitsWriteto(hdus, outfile, overwrite=True)
 
         if residuals_file is not None:
             with fits.open(raw_file) as resids, fits.open(outfile) as bias:
