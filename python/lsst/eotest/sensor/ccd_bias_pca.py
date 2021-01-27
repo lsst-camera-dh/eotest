@@ -117,7 +117,9 @@ class CCD_bias_PCA(dict):
                 mean_bias_frame[amp].data = mean_amp
             self.pca_bias_file = f'{outfile_prefix}_pca_bias.fits'
             fitsWriteto(mean_bias_frame, self.pca_bias_file, overwrite=True)
-        self.to_pickle(f'{outfile_prefix}_pca_bias.pickle')
+        pickle_file = f'{outfile_prefix}_pca_bias.pickle'
+        self.to_pickle(pickle_file)
+        return pickle_file, self.pca_bias_file
 
     def _compute_amp_pcas(self, amp_stack, fit_full_segment=True,
                           verbose=False, sigma=3, use_median=True):
