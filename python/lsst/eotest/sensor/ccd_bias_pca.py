@@ -41,7 +41,7 @@ class CCD_bias_PCA(dict):
     Class to compute mean bias frames and PCA-based models of the overscan
     subtraction derived from an ensemble of bias frames.
     """
-    def __init__(self, std_max=20, xstart=2, ystart=0, ncomp_x=6, ncomp_y=8):
+    def __init__(self, std_max=None, xstart=2, ystart=0, ncomp_x=6, ncomp_y=8):
         """
         Parameters
         ----------
@@ -141,8 +141,9 @@ class CCD_bias_PCA(dict):
             imarr -= mean_amp
             imarr -= self.mean_oscan_corner(imarr)
             sigma = np.std(imarr)
-            if sigma > self.std_max:
-                print('rejected frame:', i, sigma, self.std_max)
+            if self.std_max is not None and sigma > self.std_max:
+                print('_compute_amp_pcas: rejected frame:',
+                      i, sigma, self.std_max)
                 continue
             # Apply sigma clipping to mask pixel defects.
             training_set.append(sigma_clip(imarr, sigma=sigma))
