@@ -27,7 +27,7 @@ def get_amp_stack(fits_files, amp):
 
     Returns
     -------
-    list of numpy arrays.
+    numpy array of a stack of amp imaging section pixel data
     """
     amp_stack = []
     for item in fits_files:
@@ -120,6 +120,7 @@ class CCD_bias_PCA(dict):
                 self[amp] = pcax, pcay
                 mean_bias_frame[amp].data = mean_amp
             self.pca_bias_file = f'{outfile_prefix}_pca_bias.fits'
+            mean_bias_frame[0].header['FILENAME'] = self.pca_bias_file
             fitsWriteto(mean_bias_frame, self.pca_bias_file, overwrite=True)
         pickle_file = f'{outfile_prefix}_pca_bias.pickle'
         self.to_pickle(pickle_file)
@@ -127,16 +128,16 @@ class CCD_bias_PCA(dict):
 
     def _compute_amp_pcas(self, amp_stack, fit_full_segment=True,
                           verbose=False, sigma=3, use_median=True):
-        # Compute the mean bias image from the stack of amp data.
+        # Compute the me[di]an bias image from the stack of amp data.
         if use_median:
             mean_amp = np.median(amp_stack, axis=0)
         else:
             mean_amp = np.mean(amp_stack, axis=0)
         if verbose:
-            print("np.std(mean_amp):", np.std(mean_amp))
+            print("np.std(me[di]an_amp):", np.std(mean_amp))
 
         # Assemble the training set of mean-subtracted images from the
-        # stack of raw amplifier data.  Also subtract the mean of the
+        # stack of raw amplifier data.  Also subtract the me[di]an of the
         # per-amp overscan corner from each image, and apply a noise
         # cut of self.std_max for inclusion in the training set.
         imarrs = []
@@ -184,7 +185,8 @@ class CCD_bias_PCA(dict):
             proj = pcax.inverse_transform(_)
             serial_model = np.mean(proj, axis=0)
 
-            # Subtract the serial model from the mean-subtracted training image.
+            # Subtract the serial model from the me[di]an-subtracted training
+            # image.
             new_imarr = imarr.copy()[self.ystart:, self.xstart:] - serial_model
 
             # Add the resulting profile to the y-ensemble
