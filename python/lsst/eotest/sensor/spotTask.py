@@ -19,8 +19,8 @@ import lsst.meas.extensions.shapeHSM
 
 from .MaskedCCD import MaskedCCD
 from .AmplifierGeometry import parse_geom_kwd
-    
-def make_ccd_mosaic(infile, bias_frame=None, dark_frame=None, gains=None):
+
+def make_ccd_mosaic(infile, bias_frame=None, dark_frame=None, gains=None, linearity_correction=None):
     """Create a full CCD image mosaic.
     
     Combine the 16 amplifier arrays into a single array, performing
@@ -36,7 +36,7 @@ def make_ccd_mosaic(infile, bias_frame=None, dark_frame=None, gains=None):
         afwImage object containing CCD mosaic image.
     """
     
-    ccd = MaskedCCD(infile, bias_frame=bias_frame, dark_frame=dark_frame)
+    ccd = MaskedCCD(infile, bias_frame=bias_frame, dark_frame=dark_frame, linearity_correction=None)
 
     ## Get amp geometry information
     foo = fits.open(infile)
@@ -45,6 +45,7 @@ def make_ccd_mosaic(infile, bias_frame=None, dark_frame=None, gains=None):
     ny_segments = 2
     nx = nx_segments*(datasec['xmax'] - datasec['xmin'] + 1)
     ny = ny_segments*(datasec['ymax'] - datasec['ymin'] + 1)
+    raw = np.zeros((ny, nx), dtype=np.float32)
     mosaic = np.zeros((ny, nx), dtype=np.float32)
 
     for ypos in range(ny_segments):
@@ -69,7 +70,9 @@ def make_ccd_mosaic(infile, bias_frame=None, dark_frame=None, gains=None):
                 subarr *= gains[amp]
 
             ## Assign to final array
-            mosaic[ymin:ymax, xmin:xmax] = subarr
+            raw[ymin:ymax, xmin:xmax] = subarr
+
+    mosaic[:, : ] = raw[:, ::-1]
 
     image = afwImage.ImageF(mosaic)
     return image
@@ -96,7 +99,8 @@ class SpotTask(pipeBase.Task):
     _DefaultName = "SpotTask"
 
     @pipeBase.timeMethod
-    def run(self, sensor_id, infile, gains, bias_frame=None, flat_frame=None, dark_frame=None):
+    def run(self, sensor_id, infile, gains, bias_frame=None, flat_frame=None, dark_frame=None,
+            linearity_correction=None, read_noise=6.5):
         
         ## Process a CCD image mosaic
         if self.config.verbose:
@@ -111,6 +115,11 @@ class SpotTask(pipeBase.Task):
             image = afwImage.ImageF(imarr*np.median(flatarr)/flatarr)
         exposure = afwImage.ExposureF(image.getBBox())
         exposure.setImage(image)
+
+        ## Add variance plane
+        var = exposure.image
+        var += read_noise**2.
+        exposure.setVariance(var)
         
         ## Set up and run characterize task
         char_nsig = self.config.characterize_nsig
