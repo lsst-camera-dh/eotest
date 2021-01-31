@@ -3,7 +3,6 @@
 
 @author J. Chiang <jchiang@slac.stanford.edu>
 """
-from __future__ import absolute_import
 import os
 import astropy.io.fits as fits
 from lsst.eotest.fitsTools import fitsWriteto
@@ -11,20 +10,29 @@ import lsst.eotest.image_utils as imutils
 from .AmplifierGeometry import makeAmplifierGeometry
 from .EOTestResults import EOTestResults
 from .eperTask import EPERTask
+from .ccd_bias_pca import CCD_bias_PCA
 import lsst.afw
 import lsst.afw.image as afwImage
 import lsst.afw.math as afwMath
 import lsst.pex.config as pexConfig
 import lsst.pipe.base as pipeBase
 
+def pca_bias_subtracted_image(image, bias_frame, amp):
+    my_image = image.Factory(image, deep=True)
+    ccd_pcas = CCD_bias_PCA.read_model(*bias_frame)
+    my_image.array -= ccd_pcas.pca_bias_correction(amp, my_image.array)
+    return my_image
+
 def bias_subtracted_image(image, bias_image, overscan, bias_method='row'):
     # Make deep copies of image and bias image so that we can modify them.
-    im_out = image.Factory(image)
-    bias_sub = bias_image.Factory(bias_image)
+    im_out = image.Factory(image, deep=True)
+    bias_sub = bias_image.Factory(bias_image, deep=True)
     # Subtract overscans.
-    bias_sub -= imutils.bias_image(im=bias_image, overscan=overscan, bias_method=bias_method)
-    im_out -= imutils.bias_image(im=image, overscan=overscan, bias_method=bias_method)
-    # Subtract remaining strucutured bias.
+    bias_sub -= imutils.bias_image(im=bias_image, overscan=overscan,
+                                   bias_method=bias_method)
+    im_out -= imutils.bias_image(im=image, overscan=overscan,
+                                 bias_method=bias_method)
+    # Subtract remaining structured bias.
     im_out -= bias_sub
     return im_out
 
@@ -35,6 +43,7 @@ def superflat(files, bias_frame=None, outfile='superflat.fits', bitpix=None,
     The superflat is created by bias-offset correcting the input files
     and median-ing them together.
     """
+    use_pca_bias = os.environ.get('LCATR_USE_PCA_BIAS_FIT', 'True') == 'True'
     # Get overscan region.
     overscan = makeAmplifierGeometry(files[0]).serial_overscan
     output_images = dict()
@@ -44,10 +53,14 @@ def superflat(files, bias_frame=None, outfile='superflat.fits', bitpix=None,
             image = afwImage.ImageF(infile, imutils.dm_hdu(amp))
             if bias_subtract:
                 if bias_frame:
-                    bias_image = afwImage.ImageF(bias_frame,
-                                                 imutils.dm_hdu(amp))
-                    image = bias_subtracted_image(image, bias_image, overscan,
-                                                  bias_method)
+                    if use_pca_bias:
+                        image = pca_bias_subtracted_image(image, bias_frame,
+                                                          amp)
+                    else:
+                        bias_image = afwImage.ImageF(bias_frame,
+                                                     imutils.dm_hdu(amp))
+                        image = bias_subtracted_image(image, bias_image,
+                                                      overscan, bias_method)
                 else:
                     image -= imutils.bias_image(im=image, overscan=overscan,
                                                 bias_method=bias_method)

@@ -5,13 +5,12 @@ afwMath.makeStatistics object.
 
 @author J. Chiang <jchiang@slac.stanford.edu>
 """
-from __future__ import print_function
-from __future__ import absolute_import
 import warnings
 import astropy.io.fits as fits
 from astropy.utils.exceptions import AstropyWarning, AstropyUserWarning
 from lsst.eotest.fitsTools import fitsWriteto
 from .AmplifierGeometry import makeAmplifierGeometry
+from .ccd_bias_pca import CCD_bias_PCA
 import lsst.daf.base as dafBase
 import lsst.afw.image as afwImage
 import lsst.afw.math as afwMath
@@ -57,13 +56,17 @@ class MaskedCCD(dict):
         self.stat_ctrl = afwMath.StatisticsControl()
         if mask_files:
             self.setAllMasks()
+        self.bias_frame = None
+        self.ccd_pcas = None
         if bias_frame is not None:
             if isinstance(bias_frame, MaskedCCD):
                 self.bias_frame = bias_frame
+            elif isinstance(bias_frame, tuple) and len(bias_frame) == 2:
+                # Assume this is a pair of filenames for the
+                # CCD_bias_PCA model.
+                self.ccd_pcas = CCD_bias_PCA.read_model(*bias_frame)
             else:
                 self.bias_frame = MaskedCCD(bias_frame, all_amps=all_amps)
-        else:
-            self.bias_frame = None
         if dark_frame is not None:
             self.dark_frame = MaskedCCD(dark_frame, bias_frame=bias_frame,
                                         all_amps=all_amps)
@@ -249,6 +252,9 @@ class MaskedCCD(dict):
                 self.bias_image_using_overscan(amp, overscan=overscan, **kwargs)
             # Subtract structured, x-dependent part.
             my_image -= bias
+        elif self.ccd_pcas is not None:
+            my_image.getImage().array[:] \
+                -= self.ccd_pcas.pca_bias_correction(amp, my_image.getImage().array)
         else:
             my_image -= self.bias_image(amp, overscan, **kwargs)
 
@@ -338,6 +344,12 @@ class MaskedCCDWrapper:
             self.kwds['all_amps'] = (amp,)
             self.ccd = MaskedCCD(self.imfile, **self.kwds)
         return self.ccd.unbiased_and_trimmed_image(amp, **kwds)
+
+    def bias_subtracted_image(self, amp, **kwds):
+        if self.ccd is None or not amp in self.ccd:
+            self.kwds['all_amps'] = (amp,)
+            self.ccd = MaskedCCD(self.imfile, **self.kwds)
+        return self.ccd.bias_subtracted_image(amp, **kwds)
 
     def __getitem__(self, amp):
         if self.ccd is None or not amp in self.ccd:

@@ -14,6 +14,7 @@ from .MaskedCCD import MaskedCCD
 from .BrightPixels import BrightPixels
 from .EOTestResults import EOTestResults
 from .generate_mask import generate_mask
+from .ccd_bias_pca import CCD_bias_PCA
 
 import lsst.pex.config as pexConfig
 import lsst.pipe.base as pipeBase
@@ -54,6 +55,14 @@ class BrightPixelsTask(pipeBase.Task):
                                                      imutils.dm_hdu(amp))
         medfile = os.path.join(self.config.output_dir,
                                '%s_median_dark_bp.fits' % sensor_id)
+        if not isinstance(bias_frame, str):
+            # Assume `bias_frame` is a tuple containing the
+            # CCD_bias_PCA filenames so do a bias correction on the
+            # median image using that model so that the FITS file
+            # contains the bias-corrected data.
+            ccd_pcas = CCD_bias_PCA.read_model(*bias_frame)
+            for amp, image in median_images.items():
+                image.array -= ccd_pcas.pca_bias_correction(amp, image.array)
         imutils.writeFits(median_images, medfile, dark_files[0])
 
         ccd = MaskedCCD(medfile, mask_files=mask_files, bias_frame=bias_frame,
