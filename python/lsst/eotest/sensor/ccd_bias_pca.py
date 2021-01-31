@@ -33,7 +33,7 @@ def get_amp_stack(fits_files, amp):
     for item in fits_files:
         with fits.open(item) as hdus:
             amp_stack.append(np.array(hdus[amp].data, dtype=float))
-    return amp_stack
+    return np.array(amp_stack)
 
 
 class CCD_bias_PCA(dict):
@@ -41,15 +41,17 @@ class CCD_bias_PCA(dict):
     Class to compute mean bias frames and PCA-based models of the overscan
     subtraction derived from an ensemble of bias frames.
     """
-    def __init__(self, std_max=None, xstart=2, ystart=0, ncomp_x=6, ncomp_y=8):
+    def __init__(self, std_max=10, xstart=None, ystart=0, ncomp_x=6, ncomp_y=8):
         """
         Parameters
         ----------
-        std_max: float [15]
+        std_max: float [10]
             Cutoff for stdev of amp ADU values for inclusion in the PCA
             training set.
-        xstart: int [2]
+        xstart: int [None]
             Starting pixel for the PCA modeling in the serial direction.
+            If None, then use the number of prescan pixels, 3 for ITL
+            and 10 for e2V.
         ystart: int [0]
             Starting pixel for the PCA modeling in the parallel direction.
         ncomp_x: int [6]
@@ -68,7 +70,7 @@ class CCD_bias_PCA(dict):
         self.pca_bias_file = None
 
     def compute_pcas(self, fits_files, outfile_prefix, amps=None,
-                     verbose=False, fit_full_segment=True, sigma=3,
+                     verbose=False, fit_full_segment=True, sigma=10,
                      use_median=True):
         """
         Compute mean bias and PCA models of serial and parallel
@@ -90,7 +92,7 @@ class CCD_bias_PCA(dict):
         fit_full_segment: bool [True]
             Use the full amplifier segment in deriving the PCAs.  If False,
             then use the parallel and serial overscan regions.
-        sigma: int [3]
+        sigma: int [10]
             Value to use for sigma-clipping the amp-level images that
             are included in the training set.
         use_median: bool [True]
@@ -100,6 +102,8 @@ class CCD_bias_PCA(dict):
         amp_geom = makeAmplifierGeometry(fits_files[0])
         self.x_oscan_corner = amp_geom.imaging.getEndX()
         self.y_oscan_corner = amp_geom.imaging.getEndY()
+        if self.xstart is None:
+            self.xstart = amp_geom.imaging.getBeginX()
         if amps is None:
             amps = imutils.allAmps(fits_files[0])
         with fits.open(fits_files[0]) as mean_bias_frame:
@@ -125,9 +129,9 @@ class CCD_bias_PCA(dict):
                           verbose=False, sigma=3, use_median=True):
         # Compute the mean bias image from the stack of amp data.
         if use_median:
-            mean_amp = np.median(np.array(amp_stack), axis=0)
+            mean_amp = np.median(amp_stack, axis=0)
         else:
-            mean_amp = np.mean(np.array(amp_stack), axis=0)
+            mean_amp = np.mean(amp_stack, axis=0)
         if verbose:
             print("np.std(mean_amp):", np.std(mean_amp))
 
@@ -135,18 +139,23 @@ class CCD_bias_PCA(dict):
         # stack of raw amplifier data.  Also subtract the mean of the
         # per-amp overscan corner from each image, and apply a noise
         # cut of self.std_max for inclusion in the training set.
-        training_set = list()
+        imarrs = []
+        stdevs = []
         for i, _ in enumerate(amp_stack):
             imarr = _.copy()
             imarr -= mean_amp
             imarr -= self.mean_oscan_corner(imarr)
-            sigma = np.std(imarr)
-            if self.std_max is not None and sigma > self.std_max:
+            stdevs.append(np.std(imarr))
+            imarrs.append(imarr)
+        std_max = max(self.std_max, np.percentile(stdevs, 80))
+        training_set = []
+        for i, (stdev, imarr) in enumerate(zip(stdevs, imarrs)):
+            if stdev <= std_max:
+                training_set.append(sigma_clip(imarr, sigma=sigma))
+            else:
                 print('_compute_amp_pcas: rejected frame:',
-                      i, sigma, self.std_max)
-                continue
-            # Apply sigma clipping to mask pixel defects.
-            training_set.append(sigma_clip(imarr, sigma=sigma))
+                      i, stdev, std_max)
+
         if verbose:
             print("training set size:", len(training_set))
 
