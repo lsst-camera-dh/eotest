@@ -43,7 +43,7 @@ def superflat(files, bias_frame=None, outfile='superflat.fits', bitpix=None,
     The superflat is created by bias-offset correcting the input files
     and median-ing them together.
     """
-    use_pca_bias = os.environ.get('LCATR_USE_PCA_BIAS_FIT', False) == 'True'
+    use_pca_bias = os.environ.get('LCATR_USE_PCA_BIAS_FIT', 'True') == 'True'
     # Get overscan region.
     overscan = makeAmplifierGeometry(files[0]).serial_overscan
     output_images = dict()
