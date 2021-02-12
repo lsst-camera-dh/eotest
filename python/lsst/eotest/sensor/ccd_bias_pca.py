@@ -18,7 +18,7 @@ from .AmplifierGeometry import makeAmplifierGeometry
 __all__ = ['CCD_bias_PCA', 'defect_repair']
 
 
-def defect_repair(imarr, sigma=6, nx=20, ny=20, grow=2):
+def defect_repair(imarr, sigma=6, nx=10, ny=10, grow=2):
     """Repair pixel defects in an array of pixel data.
 
     Parameters
@@ -27,9 +27,9 @@ def defect_repair(imarr, sigma=6, nx=20, ny=20, grow=2):
         2D array of pixel data.
     sigma: float [6]
         Number of clipped stdevs to use for the defect detection threshold.
-    nx: int [20]
+    nx: int [10]
         Size in pixels of local background region in x-direction.
-    ny: int [20]
+    ny: int [10]
         Size in pixels of local background region in y-direction.
     grow: int [2]
         Number of pixels to grow the initial footprint for each detection.
@@ -69,7 +69,7 @@ def defect_repair(imarr, sigma=6, nx=20, ny=20, grow=2):
     abs_image = image.Factory(image, deep=True)
     abs_image.array = np.abs(image.array)
 
-    # Generate footprints for the above threshold pixels and grow them
+    # Generate footprints for the above-threshold pixels and grow them
     # by `grow` pixels.
     fpset = afwDetect.FootprintSet(abs_image, threshold)
     fpset = afwDetect.FootprintSet(fpset, grow, False)
@@ -90,7 +90,7 @@ def defect_repair(imarr, sigma=6, nx=20, ny=20, grow=2):
     return np.ma.MaskedArray(data=out_image.array, mask=(mask.array == 1))
 
 
-def get_amp_stack(fits_files, amp, sigma=6, grow=2):
+def get_amp_stack(fits_files, amp, sigma=6, nx=10, ny=10, grow=2):
     """Get a list of numpy arrays of pixel data for the specified amp.
 
     Parameters
@@ -103,6 +103,10 @@ def get_amp_stack(fits_files, amp, sigma=6, grow=2):
         Numer of standard deviations to use in sigma-clipping mask
         applied to each frame.  If None, then no masking will be
         performed.
+    nx: int [10]
+        Size in pixels of local background region in x-direction.
+    ny: int [10]
+        Size in pixels of local background region in y-direction.
     grow: int [2]
         Number of pixels to grow the above-threshold footprints
         for mask generation.
@@ -117,7 +121,8 @@ def get_amp_stack(fits_files, amp, sigma=6, grow=2):
             if sigma is None:
                 imarr = hdus[amp].data
             else:
-                imarr = defect_repair(hdus[amp].data, sigma=sigma, grow=grow)
+                imarr = defect_repair(hdus[amp].data, sigma=sigma,
+                                      nx=nx, ny=ny, grow=grow)
             amp_stack.append(np.array(imarr, dtype=float))
     return np.array(amp_stack)
 
@@ -127,10 +132,15 @@ class CCD_bias_PCA(dict):
     Class to compute mean bias frames and PCA-based models of the overscan
     subtraction derived from an ensemble of bias frames.
     """
-    def __init__(self, std_max=10, xstart=None, ystart=0, ncomp_x=6, ncomp_y=8):
+    def __init__(self, nx=10, ny=10, std_max=10, xstart=None, ystart=0,
+                 ncomp_x=6, ncomp_y=8):
         """
         Parameters
         ----------
+        nx: int [10]
+            Size in pixels of local background region in x-direction.
+        ny: int [10]
+            Size in pixels of local background region in y-direction.
         std_max: float [10]
             Cutoff for stdev of amp ADU values for inclusion in the PCA
             training set.
@@ -146,6 +156,8 @@ class CCD_bias_PCA(dict):
             Number of PCA components to fit in the parallel direction.
         """
         super().__init__()
+        self.nx = nx
+        self.ny = ny
         self.std_max = std_max
         self.xstart = xstart
         self.ystart = ystart
@@ -200,7 +212,7 @@ class CCD_bias_PCA(dict):
                 if verbose:
                     print(f"amp {amp}")
                 amp_stack = get_amp_stack(fits_files, amp, sigma=sigma,
-                                          grow=grow)
+                                          nx=self.nx, ny=self.ny, grow=grow)
                 pcax, pcay, mean_amp \
                     = self._compute_amp_pcas(amp_stack,
                                              fit_full_segment=fit_full_segment,
@@ -391,7 +403,8 @@ class CCD_bias_PCA(dict):
         pcax, pcay = self[amp]
         mean_amp = fits.getdata(self.pca_bias_file, amp).astype('float')
 
-        imarr = defect_repair(image_array, sigma=sigma) - mean_amp
+        imarr = (defect_repair(image_array, sigma=sigma, nx=self.nx, ny=self.ny)
+                 - mean_amp)
         corner_mean = self.mean_oscan_corner(imarr)
         imarr -= corner_mean
 
