@@ -5,17 +5,92 @@ jupyter notebook from Andrew Bradshaw.
 import pickle
 import numpy as np
 from astropy.io import fits
-from astropy.stats import sigma_clip
 from sklearn.decomposition import PCA
+import lsst.afw.image as afwImage
+import lsst.afw.math as afwMath
+import lsst.afw.detection as afwDetect
+import lsst.ip.isr as ipIsr
 import lsst.eotest.image_utils as imutils
 from lsst.eotest.fitsTools import fitsWriteto
 from .AmplifierGeometry import makeAmplifierGeometry
 
 
-__all__ = ['CCD_bias_PCA']
+__all__ = ['CCD_bias_PCA', 'defect_repair']
 
 
-def get_amp_stack(fits_files, amp):
+def defect_repair(imarr, sigma=6, nx=20, ny=20, grow=2):
+    """Repair pixel defects in an array of pixel data.
+
+    Parameters
+    ----------
+    imarr: np.array
+        2D array of pixel data.
+    sigma: float [6]
+        Number of clipped stdevs to use for the defect detection threshold.
+    nx: int [20]
+        Size in pixels of local background region in x-direction.
+    ny: int [20]
+        Size in pixels of local background region in y-direction.
+    grow: int [2]
+        Number of pixels to grow the initial footprint for each detection.
+
+    Returns
+    -------
+    numpy.ma.MaskedArray
+
+    Algorithm
+    ---------
+    * A local background model, based on pixel neighborhoods of size nx x ny,
+      is subtracted from the raw data.
+    * A clipped stdev is computed from the background-subtracted data, and
+      a threshold of sigma*clipped_stdev is computed.
+    * Defect footprints are found by applying that threshold to the `np.abs`
+      of the background-subtracted data.
+    * The footprints are grown by a `grow` pixels to handle below-threshold
+      signal "leakage" around the boundary of original footprint.
+    * A "BAD" pixel mask is created from the grown footprints.
+    * The original image data is interpolated across the masked regions.
+    """
+    # Create an lsst.afw.image.ImageF object so that the afw tools
+    # can be used.
+    image = afwImage.ImageF(np.array(imarr, dtype=np.float32))
+
+    # Do local background modeling and subtraction.
+    bg_ctrl = afwMath.BackgroundControl(nx, ny)
+    image -= afwMath.makeBackground(image, bg_ctrl).getImageF()
+
+    # Compute the detection threshold using the clipped stdev.
+    stats = afwMath.makeStatistics(image, afwMath.STDEVCLIP)
+    stdev = stats.getValue(afwMath.STDEVCLIP)
+    threshold = afwDetect.Threshold(sigma*stdev)
+
+    # Take the absolute value of image array to detect outlier pixels
+    # with both positive and negative values.
+    abs_image = image.Factory(image, deep=True)
+    abs_image.array = np.abs(image.array)
+
+    # Generate footprints for the above threshold pixels and grow them
+    # by `grow` pixels.
+    fpset = afwDetect.FootprintSet(abs_image, threshold)
+    fpset = afwDetect.FootprintSet(fpset, grow, False)
+
+    # Make a mask and set the bad pixels.
+    mask = afwImage.Mask(image.getDimensions())
+    mask_name = 'BAD'
+    fpset.setMask(mask, mask_name)
+
+    # Create a MaskedImage from the original data.
+    mi = afwImage.MaskedImageF(
+        afwImage.ImageF(np.array(imarr, dtype=np.float32)), mask)
+    fwhm = 1
+    out_image = ipIsr.interpolateFromMask(mi, fwhm, maskNameList=[mask_name])\
+                     .getImage()
+
+    # Convert to a numpy.ma.MaskedArray and return
+    return np.ma.MaskedArray(data=out_image.array, mask=(mask.array == 1))
+
+
+def get_amp_stack(fits_files, amp, sigma=6, grow=2):
     """Get a list of numpy arrays of pixel data for the specified amp.
 
     Parameters
@@ -24,6 +99,13 @@ def get_amp_stack(fits_files, amp):
         List of FITS filenames.
     amp: int
         Desired amp.
+    sigma: int [6]
+        Numer of standard deviations to use in sigma-clipping mask
+        applied to each frame.  If None, then no masking will be
+        performed.
+    grow: int [2]
+        Number of pixels to grow the above-threshold footprints
+        for mask generation.
 
     Returns
     -------
@@ -32,7 +114,11 @@ def get_amp_stack(fits_files, amp):
     amp_stack = []
     for item in fits_files:
         with fits.open(item) as hdus:
-            amp_stack.append(np.array(hdus[amp].data, dtype=float))
+            if sigma is None:
+                imarr = hdus[amp].data
+            else:
+                imarr = defect_repair(hdus[amp].data, sigma=sigma, grow=grow)
+            amp_stack.append(np.array(imarr, dtype=float))
     return np.array(amp_stack)
 
 
@@ -70,8 +156,8 @@ class CCD_bias_PCA(dict):
         self.pca_bias_file = None
 
     def compute_pcas(self, fits_files, outfile_prefix, amps=None,
-                     verbose=False, fit_full_segment=True, sigma=10,
-                     use_median=True):
+                     verbose=False, fit_full_segment=True, sigma=6,
+                     grow=2, use_median=True):
         """
         Compute mean bias and PCA models of serial and parallel
         overscans using a list of bias frame FITS files for a
@@ -92,9 +178,12 @@ class CCD_bias_PCA(dict):
         fit_full_segment: bool [True]
             Use the full amplifier segment in deriving the PCAs.  If False,
             then use the parallel and serial overscan regions.
-        sigma: int [10]
+        sigma: int [6]
             Value to use for sigma-clipping the amp-level images that
             are included in the training set.
+        grow: int [2]
+            Number of pixels to grow the above-threshold footprints
+            for mask generation.
         use_median: bool [True]
             Compute the median of the stacked images for the mean_amp
             image.  If False, then compute the mean.
@@ -110,12 +199,12 @@ class CCD_bias_PCA(dict):
             for amp in amps:
                 if verbose:
                     print(f"amp {amp}")
-                amp_stack = get_amp_stack(fits_files, amp)
+                amp_stack = get_amp_stack(fits_files, amp, sigma=sigma,
+                                          grow=grow)
                 pcax, pcay, mean_amp \
                     = self._compute_amp_pcas(amp_stack,
                                              fit_full_segment=fit_full_segment,
                                              verbose=verbose,
-                                             sigma=sigma,
                                              use_median=use_median)
                 self[amp] = pcax, pcay
                 mean_bias_frame[amp].data = mean_amp
@@ -127,7 +216,7 @@ class CCD_bias_PCA(dict):
         return pickle_file, self.pca_bias_file
 
     def _compute_amp_pcas(self, amp_stack, fit_full_segment=True,
-                          verbose=False, sigma=3, use_median=True):
+                          verbose=False, use_median=True):
         # Compute the me[di]an bias image from the stack of amp data.
         if use_median:
             mean_amp = np.median(amp_stack, axis=0)
@@ -152,7 +241,7 @@ class CCD_bias_PCA(dict):
         training_set = []
         for i, (stdev, imarr) in enumerate(zip(stdevs, imarrs)):
             if stdev <= std_max:
-                training_set.append(sigma_clip(imarr, sigma=sigma))
+                training_set.append(imarr)
             else:
                 print('_compute_amp_pcas: rejected frame:',
                       i, stdev, std_max)
@@ -277,7 +366,7 @@ class CCD_bias_PCA(dict):
         my_instance.pca_bias_file = pca_bias_file
         return my_instance
 
-    def pca_bias_correction(self, amp, image_array):
+    def pca_bias_correction(self, amp, image_array, sigma=6):
         """
         Compute the bias model based on the PCA fit.  This should be
         subtracted from the raw data for the specified amp in order to
@@ -290,6 +379,8 @@ class CCD_bias_PCA(dict):
         image_array: numpy.array
             Array containing the pixel values for the full segment of
             the specified amp.
+        sigma: int [6]
+            Number of stdevs to use for sigma clip masking.
 
         Returns
         -------
@@ -300,7 +391,7 @@ class CCD_bias_PCA(dict):
         pcax, pcay = self[amp]
         mean_amp = fits.getdata(self.pca_bias_file, amp).astype('float')
 
-        imarr = image_array - mean_amp
+        imarr = defect_repair(image_array, sigma=sigma) - mean_amp
         corner_mean = self.mean_oscan_corner(imarr)
         imarr -= corner_mean
 
