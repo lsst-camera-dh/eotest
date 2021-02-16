@@ -18,14 +18,14 @@ from .AmplifierGeometry import makeAmplifierGeometry
 __all__ = ['CCD_bias_PCA', 'defect_repair']
 
 
-def defect_repair(imarr, sigma=20, nx=10, ny=10, grow=2):
+def defect_repair(imarr, sigma=10, nx=10, ny=10, grow=2):
     """Repair pixel defects in an array of pixel data.
 
     Parameters
     ----------
     imarr: np.array
         2D array of pixel data.
-    sigma: float [20]
+    sigma: float [10]
         Number of clipped stdevs to use for the defect detection threshold.
     nx: int [10]
         Size in pixels of local background region in x-direction.
@@ -90,7 +90,7 @@ def defect_repair(imarr, sigma=20, nx=10, ny=10, grow=2):
     return np.ma.MaskedArray(data=out_image.array, mask=(mask.array == 1))
 
 
-def get_amp_stack(fits_files, amp, sigma=20, nx=10, ny=10, grow=2):
+def get_amp_stack(fits_files, amp, sigma=10, nx=10, ny=10, grow=2):
     """Get a list of numpy arrays of pixel data for the specified amp.
 
     Parameters
@@ -99,7 +99,7 @@ def get_amp_stack(fits_files, amp, sigma=20, nx=10, ny=10, grow=2):
         List of FITS filenames.
     amp: int
         Desired amp.
-    sigma: float [20]
+    sigma: float [10]
         Numer of standard deviations to use in sigma-clipping mask
         applied to each frame.  If None, then no masking will be
         performed.
@@ -168,7 +168,7 @@ class CCD_bias_PCA(dict):
         self.pca_bias_file = None
 
     def compute_pcas(self, fits_files, outfile_prefix, amps=None,
-                     verbose=False, fit_full_segment=True, sigma=20,
+                     verbose=False, fit_full_segment=True, sigma=10,
                      grow=2, use_median=True):
         """
         Compute mean bias and PCA models of serial and parallel
@@ -190,7 +190,7 @@ class CCD_bias_PCA(dict):
         fit_full_segment: bool [True]
             Use the full amplifier segment in deriving the PCAs.  If False,
             then use the parallel and serial overscan regions.
-        sigma: float [20]
+        sigma: float [10]
             Value to use for sigma-clipping the amp-level images that
             are included in the training set.
         grow: int [2]
