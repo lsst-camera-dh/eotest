@@ -402,6 +402,18 @@ class CCD_bias_PCA(dict):
         mean_amp = fits.getdata(self.pca_bias_file, amp).astype('float')
 
         imarr = image_array - mean_amp
+
+        # Run defect repair on overscan regions.
+        ny, nx = imarr.shape
+
+        # Parallel overscan region:
+        yslice = slice(self.y_oscan_corner, ny)
+        imarr[yslice, :] = defect_repair(imarr[yslice, :]).data
+
+        # Serial overscan region:
+        xslice = slice(self.x_oscan_corner, nx)
+        imarr[:, xslice] = defect_repair(imarr[:, xslice]).data
+
         corner_mean = self.mean_oscan_corner(imarr)
         imarr -= corner_mean
 
