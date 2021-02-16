@@ -15,7 +15,10 @@ def plot_imarr(imarr, vmin=-10, vmax=10):
     plt.colorbar()
 
 
-def pca_bias_profile_plots(raw_file, amp, pca_bias_files, suffix=''):
+def pca_bias_profile_plots(raw_file, amp, pca_bias_files, suffix='',
+                           amps=None):
+    if amps is None:
+        amps = (amp,)
     amp_geom = makeAmplifierGeometry(raw_file)
     ccd_pcas = CCD_bias_PCA.read_model(*pca_bias_files)
     if not hasattr(ccd_pcas, 'nx'):
@@ -32,9 +35,9 @@ def pca_bias_profile_plots(raw_file, amp, pca_bias_files, suffix=''):
     bias_file = f'bias_model_{raft}_{sensor}_{Run}_{seqnum:06d}_median.fits'
     residuals_file = f'residuals_{raft}_{sensor}_{Run}_{seqnum:06d}_median.fits'
     ccd_pcas.make_bias_frame(raw_file, bias_file,
-                             residuals_file=residuals_file)
+                             residuals_file=residuals_file, amps=amps)
     overscan_file = f'overscan_model_{raft}_{sensor}_{Run}_{seqnum:06d}.fits'
-    make_overscan_frame(raw_file, outfile=overscan_file)
+    make_overscan_frame(raw_file, outfile=overscan_file, amps=amps)
 
     with fits.open(raw_file) as raw, fits.open(bias_file) as bias,\
          fits.open(overscan_file) as oscan:
