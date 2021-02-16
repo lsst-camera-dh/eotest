@@ -436,7 +436,8 @@ class CCD_bias_PCA(dict):
 
         return bias_model
 
-    def make_bias_frame(self, raw_file, outfile, residuals_file=None):
+    def make_bias_frame(self, raw_file, outfile, residuals_file=None,
+                        amps=None):
         """
         Construct the PCA model bias frame for one of the bias files
         and optionally write the bias-subtracted file.
@@ -451,14 +452,16 @@ class CCD_bias_PCA(dict):
             Filename of the output bias-subtracted frame. If None, then
             the file is not written.
         """
+        if amps is None:
+            amps = imutils.allAmps(raw_file)
         with fits.open(raw_file) as hdus:
-            for amp in range(1, 17):
+            for amp in amps:
                 hdus[amp].data = self.pca_bias_correction(amp, hdus[amp].data)
             fitsWriteto(hdus, outfile, overwrite=True)
 
         if residuals_file is not None:
             with fits.open(raw_file) as resids, fits.open(outfile) as bias:
-                for amp in range(1, 17):
+                for amp in amps:
                     resids[amp].data = (np.array(resids[amp].data, dtype=float)
                                         - bias[amp].data)
                 resids.writeto(residuals_file, overwrite=True)
