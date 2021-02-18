@@ -16,7 +16,7 @@ def plot_imarr(imarr, vmin=-10, vmax=10):
 
 
 def pca_bias_profile_plots(raw_file, amp, pca_bias_files, suffix='',
-                           amps=None):
+                           vmin=-10, vmax=10, amps=None):
     if amps is None:
         amps = (amp,)
     amp_geom = makeAmplifierGeometry(raw_file)
@@ -48,19 +48,19 @@ def pca_bias_profile_plots(raw_file, amp, pca_bias_files, suffix='',
         title = f'Run {Run}, {raft}_{sensor}, SEQNUM {seqnum}, amp {amp}'
         fig = plt.figure(figsize=(10, nrows*row_height))
         fig.add_subplot(nrows, 1, 1)
-        plot_imarr(raw[amp].data)
+        plot_imarr(raw[amp].data, vmin=vmin, vmax=vmax)
         plt.title('raw bias image')
         fig.add_subplot(nrows, 1, 2)
-        plot_imarr(bias[amp].data)
+        plot_imarr(bias[amp].data, vmin=vmin, vmax=vmax)
         plt.title('PCA bias model')
         fig.add_subplot(nrows, 1, 3)
-        plot_imarr(raw[amp].data - bias[amp].data)
+        plot_imarr(raw[amp].data - bias[amp].data, vmin=vmin, vmax=vmax)
         plt.title('raw - bias model')
         fig.add_subplot(nrows, 1, 4)
-        plot_imarr(oscan[amp].data)
+        plot_imarr(oscan[amp].data, vmin=vmin, vmax=vmax)
         plt.title('overscan-based image')
         fig.add_subplot(nrows, 1, 5)
-        plot_imarr(raw[amp].data - oscan[amp].data)
+        plot_imarr(raw[amp].data - oscan[amp].data, vmin=vmin, vmax=vmax)
         plt.title('raw - overscan-based image')
         plt.suptitle('\n'.join((title, os.path.basename(raw_file))))
 
