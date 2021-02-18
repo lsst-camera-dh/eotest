@@ -56,7 +56,9 @@ def defect_repair(imarr, sigma=10, nx=10, ny=10, grow=2):
     image = afwImage.ImageF(np.array(imarr, dtype=np.float32))
 
     # Do local background modeling and subtraction.
-    bg_ctrl = afwMath.BackgroundControl(nx, ny)
+    nbins_x = max(10, imarr.shape[1]//nx)
+    nbins_y = max(10, imarr.shape[0]//ny)
+    bg_ctrl = afwMath.BackgroundControl(nbins_x, nbins_y)
     image -= afwMath.makeBackground(image, bg_ctrl).getImageF()
 
     # Compute the detection threshold using the clipped stdev.
