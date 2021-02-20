@@ -2,6 +2,7 @@
 Module to use PCA modeling of bias frames.   This code is based on a
 jupyter notebook from Andrew Bradshaw.
 """
+import os
 import pickle
 import numpy as np
 from astropy.io import fits
@@ -15,7 +16,49 @@ from lsst.eotest.fitsTools import fitsWriteto
 from .AmplifierGeometry import makeAmplifierGeometry
 
 
-__all__ = ['CCD_bias_PCA', 'defect_repair']
+__all__ = ['CCD_bias_PCA', 'defect_repair', 'pca_superbias']
+
+
+def pca_superbias(bias_files, pca_bias_files, outfile, overwrite=True,
+                  statistic=afwMath.MEDIAN):
+    """
+    Compute a "superbias" frame from a set of bias files with the
+    PCA-biased correction applied to each image.
+
+    Parameters
+    ----------
+    bias_files: list-like
+        List of single CCD bias files.
+    pca_bias_files: (str, str)
+        Two member tuple of strings. The first item is the pickle file
+        containing the PCA model components, and the second item is
+        the file containing the mean bias images per amp used in the
+        modeling.
+    outfile: str
+        Name of the output FITS file.
+    overwrite: bool [True]
+        Option to overwrite the outfile.
+    statistic: lsst.afw.math.statistics.Property [lsst.afw.math.MEDIAN]
+        Statistic to use with lsst.afw.math.statisticsStack for producing
+        the superbias frame.
+    """
+    ccd_pcas = CCD_bias_PCA.read_model(*pca_bias_files)
+    if not hasattr(ccd_pcas, 'mean_amp_cache'):
+        ccd_pcas.mean_amp_cache = None
+    amps = imutils.allAmps(bias_files[0])
+    medianed_images = dict()
+    for amp in amps:
+        images = []
+        for bias_file in bias_files:
+            imarr = np.array(fits.getdata(bias_file, amp), dtype=np.float32)
+            imarr -= ccd_pcas.pca_bias_correction(amp, imarr)
+            images.append(afwImage.ImageF(imarr))
+        medianed_images[amp] = afwMath.statisticsStack(images, statistic)
+    with fits.open(bias_files[0]) as hdus:
+        for amp, image in medianed_images.items():
+            hdus[amp].data = image.array
+        hdus[0].header['FILENAME'] = os.path.basename(outfile)
+        fitsWriteto(hdus, outfile, overwrite=overwrite)
 
 
 def defect_repair(imarr, sigma=10, nx=10, ny=10, grow=2):
@@ -168,6 +211,7 @@ class CCD_bias_PCA(dict):
         self.x_oscan_corner = None
         self.y_oscan_corner = None
         self.pca_bias_file = None
+        self.mean_amp_cache = None
 
     def compute_pcas(self, fits_files, outfile_prefix, amps=None,
                      verbose=False, fit_full_segment=True, sigma=10,
@@ -401,7 +445,11 @@ class CCD_bias_PCA(dict):
 
         """
         pcax, pcay = self[amp]
-        mean_amp = fits.getdata(self.pca_bias_file, amp).astype('float')
+        if self.mean_amp_cache is None or self.mean_amp_cache[0] != amp:
+            mean_amp = fits.getdata(self.pca_bias_file, amp).astype('float')
+            self.mean_amp_cache = (amp, mean_amp)
+        else:
+            mean_amp = self.mean_amp_cache[1]
 
         imarr = image_array - mean_amp
 
