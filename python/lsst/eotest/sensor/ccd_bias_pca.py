@@ -61,7 +61,7 @@ def pca_superbias(bias_files, pca_bias_files, outfile, overwrite=True,
         fitsWriteto(hdus, outfile, overwrite=overwrite)
 
 
-def defect_repair(imarr, sigma=10, nx=10, ny=10, grow=2):
+def defect_repair(imarr, sigma=10, nx=10, ny=10, grow=2, use_abs_image=False):
     """Repair pixel defects in an array of pixel data.
 
     Parameters
@@ -76,6 +76,9 @@ def defect_repair(imarr, sigma=10, nx=10, ny=10, grow=2):
         Size in pixels of local background region in y-direction.
     grow: int [2]
         Number of pixels to grow the initial footprint for each detection.
+    use_abs_image: bool [False]
+        Take the absolute value of the background-subtracted image to
+        find positive and negative defects.
 
     Returns
     -------
@@ -112,7 +115,8 @@ def defect_repair(imarr, sigma=10, nx=10, ny=10, grow=2):
     # Take the absolute value of image array to detect outlier pixels
     # with both positive and negative values.
     abs_image = image.Factory(image, deep=True)
-    abs_image.array = np.abs(image.array)
+    if use_abs_image:
+        abs_image.array = np.abs(image.array)
 
     # Generate footprints for the above-threshold pixels and grow them
     # by `grow` pixels.
