@@ -35,6 +35,7 @@ from .gain_sequence import *
 from .flat_signal_sequence import *
 from .ccd_bias_pca import *
 from .overscan_frame import *
+from .pca_bias_profile_plots import *
 #
 # Pipe tasks
 #

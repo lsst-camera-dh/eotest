@@ -5,17 +5,20 @@ serial overscans to use for overscan correction.
 import numpy as np
 from astropy.io import fits
 import lsst.geom
+import lsst.eotest.image_utils as imutils
 from .MaskedCCD import MaskedCCD
 
 
 __all__ = ['make_overscan_frame']
 
 
-def make_overscan_frame(fits_file, outfile=None):
+def make_overscan_frame(fits_file, outfile=None, amps=None):
     """
     Use overscan regions to do column-wise, then row-wise overscan
     profile-based overscan frame.
     """
+    if amps is None:
+        amps = imutils.allAmps(fits_file)
     ccd = MaskedCCD(fits_file)
     par_corner = lsst.geom.Point2I(0, ccd.amp_geom.imaging.getHeight())
     par_extent = lsst.geom.Extent2I(ccd.amp_geom.full_segment.getWidth(),
