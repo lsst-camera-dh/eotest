@@ -206,11 +206,13 @@ class FlatPairTask(pipeBase.Task):
                    ['FLAT1_AMP%02i_SIGNAL' % i for i in all_amps] + \
                    ['FLAT2_AMP%02i_SIGNAL' % i for i in all_amps] + \
                    ['AMP%02i_ROW_MEAN_VAR' % i for i in all_amps] + \
-                   ['SEQNUM', 'DAYOBS']
-        formats = 'E'*(len(colnames) - 2) + 'JJ'
+                   ['SEQNUM', 'DAYOBS', 'FILTER']
+        formats = ['E']*(len(colnames) - 3) + ['J', 'J'] + ['20A']
         namps = len(all_amps)
-        units = ['None'] + 3*namps*['e-'] + namps*['e-^2'] + ['None', 'None']
-        columns = [np.zeros(nrows, dtype=np.float) for fmt in formats]
+        units = (['None'] + 3*namps*['e-'] + namps*['e-^2']
+                 + ['None', 'None', 'None'])
+        columns = [np.zeros(nrows, dtype=np.float) for fmt in formats[:-1]]
+        columns.append(nrows*[''])
         fits_cols = [fits.Column(name=colnames[i], format=formats[i],
                                  unit=units[i], array=columns[i])
                      for i in range(len(units))]
@@ -254,6 +256,10 @@ class FlatPairTask(pipeBase.Task):
             except KeyError:
                 # This occurs if running on non-BOT data.
                 dayobs = 0
+            # Extract filter combination.  Use the same order as the folder
+            # name for the frame.
+            filter_combo = '_'.join((flat1.md.get('FILTER2'),
+                                     flat1.md.get('FILTER')))
 
             exptime1 = flat1.md.get('EXPTIME')
             exptime2 = flat2.md.get('EXPTIME')
@@ -294,6 +300,9 @@ class FlatPairTask(pipeBase.Task):
             if row == 0:
                 self.output[0].header['NAMPS'] = len(all_amps)
 
+            self.output[-1].data.field('SEQNUM')[row] = seqnum
+            self.output[-1].data.field('DAYOBS')[row] = dayobs
+            self.output[-1].data.field('FILTER')[row] = filter_combo
             for amp in all_amps:
                 # Convert to e- and write out for each segment.
                 signal, sig1, sig2 \
@@ -305,8 +314,6 @@ class FlatPairTask(pipeBase.Task):
                 # Convert row mean variance to e-**2
                 self.output[-1].data.field(f'AMP{amp:02d}_ROW_MEAN_VAR')[row] \
                     = row_mean_variance(flat1, flat2, amp)*self.gains[amp]**2
-                self.output[-1].data.field('SEQNUM')[row] = seqnum
-                self.output[-1].data.field('DAYOBS')[row] = dayobs
                 if row == 0 and amp == 1:
                     self.output[0].header['NUMCOLS'] \
                         = flat1.amp_geom.imaging.getWidth()
