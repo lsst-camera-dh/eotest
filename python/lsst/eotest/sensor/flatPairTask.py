@@ -131,7 +131,8 @@ class FlatPairTask(pipeBase.Task):
             bias_frame=None, max_pd_frac_dev=0.05,
             linearity_spec_range=(1e3, 9e4), use_exptime=False,
             flat2_finder=find_flat2, mondiode_func=mondiode_value,
-            linearity_correction=None, dark_frame=None):
+            linearity_correction=None, dark_frame=None,
+            filter_corrections=None):
         self.sensor_id = sensor_id
         self.infiles = infiles
         self.mask_files = mask_files
@@ -142,6 +143,8 @@ class FlatPairTask(pipeBase.Task):
         self.mondiode_func = mondiode_func
         self.linearity_correction = linearity_correction
         self.dark_frame = dark_frame
+        self.filter_corrections = (filter_corrections if filter_corrections
+                                   is not None else dict())
         if detrespfile is None:
             #
             # Compute detector response from flat pair files.
@@ -284,6 +287,7 @@ class FlatPairTask(pipeBase.Task):
                 flux = exptime1
             else:
                 flux = abs(pd1*exptime1 + pd2*exptime2)/2.
+                flux *= self.filter_corrections.get(filter_combo, 1)
                 if np.abs((pd1 - pd2)/((pd1 + pd2)/2.)) > max_pd_frac_dev:
                     self.log.info("Skipping %s and %s since MONDIODE values "
                                   "do not agree to %.1f%%",
