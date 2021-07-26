@@ -4,19 +4,20 @@ units of e-/sec/pixel.
 
 @author J. Chiang <jchiang@slac.stanford.edu>
 """
-from __future__ import print_function
-from __future__ import absolute_import
 import os
+from collections import defaultdict
 import warnings
 import numpy as np
+import pandas as pd
 import astropy.io.fits as fits
 from astropy.utils.exceptions import AstropyWarning, AstropyUserWarning
+import lsst.afw.math as afwMath
+import lsst.pex.config as pexConfig
+import lsst.pipe.base as pipeBase
 from lsst.eotest.fitsTools import fitsWriteto
 import lsst.eotest.image_utils as imutils
 from .MaskedCCD import MaskedCCD
 from .EOTestResults import EOTestResults
-import lsst.pex.config as pexConfig
-import lsst.pipe.base as pipeBase
 
 
 class DarkCurrentConfig(pexConfig.Config):
@@ -39,6 +40,51 @@ class DarkCurrentTask(pipeBase.Task):
     @pipeBase.timeMethod
     def run(self, sensor_id, dark_files, mask_files, gains, bias_frame=None,
             linearity_correction=None):
+        self.linear_fit(sensor_id, dark_files, mask_files, gains,
+                        bias_frame=bias_frame,
+                        linearity_correction=linearity_correction)
+        self.compute_percentiles(sensor_id, dark_files, mask_files, gains,
+                                 bias_frame=bias_frame,
+                                 linearity_correction=linearity_correction)
+
+    def linear_fit(self, sensor_id, dark_files, mask_files, gains,
+                   bias_frame=None, linearity_correction=None):
+        """Fit a slope and intercept for a dark frame data set that has
+        a range of different exposure times.
+        """
+        data = defaultdict(list)
+        for item in dark_files:
+            ccd = MaskedCCD(item, mask_files=mask_files, bias_frame=bias_frame,
+                            linearity_correction=linearity_correction)
+            for amp in ccd:
+                data['amp'].append(amp)
+                data['darktime'].append(ccd.md.get('DARKTIME'))
+                image = ccd.unbiased_and_trimmed_image(amp)
+                stats = afwMath.makeStatistics(image, afwMath.MEDIAN)
+                data['median'].append(stats.getValue(afwMath.MEDIAN)*gains[amp])
+        df0 = pd.DataFrame(data=data)
+        slopes, intercepts = dict(), dict()
+        for amp in ccd:
+            df = df0.query(f'amp == {amp}')
+            slopes[amp], intercepts[amp] \
+                = np.polyfit(df['darktime'], df['median'], 1)
+
+        results_file = self.config.eotest_results_file
+        if results_file is None:
+            results_file = os.path.join(self.config.output_dir,
+                                        '%s_eotest_results.fits' % sensor_id)
+        results = EOTestResults(results_file, namps=len(ccd))
+        # Write slopes and intercepts for each amp
+        for amp in ccd:
+            results.add_seg_result(amp, 'DARK_CURRENT_SLOPE', slopes[amp])
+            results.add_seg_result(amp, 'DARK_CURRENT_INTERCEPT',
+                                   intercepts[amp])
+        results.write(clobber=True)
+
+    def compute_percentiles(self, sensor_id, dark_files, mask_files, gains,
+                            bias_frame=None, linearity_correction=None):
+        """Compute median and 95th percentiles of pixel values for dark frame
+        data sets that have the same integration times."""
         imutils.check_temperatures(dark_files, self.config.temp_set_point_tol,
                                    setpoint=self.config.temp_set_point,
                                    warn_only=True)
