@@ -44,9 +44,9 @@ class DarkCurrentTask(pipeBase.Task):
             self.linear_fit(sensor_id, dark_files_linear_fit, mask_files,
                             gains, bias_frame=bias_frame,
                             linearity_correction=linearity_correction)
-        self.compute_percentiles(sensor_id, dark_files, mask_files, gains,
-                                 bias_frame=bias_frame,
-                                 linearity_correction=linearity_correction)
+        return self.compute_percentiles(sensor_id, dark_files, mask_files,
+                                        gains, bias_frame=bias_frame,
+                                        linearity_correction=linearity_correction)
 
     def linear_fit(self, sensor_id, dark_files, mask_files, gains,
                    bias_frame=None, linearity_correction=None):
