@@ -51,7 +51,7 @@ def row_mean_variance(flat1, flat2, amp, nsig=10):
     mi_diff = afwImage.MaskedImageF(flat1.unbiased_and_trimmed_image(amp),
                                     deep=True)
     mi_diff -= flat2.unbiased_and_trimmed_image(amp)
-    row_means = np.mean(mi_diff.getImage().array, axis=1)
+    row_means = np.mean(mi_diff.getImage().array, axis=1, dtype=np.float64)
     sctrl = afwMath.StatisticsControl()
     sctrl.setNumSigmaClip(nsig)
     return afwMath.makeStatistics(row_means, afwMath.VARIANCECLIP,
@@ -214,7 +214,7 @@ class FlatPairTask(pipeBase.Task):
         namps = len(all_amps)
         units = (['None'] + 3*namps*['e-'] + namps*['e-^2']
                  + ['None', 'None', 'None'])
-        columns = [np.zeros(nrows, dtype=np.float) for fmt in formats[:-1]]
+        columns = [np.zeros(nrows, dtype=np.float64) for fmt in formats[:-1]]
         columns.append(nrows*[''])
         fits_cols = [fits.Column(name=colnames[i], format=formats[i],
                                  unit=units[i], array=columns[i])
