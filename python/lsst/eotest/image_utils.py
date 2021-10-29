@@ -132,7 +132,6 @@ def bias_row(im, overscan, dxmin=5, dxmax=2, statistic=np.mean, **kwargs):
     return lambda x: values[x]
 
 
-
 def bias_col(im, overscan, dymin=5, dymax=2, statistic=np.mean, **kwargs):
     """Compute the offset based on a statistic for each column in the serial 
     overscan region for rows dymin through dymax.
@@ -299,9 +298,6 @@ def bias_col_spline(im, overscan, dymin=5, dymax=2, statistic=np.mean, **kwargs)
                               s=kwargs.get('s', 18000), t=kwargs.get('t', None))
 
 
-
-
-
 def bias_image(im, overscan, dxmin=5, dxmax=2, statistic=np.mean, bias_method='row', **kwargs):
     """Generate a bias image containing the offset values calculated from
     bias(), bias_row(), bias_func() or bias_spline().
@@ -331,7 +327,7 @@ def bias_image(im, overscan, dxmin=5, dxmax=2, statistic=np.mean, bias_method='r
         An image with size equal to the input image containing the offset level.
     """
     if bias_method.lower() not in ['mean', 'row', 'func', 'spline', 'none']:
-        raise RuntimeError('Bias method must be either "none", "mean", "row", "func" or "spline".')  
+        raise RuntimeError('Bias method must be either "none", "mean", "row", "func", or "spline".')  
 
     def dummy_none(im, overscan, dxmin, dxmax, **kwargs):
         return 0.0
@@ -397,6 +393,55 @@ def bias_image_col(im, overscan, dymin=5, dymax=2, statistic=np.mean, bias_metho
         imarr[:,col] += values[col]
     return biasim
 
+
+def bias_image_rowcol(im, amp_bbox, serial_overscan, parallel_overscan, \
+                      dxmin=5, dxmax=2, dymin=5, dymax=2, statistic=np.mean, **kwargs):
+    """Generate a bias image based on a statistic for each row in the serial 
+    overscan region for columns dxmin through dxmax, and the parallel 
+    overscan region for rows dymin through dymax.
+
+    Args:
+        im: A masked (lsst.afw.image.imageLib.MaskedImageF) or unmasked 
+            (lsst.afw.image.imageLib.ImageF) afw image.
+        amp_bbox: A bounding box for the raw amplifier region. 
+        serial_overscan: A bounding box for the serial overscan region.
+        parallel_overscan: A bounding box for the parallel overscan region.
+        dxmin: The number of columns to skip at the beginning of the serial 
+            overscan region.
+        dxmax: The number of columns to skip at the end of the serial overscan region.
+        dymin: The number of rows to skip at the beginning of the serial 
+            overscan region.
+        dymax: The number of rows to skip at the end of the parallel overscan region.
+        statistic: The statistic to use to calculate the offset for each row.
+
+    Returns:
+        An image with size equal to the input image containing the offset level.
+    """
+    biasim = afwImage.ImageF(im.getDimensions())
+    imarr = biasim.getArray()
+    
+    corner_start_x = serial_overscan.getMin().x
+    corner_start_y = parallel_overscan.getMin().y
+    corner_bbox    = lsst.geom.Box2I(lsst.geom.Point2I(corner_start_x, corner_start_y), amp_bbox.getMax())
+    
+    my_bias_row    = bias_row(im, serial_overscan,   dxmin=dxmin, dxmax=dxmax, statistic=statistic, **kwargs)
+    my_bias_col    = bias_col(im, parallel_overscan, dymin=dymin, dymax=dymax, statistic=statistic, **kwargs)   
+    my_bias_corner = bias(im, corner_bbox)
+    
+    nx = parallel_overscan.width
+    ny = serial_overscan.height
+    
+    values_row = my_bias_row(np.arange(ny))
+    values_col = my_bias_col(np.arange(nx))
+    
+    for col in range(nx):
+        imarr[:,col] += values_col[col]
+    for row in range(ny):
+        imarr[row]   += values_row[row]
+    imarr[:ny,:nx] -= my_bias_corner
+    imarr[ny:,nx:] += my_bias_corner
+            
+    return biasim
 
 
 def trim(im, imaging):
