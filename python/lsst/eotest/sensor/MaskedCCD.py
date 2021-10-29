@@ -181,6 +181,13 @@ class MaskedCCD(dict):
         if overscan is None:
             overscan = self.amp_geom.serial_overscan
         try:
+            if 'bias_method' in kwargs:
+                if kwargs['bias_method'] == 'rowcol':
+                    serial_overscan   = self.amp_geom.serial_overscan
+                    parallel_overscan = self.amp_geom.parallel_overscan
+                    amp_bbox          = self.amp_geom.full_segment
+                    return imutils.bias_image_rowcol(self._deep_copy(amp), amp_bbox=amp_bbox, \
+                                                     serial_overscan=serial_overscan, parallel_overscan=parallel_overscan, **kwargs)
             return imutils.bias_image(self._deep_copy(amp), overscan=overscan, **kwargs)
         except pexExcept.LSST_RUNTIME_EXCEPTION as eobj:
             raise MaskedCCDBiasImageException("DM stack error generating bias "
