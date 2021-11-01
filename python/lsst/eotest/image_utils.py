@@ -132,6 +132,7 @@ def bias_row(im, overscan, dxmin=5, dxmax=2, statistic=np.mean, **kwargs):
     return lambda x: values[x]
 
 
+
 def bias_col(im, overscan, dymin=5, dymax=2, statistic=np.mean, **kwargs):
     """Compute the offset based on a statistic for each column in the serial 
     overscan region for rows dymin through dymax.
@@ -298,6 +299,9 @@ def bias_col_spline(im, overscan, dymin=5, dymax=2, statistic=np.mean, **kwargs)
                               s=kwargs.get('s', 18000), t=kwargs.get('t', None))
 
 
+
+
+
 def bias_image(im, overscan, dxmin=5, dxmax=2, statistic=np.mean, bias_method='row', **kwargs):
     """Generate a bias image containing the offset values calculated from
     bias(), bias_row(), bias_func() or bias_spline().
@@ -327,7 +331,7 @@ def bias_image(im, overscan, dxmin=5, dxmax=2, statistic=np.mean, bias_method='r
         An image with size equal to the input image containing the offset level.
     """
     if bias_method.lower() not in ['mean', 'row', 'func', 'spline', 'none']:
-        raise RuntimeError('Bias method must be either "none", "mean", "row", "func", or "spline".')  
+        raise RuntimeError('Bias method must be either "none", "mean", "row", "func" or "spline".')  
 
     def dummy_none(im, overscan, dxmin, dxmax, **kwargs):
         return 0.0
