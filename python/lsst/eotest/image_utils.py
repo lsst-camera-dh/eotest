@@ -398,7 +398,7 @@ def bias_image_col(im, overscan, dymin=5, dymax=2, statistic=np.mean, bias_metho
     return biasim
 
 
-def bias_image_rowcol(im, amp_bbox, serial_overscan, parallel_overscan, \
+def bias_image_rowcol(im, serial_overscan, parallel_overscan, \
                       dxmin=5, dxmax=2, dymin=5, dymax=2, statistic=np.mean, **kwargs):
     """Generate a bias image based on a statistic for each row in the serial 
     overscan region for columns dxmin through dxmax, and the parallel 
@@ -407,7 +407,6 @@ def bias_image_rowcol(im, amp_bbox, serial_overscan, parallel_overscan, \
     Args:
         im: A masked (lsst.afw.image.imageLib.MaskedImageF) or unmasked 
             (lsst.afw.image.imageLib.ImageF) afw image.
-        amp_bbox: A bounding box for the raw amplifier region. 
         serial_overscan: A bounding box for the serial overscan region.
         parallel_overscan: A bounding box for the parallel overscan region.
         dxmin: The number of columns to skip at the beginning of the serial 
@@ -424,6 +423,8 @@ def bias_image_rowcol(im, amp_bbox, serial_overscan, parallel_overscan, \
     biasim = afwImage.ImageF(im.getDimensions())
     imarr = biasim.getArray()
     
+    amp_bbox = im.getBBox()
+
     corner_start_x = serial_overscan.getMin().x
     corner_start_y = parallel_overscan.getMin().y
     corner_bbox    = lsst.geom.Box2I(lsst.geom.Point2I(corner_start_x, corner_start_y), amp_bbox.getMax())
@@ -435,13 +436,9 @@ def bias_image_rowcol(im, amp_bbox, serial_overscan, parallel_overscan, \
     nx = parallel_overscan.width
     ny = serial_overscan.height
     
-    values_row = my_bias_row(np.arange(ny))
-    values_col = my_bias_col(np.arange(nx))
+    imarr[:, :nx] += my_bias_col(np.arange(nx))
+    imarr[:ny] += my_bias_row(np.arange(ny))[:, None]
     
-    for col in range(nx):
-        imarr[:,col] += values_col[col]
-    for row in range(ny):
-        imarr[row]   += values_row[row]
     imarr[:ny,:nx] -= my_bias_corner
     imarr[ny:,nx:] += my_bias_corner
             
