@@ -14,6 +14,7 @@ from .ccd_bias_pca import CCD_bias_PCA
 import lsst.daf.base as dafBase
 import lsst.afw.image as afwImage
 import lsst.afw.math as afwMath
+import lsst.geom
 import lsst.ip.isr as ipIsr
 import lsst.pex.exceptions as pexExcept
 import lsst.eotest.image_utils as imutils
@@ -185,13 +186,12 @@ class MaskedCCD(dict):
                 if kwargs['bias_method'] == 'rowcol':
                     serial_overscan   = self.amp_geom.serial_overscan
                     parallel_overscan = self.amp_geom.parallel_overscan
-                    amp_bbox          = self.amp_geom.full_segment
                     parallel_bbox = lsst.geom.Box2I(lsst.geom.Point2I(0, \
                                                     parallel_overscan.getMin().y), parallel_overscan.getMax())
                     return imutils.bias_image_rowcol(self._deep_copy(amp), \
                                                      serial_overscan=serial_overscan, parallel_overscan=parallel_bbox, **kwargs)
             return imutils.bias_image(self._deep_copy(amp), overscan=overscan, **kwargs)
-        except pexExcept.LSST_RUNTIME_EXCEPTION as eobj:
+        except pexExcept.RuntimeError as eobj:
             raise MaskedCCDBiasImageException("DM stack error generating bias "
                                               + "image from overscan region:\n"
                                               + str(eobj))
