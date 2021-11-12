@@ -53,8 +53,14 @@ def cluster_moments(dn, pos):
     sum_y2 = np.sum(vy*vy*dn)
     mean_x = sum_x / sum_0
     mean_y = sum_y / sum_0
-    std_x = np.sqrt((sum_x2 / sum_0) - (mean_x * mean_x))
-    std_y = np.sqrt((sum_y2 / sum_0) - (mean_y * mean_y))
+    var_x = (sum_x2 / sum_0) - (mean_x * mean_x)
+    if var_x < 0:
+        raise RuntimeError
+    std_x = np.sqrt(var_x)
+    var_y = (sum_y2 / sum_0) - (mean_y * mean_y)
+    if var_y < 0:
+        raise RuntimeError
+    std_y = np.sqrt(var_y)
     return (mean_x, mean_y, std_x, std_y, sum_0)
 
 
