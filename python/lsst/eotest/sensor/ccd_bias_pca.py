@@ -490,6 +490,18 @@ class CCD_bias_PCA(dict):
 
         return bias_model
 
+    @staticmethod
+    def bbox_chisq(amp_image, bias_model, bbox):
+        """
+        Compute the chi-square for the pixels in the provided bounding box,
+        using the bias_model value as the variance.
+        """
+        data = amp_image.Factory(amp_image, bbox, deep=True)
+        model = bias_model.Factory(bias_model, bbox)
+        data -= model
+        chisq = np.sum(data.array*data.array/model.array)
+        return chisq
+
     def make_bias_frame(self, raw_file, outfile, residuals_file=None,
                         amps=None):
         """

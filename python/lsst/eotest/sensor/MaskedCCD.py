@@ -6,6 +6,7 @@ afwMath.makeStatistics object.
 @author J. Chiang <jchiang@slac.stanford.edu>
 """
 import warnings
+import numpy as np
 import astropy.io.fits as fits
 from astropy.utils.exceptions import AstropyWarning, AstropyUserWarning
 from lsst.eotest.fitsTools import fitsWriteto
@@ -227,7 +228,9 @@ class MaskedCCD(dict):
             return my_image.Factory(my_image, deep=True)
         return self.bias_image_using_overscan(amp, overscan=overscan, **kwargs)
 
-    def bias_subtracted_image(self, amp, overscan=None, **kwargs):
+    def bias_subtracted_image(self, amp, overscan=None,
+                              max_pca_reduced_chisq=None,
+                              **kwargs):
         """
         Subtract a bias image to correct for the offset. A bias correction is also
         applied if a base_frame is passed. The bias image with the offset values is
@@ -252,9 +255,8 @@ class MaskedCCD(dict):
             # Make a deep copy of the bias frame.
             bias = self.bias_frame[amp].Factory(self.bias_frame[amp], deep=True)
             # Subtract x-independent component using overscan.
-            bias -= \
-                self.bias_frame.bias_image_using_overscan(amp,
-                                                          overscan=overscan, **kwargs)
+            bias -= self.bias_frame.bias_image_using_overscan(
+                amp, overscan=overscan, **kwargs)
             # Subtract x-independent component of image for this amp
             # using overscan.
             my_image -= \
@@ -262,8 +264,15 @@ class MaskedCCD(dict):
             # Subtract structured, x-dependent part.
             my_image -= bias
         elif self.ccd_pcas is not None:
-            my_image.getImage().array[:] \
-                -= self.ccd_pcas.pca_bias_correction(amp, my_image.getImage().array)
+            bias_model = self.ccd_pcas.pca_bias_correction(amp, my_image.getImage().array)
+            bias_image = afwImage.ImageF(np.array(bias_model, dtype=np.float32))
+            bbox = self.amp_geom.serial_overscan
+            chisq = self.ccd_pcas.bbox_chisq(my_image.getImage(), bias_image,
+                                             bbox)
+            if (max_pca_reduced_chisq is not None and
+                chisq/bbox.area > max_pca_reduced_chisq):
+                raise MaskedCCDBiasImageException
+            my_image.getImage().array[:] -= bias_model
         else:
             my_image -= self.bias_image(amp, overscan, **kwargs)
 
