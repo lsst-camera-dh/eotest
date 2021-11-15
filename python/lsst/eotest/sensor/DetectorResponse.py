@@ -63,7 +63,7 @@ class DetectorResponse(object):
             hdu = foo[hdu_name]
             self.flux = np.fabs(np.array(hdu.data.field('FLUX'),
                                          dtype=float))
-            # Apply fiter corrections, if they exist as a separate
+            # Apply filter corrections if they exist as a separate
             # column in the FITS table.
             try:
                 self.flux *= np.array(hdu.data.field('FILTER_CORRECTION'),
