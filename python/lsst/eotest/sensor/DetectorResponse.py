@@ -66,7 +66,7 @@ class DetectorResponse(object):
             # Apply fiter corrections, if they exist as a separate
             # column in the FITS table.
             try:
-                self.flux *= np.array(hdu.data.field('FILTER_CORRECTIONS'),
+                self.flux *= np.array(hdu.data.field('FILTER_CORRECTION'),
                                       dtype=float)
             except KeyError:
                 pass

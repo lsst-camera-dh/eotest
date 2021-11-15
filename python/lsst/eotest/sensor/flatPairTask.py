@@ -209,11 +209,11 @@ class FlatPairTask(pipeBase.Task):
                    ['FLAT1_AMP%02i_SIGNAL' % i for i in all_amps] + \
                    ['FLAT2_AMP%02i_SIGNAL' % i for i in all_amps] + \
                    ['AMP%02i_ROW_MEAN_VAR' % i for i in all_amps] + \
-                   ['SEQNUM', 'DAYOBS', 'FILTER']
-        formats = ['E']*(len(colnames) - 3) + ['J', 'J'] + ['20A']
+                   ['SEQNUM', 'DAYOBS', 'FILTER_CORRECTION', 'FILTER']
+        formats = ['E']*(len(colnames) - 4) + ['J', 'J', 'E'] + ['20A']
         namps = len(all_amps)
         units = (['None'] + 3*namps*['e-'] + namps*['e-^2']
-                 + ['None', 'None', 'None'])
+                 + ['None', 'None', 'None', 'None'])
         columns = [np.zeros(nrows, dtype=np.float64) for fmt in formats[:-1]]
         columns.append(nrows*[''])
         fits_cols = [fits.Column(name=colnames[i], format=formats[i],
