@@ -62,9 +62,16 @@ class DetectorResponse(object):
         with fits.open(infile) as foo:
             hdu = foo[hdu_name]
             self.flux = np.fabs(np.array(hdu.data.field('FLUX'),
-                                         dtype=np.float))
+                                         dtype=float))
+            # Apply filter corrections if they exist as a separate
+            # column in the FITS table.
+            try:
+                self.flux *= np.array(hdu.data.field('FILTER_CORRECTION'),
+                                      dtype=float)
+            except KeyError:
+                pass
             self.Ne = dict([(amp, np.array(hdu.data.field('AMP%02i_SIGNAL' % amp),
-                                           dtype=np.float)) for amp in all_amps])
+                                           dtype=float)) for amp in all_amps])
 
     def _read_from_text(self, infile):
         data = np.recfromtxt(infile)

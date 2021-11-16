@@ -209,11 +209,11 @@ class FlatPairTask(pipeBase.Task):
                    ['FLAT1_AMP%02i_SIGNAL' % i for i in all_amps] + \
                    ['FLAT2_AMP%02i_SIGNAL' % i for i in all_amps] + \
                    ['AMP%02i_ROW_MEAN_VAR' % i for i in all_amps] + \
-                   ['SEQNUM', 'DAYOBS', 'FILTER']
-        formats = ['E']*(len(colnames) - 3) + ['J', 'J'] + ['20A']
+                   ['SEQNUM', 'DAYOBS', 'FILTER_CORRECTION', 'FILTER']
+        formats = ['E']*(len(colnames) - 4) + ['J', 'J', 'E'] + ['20A']
         namps = len(all_amps)
         units = (['None'] + 3*namps*['e-'] + namps*['e-^2']
-                 + ['None', 'None', 'None'])
+                 + ['None', 'None', 'None', 'None'])
         columns = [np.zeros(nrows, dtype=np.float64) for fmt in formats[:-1]]
         columns.append(nrows*[''])
         fits_cols = [fits.Column(name=colnames[i], format=formats[i],
@@ -285,9 +285,10 @@ class FlatPairTask(pipeBase.Task):
 
             if use_exptime:
                 flux = exptime1
+                filter_correction = 1
             else:
                 flux = abs(pd1*exptime1 + pd2*exptime2)/2.
-                flux *= self.filter_corrections.get(filter_combo, 1)
+                filter_correction = self.filter_corrections.get(filter_combo, 1)
                 if np.abs((pd1 - pd2)/((pd1 + pd2)/2.)) > max_pd_frac_dev:
                     self.log.info("Skipping %s and %s since MONDIODE values "
                                   "do not agree to %.1f%%",
@@ -301,6 +302,8 @@ class FlatPairTask(pipeBase.Task):
                 self.log.info('   flux = %s', flux)
                 self.log.info('   flux/exptime = %s', flux/exptime1)
             self.output[-1].data.field('FLUX')[row] = flux
+            self.output[-1].data.field('FILTER_CORRECTION')[row] \
+                = filter_correction
             if row == 0:
                 self.output[0].header['NAMPS'] = len(all_amps)
 
