@@ -60,7 +60,10 @@ class MaskedCCD(dict):
             self.setAllMasks()
         self.bias_frame = None
         self.ccd_pcas = None
-        if bias_frame is not None:
+        if bias_frame == 'rowcol':
+            # Use parallel+serial overscan model to do bias subtraction.
+            self.bias_frame = 'rowcol'
+        elif bias_frame is not None:
             if isinstance(bias_frame, MaskedCCD):
                 self.bias_frame = bias_frame
             elif isinstance(bias_frame, tuple) and len(bias_frame) == 2:
@@ -146,7 +149,10 @@ class MaskedCCD(dict):
         hdulist = fits.HDUList()
         with fits.open(self.imfile) as template:
             hdulist.append(template[0])
-            hdulist[0].header['ORIGFILE'] = hdulist[0].header['FILENAME']
+            try:
+                hdulist[0].header['ORIGFILE'] = hdulist[0].header['FILENAME']
+            except KeyError:
+                pass
             hdulist[0].header['FILENAME'] = outfile
             for amp in self:
                 imarr = self.bias_subtracted_image(amp).getImage().getArray()
@@ -219,7 +225,7 @@ class MaskedCCD(dict):
             smoothing factor, s. This only needs to be specified when using the 'spline'
             method. The default is: None.
         """
-        if self.bias_frame is not None:
+        if self.bias_frame != 'rowcol' and self.bias_frame is not None:
             #
             # Use bias frame, if available, instead of overscan region
             #
@@ -251,7 +257,10 @@ class MaskedCCD(dict):
         """
         # Make a local copy to process and return.
         my_image = self._deep_copy(amp)
-        if self.bias_frame is not None:
+        if self.bias_frame == 'rowcol':
+            # This overrides any bias_method options.
+            my_image -= self.bias_image(amp, bias_method='rowcol')
+        elif self.bias_frame is not None:
             # Make a deep copy of the bias frame.
             bias = self.bias_frame[amp].Factory(self.bias_frame[amp], deep=True)
             # Subtract x-independent component using overscan.
