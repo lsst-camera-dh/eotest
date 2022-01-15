@@ -45,14 +45,19 @@ def superflat(files, bias_frame=None, outfile='superflat.fits', bitpix=None,
     """
     use_pca_bias = os.environ.get('LCATR_USE_PCA_BIAS_FIT', 'True') == 'True'
     # Get overscan region.
-    overscan = makeAmplifierGeometry(files[0]).serial_overscan
+    amp_geom = makeAmplifierGeometry(files[0])
+    overscan = amp_geom.serial_overscan
     output_images = dict()
     for amp in imutils.allAmps(files[0]):
         images = []
         for infile in files:
             image = afwImage.ImageF(infile, imutils.dm_hdu(amp))
             if bias_subtract:
-                if bias_frame:
+                if bias_frame == 'rowcol':
+                    image -= imutils\
+                        .bias_image_rowcol(image, amp_geom.serial_overscan,
+                                           amp_geom.parallel_overscan)
+                elif bias_frame:
                     if use_pca_bias:
                         image = pca_bias_subtracted_image(image, bias_frame,
                                                           amp)
