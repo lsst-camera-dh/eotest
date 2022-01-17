@@ -3,8 +3,6 @@
 computing median images, unbiasing using the serial overscan region,
 trimming, etc..
 """
-from __future__ import print_function
-from __future__ import absolute_import
 import os
 import warnings
 import numpy as np
@@ -488,9 +486,9 @@ def unbias_and_trim(im, overscan, imaging=None, dxmin=5, dxmax=2, bias_method='r
         t: The number of knots. If None, finds the number of knots to use for a given smoothing
             factor, s. This only needs to be specified when using the 'spline' method.
             The default is: None.
-        bias_method_col : Method to subtract the parallel overscan.  Typically not used. 
+        bias_method_col : Method to subtract the parallel overscan.  Typically not used.
             However can be set to 'mean', 'col', 'func', or 'spline'.   Default is None, in which
-            case the parallel overscan is not subtracted.  
+            case the parallel overscan is not subtracted.
         dymin: The number of columns to skip at the beginning of the parallel
             overscan region, if parallel overscan subtraction is requested. Defaults to 5
         dymax: The number of columns to skip at the end of the parallel
@@ -499,15 +497,21 @@ def unbias_and_trim(im, overscan, imaging=None, dxmin=5, dxmax=2, bias_method='r
     Returns:
         An afw image.
     """
-
-    im -= bias_image(im, overscan, dxmin=dxmin, dxmax=dxmax, bias_method=bias_method, **kwargs)
-    bias_method_col = kwargs.get('bias_method_col', None)
-    overscan_col = kwargs.get('overscan_col')
-    if bias_method_col not in ['None', None]:
-        im -= bias_image_col(im, overscan_col, dymin=kwaargs.get('dymin', 5), dymax=kwargs.get('dymax', 2),
-                             bias_method=bias_method_col, **kwargs)
-    if bias_frame:
-        im -= bias_frame
+    if bias_method == 'rowcol':
+        serial_overscan = kwargs['serial_overscan']
+        parallel_overscan = kwargs['parallel_overscan']
+        im -= bias_image_rowcol(im, serial_overscan, parallel_overscan)
+    else:
+        im -= bias_image(im, overscan, dxmin=dxmin, dxmax=dxmax,
+                         bias_method=bias_method, **kwargs)
+        bias_method_col = kwargs.get('bias_method_col', None)
+        overscan_col = kwargs.get('overscan_col')
+        if bias_method_col not in ['None', None]:
+            im -= bias_image_col(im, overscan_col, dymin=kwargs.get('dymin', 5),
+                                 dymax=kwargs.get('dymax', 2),
+                                 bias_method=bias_method_col, **kwargs)
+        if bias_frame:
+            im -= bias_frame
     if imaging is not None:
         return trim(im, imaging)
     return im
@@ -601,6 +605,7 @@ def fits_median(files, hdu=2, fix=True):
 
     return median_image
 
+
 def stack(ims, statistic=afwMath.MEDIAN, stat_ctrl=afwMath.StatisticsControl()):
     """Stacks a list of images based on a statistic."""
     images = []
@@ -612,20 +617,23 @@ def stack(ims, statistic=afwMath.MEDIAN, stat_ctrl=afwMath.StatisticsControl()):
     return summary
 
 
-def superbias(files, overscan, imaging=None, dxmin=5, dxmax=2, bias_method='row',
-               hdu=2, statistic=afwMath.MEDIAN, **kwargs):
+def superbias(files, overscan, imaging=None, dxmin=5, dxmax=2,
+              bias_method='row', hdu=2, statistic=afwMath.MEDIAN, **kwargs):
     """Generates a single stacked 'super' bias frame based on
     a statistic. Images must be either all masked or all unmasked."""
     ims = [afwImage.ImageF(f, hdu) for f in files]
-    bias_frames = [unbias_and_trim(im, overscan, imaging, dxmin, dxmax, bias_method,
-                                   **kwargs) for im in ims]
+    bias_frames = [unbias_and_trim(im, overscan, imaging, dxmin, dxmax,
+                                   bias_method, **kwargs) for im in ims]
     return stack(bias_frames, statistic)
 
+
 def superbias_file(files, overscan, outfile, imaging=None, dxmin=5, dxmax=2,
-                    bias_method='row', bitpix=-32, clobber=True, **kwargs):
-    images = {amp : superbias(files, overscan, imaging, dxmin, dxmax, bias_method,
-                              hdu=dm_hdu(amp), **kwargs) for amp in allAmps(files[0])}
+                   bias_method='row', bitpix=-32, clobber=True, **kwargs):
+    images = {amp: superbias(files, overscan, imaging, dxmin, dxmax,
+                             bias_method, hdu=dm_hdu(amp), **kwargs)
+              for amp in allAmps(files[0])}
     writeFits(images, outfile, files[0], bitpix=bitpix)
+
 
 def writeFits(images, outfile, template_file, bitpix=32):
     output = fits.HDUList()
