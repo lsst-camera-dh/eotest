@@ -30,10 +30,18 @@ class OverscanResults(object):
         self.serial_overscan_noise = {amp : [] for amp in all_amps}
         self.parallel_overscan_noise = {amp : [] for amp in all_amps}
         self.flatfield_signal = {amp : [] for amp in all_amps}
+        self.exptime = []   # Frame exposure time
+        self.seqnum = []    # Observation sequence number
+        self.dayobs = []    # Observation date, e.g., 20211204
 
     def process_image(self, ccd, gains):
         """Process an image."""
-      
+        self.exptime.append(ccd.md.get('EXPTIME'))
+        self.seqnum.append(ccd.md.get('SEQNUM'))
+        try:
+            self.dayobs.append(ccd.md.get('DAYOBS'))
+        except KeyError:
+            self.dayobs.append(0)
         for amp in self.all_amps:
             image = ccd.bias_subtracted_image(amp)
 
@@ -80,7 +88,10 @@ class OverscanResults(object):
 
     def write_results(self, outfile):
         """Export results as a FITs file."""
-        
+        exptime = np.asarray(self.exptime)
+        seqnum = np.asarray(self.seqnum)
+        dayobs = np.asarray(self.dayobs)
+
         for amp in self.all_amps:
             extname = 'Amp{0:02d}'.format(amp)
             ncols = len(self.column_mean[amp][0])
@@ -88,20 +99,24 @@ class OverscanResults(object):
 
             idx = np.argsort(self.flatfield_signal[amp])
 
-            cols = [fits.Column('COLUMN_MEAN', format='{0}E'.format(ncols), 
+            cols = [fits.Column('COLUMN_MEAN', format='{0}E'.format(ncols),
                                 unit='e-', array=np.asarray(self.column_mean[amp])[idx, :]),
-                    fits.Column('COLUMN_VARIANCE', format='{0}E'.format(ncols), 
+                    fits.Column('COLUMN_VARIANCE', format='{0}E'.format(ncols),
                                 unit='e-', array=np.asarray(self.column_variance[amp])[idx, :]),
                     fits.Column('ROW_MEAN', format='{0}E'.format(nrows),
                                 unit='e-', array=np.asarray(self.row_mean[amp])[idx, :]),
                     fits.Column('ROW_VARIANCE', format='{0}E'.format(nrows),
                                 unit='e-', array=np.asarray(self.row_variance[amp])[idx, :]),
-                    fits.Column('FLATFIELD_SIGNAL', format='E', unit='e-', 
+                    fits.Column('FLATFIELD_SIGNAL', format='E', unit='e-',
                                 array=np.asarray(self.flatfield_signal[amp])[idx]),
-                    fits.Column('SERIAL_OVERSCAN_NOISE', format='E', unit='e-', 
+                    fits.Column('SERIAL_OVERSCAN_NOISE', format='E', unit='e-',
                                 array=np.asarray(self.serial_overscan_noise[amp])[idx]),
                     fits.Column('PARALLEL_OVERSCAN_NOISE', format='E', unit='e-',
-                                array=np.asarray(self.parallel_overscan_noise[amp])[idx])]
+                                array=np.asarray(self.parallel_overscan_noise[amp])[idx]),
+                    fits.Column('EXPOSURE', format='E', unit='seconds', array=exptime[idx]),
+                    fits.Column('SEQNUM', format='J', unit='None', array=seqnum[idx]),
+                    fits.Column('DAYOBS', format='J', unit='None', array=dayobs[idx])
+            ]
 
             self.output.append(fitsTableFactory(cols))
             self.output[-1].name = extname
