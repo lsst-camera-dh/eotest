@@ -3,6 +3,7 @@ Code to perform Divisadero tearing analysis.  This is slightly
 revised code originally from Aaron Roodman. See LSSTTD-1440.
 """
 import numpy as np
+import numpy.ma as ma
 from matplotlib import pyplot as plt
 import matplotlib.gridspec as gridspec
 from astropy import stats
@@ -13,13 +14,13 @@ import lsst.eotest.sensor as sensorTest
 __all__ = ['ana_divisidero_tearing']
 
 
-def normed_mean_response_vscol(sflat_file):
+def normed_mean_response_vscol(sflat_file, mask_files=()):
     """
     For an input .fits file, calculates the normalized sigma clipped
     mean flux vs. Col# for a group of Rows returns two arrays for
     the top and bottom section of the CCD
     """
-    amc = sensorTest.MaskedCCD(sflat_file)
+    amc = sensorTest.MaskedCCD(sflat_file, mask_files=mask_files)
     amps = imutils.allAmps(sflat_file)
     ncol = amc.amp_geom.nx
     sensor_type = amc.amp_geom.vendor.lower()
@@ -34,7 +35,8 @@ def normed_mean_response_vscol(sflat_file):
         # Segments 10-17
         anamp = imutils.trim(amc[i_amp], imaging=imaging)
         anamp_im = anamp.getImage()
-        anamp_arr = anamp_im.getArray()
+        anamp_arr = ma.masked_array(anamp_im.getArray(),
+                                    mask=anamp.getMask().array)
 
         # use a robust mean
         anamp_meanbyrow, _, _ \
@@ -107,7 +109,7 @@ def normed_mean_response_vscol(sflat_file):
     return averow_top, averow_bot, max_divisidero_tearing
 
 
-def ana_divisidero_tearing(sflat_files, raft_unit_id, title=None):
+def ana_divisidero_tearing(sflat_files, mask_files, title=None):
     """
     Analyze a raft of corrected super-flats for Divisidero Tearing.
 
@@ -115,8 +117,8 @@ def ana_divisidero_tearing(sflat_files, raft_unit_id, title=None):
     ----------
     sflat_files: dict
         Dictionary of single CCD superflat files, keyed by slot name.
-    raft_unit_id: str
-        Raft unit id, e.g., 'LCA-11021_RTM-019'
+    mask_files: dict of lists
+        Mask files for each CCD, keyed by slot name.
     title: str [None]
         Plot title.
     """
@@ -136,7 +138,8 @@ def ana_divisidero_tearing(sflat_files, raft_unit_id, title=None):
     avedict = {}
     for slot in dmslots:
         try:
-            avedict[slot] = normed_mean_response_vscol(sflat_files[slot])
+            avedict[slot] = normed_mean_response_vscol(sflat_files[slot],
+                                                       mask_files=mask_files[slot])
         except KeyError:
             # This will occur if data from `slot` is not available.
             pass
@@ -156,7 +159,7 @@ def ana_divisidero_tearing(sflat_files, raft_unit_id, title=None):
             if have_wf_sensor and j==1:
                 continue
             # use max of max_divisidero_tearing to set the range of plots
-            plot_range = np.max(max_divisidero[j*7:j*7+8])
+            plot_range = np.nanmax(max_divisidero[j*7:j*7+8])
 
             ax = plt.Subplot(f, inner[j])
             ax.plot(xpixval[nskip_edge:ncol*8 - nskip_edge],
