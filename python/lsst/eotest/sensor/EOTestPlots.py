@@ -921,7 +921,14 @@ class EOTestPlots(object):
                          frameLabels=True, amp=amp, xrange_scale=xrange_scale)
             pylab.locator_params(axis='x', nbins=4, tight=True)
 
-    def ptcs(self, xrange=None, yrange=None, figsize=(11, 8.5), ptc_file=None):
+    def ptcs(self, xrange=None, yrange=None, figsize=(11, 8.5), ptc_file=None,
+             axis_scaling='log'):
+        if axis_scaling == 'log':
+            xlog = 1
+            ylog = 1
+        else:
+            xlog = 0
+            ylog = 0
         if ptc_file is None:
             ptc_file = self._fullpath('%s_ptc.fits' % self.sensor_id)
         with fits.open(ptc_file) as ptc:
@@ -945,9 +952,13 @@ class EOTestPlots(object):
                 self._offset_subplot(win)
                 win = plot.xyplot(mean, var, xname='', yname='',
                                   xrange=xrange, yrange=yrange,
-                                  xlog=1, ylog=1, new_win=False,)
+                                  xlog=xlog, ylog=ylog, new_win=False)
                 axes = pylab.gca()
-                xx = np.logspace(np.log10(min(mean)), np.log10(max(mean)), 20)
+                if axis_scaling == 'log':
+                    xx = np.logspace(np.log10(min(mean)), np.log10(max(mean)),
+                                     20)
+                else:
+                    xx = np.linspace(min(mean), max(mean), 20)
                 # Plot PTC curves using gain measurements.
                 ptc_gain = self.results['PTC_GAIN'][amp-1]
                 ptc_gain_error = self.results['PTC_GAIN_ERROR'][amp-1]
