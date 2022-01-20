@@ -67,7 +67,8 @@ def normed_mean_response_vscol(sflat_file, mask_files=()):
         i_amp = 17 - j_amp
         anamp = imutils.trim(amc[j_amp], imaging=imaging)
         anamp_im = anamp.getImage()
-        anamp_arr = anamp_im.getArray()
+        anamp_arr = ma.masked_array(anamp_im.getArray(),
+                                    mask=anamp.getMask().array)
 
         # use a robust mean
         anamp_meanbyrow, _, _ \
@@ -96,14 +97,18 @@ def normed_mean_response_vscol(sflat_file, mask_files=()):
     max_divisidero_tearing = []    # 14 entries per CCD
     for k in range(1, 7+1):
         collo = ncol*k - 2  # 2nd to last column in Amplifier
-        max_divisidero = np.max(np.abs(averow_top[collo:collo+4] - 1.0))    # +-2 columns
+        max_divisidero = np.nanmax(np.abs(averow_top[collo:collo+4] - 1.0))    # +-2 columns
+        if np.isnan(max_divisidero):
+            max_divisidero = 0
         max_divisidero_tearing.append(max_divisidero)
 
     for k in range(1, 7+1):
         if k + 8 not in amps:
             continue
         collo = ncol*k - 2  # 2nd to last column in Amplifier
-        max_divisidero = np.max(np.abs(averow_bot[collo:collo+4] - 1.0))    # +-2 columns
+        max_divisidero = np.nanmax(np.abs(averow_bot[collo:collo+4] - 1.0))    # +-2 columns
+        if np.isnan(max_divisidero):
+            max_divisidero = 0
         max_divisidero_tearing.append(max_divisidero)
 
     return averow_top, averow_bot, max_divisidero_tearing
