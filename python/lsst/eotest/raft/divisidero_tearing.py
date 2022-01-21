@@ -7,6 +7,7 @@ import numpy.ma as ma
 from matplotlib import pyplot as plt
 import matplotlib.gridspec as gridspec
 from astropy import stats
+import lsst.ip.isr as ipIsr
 import lsst.eotest.image_utils as imutils
 import lsst.eotest.sensor as sensorTest
 
@@ -33,10 +34,12 @@ def normed_mean_response_vscol(sflat_file, mask_files=()):
     averow_top = np.zeros(ncol*8)
     for i_amp in range(1, 8+1):
         # Segments 10-17
-        anamp = imutils.trim(amc[i_amp], imaging=imaging)
-        anamp_im = anamp.getImage()
-        anamp_arr = ma.masked_array(anamp_im.getArray(),
-                                    mask=anamp.getMask().array)
+        # Interpolate over bad pixels.
+        fwhm = 1
+        interp_image = ipIsr.interpolateFromMask(amc[i_amp], fwhm,
+                                                 maskNameList=['BAD'])
+        anamp_mi = imutils.trim(interp_image, imaging=imaging)
+        anamp_arr = anamp_mi.getImage().array
 
         # use a robust mean
         anamp_meanbyrow, _, _ \
@@ -65,10 +68,12 @@ def normed_mean_response_vscol(sflat_file, mask_files=()):
         # Segments 00-07
         # i_amp goes from 1 to 8, in order of increasing Yccs
         i_amp = 17 - j_amp
-        anamp = imutils.trim(amc[j_amp], imaging=imaging)
-        anamp_im = anamp.getImage()
-        anamp_arr = ma.masked_array(anamp_im.getArray(),
-                                    mask=anamp.getMask().array)
+        # Interpolate over bad pixels.
+        fwhm = 1
+        interp_image = ipIsr.interpolateFromMask(amc[j_amp], fwhm,
+                                                 maskNameList=['BAD'])
+        anamp_mi = imutils.trim(interp_image, imaging=imaging)
+        anamp_arr = anamp_mi.getImage().array
 
         # use a robust mean
         anamp_meanbyrow, _, _ \
