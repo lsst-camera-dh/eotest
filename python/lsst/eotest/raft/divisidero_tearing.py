@@ -30,14 +30,26 @@ def normed_mean_response_vscol(sflat_file, mask_files=()):
     row_lo = 10
     row_hi = 210
 
+    # FWHM (in pixels) of double Gaussian smoothing kernel used by
+    # ipIsr.interpolateFromMask.
+    fwhm = 2
+
+    # Grow the BAD pixel masks since these are mostly from saturated bright
+    # column defects.
+    maskValue = 'BAD'
+    maskNameList = [maskValue]
+    grow_mask = 5
+
     # top row
     averow_top = np.zeros(ncol*8)
     for i_amp in range(1, 8+1):
         # Segments 10-17
         # Interpolate over bad pixels.
-        fwhm = 1
+        amp_mask = amc[i_amp].getMask()
+        ipIsr.growMasks(amp_mask, radius=grow_mask, maskNameList=maskNameList,
+                        maskValue=maskValue)
         interp_image = ipIsr.interpolateFromMask(amc[i_amp], fwhm,
-                                                 maskNameList=['BAD'])
+                                                 maskNameList=maskNameList)
         anamp_mi = imutils.trim(interp_image, imaging=imaging)
         anamp_arr = anamp_mi.getImage().array
 
@@ -69,9 +81,11 @@ def normed_mean_response_vscol(sflat_file, mask_files=()):
         # i_amp goes from 1 to 8, in order of increasing Yccs
         i_amp = 17 - j_amp
         # Interpolate over bad pixels.
-        fwhm = 1
+        amp_mask = amc[j_amp].getMask()
+        ipIsr.growMasks(amp_mask, radius=grow_mask, maskNameList=maskNameList,
+                        maskValue=maskValue)
         interp_image = ipIsr.interpolateFromMask(amc[j_amp], fwhm,
-                                                 maskNameList=['BAD'])
+                                                 maskNameList=maskNameList)
         anamp_mi = imutils.trim(interp_image, imaging=imaging)
         anamp_arr = anamp_mi.getImage().array
 
