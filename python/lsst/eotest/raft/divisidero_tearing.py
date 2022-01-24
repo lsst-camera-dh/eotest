@@ -15,6 +15,43 @@ import lsst.eotest.sensor as sensorTest
 __all__ = ['ana_divisidero_tearing']
 
 
+def get_interpolated_image_array(masked_image, bbox, maskNameList, maskValue,
+                                 grow_mask=5, fwhm=2):
+    """
+    Interpolate over masked pixels and return the resulting numpy array
+    corresponding to the bbox.
+
+    Parameters
+    ----------
+    masked_image : lsst.afw.Exposure
+        Exposure to be processed.
+    bbox : lsst.geom.BBox
+        Bounding box of desired part of image array.  Typically the
+        imaging section of an amp.
+    maskNameList : list
+        List of mask names to interpolate over. Typically ['BAD'].
+    maskValue : str
+        Name of mask on output after growing.
+    grow_mask : int [5]
+        Number of pixels to grow the mask by, e.g., to account for
+        spill over from saturated bright columns.
+    fwhm : int [2]
+        FWHM (in pixels) of double Gaussian smoothing kernel used by
+        ipIsr.interpolateFromMask.
+
+    Returns
+    -------
+    numpy.array
+    """
+    mask = masked_image.getMask()
+    ipIsr.growMasks(mask, radius=grow_mask, maskNameList=maskNameList,
+                    maskValue=maskValue)
+    interp_image = ipIsr.interpolateFromMask(masked_image, fwhm,
+                                             maskNameList=maskNameList)
+    trimmed_image = imutils.trim(interp_image, imaging=bbox)
+    return trimmed_image.getImage().array
+
+
 def normed_mean_response_vscol(sflat_file, mask_files=()):
     """
     For an input .fits file, calculates the normalized sigma clipped
@@ -30,10 +67,6 @@ def normed_mean_response_vscol(sflat_file, mask_files=()):
     row_lo = 10
     row_hi = 210
 
-    # FWHM (in pixels) of double Gaussian smoothing kernel used by
-    # ipIsr.interpolateFromMask.
-    fwhm = 2
-
     # Grow the BAD pixel masks since these are mostly from saturated bright
     # column defects.
     maskValue = 'BAD'
@@ -45,13 +78,9 @@ def normed_mean_response_vscol(sflat_file, mask_files=()):
     for i_amp in range(1, 8+1):
         # Segments 10-17
         # Interpolate over bad pixels.
-        amp_mask = amc[i_amp].getMask()
-        ipIsr.growMasks(amp_mask, radius=grow_mask, maskNameList=maskNameList,
-                        maskValue=maskValue)
-        interp_image = ipIsr.interpolateFromMask(amc[i_amp], fwhm,
-                                                 maskNameList=maskNameList)
-        anamp_mi = imutils.trim(interp_image, imaging=imaging)
-        anamp_arr = anamp_mi.getImage().array
+        anamp_arr = get_interpolated_image_array(amc[i_amp], imaging,
+                                                 maskNameList, maskValue,
+                                                 grow_mask=grow_mask)
 
         # use a robust mean
         anamp_meanbyrow, _, _ \
@@ -81,13 +110,9 @@ def normed_mean_response_vscol(sflat_file, mask_files=()):
         # i_amp goes from 1 to 8, in order of increasing Yccs
         i_amp = 17 - j_amp
         # Interpolate over bad pixels.
-        amp_mask = amc[j_amp].getMask()
-        ipIsr.growMasks(amp_mask, radius=grow_mask, maskNameList=maskNameList,
-                        maskValue=maskValue)
-        interp_image = ipIsr.interpolateFromMask(amc[j_amp], fwhm,
-                                                 maskNameList=maskNameList)
-        anamp_mi = imutils.trim(interp_image, imaging=imaging)
-        anamp_arr = anamp_mi.getImage().array
+        anamp_arr = get_interpolated_image_array(amc[j_amp], imaging,
+                                                 maskNameList, maskValue,
+                                                 grow_mask=grow_mask)
 
         # use a robust mean
         anamp_meanbyrow, _, _ \
