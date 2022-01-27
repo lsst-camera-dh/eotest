@@ -3,9 +3,11 @@ Code to perform Divisadero tearing analysis.  This is slightly
 revised code originally from Aaron Roodman. See LSSTTD-1440.
 """
 import numpy as np
+import numpy.ma as ma
 from matplotlib import pyplot as plt
 import matplotlib.gridspec as gridspec
 from astropy import stats
+import lsst.ip.isr as ipIsr
 import lsst.eotest.image_utils as imutils
 import lsst.eotest.sensor as sensorTest
 
@@ -13,13 +15,50 @@ import lsst.eotest.sensor as sensorTest
 __all__ = ['ana_divisidero_tearing']
 
 
-def normed_mean_response_vscol(sflat_file):
+def get_interpolated_image_array(masked_image, bbox, maskNameList, maskValue,
+                                 grow_mask=5, fwhm=2):
+    """
+    Interpolate over masked pixels and return the resulting numpy array
+    corresponding to the bbox.
+
+    Parameters
+    ----------
+    masked_image : lsst.afw.Exposure
+        Exposure to be processed.
+    bbox : lsst.geom.BBox
+        Bounding box of desired part of image array.  Typically the
+        imaging section of an amp.
+    maskNameList : list
+        List of mask names to interpolate over. Typically ['BAD'].
+    maskValue : str
+        Name of mask on output after growing.
+    grow_mask : int [5]
+        Number of pixels to grow the mask by, e.g., to account for
+        spill over from saturated bright columns.
+    fwhm : int [2]
+        FWHM (in pixels) of double Gaussian smoothing kernel used by
+        ipIsr.interpolateFromMask.
+
+    Returns
+    -------
+    numpy.array
+    """
+    mask = masked_image.getMask()
+    ipIsr.growMasks(mask, radius=grow_mask, maskNameList=maskNameList,
+                    maskValue=maskValue)
+    interp_image = ipIsr.interpolateFromMask(masked_image, fwhm,
+                                             maskNameList=maskNameList)
+    trimmed_image = imutils.trim(interp_image, imaging=bbox)
+    return trimmed_image.getImage().array
+
+
+def normed_mean_response_vscol(sflat_file, mask_files=()):
     """
     For an input .fits file, calculates the normalized sigma clipped
     mean flux vs. Col# for a group of Rows returns two arrays for
     the top and bottom section of the CCD
     """
-    amc = sensorTest.MaskedCCD(sflat_file)
+    amc = sensorTest.MaskedCCD(sflat_file, mask_files=mask_files)
     amps = imutils.allAmps(sflat_file)
     ncol = amc.amp_geom.nx
     sensor_type = amc.amp_geom.vendor.lower()
@@ -28,13 +67,20 @@ def normed_mean_response_vscol(sflat_file):
     row_lo = 10
     row_hi = 210
 
+    # Grow the BAD pixel masks since these are mostly from saturated bright
+    # column defects.
+    maskValue = 'BAD'
+    maskNameList = [maskValue]
+    grow_mask = 5
+
     # top row
     averow_top = np.zeros(ncol*8)
     for i_amp in range(1, 8+1):
         # Segments 10-17
-        anamp = imutils.trim(amc[i_amp], imaging=imaging)
-        anamp_im = anamp.getImage()
-        anamp_arr = anamp_im.getArray()
+        # Interpolate over bad pixels.
+        anamp_arr = get_interpolated_image_array(amc[i_amp], imaging,
+                                                 maskNameList, maskValue,
+                                                 grow_mask=grow_mask)
 
         # use a robust mean
         anamp_meanbyrow, _, _ \
@@ -63,9 +109,10 @@ def normed_mean_response_vscol(sflat_file):
         # Segments 00-07
         # i_amp goes from 1 to 8, in order of increasing Yccs
         i_amp = 17 - j_amp
-        anamp = imutils.trim(amc[j_amp], imaging=imaging)
-        anamp_im = anamp.getImage()
-        anamp_arr = anamp_im.getArray()
+        # Interpolate over bad pixels.
+        anamp_arr = get_interpolated_image_array(amc[j_amp], imaging,
+                                                 maskNameList, maskValue,
+                                                 grow_mask=grow_mask)
 
         # use a robust mean
         anamp_meanbyrow, _, _ \
@@ -94,20 +141,24 @@ def normed_mean_response_vscol(sflat_file):
     max_divisidero_tearing = []    # 14 entries per CCD
     for k in range(1, 7+1):
         collo = ncol*k - 2  # 2nd to last column in Amplifier
-        max_divisidero = np.max(np.abs(averow_top[collo:collo+4] - 1.0))    # +-2 columns
+        max_divisidero = np.nanmax(np.abs(averow_top[collo:collo+4] - 1.0))    # +-2 columns
+        if np.isnan(max_divisidero):
+            max_divisidero = 0
         max_divisidero_tearing.append(max_divisidero)
 
     for k in range(1, 7+1):
         if k + 8 not in amps:
             continue
         collo = ncol*k - 2  # 2nd to last column in Amplifier
-        max_divisidero = np.max(np.abs(averow_bot[collo:collo+4] - 1.0))    # +-2 columns
+        max_divisidero = np.nanmax(np.abs(averow_bot[collo:collo+4] - 1.0))    # +-2 columns
+        if np.isnan(max_divisidero):
+            max_divisidero = 0
         max_divisidero_tearing.append(max_divisidero)
 
     return averow_top, averow_bot, max_divisidero_tearing
 
 
-def ana_divisidero_tearing(sflat_files, raft_unit_id, title=None):
+def ana_divisidero_tearing(sflat_files, mask_files, title=None):
     """
     Analyze a raft of corrected super-flats for Divisidero Tearing.
 
@@ -115,8 +166,8 @@ def ana_divisidero_tearing(sflat_files, raft_unit_id, title=None):
     ----------
     sflat_files: dict
         Dictionary of single CCD superflat files, keyed by slot name.
-    raft_unit_id: str
-        Raft unit id, e.g., 'LCA-11021_RTM-019'
+    mask_files: dict of lists
+        Mask files for each CCD, keyed by slot name.
     title: str [None]
         Plot title.
     """
@@ -136,7 +187,8 @@ def ana_divisidero_tearing(sflat_files, raft_unit_id, title=None):
     avedict = {}
     for slot in dmslots:
         try:
-            avedict[slot] = normed_mean_response_vscol(sflat_files[slot])
+            avedict[slot] = normed_mean_response_vscol(sflat_files[slot],
+                                                       mask_files=mask_files[slot])
         except KeyError:
             # This will occur if data from `slot` is not available.
             pass
@@ -156,7 +208,7 @@ def ana_divisidero_tearing(sflat_files, raft_unit_id, title=None):
             if have_wf_sensor and j==1:
                 continue
             # use max of max_divisidero_tearing to set the range of plots
-            plot_range = np.max(max_divisidero[j*7:j*7+8])
+            plot_range = np.nanmax(max_divisidero[j*7:j*7+8])
 
             ax = plt.Subplot(f, inner[j])
             ax.plot(xpixval[nskip_edge:ncol*8 - nskip_edge],
