@@ -9,6 +9,7 @@ import glob
 from copy import deepcopy
 import operator
 import numpy as np
+import numpy.ma as ma
 import scipy.optimize
 import astropy.io.fits as fits
 import astropy.stats as astats
@@ -87,10 +88,6 @@ def flat_pair_stats(ccd1, ccd2, amp, mask_files=(), bias_frame=None):
         fmean = mean(image1)
         fvar = var(image1)
     else:
-        #
-        # Make a deep copy since otherwise the pixel values in image1
-        # would be altered in the ratio calculation.
-        #
         mean1 = mean(image1)
         mean2 = mean(image2)
         fmean = (mean1 + mean2)/2.
@@ -102,17 +99,23 @@ def flat_pair_stats(ccd1, ccd2, amp, mask_files=(), bias_frame=None):
         image2 *= weight2
 
         # Make a robust estimate of variance by filtering outliers
-        image1 = np.ravel(image1.getArrays()[0])
-        image2 = np.ravel(image2.getArrays()[0])
-        fdiff = image1 - image2
-        mad = astats.mad_std(fdiff)  #/2.
-        # The factor 14.826 below makes the filter the equivalent of a 10-sigma
-        # cut for a normal distribution
-        keep = np.where((np.abs(fdiff) < (mad*14.826)))[0]
+        fdiff = image1.getImage().array - image2.getImage().array
+        mad = astats.mad_std(fdiff)
+
+        # Build a mask from the 10-sigma equivalent cut using the
+        # median absolute deviation and combine with the CCD mask.
+        # The CCD masks for image1 and image2 are the same in this
+        # context.
+        mask = (np.where(np.abs(fdiff) >= mad*14.826, 1, 0) +
+                image1.getMask().array)
+
+        # Create masked arrays for computing statistics.
+        marr1 = ma.masked_array(image1.getImage().array, mask=mask)
+        marr2 = ma.masked_array(image2.getImage().array, mask=mask)
 
         # Re-weight the images
-        mean1 = np.mean(image1[keep], dtype=np.float64)
-        mean2 = np.mean(image2[keep], dtype=np.float64)
+        mean1 = np.mean(marr1, dtype=np.float64)
+        mean2 = np.mean(marr2, dtype=np.float64)
         fmean = (mean1 + mean2)/2.
         weight1 = mean2/fmean
         weight2 = mean1/fmean
@@ -120,8 +123,8 @@ def flat_pair_stats(ccd1, ccd2, amp, mask_files=(), bias_frame=None):
         image2 *= weight2
 
         fmean = (mean1 + mean2)/2.
-        fvar = np.var(image1[keep] - image2[keep])/2.
-        discard = len(image1) - len(keep)
+        fvar = np.var(marr1 - marr2)/2.
+        discard = np.sum(marr1.mask)   # The number of masked pixels.
 
     return FlatPairStats(fmean, fvar, discard)
 
