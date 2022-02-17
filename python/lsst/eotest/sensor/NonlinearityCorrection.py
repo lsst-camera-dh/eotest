@@ -1,8 +1,6 @@
 """
 Code to apply non-linearity correction.
 """
-from __future__ import print_function
-
 import copy
 
 import numpy as np
@@ -140,7 +138,7 @@ class NonlinearityCorrection:
 
     def __call__(self, amp, adu):
         """Apply the non-linearity correction to a particular amp"""
-        return adu*(1 + self._spline_dict[amp-1](adu))
+        return adu*self._spline_dict[amp-1](adu)
 
 
     def write_to_fits(self, fits_file):
@@ -252,8 +250,8 @@ class NonlinearityCorrection:
 
 
     @staticmethod
-    def _correct_null_point(profile_x, profile_y, profile_yerr, null_point):
-        """Force the spline to go through zero at a particular x-xvalue
+    def _correct_unit_point(profile_x, profile_y, profile_yerr, unit_point):
+        """Force the spline to go through one at a particular x-value
 
         Parameters
         ----------
@@ -263,8 +261,8 @@ class NonlinearityCorrection:
             The b-bin values
         profile_yerr : `array`
             The y-bin errors
-        null_point : `float`
-            The x-value where the spline should go through zero       
+        unit_point : `float`
+            The x-value where the spline should go through one
 
         Returns
         -------
@@ -274,9 +272,9 @@ class NonlinearityCorrection:
             The adjusted y-errors
         """
         uni_spline = UnivariateSpline(profile_x, profile_y)
-        offset = uni_spline(null_point)
+        y_value_0 = uni_spline(unit_point)
 
-        y_vals_corr = ((1 + profile_y) / (1 + offset)) - 1.
+        y_vals_corr = profile_y/y_value_0
         y_errs_corr = profile_yerr
         return y_vals_corr, y_errs_corr
 
@@ -308,7 +306,7 @@ class NonlinearityCorrection:
 
         null_point : `float` or `None`
              X-value at which the correction should vanish, defaults to 0.
-             If `None` then this will simply use the pivot point of the fit to the data             
+             If `None` then this will simply use the pivot point of the fit to the data
 
         remaining kwargs are passed to the class c'tor
 
@@ -319,8 +317,9 @@ class NonlinearityCorrection:
         """
         kwcopy = kwargs.copy()
         fit_range = kwcopy.pop('fit_range', (0., 9e4))
-        nprofile_bins = kwcopy.pop('nprofile_bins', 10)
-        null_point = kwcopy.pop('null_point', 0,)
+        unit_point = kwcopy.pop('unit_point', None)
+        nprofile_bins = kwcopy.pop('nprofile_bins', 100)
+        nprofile_bins = min(len(detresp.flux)//3, nprofile_bins)
 
         if nprofile_bins is not None:
             xbins = np.linspace(fit_range[0], fit_range[1], nprofile_bins+1)
@@ -333,29 +332,48 @@ class NonlinearityCorrection:
         prof_yerr = np.ndarray((16, nprofile_bins))
 
         for idx, amp in enumerate(detresp.Ne):
-            xdata = copy.copy(detresp.Ne[amp])
-            if gains is not None:
-                xdata /= gains[idx]
-            mask = (fit_range[0] < xdata) * (fit_range[1] > xdata)
+            # For each amp, fit a linear model to the signal vs
+            # incident flux.
+            xdata = copy.copy(detresp.flux)
+            ydata = copy.copy(detresp.Ne[amp])
+            # The nominal fit_range applies to e-/pixel.  We also want
+            # to avoid fitting data past the saturation peak.
+            ypeak_index = np.argmax(ydata)
+            x_at_ypeak = xdata[ypeak_index]
+            mask = np.where((fit_range[0] < ydata) & (fit_range[1] > ydata)
+                            & (xdata < x_at_ypeak))
+            # Convert to ADU
+            ydata /= gains[amp]
+
             xdata_fit = xdata[mask]
-            ydata_fit = detresp.flux[mask]
+            ydata_fit = ydata[mask]
             mean_slope = (ydata_fit/xdata_fit).mean()
             pars = (mean_slope,)
             results = scipy.optimize.leastsq(chi2_model, pars,
                                              full_output=1,
                                              args=(xdata_fit, ydata_fit))
             model_yvals = lin_func(results[0], xdata)
-            frac_resid = (detresp.flux - model_yvals)/model_yvals
-            frac_resid_err = 1./xdata
+
+            # Compute the ratio of the linear model to the measured
+            # signal in ADU.  This ratio would be the correction
+            # factor assuming the y value computed from the linear fit
+            # is the desired signal.  The correction factor would then
+            # be a function of the measured signal that's in ydata.
+            ratio = model_yvals/ydata
+
+            # Don't try to fit a spline past the saturation peak.
+            ydata = ydata[:ypeak_index]
+            ratio = ratio[:ypeak_index]
 
             if xbins is not None:
-                prof_x[idx], prof_y[idx], prof_yerr[idx] = make_profile_hist(xbins, xdata, frac_resid,
-                                                                             y_errs=frac_resid_err,
-                                                                             stderr=True)
+                prof_x[idx], prof_y[idx], prof_yerr[idx] \
+                    = make_profile_hist(xbins, ydata, ratio, stderr=True)
             else:
-                prof_x[idx], prof_y[idx], prof_yerr[idx] = xdata, frac_resid, frac_resid_err
+                prof_x[idx], prof_y[idx], prof_yerr[idx] = ydata, ratio, None
 
-            if null_point is not None:
-                prof_y[idx], prof_yerr[idx] = cls._correct_null_point(prof_x[idx], prof_y[idx], prof_yerr[idx], null_point)                
+            if unit_point is not None:
+                prof_y[idx], prof_yerr[idx] \
+                    = cls._correct_unit_point(prof_x[idx], prof_y[idx],
+                                              prof_yerr[idx], unit_point)
 
         return cls(prof_x, prof_y, prof_yerr, **kwcopy)
