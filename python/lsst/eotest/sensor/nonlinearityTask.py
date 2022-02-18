@@ -26,8 +26,8 @@ class NonlinearityTask(pipeBase.Task):
     @pipeBase.timeMethod
     def run(self, sensor_id, detrespfile, gains,
             fit_range=(0., 9e4),
-            nprofile_bins=10,
-            null_point=0.,
+            nprofile_bins=100,
+            unit_point=None,
             outputfile=None,
             plotfile=None,
             spline_ext_method=0,
