@@ -290,8 +290,8 @@ class NonlinearityCorrection:
         detresp : `DetectorResponse`
             An object with the detector response calculated from flat-pair files
 
-        gains : `array` or `None`
-            Array with amplifier by amplifer gains
+        gains : `dict`
+            Dictionary with amp gains keyed by amp number.
 
 
         Keywords
