@@ -70,7 +70,7 @@ class NonlinearityTask(pipeBase.Task):
         self.detrespfile = detrespfile
         self.fit_range = fit_range
         self.nprofile_bins = nprofile_bins
-        self.null_point = null_point
+        self.unit_point = unit_point
         self.detresp = DetectorResponse(detrespfile)
 
         kw_ctor = {}
@@ -83,7 +83,7 @@ class NonlinearityTask(pipeBase.Task):
                                                                    gains,
                                                                    fit_range=self.fit_range,
                                                                    nprofile_bins=self.nprofile_bins,
-                                                                   null_point=self.null_point,
+                                                                   unit_point=self.unit_point,
                                                                    **kw_ctor)
 
         if outputfile is not None:
