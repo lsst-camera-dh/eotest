@@ -35,7 +35,8 @@ class NonlinearityCorrectionTestCase(unittest.TestCase):
         """Run the NonlinearityTask"""
         task = NonlinearityTask()
         sensorid = 'RTM-022'
-        task.run(sensorid, _detrespfile, outputfile=self.fits_file, plotfile=None)
+        gains = {amp: 1 for amp in range(1, 17)}
+        task.run(sensorid, _detrespfile, gains, outputfile=self.fits_file, plotfile=None)
 
         nlc = NonlinearityCorrection.create_from_fits_file(self.fits_file, s=None, ext=0)
         
