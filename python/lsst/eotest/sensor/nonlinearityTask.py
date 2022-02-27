@@ -24,10 +24,10 @@ class NonlinearityTask(pipeBase.Task):
     _DefaultName = "NonlinearityTask"
 
     @pipeBase.timeMethod
-    def run(self, sensor_id, detrespfile,
+    def run(self, sensor_id, detrespfile, gains,
             fit_range=(0., 9e4),
-            nprofile_bins=10,
-            null_point=0.,
+            nprofile_bins=100,
+            unit_point=None,
             outputfile=None,
             plotfile=None,
             spline_ext_method=0,
@@ -40,6 +40,8 @@ class NonlinearityTask(pipeBase.Task):
             The name of the CCD we are analyzing
         detrespfile : `str`
             The detector response file, produced by `FlatPairTask`
+        gains : `dict`
+            Dictionary of gains keyed by amp number.
         fit_range : `tuple`
             The range (in e-) over which to fit the splines
         nprofile_bins : `int`
@@ -68,7 +70,7 @@ class NonlinearityTask(pipeBase.Task):
         self.detrespfile = detrespfile
         self.fit_range = fit_range
         self.nprofile_bins = nprofile_bins
-        self.null_point = null_point
+        self.unit_point = unit_point
         self.detresp = DetectorResponse(detrespfile)
 
         kw_ctor = {}
@@ -78,10 +80,10 @@ class NonlinearityTask(pipeBase.Task):
             kw_ctor['s'] = spline_s_factor
 
         self.nlc = NonlinearityCorrection.create_from_det_response(self.detresp,
-                                                                   None,
+                                                                   gains,
                                                                    fit_range=self.fit_range,
                                                                    nprofile_bins=self.nprofile_bins,
-                                                                   null_point=self.null_point,
+                                                                   unit_point=self.unit_point,
                                                                    **kw_ctor)
 
         if outputfile is not None:
