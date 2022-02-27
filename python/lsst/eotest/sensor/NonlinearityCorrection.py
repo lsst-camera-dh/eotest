@@ -2,6 +2,7 @@
 Code to apply non-linearity correction.
 """
 import copy
+import warnings
 import numpy as np
 
 class NonlinearityCorrection:
@@ -80,5 +81,8 @@ class NonlinearityCorrection:
             ratio = slope*xdata/ydata
             index = np.where((adu_range[0] < ydata) & (ydata < adu_range[1])
                              & (xdata < xdata[ypeak_index]))
-            params[amp] = np.polyfit(np.log(ydata[index]), ratio[index], order)
+            with warnings.catch_warnings():
+                warnings.simplefilter('ignore')
+                params[amp] = np.polyfit(np.log(ydata[index]), ratio[index],
+                                         order)
         return cls(params)
