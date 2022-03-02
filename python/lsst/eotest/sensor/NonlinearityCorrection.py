@@ -36,7 +36,8 @@ class NonlinearityCorrection:
 
     @classmethod
     def create_from_det_response(cls, detresp, gains, order=20,
-                                 fit_range=(100, 3e4), adu_range=(100, 1.1e5)):
+                                 fit_range=(100, 3e4), adu_range=(100, 1e5),
+                                 max_ratio_dev=0.02):
         """
         Create a NonlinearityCorrection object from a DetectorResponse file
 
@@ -55,9 +56,12 @@ class NonlinearityCorrection:
         fit_range : (float, float) [(100, 3e4)]
             Range in e- over which to fit the linear model to the
             measured signal vs flux data.
-        adu_range : (float, float) [(100, 1.1e5)]
+        adu_range : (float, float) [(100, 1e5)]
             Range in ADU over which to fit the polynomial model of
             the nonlinear correction.
+        max_ratio_dev : float [0.02]
+            Maximum deviation from unity for fitting the
+            uncorrected/corrected signal level vs log(corrected signal)
 
         Returns
         -------
@@ -70,8 +74,6 @@ class NonlinearityCorrection:
             ypeak_index = np.argmax(ydata)
             index = np.where((fit_range[0] < ydata) & (ydata < fit_range[1])
                              & (xdata < xdata[ypeak_index]))
-            # Convert to ADU.
-            ydata /= gains[amp]
             # Fit linear model with zero y-intercept.
             slope = len(ydata[index])/np.sum(xdata[index]/ydata[index])
             # Fit a power-law to the ratio of model to measured
@@ -79,8 +81,13 @@ class NonlinearityCorrection:
             # restricting to data below the location of the peak
             # signal.
             ratio = slope*xdata/ydata
+            # Convert to ADU.
+            ydata /= gains[amp]
+            # Restrict the range of measured signal to fit and avoid
+            # deviations from unity > max_ratio_dev.
             index = np.where((adu_range[0] < ydata) & (ydata < adu_range[1])
-                             & (xdata < xdata[ypeak_index]))
+                             & (1 - max_ratio_dev < ratio)
+                             & (ratio < 1 + max_ratio_dev))
             with warnings.catch_warnings():
                 warnings.simplefilter('ignore')
                 params[amp] = np.polyfit(np.log(ydata[index]), ratio[index],
