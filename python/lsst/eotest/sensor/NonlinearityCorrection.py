@@ -75,7 +75,8 @@ class NonlinearityCorrection:
             index = np.where((fit_range[0] < ydata) & (ydata < fit_range[1])
                              & (xdata < xdata[ypeak_index]))
             # Fit linear model with zero y-intercept.
-            slope = len(ydata[index])/np.sum(xdata[index]/ydata[index])
+            slope = np.sqrt(sum(ydata[index]**2/xdata[index])
+                            /sum(xdata[index]))
             # Fit a power-law to the ratio of model to measured
             # signals as a function of the log of the measured signal,
             # restricting to data below the location of the peak
