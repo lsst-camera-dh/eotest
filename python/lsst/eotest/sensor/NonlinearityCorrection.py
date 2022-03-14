@@ -19,7 +19,7 @@ class NonlinearityCorrection:
     linear fit (with zero y-intercept) to the measured signal vs
     incident flux data.
     """
-    def __init__(self, params):
+    def __init__(self, params, fitted_range):
         """
         Parameters
         ----------
@@ -28,11 +28,27 @@ class NonlinearityCorrection:
            by amp number.
         """
         self.params = params
+        self.fitted_range = fitted_range
 
     def __call__(self, amp, adu):
         """Apply the non-linearity correction to the specified amp."""
         func = np.poly1d(self.params[amp])
-        return func(np.log(adu))*adu
+        adu_bounds = self.fitted_range[amp]
+        if not isinstance(adu, np.ndarray):
+            # Consider single adu values, applying adu_bounds to
+            # avoid extrapolaton.
+            if adu < adu_bounds[0]:
+                ratio = func(np.log(adu_bounds[0]))
+            elif adu > adu_bounds[1]:
+                ratio = func(np.log(adu_bounds[1]))
+            else:
+                ratio = func(np.log(adu))
+            return ratio*adu
+        # Consider numpy arrays
+        adu_tmp = copy.copy(adu)
+        adu_tmp[np.where(adu_tmp < adu_bounds[0])] = adu_bounds[0]
+        adu_tmp[np.where(adu_tmp > adu_bounds[1])] = adu_bounds[1]
+        return func(np.log(adu_tmp))*adu
 
     @classmethod
     def create_from_det_response(cls, detresp, gains, order=20,
@@ -68,6 +84,7 @@ class NonlinearityCorrection:
         NonlinearityCorrection
         """
         params = dict()
+        fitted_range = dict()
         xdata = detresp.flux
         for amp, measured_signal in detresp.Ne.items():
             ydata = copy.copy(measured_signal)
@@ -93,4 +110,5 @@ class NonlinearityCorrection:
                 warnings.simplefilter('ignore')
                 params[amp] = np.polyfit(np.log(ydata[index]), ratio[index],
                                          order)
-        return cls(params)
+            fitted_range[amp] = min(ydata[index]), max(ydata[index])
+        return cls(params, fitted_range)
