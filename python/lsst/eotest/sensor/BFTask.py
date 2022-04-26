@@ -202,9 +202,12 @@ class BFTask(pipeBase.Task):
             results.add_seg_result(amp, 'BF_YCORR', BFResults[amp][2][meanidx])
             results.add_seg_result(amp, 'BF_YCORR_ERR', BFResults[amp][3][meanidx])
             results.add_seg_result(amp, 'BF_MEAN', BFResults[amp][4][meanidx])
-            slopex, slopex_err, slopey, slopey_err \
-                = self.fit_slopes(BFResults[amp][0], BFResults[amp][4],
-                                  BFResults[amp][10], adu_max)
+            try:
+                slopex, slopex_err, slopey, slopey_err \
+                    = self.fit_slopes(BFResults[amp][0], BFResults[amp][4],
+                                      BFResults[amp][10], adu_max)
+            except ValueError:
+                slopex, slopex_err, slopey, slopey_err = 0, 0, 0, 0
             results.add_seg_result(amp, 'BF_SLOPEX', slopex)
             results.add_seg_result(amp, 'BF_SLOPEX_ERR', slopex_err)
             results.add_seg_result(amp, 'BF_SLOPEY', slopey)
