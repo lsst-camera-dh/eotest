@@ -60,9 +60,14 @@ class MaskedCCD(dict):
             self.setAllMasks()
         self.bias_frame = None
         self.ccd_pcas = None
-        if bias_frame == 'rowcol':
+        self.bias_method = None
+        if isinstance(bias_frame, (tuple, list)) and bias_frame[0] == 'rowcol':
             # Use parallel+serial overscan model to do bias subtraction.
-            self.bias_frame = 'rowcol'
+            # The second element of bias_frame should be the superbias file
+            # for this CCD.
+            self.bias_method = 'rowcol'
+            self.bias_frame = (MaskedCCD(bias_frame[1], all_amps=all_amps)
+                               if bias_frame[1] is not None else None)
         elif bias_frame is not None:
             if isinstance(bias_frame, MaskedCCD):
                 self.bias_frame = bias_frame
@@ -169,35 +174,43 @@ class MaskedCCD(dict):
 
 
     def bias_image_using_overscan(self, amp, overscan=None, **kwargs):
-        """
-        Generate a bias image containing offset values calculated from
-        bias(), bias_row(), bias_func() or bias_spline(). The default bias method
-        is set to bias_row() in image_utils.py. Keyword arguments can be passed
-        depending on which bias method is used.
+        """Generate a bias image containing offset values calculated from
+        bias(), bias_row(), bias_func() or bias_spline(). The default
+        bias method is set to bias_row() in image_utils.py. Keyword
+        arguments can be passed depending on which bias method is
+        used.
 
         Keyword Arguments:
-        fit_order: The order of the polynomial. This only needs to be specified when
-            using the 'func' method. The default is: 1.
-        k: The degree of the spline fit. This only needs to be specified when using
-            the 'spline' method. The default is: 3.
-        s: The amount of smoothing to be applied to the fit. This only needs to be
-            specified when using the 'spline' method. The default is: 18000.
-        t: The number of knots. If None, finds the number of knots to use for a given
-            smoothing factor, s. This only needs to be specified when using the 'spline'
-            method. The default is: None.
+        fit_order: The order of the polynomial. This only needs to be
+            specified when using the 'func' method. The default is: 1.
+        k: The degree of the spline fit. This only needs to be specified
+           when using the 'spline' method. The default is: 3.
+        s: The amount of smoothing to be applied to the fit. This only needs
+           to be specified when using the 'spline' method.
+           The default is: 18000.
+        t: The number of knots. If None, finds the number of knots to use
+           for a given smoothing factor, s. This only needs to be specified
+           when using the 'spline' method. The default is: None.
         """
         if overscan is None:
             overscan = self.amp_geom.serial_overscan
         try:
             if 'bias_method' in kwargs:
                 if kwargs['bias_method'] == 'rowcol':
-                    serial_overscan   = self.amp_geom.serial_overscan
+                    serial_overscan = self.amp_geom.serial_overscan
                     parallel_overscan = self.amp_geom.parallel_overscan
-                    parallel_bbox = lsst.geom.Box2I(lsst.geom.Point2I(0, \
-                                                    parallel_overscan.getMin().y), parallel_overscan.getMax())
-                    return imutils.bias_image_rowcol(self._deep_copy(amp), \
-                                                     serial_overscan=serial_overscan, parallel_overscan=parallel_bbox, **kwargs)
-            return imutils.bias_image(self._deep_copy(amp), overscan=overscan, **kwargs)
+                    parallel_bbox = lsst.geom.Box2I(
+                        lsst.geom.Point2I(0, parallel_overscan.getMin().y),
+                        parallel_overscan.getMax())
+                    bias_image = imutils.bias_image_rowcol(
+                        self._deep_copy(amp),
+                        serial_overscan=serial_overscan,
+                        parallel_overscan=parallel_bbox, **kwargs)
+                    if self.bias_frame is not None:
+                        bias_image += self.bias_frame[amp].getImage()
+                    return bias_image
+            return imutils.bias_image(self._deep_copy(amp), overscan=overscan,
+                                      **kwargs)
         except pexExcept.RuntimeError as eobj:
             raise MaskedCCDBiasImageException("DM stack error generating bias "
                                               + "image from overscan region:\n"
@@ -207,25 +220,33 @@ class MaskedCCD(dict):
         return self[amp].Factory(self[amp], deep=True)
 
     def bias_image(self, amp, overscan=None, **kwargs):
-        """
-        Use separately stored metadata to determine file-specified
+        """Use separately stored metadata to determine file-specified
         overscan region. If bias_frame is not given, then calculate
-        the bias image using bias(), bias_row(), bias_func() or bias_spline().
-        The default bias method is set to bias_row() in image_utils.py.
-        Keyword arguments can be passed depending on which bias method is used.
+        the bias image using bias(), bias_row(), bias_func() or
+        bias_spline().  The default bias method is set to bias_row()
+        in image_utils.py.  Keyword arguments can be passed depending
+        on which bias method is used.
 
         Keyword Arguments:
-        fit_order: The order of the polynomial. This only needs to be specified when
-            using the 'func' method. The default is: 1.
-        k: The degree of the spline fit. This only needs to be specified when using
-            the 'spline' method. The default is: 3.
-        s: The amount of smoothing to be applied to the fit. This only needs to be
-            specified when using the 'spline' method. The default is: 18000.
-        t: The number of knots. If None, finds the number of knots to use for a given
-            smoothing factor, s. This only needs to be specified when using the 'spline'
-            method. The default is: None.
+
+        fit_order: The order of the polynomial. This only needs to be
+            specified when using the 'func' method. The default is: 1.
+
+        k: The degree of the spline fit. This only needs to be
+            specified when using the 'spline' method. The default is:
+            3.
+
+        s: The amount of smoothing to be applied to the fit. This only
+            needs to be specified when using the 'spline' method. The
+            default is: 18000.
+
+        t: The number of knots. If None, finds the number of knots to
+            use for a given smoothing factor, s. This only needs to be
+            specified when using the 'spline' method. The default is:
+            None.
+
         """
-        if self.bias_frame != 'rowcol' and self.bias_frame is not None:
+        if self.bias_method != 'rowcol' and self.bias_frame is not None:
             #
             # Use bias frame, if available, instead of overscan region
             #
@@ -237,27 +258,36 @@ class MaskedCCD(dict):
     def bias_subtracted_image(self, amp, overscan=None,
                               max_pca_reduced_chisq=None,
                               **kwargs):
-        """
-        Subtract a bias image to correct for the offset. A bias correction is also
-        applied if a base_frame is passed. The bias image with the offset values is
-        generated using either of the bias(), bias_row(), bias_func() or bias_spline()
-        methods from image_utils.py. The default bias method is set to bias_row().
-        Keyword arguments can be passed depending on which bias method is used.
+        """Subtract a bias image to correct for the offset. A bias
+        correction is also applied if a base_frame is passed. The bias
+        image with the offset values is generated using either of the
+        bias(), bias_row(), bias_func() or bias_spline() methods from
+        image_utils.py. The default bias method is set to bias_row().
+        Keyword arguments can be passed depending on which bias method
+        is used.
 
         Keyword Arguments:
-        fit_order: The order of the polynomial. This only needs to be specified when
-            using the 'func' method. The default is: 1.
-        k: The degree of the spline fit. This only needs to be specified when using
-            the 'spline' method. The default is: 3.
-        s: The amount of smoothing to be applied to the fit. This only needs to be
-            specified when using the 'spline' method. The default is: 18000.
-        t: The number of knots. If None, finds the number of knots to use for a given
-            smoothing factor, s. This only needs to be specified when using the 'spline'
-            method. The default is: None.
+
+        fit_order: The order of the polynomial. This only needs to be
+            specified when using the 'func' method. The default is: 1.
+
+        k: The degree of the spline fit. This only needs to be
+            specified when using the 'spline' method. The default is:
+            3.
+
+        s: The amount of smoothing to be applied to the fit. This only
+            needs to be specified when using the 'spline' method. The
+            default is: 18000.
+
+        t: The number of knots. If None, finds the number of knots to
+            use for a given smoothing factor, s. This only needs to be
+            specified when using the 'spline' method. The default is:
+            None.
+
         """
         # Make a local copy to process and return.
         my_image = self._deep_copy(amp)
-        if self.bias_frame == 'rowcol':
+        if self.bias_method == 'rowcol':
             # This overrides any bias_method options.
             my_image -= self.bias_image(amp, bias_method='rowcol')
         elif self.bias_frame is not None:
