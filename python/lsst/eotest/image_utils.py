@@ -500,7 +500,11 @@ def unbias_and_trim(im, overscan, imaging=None, dxmin=5, dxmax=2, bias_method='r
     if bias_method == 'rowcol':
         serial_overscan = kwargs['serial_overscan']
         parallel_overscan = kwargs['parallel_overscan']
-        im -= bias_image_rowcol(im, serial_overscan, parallel_overscan)
+        parallel_bbox = lsst.geom.Box2I(
+            lsst.geom.Point2I(0, parallel_overscan.getMin().y),
+            parallel_overscan.getMax())
+        im -= bias_image_rowcol(im, serial_overscan=serial_overscan,
+                                parallel_overscan=parallel_bbox)
     else:
         im -= bias_image(im, overscan, dxmin=dxmin, dxmax=dxmax,
                          bias_method=bias_method, **kwargs)
