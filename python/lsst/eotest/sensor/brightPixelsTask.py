@@ -55,7 +55,7 @@ class BrightPixelsTask(pipeBase.Task):
                                                      imutils.dm_hdu(amp))
         medfile = os.path.join(self.config.output_dir,
                                '%s_median_dark_bp.fits' % sensor_id)
-        if not isinstance(bias_frame, str):
+        if not isinstance(bias_frame, str) and bias_frame[0] != 'rowcol':
             # Assume `bias_frame` is a tuple containing the
             # CCD_bias_PCA filenames so do a bias correction on the
             # median image using that model so that the FITS file

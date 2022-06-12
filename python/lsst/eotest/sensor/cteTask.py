@@ -16,6 +16,7 @@ import lsst.afw.image as afwImage
 import lsst.afw.math as afwMath
 import lsst.pex.config as pexConfig
 import lsst.pipe.base as pipeBase
+import lsst.geom
 
 def pca_bias_subtracted_image(image, bias_frame, amp):
     my_image = image.Factory(image, deep=True)
@@ -46,17 +47,28 @@ def superflat(files, bias_frame=None, outfile='superflat.fits', bitpix=None,
     use_pca_bias = os.environ.get('LCATR_USE_PCA_BIAS_FIT', 'True') == 'True'
     # Get overscan region.
     amp_geom = makeAmplifierGeometry(files[0])
-    overscan = amp_geom.serial_overscan
+    serial_overscan = amp_geom.serial_overscan
+    parallel_overscan = amp_geom.parallel_overscan
+    parallel_overscan = lsst.geom.Box2I(
+        lsst.geom.Point2I(0, parallel_overscan.getMin().y),
+        parallel_overscan.getMax())
+    superbias = None
     output_images = dict()
+    if isinstance(bias_frame, (tuple, list)) and bias_frame[0] == 'rowcol':
+        use_rowcol = True
+        if bias_frame[1] is not None:
+            superbias = fits.open(bias_frame[1])
     for amp in imutils.allAmps(files[0]):
         images = []
         for infile in files:
             image = afwImage.ImageF(infile, imutils.dm_hdu(amp))
             if bias_subtract:
-                if bias_frame == 'rowcol':
+                if use_rowcol:
                     image -= imutils\
-                        .bias_image_rowcol(image, amp_geom.serial_overscan,
-                                           amp_geom.parallel_overscan)
+                        .bias_image_rowcol(image, serial_overscan,
+                                           parallel_overscan)
+                    if superbias is not None:
+                        image.array -= superbias[amp].data
                 elif bias_frame:
                     if use_pca_bias:
                         image = pca_bias_subtracted_image(image, bias_frame,
@@ -65,15 +77,19 @@ def superflat(files, bias_frame=None, outfile='superflat.fits', bitpix=None,
                         bias_image = afwImage.ImageF(bias_frame,
                                                      imutils.dm_hdu(amp))
                         image = bias_subtracted_image(image, bias_image,
-                                                      overscan, bias_method)
+                                                      serial_overscan,
+                                                      bias_method)
                 else:
-                    image -= imutils.bias_image(im=image, overscan=overscan,
+                    image -= imutils.bias_image(im=image,
+                                                overscan=serial_overscan,
                                                 bias_method=bias_method)
             images.append(image)
         if lsst.afw.__version__.startswith('12.0'):
             images = afwImage.vectorImageF(images)
         output_images[amp] = afwMath.statisticsStack(images, afwMath.MEDIAN)
     imutils.writeFits(output_images, outfile, files[0])
+    if superbias is not None:
+        superbias.close()
     return outfile
 
 
