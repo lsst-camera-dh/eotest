@@ -45,7 +45,8 @@ def superflat(files, bias_frame=None, outfile='superflat.fits', bitpix=None,
     and median-ing them together.
     """
     use_pca_bias = os.environ.get('LCATR_USE_PCA_BIAS_FIT', 'True') == 'True'
-    # Get overscan region.
+    use_rowcol = False
+    # Get overscan regions.
     amp_geom = makeAmplifierGeometry(files[0])
     serial_overscan = amp_geom.serial_overscan
     parallel_overscan = amp_geom.parallel_overscan
