@@ -1,17 +1,11 @@
 """
 Code to apply non-linearity correction.
 """
-from __future__ import print_function
-
 import copy
-
 import numpy as np
-
+from astropy.io import fits
 import scipy.optimize
 from scipy.interpolate import UnivariateSpline
-
-import astropy.io.fits as fits
-
 from lsst.eotest.fitsTools import fitsTableFactory, fitsWriteto
 
 
@@ -21,9 +15,9 @@ def lin_func(pars, xvals):
 
 def chi2_model(pars, xvals, yvals):
     """Return the chi2 w.r.t. the model"""
-    return (yvals - lin_func(pars, xvals))/np.sqrt(yvals)
+    return (yvals - lin_func(pars, xvals))/np.sqrt(lin_func(pars, xvals))
 
-def make_profile_hist(xbin_edges, xdata, ydata, **kwargs):
+def make_profile_hist(xbin_edges, xdata, ydata, yerrs=None, stderr=False):
     """Build a profile historgram
 
     Parameters
@@ -34,13 +28,9 @@ def make_profile_hist(xbin_edges, xdata, ydata, **kwargs):
         The x-axis data
     ydata : `array`
         The y-axis data
-
-    Keywords
-    --------
-    yerrs :  `array`
+    yerrs :  `array` [None]
         The errors on the y-axis points
-
-    stderr : `bool`
+    stderr : `bool` [False]
         Set error bars to standard error instead of RMS
 
     Returns
@@ -52,9 +42,6 @@ def make_profile_hist(xbin_edges, xdata, ydata, **kwargs):
     y_errs : `array`
         The y-bin errors
     """
-    yerrs = kwargs.get('yerrs', None)
-    stderr = kwargs.get('stderr', False)
-
     nx = len(xbin_edges) - 1
     x_vals = (xbin_edges[0:-1] + xbin_edges[1:])/2.
     y_vals = np.ndarray((nx))
@@ -89,50 +76,44 @@ class NonlinearityCorrection:
 
     corrected_adu = nlc(amp, uncorrected_adu)
 
-    This is implemented as a spline interpolation for each of the 16 amplifiers on a CCD
+    This is implemented as a spline interpolation for each of the
+    amplifiers on a CCD
     """
-    def __init__(self, prof_x, prof_y, prof_yerr, **kwargs):
-        """C'tor
-
+    def __init__(self, prof_x, prof_y, prof_yerr, s=1e-6, ext=3):
+        """
         Parameters
         ----------
-        prof_x : `array`
-            Array of 16 x nbins values for the x-axis of the correction function
+        prof_x : dict
+            Dictionary of nbins values for the x-axis of the correction function
         prof_y : `array`
-            Array of 16 x nbins values for the y-axis of the correction function
+            Dictionary of nbins values for the y-axis of the correction function
         prof_yerr : `array`
-            Array of 16 x nbins values for the y-axis of the correction function
-
-        Keywords
-        --------
-        Passed to UnivariateSpline c'tor
-
+            Dictionary of nbins values for the y-axis errors of the correction
+            function
+        s : float [1e-6]
+            Smoothing parameter for UnivariateSpline
+        ext : int [3]
+            Extrapolation mode of UnivariateSpline, ext=3 returns the boundary
+            value.
         """
         self._prof_x = prof_x
         self._prof_y = prof_y
         self._prof_yerr = prof_yerr
-        self._nxbins = self._prof_x.shape[1]
-
-        kwcopy = kwargs.copy()
-        kwcopy.setdefault('s', 1e-6)
-        kwcopy.setdefault('ext', 3)
+        self._nxbins = len(list(prof_x.values())[0])
 
         self._spline_dict = {}
-        for iamp in range(16):
-            idx_sort = np.argsort(self._prof_x[iamp])
-            profile_x = self._prof_x[iamp][idx_sort]
-            profile_y = self._prof_y[iamp][idx_sort]
+        for amp in prof_x:
+            idx_sort = np.argsort(self._prof_x[amp])
+            profile_x = self._prof_x[amp][idx_sort]
+            profile_y = self._prof_y[amp][idx_sort]
             if self._prof_yerr is not None:
-                profile_yerr = self._prof_yerr[iamp][idx_sort]
+                profile_yerr = self._prof_yerr[amp][idx_sort]
                 mask = profile_yerr >= 0.
             else:
                 mask = np.ones(profile_x.shape)
-            try:
-                self._spline_dict[iamp] = UnivariateSpline(profile_x[mask],
-                                                           profile_y[mask],
-                                                           **kwcopy)
-            except Exception:
-                self._spline_dict[iamp] = lambda x : x
+            self._spline_dict[amp] = UnivariateSpline(profile_x[mask],
+                                                      profile_y[mask],
+                                                      s=s, ext=ext)
 
     def __getitem__(self, amp):
         """Get the function that corrects a particular amp"""
@@ -140,36 +121,38 @@ class NonlinearityCorrection:
 
     def __call__(self, amp, adu):
         """Apply the non-linearity correction to a particular amp"""
-        return adu*(1 + self._spline_dict[amp-1](adu))
-
+        return adu*self._spline_dict[amp](adu)
 
     def write_to_fits(self, fits_file):
         """Write this object to a FITS file"""
         output = fits.HDUList()
         output.append(fits.PrimaryHDU())
 
-        col_prof_x = fits.Column(name='prof_x', format='%iE' % self._nxbins,
-                                 unit='ADU', array=self._prof_x)
-        col_prof_y = fits.Column(name='prof_y_corr', format='%iE' % self._nxbins,
-                                 unit='ADU', array=self._prof_y)
-        col_prof_yerr = fits.Column(name='prof_yerr', format='%iE' % self._nxbins,
-                                    unit='ADU', array=self._prof_yerr)
+        col_amps = fits.Column(name='amps', format='J', unit='None',
+                               array= np.array(list(self._prof_x.keys())))
 
-        fits_cols = [col_prof_x, col_prof_y, col_prof_yerr]
+        def convert_to_array(profile_dict):
+            return np.array([_ for _ in profile_dict.values()])
+
+        col_prof_x = fits.Column(name='prof_x', format='%iE' % self._nxbins,
+                                 unit='ADU', array=convert_to_array(self._prof_x))
+        col_prof_y = fits.Column(name='prof_y_corr', format='%iE' % self._nxbins,
+                                 unit='ADU', array=convert_to_array(self._prof_y))
+        col_prof_yerr = fits.Column(name='prof_yerr', format='%iE' % self._nxbins,
+                                    unit='ADU',
+                                    array=convert_to_array(self._prof_yerr))
+
+        fits_cols = [col_amps, col_prof_x, col_prof_y, col_prof_yerr]
         hdu = fitsTableFactory(fits_cols)
         hdu.name = 'nonlin'
         output.append(hdu)
 
         fitsWriteto(output, fits_file, overwrite=True)
+        return output
 
-
-    def save_plots(self, plotfile, **kwargs):
+    def save_plots(self, plotfile=None, ymin=None, ymax=None, figsize=(15, 10)):
         """Save plots showing the nonlinearity correction"""
         import matplotlib.pyplot as plt
-        ymin = kwargs.get('ymin', None)
-        ymax = kwargs.get('ymax', None)
-
-        figsize = kwargs.get('figsize', (15, 10))
 
         fig, axs = plt.subplots(nrows=4, ncols=4, figsize=figsize)
         fig.suptitle("Nonlinearity")
@@ -184,60 +167,66 @@ class NonlinearityCorrection:
             ax_col = axs[3, i_col]
             ax_col.set_xlabel(xlabel)
 
-        iamp = 0
+        amp = 1
         for i_row in range(4):
             for i_col in range(4):
                 axes = axs[i_row, i_col]
                 if ymin is not None or ymax is not None:
                     axes.set_ylim(ymin, ymax)
-                mask = self._prof_yerr[iamp] >= 0.
-                x_masked = self._prof_x[iamp][mask]
+                mask = self._prof_yerr[amp] >= 0.
+                x_masked = self._prof_x[amp][mask]
                 xline = np.linspace(1., x_masked.max(), 1001)
-                model = self._spline_dict[iamp](xline)
-                axes.errorbar(x_masked, self._prof_y[iamp][mask],
-                              yerr=self._prof_yerr[iamp][mask], fmt='.')
+                model = self._spline_dict[amp](xline)
+                axes.errorbar(x_masked, self._prof_y[amp][mask],
+                              yerr=self._prof_yerr[amp][mask], fmt='.')
                 axes.plot(xline, model, 'r-')
-                iamp += 1
+                amp += 1
         if plotfile is None:
             fig.show()
         else:
             fig.savefig(plotfile)
 
-
     @classmethod
-    def create_from_table(cls, table, **kwargs):
+    def create_from_table(cls, table, s=1e-6, ext=3):
         """Create a NonlinearityCorrection object from a fits file
 
         Parameters
         ----------
         table : `Table`
             The table data used to build the nonlinearity correction
-
-        kwargs : passed to UnivariateSpline Constructor
+        s : float [1e-6]
+            Smoothing parameter for UnivariateSpline
+        ext : int [3]
+            Extrapolation mode of UniveriateSpline. ext=3 returns the boundary
+            value
 
         Returns
         -------
         nl : `NonlinearityCorrection`
             The requested object
         """
-        prof_x = table.data['prof_x']
-        prof_y = table.data['prof_y_corr']
-        prof_yerr = table.data['prof_yerr']
-        return cls(prof_x, prof_y, prof_yerr, **kwargs)
+        amps = table.data['amps']
+        prof_x = dict(zip(amps, table.data['prof_x']))
+        prof_y = dict(zip(amps, table.data['prof_y_corr']))
+        prof_yerr = dict(zip(amps, table.data['prof_yerr']))
+        return cls(prof_x, prof_y, prof_yerr, s=s, ext=ext)
 
     @classmethod
-    def create_from_fits_file(cls, fits_file, hdu_name='nonlin', **kwargs):
+    def create_from_fits_file(cls, fits_file, hdu_name='nonlin', s=1e-6,
+                              ext=3):
         """Create a NonlinearityCorrection object from a fits file
 
         Parameters
         ----------
         fits_file : `str`
             The file with the data used to build the nonlinearity correction
-
-        hdu_name : `str`
+        hdu_name : `str` ['nonlin']
             The name of the HDU with the nonlinearity correction data
-
-        kwargs : passed to UnivariateSpline Constructor
+        s : float [1e-6]
+            Smoothing parameter for UnivariateSpline
+        ext : int [3]
+            Extrapolation mode of UniveriateSpline. ext=3 returns the boundary
+            value
 
         Returns
         -------
@@ -246,14 +235,13 @@ class NonlinearityCorrection:
         """
         hdulist = fits.open(fits_file)
         table = hdulist[hdu_name]
-        nl = cls.create_from_table(table, **kwargs)
+        nl = cls.create_from_table(table, s=s, ext=ext)
         hdulist.close()
         return nl
 
-
     @staticmethod
-    def _correct_null_point(profile_x, profile_y, profile_yerr, null_point):
-        """Force the spline to go through zero at a particular x-xvalue
+    def _correct_fixed_point(profile_x, profile_y, profile_yerr, fixed_point):
+        """Force the spline to go through one at a particular x-value
 
         Parameters
         ----------
@@ -263,8 +251,8 @@ class NonlinearityCorrection:
             The b-bin values
         profile_yerr : `array`
             The y-bin errors
-        null_point : `float`
-            The x-value where the spline should go through zero       
+        fixed_point : `float`
+            The x-value where the spline should go through one
 
         Returns
         -------
@@ -274,88 +262,101 @@ class NonlinearityCorrection:
             The adjusted y-errors
         """
         uni_spline = UnivariateSpline(profile_x, profile_y)
-        offset = uni_spline(null_point)
+        y_value_0 = uni_spline(fixed_point)
 
-        y_vals_corr = ((1 + profile_y) / (1 + offset)) - 1.
+        y_vals_corr = profile_y/y_value_0
         y_errs_corr = profile_yerr
         return y_vals_corr, y_errs_corr
 
     @classmethod
-    def create_from_det_response(cls, detresp, gains, **kwargs):
+    def create_from_det_response(cls, detresp, gains, fit_range=(0, 9e4),
+                                 nprofile_bins=10, fixed_point=None,
+                                 max_ratio_dev=0.02, s=1e-6, ext=3):
         """Create a NonlinearityCorrection object DetectorResponse FITS file
 
-        Note that the DetectorResponse files typically store the signal in electrons,
-        but we want a correction that works on ADU, so we have to remove the gains.
+        Note that the DetectorResponse files typically store the
+        signal in electrons, but we want a correction that works on
+        ADU, so we have to remove the gains.
 
         Parameters
         ----------
         detresp : `DetectorResponse`
             An object with the detector response calculated from flat-pair files
-
-        gains : `array` or `None`
-            Array with amplifier by amplifer gains
-
-
-        Keywords
-        --------
-        fit_range : `tuple`
-            The range over which to define the non-linearity, defaults to (0., 9e4)
-
-        nprofile_bins : `int` or `None`
-             The number of bins to use in the profile, defaults to 10
-             If `None` then this will use all of the data point rather that making
-             a profile histogram
-
-        null_point : `float` or `None`
+        gains : `dict`
+            Dictionary with amp gains keyed by amp number.
+        fit_range : `tuple` [(0., 9e4)]
+            The range over which to define the non-linearity
+        nprofile_bins : `int` [10]
+             The number of bins to use in the profile.
+        fixed_point : `float` [None]
              X-value at which the correction should vanish, defaults to 0.
-             If `None` then this will simply use the pivot point of the fit to the data             
-
-        remaining kwargs are passed to the class c'tor
+             If `None` then this will simply use the pivot point of the fit
+             to the data
+        max_ratio_dev : float [0.02]
+             Maximum deviation from unity of ratio points to include in
+             spline fit.
+        s : float [1e-6]
+            Smoothing parameter for UnivariateSpline
+        ext : int [3]
+            Extrapolation mode of UniveriateSpline. ext=3 returns the boundary
+            value
 
         Returns
         -------
         nl : `NonlinearityCorrection`
             The requested object
+
         """
-        kwcopy = kwargs.copy()
-        fit_range = kwcopy.pop('fit_range', (0., 9e4))
-        nprofile_bins = kwcopy.pop('nprofile_bins', 10)
-        null_point = kwcopy.pop('null_point', 0,)
+        prof_x = dict()
+        prof_y = dict()
+        prof_yerr = dict()
 
-        if nprofile_bins is not None:
-            xbins = np.linspace(fit_range[0], fit_range[1], nprofile_bins+1)
-        else:
-            xbins = None
-            nprofile_bins = len(detresp.flux)
+        # For each amp, fit a linear model to the signal vs
+        # incident flux.
+        xdata = detresp.flux
+        for amp in detresp.Ne:
+            ydata = copy.copy(detresp.Ne[amp])
+            # The nominal fit_range applies to e-/pixel.  We also want
+            # to avoid fitting data past the saturation peak.
+            ypeak_index = np.argmax(ydata)
+            x_at_ypeak = xdata[ypeak_index]
+            mask = np.where((fit_range[0] < ydata) & (fit_range[1] > ydata)
+                            & (xdata < x_at_ypeak))
+            # Convert back to ADU
+            ydata /= gains[amp]
 
-        prof_x = np.ndarray((16, nprofile_bins))
-        prof_y = np.ndarray((16, nprofile_bins))
-        prof_yerr = np.ndarray((16, nprofile_bins))
-
-        for idx, amp in enumerate(detresp.Ne):
-            xdata = copy.copy(detresp.Ne[amp])
-            if gains is not None:
-                xdata /= gains[idx]
-            mask = (fit_range[0] < xdata) * (fit_range[1] > xdata)
             xdata_fit = xdata[mask]
-            ydata_fit = detresp.flux[mask]
+            ydata_fit = ydata[mask]
             mean_slope = (ydata_fit/xdata_fit).mean()
             pars = (mean_slope,)
             results = scipy.optimize.leastsq(chi2_model, pars,
                                              full_output=1,
                                              args=(xdata_fit, ydata_fit))
-            model_yvals = lin_func(results[0], xdata)
-            frac_resid = (detresp.flux - model_yvals)/model_yvals
-            frac_resid_err = 1./xdata
 
-            if xbins is not None:
-                prof_x[idx], prof_y[idx], prof_yerr[idx] = make_profile_hist(xbins, xdata, frac_resid,
-                                                                             y_errs=frac_resid_err,
-                                                                             stderr=True)
-            else:
-                prof_x[idx], prof_y[idx], prof_yerr[idx] = xdata, frac_resid, frac_resid_err
+            # Compute the ratio of the linear model to the measured
+            # signal in ADU.  This ratio would be the correction
+            # factor assuming the y-value computed from the linear fit
+            # is the desired signal.  The correction factor would then
+            # be a function of the measured signal in ydata.
+            ratio = lin_func(results[0], xdata)/ydata
 
-            if null_point is not None:
-                prof_y[idx], prof_yerr[idx] = cls._correct_null_point(prof_x[idx], prof_y[idx], prof_yerr[idx], null_point)                
+            # Avoid ratio points > +/-max_ratio_dev from unity and
+            # don't try to fit a spline past the saturation peak.
+            index = np.where((1 - max_ratio_dev < ratio)
+                             & (ratio < 1 + max_ratio_dev)
+                             & (xdata < x_at_ypeak))
+            ydata = ydata[index]
+            ratio = ratio[index]
 
-        return cls(prof_x, prof_y, prof_yerr, **kwcopy)
+            # Bin the data over the full range of signal values that
+            # pass the above cuts.
+            xbins = np.linspace(min(ydata), max(ydata), nprofile_bins + 1)
+            prof_x[amp], prof_y[amp], prof_yerr[amp] \
+                = make_profile_hist(xbins, ydata, ratio, stderr=True)
+
+            if fixed_point is not None:
+                prof_y[amp], prof_yerr[amp] \
+                    = cls._correct_fixed_point(prof_x[amp], prof_y[amp],
+                                               prof_yerr[amp], fixed_point)
+
+        return cls(prof_x, prof_y, prof_yerr, s=s, ext=ext)
