@@ -18,7 +18,7 @@ class NoiseDistributions(dict):
     def __init__(self, amps=list(range(1, 17))):
         super(NoiseDistributions, self).__init__()
         for amp in amps:
-            self[amp] = np.array((), dtype=np.float)
+            self[amp] = np.array((), dtype=float)
 
     def append(self, other):
         for amp in self:
@@ -41,7 +41,7 @@ def noise_samples(raw_image, gain, region_sampler,
 
 def noise_dists(imfile, gains, sampler, mask_files=()):
     if imfile is None:
-        return dict([(amp, np.zeros(len(sampler.xarr), dtype=np.float))
+        return dict([(amp, np.zeros(len(sampler.xarr), dtype=float))
                      for amp in imutils.allAmps()])
     ccd = MaskedCCD(imfile, mask_files=mask_files)
     my_noise_dists = NoiseDistributions(amps=list(ccd.keys()))

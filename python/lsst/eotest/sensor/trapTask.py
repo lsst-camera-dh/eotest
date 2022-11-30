@@ -11,6 +11,7 @@ from .Traps import Traps
 from .generate_mask import generate_mask
 import lsst.pex.config as pexConfig
 import lsst.pipe.base as pipeBase
+from lsst.utils.timer import timeMethod
 
 
 class TrapConfig(pexConfig.Config):
@@ -33,7 +34,7 @@ class TrapTask(pipeBase.Task):
     ConfigClass = TrapConfig
     _DefaultName = "TrapTask"
 
-    @pipeBase.timeMethod
+    @timeMethod
     def run(self, sensor_id, pocket_pumped_file, mask_files, gains,
             cycles=100, threshold=200, bias_frame=None,
             linearity_correction=None):

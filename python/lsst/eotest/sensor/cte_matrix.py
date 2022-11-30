@@ -37,7 +37,7 @@ def cte_matrix(npix, cti):
     """
     old_settings = np.seterr(invalid='ignore', under='ignore')
     # Fill CTE matrix using the exact expression
-    my_matrix = np.zeros((npix, npix), dtype=np.float)
+    my_matrix = np.zeros((npix, npix), dtype=float)
     for i in range(npix):
         jvals = np.arange(i+1)
         my_matrix[i, :i+1] = (scipy.special.binom(i, i - jvals)

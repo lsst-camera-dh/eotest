@@ -8,6 +8,7 @@ import lsst.eotest.image_utils as imutils
 from lsst.eotest.sensor.crosstalk import make_crosstalk_matrix, CrosstalkMatrix
 import lsst.pex.config as pexConfig
 import lsst.pipe.base as pipeBase
+from lsst.utils.timer import timeMethod
 
 
 class CrosstalkConfig(pexConfig.Config):
@@ -25,7 +26,7 @@ class CrosstalkTask(pipeBase.Task):
     ConfigClass = CrosstalkConfig
     _DefaultName = "CrosstalkTask"
 
-    @pipeBase.timeMethod
+    @timeMethod
     def run(self, sensor_id, xtalk_files, mask_files, system_xtalk_file=None):
         imutils.check_temperatures(xtalk_files, self.config.temp_set_point_tol,
                                    setpoint=self.config.temp_set_point,

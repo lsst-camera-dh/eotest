@@ -17,6 +17,7 @@ import lsst.afw.image as afwImage
 import lsst.afw.math as afwMath
 import lsst.pex.config as pexConfig
 import lsst.pipe.base as pipeBase
+from lsst.utils.timer import timeMethod
 from lsst.eotest.fitsTools import fitsTableFactory, fitsWriteto
 import lsst.eotest.image_utils as imutils
 from .MaskedCCD import MaskedCCDWrapper
@@ -144,7 +145,7 @@ class PtcTask(pipeBase.Task):
     ConfigClass = PtcConfig
     _DefaultName = "PtcTask"
 
-    @pipeBase.timeMethod
+    @timeMethod
     def run(self, sensor_id, infiles, mask_files, gains, binsize=1,
             bias_frame=None, flat2_finder=find_flat2,
             linearity_correction=None):
@@ -184,14 +185,14 @@ class PtcTask(pipeBase.Task):
         output.append(fits.PrimaryHDU())
         colnames = ['EXPOSURE']
         units = ['seconds']
-        columns = [np.array(exposure, dtype=np.float)]
+        columns = [np.array(exposure, dtype=float)]
         for amp in all_amps:
             colnames.extend(['AMP%02i_MEAN' % amp, 'AMP%02i_VAR' % amp,
                              'AMP%02i_DISCARD' % amp])
             units.extend(['ADU', 'ADU**2', 'pixls'])
-            columns.extend([np.array(ptc_stats[amp][0], dtype=np.float),
-                            np.array(ptc_stats[amp][1], dtype=np.float),
-                            np.array(ptc_stats[amp][2], dtype=np.integer)])
+            columns.extend([np.array(ptc_stats[amp][0], dtype=float),
+                            np.array(ptc_stats[amp][1], dtype=float),
+                            np.array(ptc_stats[amp][2], dtype=int)])
         colnames.append('SEQNUM')
         units.append('None')
         columns.append(seqnums)

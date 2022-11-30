@@ -105,7 +105,7 @@ class MaskedCCD_biasHandlingTestCase(unittest.TestCase):
         cls.bias_image = afwImage.ImageF(cls.amp_geom.full_segment)
         imarr = cls.bias_image.getArray()
         ny, nx = imarr.shape
-        yvals = np.arange(0, ny, dtype=np.float)
+        yvals = np.arange(0, ny, dtype=float)
         bias_func = BiasFunc(cls.bias_slope, cls.bias_intercept)
         for x in range(nx):
             imarr[:, x] += bias_func(yvals)
@@ -147,7 +147,7 @@ class MaskedCCD_biasHandlingTestCase(unittest.TestCase):
         bias_ccd = sim_tools.CCD(exptime=self.exptime, gain=self.gain)
         for amp in bias_ccd.segments:
             imarr = bias_ccd.segments[amp].image.getArray()
-            yvals = np.arange(0, imarr.shape[0], dtype=np.float)
+            yvals = np.arange(0, imarr.shape[0], dtype=float)
             for x in range(imarr.shape[1]):
                 imarr[:, x] += bias_func_x(x) + bias_func_y(yvals)
         bias_ccd.writeto(bias_file, bitpix=-32, compress_images=False)
@@ -157,7 +157,7 @@ class MaskedCCD_biasHandlingTestCase(unittest.TestCase):
         image_ccd = sim_tools.CCD(exptime=self.exptime, gain=self.gain)
         for amp in image_ccd.segments:
             imarr = image_ccd.segments[amp].image.getArray()
-            yvals = np.arange(0, imarr.shape[0], dtype=np.float)
+            yvals = np.arange(0, imarr.shape[0], dtype=float)
             for x in range(imarr.shape[1]):
                 imarr[:, x] +=\
                     bias_func_x(x) + bias_func_y(yvals)

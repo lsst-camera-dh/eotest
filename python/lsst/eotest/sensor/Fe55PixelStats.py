@@ -203,7 +203,7 @@ class Fe55PixelStats(object):
         dn = my_recarr['DN_sum']
         median = np.median(dn)
         #stdev = np.std(dn)
-        stdev = afwMath.makeStatistics(np.array(dn, dtype=np.float),
+        stdev = afwMath.makeStatistics(np.array(dn, dtype=float),
                                        afwMath.STDEVCLIP).getValue()
         dn_range = (median - nsig*stdev, median + nsig*stdev)
         results = np.histogram(dn, bins=bins, range=dn_range)
@@ -344,7 +344,7 @@ class Fe55PixelStats(object):
             my_recarr = self.rec_array[np.where(self.rec_array.amp == amp)]
             dn = my_recarr['DN_sum']
             median = np.median(dn)
-            stdev = afwMath.makeStatistics(np.array(dn, dtype=np.float),
+            stdev = afwMath.makeStatistics(np.array(dn, dtype=float),
                                            afwMath.STDEVCLIP).getValue()
             dn_range = (median - nsig*stdev, median + nsig*stdev)
             plt.hist(dn, histtype='step', bins=bins, range=dn_range)

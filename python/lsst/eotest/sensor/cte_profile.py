@@ -22,7 +22,7 @@ def make_estimator(pixel_values, bias):
     and the bias level.
     """
     estimator = Estimator()
-    yvals = np.array(pixel_values.flatten(), dtype=np.float)
+    yvals = np.array(pixel_values.flatten(), dtype=float)
     estimator.value = np.mean(yvals)
     poisson_variance_per_pixel = np.sum(yvals - bias.value)/float(len(yvals)**2)
     if poisson_variance_per_pixel > 0:
@@ -48,7 +48,7 @@ def bias_estimate(masked_image, amp_geom, overscans=2, nskip_last_cols=4,
         overscan = imarr[amp_geom.parallel_overscan.getMinY() + overscans:,
                          :amp_geom.parallel_overscan.getMaxX() + 1].flatten()
     bias_est = Estimator()
-    bias_stats = afwMath.makeStatistics(np.array(overscan, dtype=np.float),
+    bias_stats = afwMath.makeStatistics(np.array(overscan, dtype=float),
                                         afwMath.MEAN | afwMath.STDEV)
     bias_est.value = bias_stats.getValue(afwMath.MEAN)
     bias_est.error = bias_stats.getValue(afwMath.STDEV)/np.sqrt(len(overscan))
@@ -123,7 +123,7 @@ def cte_profile(axes, masked_image, gain, amp_geom, cti, bias_est,
     abscissa_ests = get_overscan_ests(masked_image, gain, amp_geom,
                                       bias_est=bias_est, overscans=overscans,
                                       serial=serial)
-    abscissas = np.arange(1, full_segment_max + 1, dtype=np.float)
+    abscissas = np.arange(1, full_segment_max + 1, dtype=float)
     plt.step(abscissas, abscissa_ests.values - bias_offset, where='mid',
              color=color)
     axes.errorbar(abscissas, abscissa_ests.values - bias_offset,

@@ -5,6 +5,7 @@ from __future__ import absolute_import, print_function
 import matplotlib.pyplot as plt
 import lsst.pex.config as pexConfig
 import lsst.pipe.base as pipeBase
+from lsst.utils.timer import timeMethod
 from .Fe55PixelStats import Fe55PixelStats
 
 
@@ -22,7 +23,7 @@ class Fe55CteTask(pipeBase.Task):
     ConfigClass = Fe55CteConfig
     _DefaultName = "Fe55CteTask"
 
-    @pipeBase.timeMethod
+    @timeMethod
     def run(self, sensor_id, fe55_files, mask_files, linearity_correction=None):
         "Run the Fe55 pixel asymmetry analysis"
         if self.config.direction == 'serial':

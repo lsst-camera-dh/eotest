@@ -17,6 +17,7 @@ from .read_noise import noise_dists, NoiseDistributions
 
 import lsst.pex.config as pexConfig
 import lsst.pipe.base as pipeBase
+from lsst.utils.timer import timeMethod
 
 
 def _write_read_noise_dists(outfile, Ntot, Nsys, gains, bias, sysnoise):
@@ -63,7 +64,7 @@ class ReadNoiseTask(pipeBase.Task):
     ConfigClass = ReadNoiseConfig
     _DefaultName = "ReadNoiseTask"
 
-    @pipeBase.timeMethod
+    @timeMethod
     def run(self, sensor_id, bias_files, gains, system_noise_files=None,
             system_noise=None, mask_files=(), use_overscan=False):
         all_amps = imutils.allAmps(bias_files[0])

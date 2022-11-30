@@ -17,6 +17,7 @@ from .Fe55GainFitter import Fe55GainFitter
 
 import lsst.pex.config as pexConfig
 import lsst.pipe.base as pipeBase
+from lsst.utils.timer import timeMethod
 
 
 class Fe55Config(pexConfig.Config):
@@ -77,7 +78,7 @@ class Fe55Task(pipeBase.Task):
                     continue
         return my_gains, my_gain_errors, my_sigma_modes
 
-    @pipeBase.timeMethod
+    @timeMethod
     def run(self, sensor_id, infiles, mask_files, bias_frame=None,
             fe55_catalog=None, minClustersPerAmp=None, chiprob_min=0.1,
             accuracy_req=0, hist_nsig=10, linearity_correction=None,

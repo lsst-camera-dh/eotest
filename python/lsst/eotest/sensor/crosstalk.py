@@ -192,7 +192,7 @@ class CrosstalkMatrix(object):
                                        in imutils.allAmps()])
 
     def _set_matrix(self):
-        self.matrix = np.zeros((self.namps, self.namps), dtype=np.float)
+        self.matrix = np.zeros((self.namps, self.namps), dtype=float)
 
     def _read_matrix(self):
         if self.filename[-5:] == '.fits':

@@ -16,6 +16,7 @@ import lsst.pipe.tasks
 from lsst.pipe.tasks.characterizeImage import CharacterizeImageTask, CharacterizeImageConfig
 from lsst.pipe.tasks.calibrate import CalibrateTask, CalibrateConfig
 import lsst.meas.extensions.shapeHSM
+from lsst.utils.timer import timeMethod
 
 from .MaskedCCD import MaskedCCD
 from .AmplifierGeometry import parse_geom_kwd
@@ -98,10 +99,10 @@ class SpotTask(pipeBase.Task):
     ConfigClass = SpotConfig
     _DefaultName = "SpotTask"
 
-    @pipeBase.timeMethod
+    @timeMethod
     def run(self, sensor_id, infile, gains, bias_frame=None, flat_frame=None, dark_frame=None,
             linearity_correction=None, read_noise=6.5):
-        
+
         ## Process a CCD image mosaic
         if self.config.verbose:
             self.log.info("processing {0}".format(infile))

@@ -42,7 +42,7 @@ class CrosstalkPattern(object):
             pattern = (0.01, 0.02, 1, 0.02, 0.01)
             offsets = (-2, -1, 0, 1, 2)
             namps = len(imutils.allAmps())
-            self.matrix = np.zeros((namps, namps), dtype=np.float)
+            self.matrix = np.zeros((namps, namps), dtype=float)
             for agg in imutils.allAmps():
                 for offset, value in zip(offsets, pattern):
                     vic = agg + offset
@@ -195,7 +195,7 @@ class SegmentExposure(object):
         fullarr = self.image.getArray()
         ny, nx = fullarr.shape
         bias_arr = np.array(random.normal(level, sigma, nx*ny),
-                            dtype=np.float).reshape(ny, nx)
+                            dtype=float).reshape(ny, nx)
         fullarr += bias_arr/self.gain
 
     def add_dark_current(self, level=2e-3):

@@ -40,7 +40,7 @@ class EOTestResults(object):
                          "CTI_LOW_SERIAL", "CTI_LOW_PARALLEL",
                          "DARK_CURRENT_95", "NUM_BRIGHT_PIXELS", "NUM_TRAPS"]
         formats = "IEEEEEEEEEEJJ"
-        my_types = dict((("I", np.int), ("J", np.int), ("E", np.float)))
+        my_types = dict((("I", int), ("J", int), ("E", float)))
         columns = [np.zeros(self.namps, dtype=my_types[fmt]) for fmt in formats]
         units = ["None", "Ne/DN", "Ne/DN", "rms e-/pixel", "e-/pixel", "None",
                  "None", "None", "None", "None", "e-/s/pixel", "None", "None"]
@@ -58,7 +58,7 @@ class EOTestResults(object):
         except:
             return self.output[column]
 
-    def append_column(self, colname, dtype=np.float, unit='None', column=None):
+    def append_column(self, colname, dtype=float, unit='None', column=None):
         """
         Append a new column of amplifier data to the AMPLIFIER_RESULTS table.
         """

@@ -13,6 +13,7 @@ import lsst.eotest.image_utils as imutils
 from .prnu import prnu
 import lsst.pex.config as pexConfig
 import lsst.pipe.base as pipeBase
+from lsst.utils.timer import timeMethod
 
 
 class PrnuConfig(pexConfig.Config):
@@ -28,7 +29,7 @@ class PrnuTask(pipeBase.Task):
     ConfigClass = PrnuConfig
     _DefaultName = "PrnuTask"
 
-    @pipeBase.timeMethod
+    @timeMethod
     def run(self, sensor_id, prnu_files, mask_files, gains, correction_image,
             bias_frame=None, linearity_correction=None):
         results = OrderedDict()
@@ -65,11 +66,11 @@ class PrnuTask(pipeBase.Task):
         self.write(results, outfile)
         return results
 
-    @pipeBase.timeMethod
+    @timeMethod
     def write(self, results, outfile, overwrite=True):
         colnames = ['WAVELENGTH', 'STDEV', 'MEAN']
         formats = 'IEE'
-        my_types = dict((("I", np.int), ("E", np.float)))
+        my_types = dict((("I", int), ("E", float)))
         columns = [np.zeros(len(results), dtype=my_types[fmt])
                    for fmt in formats]
         units = ['nm', 'rms e-', 'e-']

@@ -147,7 +147,7 @@ class QE_Data(object):
         pixel_area = 1e-3*1e-3 # (10 microns)**2
         for pd_current in self.pd:
             power.append(pd_current*pixel_area)
-        self.power = np.array(power, dtype=np.float)
+        self.power = np.array(power, dtype=float)
 
     def incidentPower(self, pd_ratio_file, pixel_area=1e-10):
         # Calibration diode collecting area.
@@ -164,7 +164,7 @@ class QE_Data(object):
         for pd_current, wl_nm in zip(self.pd, self.wl):
             power.append(pd_current/(ccd_frac(wl_nm)*sensitivity(wl_nm))
                          * pixel_area/pd_area)
-        self.power = np.array(power, dtype=np.float)
+        self.power = np.array(power, dtype=float)
 
     def calculate_QE(self, gains, amps=None):
         if amps is None:

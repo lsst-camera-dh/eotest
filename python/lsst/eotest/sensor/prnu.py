@@ -35,7 +35,7 @@ def prnu(infile, mask_files, gains, bias_frame=None, correction_image=None):
     for amp in ccd:
         active_pixels.extend(extract_unmasked_pixels(ccd, amp, gains[amp],
                                                      correction_image))
-    active_pixels = np.array(active_pixels, dtype=np.float)
+    active_pixels = np.array(active_pixels, dtype=float)
     flags = afwMath.MEAN | afwMath.STDEV
     stats = afwMath.makeStatistics(active_pixels, flags)
     pix_mean = stats.getValue(afwMath.MEAN)
