@@ -18,6 +18,7 @@ from .generate_mask import generate_mask
 
 import lsst.pex.config as pexConfig
 import lsst.pipe.base as pipeBase
+from lsst.utils.timer import timeMethod
 
 
 class DarkPixelsConfig(pexConfig.Config):
@@ -39,7 +40,7 @@ class DarkPixelsTask(pipeBase.Task):
     ConfigClass = DarkPixelsConfig
     _DefaultName = "DarkPixelsTask"
 
-    @pipeBase.timeMethod
+    @timeMethod
     def run(self, sensor_id, sflat_files, mask_files, bias_frame=None,
             linearity_correction=None):
         medfile = os.path.join(self.config.output_dir,

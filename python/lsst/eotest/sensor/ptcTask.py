@@ -17,6 +17,7 @@ import lsst.afw.image as afwImage
 import lsst.afw.math as afwMath
 import lsst.pex.config as pexConfig
 import lsst.pipe.base as pipeBase
+from lsst.utils.timer import timeMethod
 from lsst.eotest.fitsTools import fitsTableFactory, fitsWriteto
 import lsst.eotest.image_utils as imutils
 from .MaskedCCD import MaskedCCDWrapper
@@ -144,7 +145,7 @@ class PtcTask(pipeBase.Task):
     ConfigClass = PtcConfig
     _DefaultName = "PtcTask"
 
-    @pipeBase.timeMethod
+    @timeMethod
     def run(self, sensor_id, infiles, mask_files, gains, binsize=1,
             bias_frame=None, flat2_finder=find_flat2,
             linearity_correction=None):

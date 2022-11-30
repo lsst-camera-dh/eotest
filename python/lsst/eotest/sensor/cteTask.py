@@ -17,6 +17,7 @@ import lsst.afw.math as afwMath
 import lsst.pex.config as pexConfig
 import lsst.pipe.base as pipeBase
 import lsst.geom
+from lsst.utils.timer import timeMethod
 
 def pca_bias_subtracted_image(image, bias_frame, amp):
     my_image = image.Factory(image, deep=True)
@@ -109,7 +110,7 @@ class CteTask(pipeBase.Task):
     ConfigClass = CteConfig
     _DefaultName = "CteTask"
 
-    @pipeBase.timeMethod
+    @timeMethod
     def run(self, sensor_id, superflat_files, bias_frame=None,
             flux_level='high', gains=None, mask_files=(),
             linearity_correction=None):

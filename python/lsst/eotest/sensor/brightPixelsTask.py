@@ -18,6 +18,7 @@ from .ccd_bias_pca import CCD_bias_PCA
 
 import lsst.pex.config as pexConfig
 import lsst.pipe.base as pipeBase
+from lsst.utils.timer import timeMethod
 
 
 class BrightPixelsConfig(pexConfig.Config):
@@ -43,7 +44,7 @@ class BrightPixelsTask(pipeBase.Task):
     ConfigClass = BrightPixelsConfig
     _DefaultName = "BrightPixelsTask"
 
-    @pipeBase.timeMethod
+    @timeMethod
     def run(self, sensor_id, dark_files, mask_files, gains, bias_frame=None,
             linearity_correction=None):
         imutils.check_temperatures(dark_files, self.config.temp_set_point_tol,

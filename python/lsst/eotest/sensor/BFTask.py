@@ -12,6 +12,7 @@ import lsst.geom as lsstGeom
 import lsst.afw.math as afwMath
 import lsst.pex.config as pexConfig
 import lsst.pipe.base as pipeBase
+from lsst.utils.timer import timeMethod
 from lsst.eotest import fitsTools
 import lsst.eotest.image_utils as imutils
 from .MaskedCCD import MaskedCCDWrapper
@@ -67,7 +68,7 @@ class BFTask(pipeBase.Task):
     ConfigClass = BFConfig
     _DefaultName = "BrighterFatterTask"
 
-    @pipeBase.timeMethod
+    @timeMethod
     def run(self, sensor_id, flat_files, single_pairs=True,
             dark_frame=None, mask_files=(), flat2_finder=None,
             bias_frame=None, meanidx=0, linearity_correction=None,gains=None):

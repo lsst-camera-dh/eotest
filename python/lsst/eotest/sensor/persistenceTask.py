@@ -16,6 +16,7 @@ import lsst.afw.image as afwImage
 import lsst.afw.math as afwMath
 import lsst.pex.config as pexConfig
 import lsst.pipe.base as pipeBase
+from lsst.utils.timer import timeMethod
 import datetime
 import astropy.time
 
@@ -68,7 +69,7 @@ class PersistenceTask(pipeBase.Task):
     ConfigClass = PersistenceConfig
     _DefaultName = "PersistenceTask"
 
-    @pipeBase.timeMethod
+    @timeMethod
     def run(self, sensor_id, pre_flat_darks, flat, post_flat_darks,
             mask_files, gains, linearity_correction=None):
         darks = list(pre_flat_darks) + list(post_flat_darks)
@@ -153,7 +154,7 @@ class PersistenceTask(pipeBase.Task):
                                '%s_persistence.fits' % sensor_id)
         self.write(times, deferred_charges, outfile, overwrite=True)
 
-    @pipeBase.timeMethod
+    @timeMethod
     def write(self, times, deferred_charges, outfile, overwrite=True):
         colnames = ['TIME']
         columns = [times]

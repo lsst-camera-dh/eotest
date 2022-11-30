@@ -9,6 +9,7 @@ import os
 
 import lsst.pipe.base as pipeBase
 import lsst.pex.config as pexConfig
+from lsst.utils.timer import timeMethod
 
 from lsst.eotest.sensor.DetectorResponse import DetectorResponse
 from lsst.eotest.sensor.NonlinearityCorrection import NonlinearityCorrection
@@ -23,7 +24,7 @@ class NonlinearityTask(pipeBase.Task):
     ConfigClass = NonlinearityConfig
     _DefaultName = "NonlinearityTask"
 
-    @pipeBase.timeMethod
+    @timeMethod
     def run(self, sensor_id, detrespfile, gains,
             fit_range=(0., 9e4),
             nprofile_bins=100,

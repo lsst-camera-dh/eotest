@@ -16,6 +16,7 @@ from .DetectorResponse import DetectorResponse
 
 import lsst.pex.config as pexConfig
 import lsst.pipe.base as pipeBase
+from lsst.utils.timer import timeMethod
 from .flatPairTask import pair_mean, find_flat2
 
 
@@ -33,7 +34,7 @@ class LinearityTask(pipeBase.Task):
     ConfigClass = LinearityConfig
     _DefaultName = "LinearityTask"
 
-    @pipeBase.timeMethod
+    @timeMethod
     def run(self, sensor_id, infiles, mask_files, gains, detrespfile=None,
             bias_frame=None, linearity_correction=None):
         self.sensor_id = sensor_id

@@ -9,6 +9,7 @@ from . import QE
 import lsst.eotest.image_utils as imutils
 import lsst.pex.config as pexConfig
 import lsst.pipe.base as pipeBase
+from lsst.utils.timer import timeMethod
 
 
 class QeConfig(pexConfig.Config):
@@ -26,7 +27,7 @@ class QeTask(pipeBase.Task):
     ConfigClass = QeConfig
     _DefaultName = "QeTask"
 
-    @pipeBase.timeMethod
+    @timeMethod
     def run(self, sensor_id, qe_files, pd_ratio_file, mask_files, gains,
             bias_frame=None, medians_file=None, vendor_data=False,
             correction_image=None, mondiode_func=None):

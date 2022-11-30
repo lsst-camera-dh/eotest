@@ -14,6 +14,7 @@ from astropy.utils.exceptions import AstropyWarning, AstropyUserWarning
 import lsst.afw.math as afwMath
 import lsst.pex.config as pexConfig
 import lsst.pipe.base as pipeBase
+from lsst.utils.timer import timeMethod
 from lsst.eotest.fitsTools import fitsWriteto
 import lsst.eotest.image_utils as imutils
 from .MaskedCCD import MaskedCCD
@@ -37,7 +38,7 @@ class DarkCurrentTask(pipeBase.Task):
     ConfigClass = DarkCurrentConfig
     _DefaultName = "DarkCurrentTask"
 
-    @pipeBase.timeMethod
+    @timeMethod
     def run(self, sensor_id, dark_files, mask_files, gains, bias_frame=None,
             linearity_correction=None, dark_files_linear_fit=None):
         if dark_files_linear_fit is not None:

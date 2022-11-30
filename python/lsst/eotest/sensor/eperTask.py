@@ -5,6 +5,7 @@ from __future__ import absolute_import
 
 import lsst.pex.config as pexConfig
 import lsst.pipe.base as pipeBase
+from lsst.utils.timer import timeMethod
 
 import sys
 import numpy as np
@@ -88,7 +89,7 @@ class EPERTask(pipeBase.Task):
     ConfigClass = EPERConfig
     _DefaultName = "eper"
 
-    @pipeBase.timeMethod
+    @timeMethod
     def run(self, infilename, nframes, amps, overscans, gains=None,
             mask_files=(), linearity_correction=None):
         if not infilename:
