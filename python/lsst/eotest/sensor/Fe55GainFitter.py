@@ -208,7 +208,7 @@ if __name__ == '__main__':
     for hdu in range(1, 17):
         chiprob = results[hdu].data.field('CHIPROB')
         index = np.where(chiprob > chiprob_min)
-        dn = np.array(results[hdu].data.field('DN'), dtype=np.float)[index]
+        dn = np.array(results[hdu].data.field('DN'), dtype=float)[index]
 
         foo = Fe55GainFitter(dn)
         foo.fit()

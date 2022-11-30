@@ -69,7 +69,7 @@ class PrnuTask(pipeBase.Task):
     def write(self, results, outfile, overwrite=True):
         colnames = ['WAVELENGTH', 'STDEV', 'MEAN']
         formats = 'IEE'
-        my_types = dict((("I", np.int), ("E", np.float)))
+        my_types = dict((("I", int), ("E", float)))
         columns = [np.zeros(len(results), dtype=my_types[fmt])
                    for fmt in formats]
         units = ['nm', 'rms e-', 'e-']

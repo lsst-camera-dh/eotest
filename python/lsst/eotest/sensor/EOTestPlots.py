@@ -75,7 +75,7 @@ def latex_minus_max(values, errors, format='%.2e'):
 
 
 def cmap_range(image_array, nsig=5):
-    pixel_data = np.array(image_array, dtype=np.float).flatten()
+    pixel_data = np.array(image_array, dtype=float).flatten()
     stats = afwMath.makeStatistics(pixel_data,
                                    afwMath.STDEVCLIP | afwMath.MEDIAN)
     median = stats.getValue(afwMath.MEDIAN)
@@ -117,7 +117,7 @@ def plot_flat(infile, nsig=3, cmap=pylab.cm.hot, win=None, subplot=(1, 1, 1),
         ny_segments = len(ccd)//nx_segments
         nx = nx_segments*(datasec['xmax'] - datasec['xmin'] + 1)
         ny = ny_segments*(datasec['ymax'] - datasec['ymin'] + 1)
-        mosaic = np.zeros((ny, nx), dtype=np.float)
+        mosaic = np.zeros((ny, nx), dtype=float)
         amp_coords = {}
         for ypos in range(ny_segments):
             for xpos in range(nx_segments):

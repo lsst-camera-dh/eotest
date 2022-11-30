@@ -167,17 +167,17 @@ class BFTask(pipeBase.Task):
                              'AMP%02i_COV11' % amp, 'AMP%02i_COV11_ERR' % amp, 'AMP%02i_MEAN' % amp])
             units.extend(
                 ['Unitless', 'Unitless', 'Unitless', 'Unitless', 'Unitless','Unitless','Unitless','Unitless','Unitless','Unitless','e-'])
-            columns.extend([np.array(BFResults[amp][0], dtype=np.float),
-                            np.array(BFResults[amp][1], dtype=np.float),
-                            np.array(BFResults[amp][2], dtype=np.float),
-                            np.array(BFResults[amp][3], dtype=np.float),
-                            np.array(BFResults[amp][4], dtype=np.float),
-                            np.array(BFResults[amp][5], dtype=np.float),
-                            np.array(BFResults[amp][6], dtype=np.float),
-                            np.array(BFResults[amp][7], dtype=np.float),
-                            np.array(BFResults[amp][8], dtype=np.float),
-                            np.array(BFResults[amp][9], dtype=np.float),
-                            np.array(BFResults[amp][10], dtype=np.float)])
+            columns.extend([np.array(BFResults[amp][0], dtype=float),
+                            np.array(BFResults[amp][1], dtype=float),
+                            np.array(BFResults[amp][2], dtype=float),
+                            np.array(BFResults[amp][3], dtype=float),
+                            np.array(BFResults[amp][4], dtype=float),
+                            np.array(BFResults[amp][5], dtype=float),
+                            np.array(BFResults[amp][6], dtype=float),
+                            np.array(BFResults[amp][7], dtype=float),
+                            np.array(BFResults[amp][8], dtype=float),
+                            np.array(BFResults[amp][9], dtype=float),
+                            np.array(BFResults[amp][10], dtype=float)])
         formats = 'E'*len(colnames)
         fits_cols = [fits.Column(name=colnames[i], format=formats[i],
                                  unit=units[i], array=columns[i])

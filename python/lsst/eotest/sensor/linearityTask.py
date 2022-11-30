@@ -79,7 +79,7 @@ class LinearityTask(pipeBase.Task):
         colnames = ['flux'] + ['AMP%02i_SIGNAL' % i for i in all_amps]
         formats = 'E'*len(colnames)
         units = ['None'] + ['e-']*len(all_amps)
-        columns = [np.zeros(nrows, dtype=np.float) for fmt in formats]
+        columns = [np.zeros(nrows, dtype=float) for fmt in formats]
         fits_cols = [fits.Column(name=colnames[i], format=formats[i],
                                  unit=units[i], array=columns[i])
                      for i in range(len(units))]

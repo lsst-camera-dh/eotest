@@ -148,9 +148,9 @@ if __name__ == '__main__':
     results = fits.open(args.psf_par_file)
     hdu = args.amplifier
     if args.fp_est:
-        dn = np.array(results[hdu].data.field('DN_FP_SUM'), dtype=np.float)
+        dn = np.array(results[hdu].data.field('DN_FP_SUM'), dtype=float)
     else:
-        dn = np.array(results[hdu].data.field('DN'), dtype=np.float)
+        dn = np.array(results[hdu].data.field('DN'), dtype=float)
     chiprob = results[hdu].data.field('CHIPROB')
 
     indx = np.where(chiprob > args.chiprob_min)

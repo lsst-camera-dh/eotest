@@ -62,7 +62,7 @@ def total_noise_histograms(dark_curr_pixels, read_noise, dark95s, exptime=16,
                      xycoords='axes fraction', size='x-small')
         if len(noise_values) == 0:
             continue
-        stats = afwMath.makeStatistics(np.array(noise_values, dtype=np.float),
+        stats = afwMath.makeStatistics(np.array(noise_values, dtype=float),
                                        afwMath.MEDIAN | afwMath.STDEVCLIP)
         median = stats.getValue(afwMath.MEDIAN)
         stdev = stats.getValue(afwMath.STDEVCLIP)

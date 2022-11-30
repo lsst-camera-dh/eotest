@@ -414,17 +414,17 @@ class PsfGaussFit(object):
         Return sigmax, sigmay, dn, chiprob for chiprob > min_prob for
         specified amp.
         """
-        chiprob = np.array(self.chiprob, dtype=np.float)
-        amps = np.array(self.amp, dtype=np.int)
+        chiprob = np.array(self.chiprob, dtype=float)
+        amps = np.array(self.amp, dtype=int)
         if amp is not None:
             indx = np.where((chiprob > min_prob) & (amps == amp))
         else:
             indx = np.where(chiprob > min_prob)
         my_results = {}
-        my_results['sigmax'] = np.array(self.sigmax, dtype=np.float)[indx]
-        my_results['sigmay'] = np.array(self.sigmay, dtype=np.float)[indx]
-        my_results['dn'] = np.array(self.dn, dtype=np.float)[indx]
-        my_results['dn_fp'] = np.array(self.dn_fp, dtype=np.float)[indx]
+        my_results['sigmax'] = np.array(self.sigmax, dtype=float)[indx]
+        my_results['sigmay'] = np.array(self.sigmay, dtype=float)[indx]
+        my_results['dn'] = np.array(self.dn, dtype=float)[indx]
+        my_results['dn_fp'] = np.array(self.dn_fp, dtype=float)[indx]
         my_results['chiprob'] = chiprob[indx]
         my_results['amps'] = amps[indx]
         return my_results

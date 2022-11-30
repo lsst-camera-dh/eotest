@@ -47,13 +47,13 @@ def flat_gain(image1, image2, count=1000, dx=100, dy=100, binsize=1,
     except ValueError:
         # Rebinned image width smaller than requested dx, so just
         # generate subregions using the full x extent.
-        xarr = np.zeros(count, dtype=np.int)
+        xarr = np.zeros(count, dtype=int)
     try:
         yarr = random.randint(im1.getHeight() - dy - 1, size=count)
     except ValueError:
         # Rebinned image height smaller than requested dy, so just
         # generate subregions using the full y extent.
-        yarr = np.zeros(count, dtype=np.int)
+        yarr = np.zeros(count, dtype=int)
 
     gains = []
     ntrial = 0

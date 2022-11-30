@@ -21,7 +21,7 @@ class Cte_Tools_TestCase(unittest.TestCase):
         npix = 2000
         noscan = 20
         for i, cti in enumerate(self.cti_values):
-            pixels = np.zeros(npix, dtype=np.float)
+            pixels = np.zeros(npix, dtype=float)
             pixels[:-noscan] += signal
             cte = sensorTest.cte_matrix(len(pixels), cti)
             pixels = np.dot(cte, pixels)

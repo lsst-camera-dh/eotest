@@ -184,14 +184,14 @@ class PtcTask(pipeBase.Task):
         output.append(fits.PrimaryHDU())
         colnames = ['EXPOSURE']
         units = ['seconds']
-        columns = [np.array(exposure, dtype=np.float)]
+        columns = [np.array(exposure, dtype=float)]
         for amp in all_amps:
             colnames.extend(['AMP%02i_MEAN' % amp, 'AMP%02i_VAR' % amp,
                              'AMP%02i_DISCARD' % amp])
             units.extend(['ADU', 'ADU**2', 'pixls'])
-            columns.extend([np.array(ptc_stats[amp][0], dtype=np.float),
-                            np.array(ptc_stats[amp][1], dtype=np.float),
-                            np.array(ptc_stats[amp][2], dtype=np.integer)])
+            columns.extend([np.array(ptc_stats[amp][0], dtype=float),
+                            np.array(ptc_stats[amp][1], dtype=float),
+                            np.array(ptc_stats[amp][2], dtype=int)])
         colnames.append('SEQNUM')
         units.append('None')
         columns.append(seqnums)
